@@ -45,7 +45,7 @@ Optional:
 
 Missing inputs must not be invented. Record them as missing or unknown.
 
-The research input manifest must bind the daily package, query plan, memory context, and retrieval report to the same episode date and their SHA-256 values. Do not proceed with a mismatched or stale manifest.
+The research input manifest must bind the daily package, query plan, memory context, and retrieval report to the same episode date and their SHA-256 values. The builder and dossier validator both replay deterministic retrieval and compare the generated Context and Report byte-for-byte. Do not proceed with a mismatched, stale, external, or path-traversing input.
 
 ## Outputs
 
@@ -65,10 +65,12 @@ The dossier is an editorial research artifact, not public narration.
 1. Read project instructions and 01–04.
 2. Record the exact input files, versions, session date, cutoff time, timezone, and research input manifest.
 3. Confirm that the manifest hashes match the supplied files.
-4. Confirm that the daily package, query plan, retrieval report, and dossier use the same episode date.
-5. Confirm that the daily package contains enough basic data to begin.
-6. Do not write narration or scene copy at this stage.
-7. Treat `memory_context` as historical research leads only.
+4. Replay retrieval and confirm that Query Plan, Context, and Report are one deterministic retrieval result.
+5. Confirm that all input paths are repository-relative and remain inside the workspace root.
+6. Confirm that the daily package, query plan, retrieval report, and dossier use the same episode date.
+7. Confirm that the daily package contains enough basic data to begin.
+8. Do not write narration or scene copy at this stage.
+9. Treat `memory_context` as historical research leads only.
 
 ### Stage 1 — Overnight contradiction detection
 
@@ -176,9 +178,11 @@ Unreadable pages and headline-only material cannot support final causal claims.
 
 Paths under `editorial-memory/`, memory IDs, memory-context files, and retrieval reports are not current evidence. They must never be assigned `E-###` merely to satisfy the contract.
 
+Every Evidence ID referenced from research questions, Expected / Actual, timeline, causal edges, alternative hypotheses, contrary evidence, or memory revalidation must exist in the dossier.
+
 ### Stage 5 — Memory revalidation
 
-Every selected non-core item in the retrieval report must receive exactly one result.
+Every selected non-core item in the retrieval report must receive exactly one result. The manifest must preserve the exact Report metadata and place each selected item in exactly one permitted bucket.
 
 Required fields:
 
@@ -204,11 +208,10 @@ Allowed `revalidation_status` values:
 
 Rules:
 
-- `supported`, `partially_supported`, `weakened`, and `invalidated` require current evidence.
-- `supported` requires current tier-1 or tier-2 fact or reported-interpretation evidence.
-- `weakened` and `invalidated` require current contrary evidence.
+- `supported`, `partially_supported`, `weakened`, and `invalidated` require current tier-1 or tier-2 fact or reported-interpretation evidence.
+- discovery-only, unavailable, tier-3, unknown, grounded-inference, and memory references cannot alone establish a revalidation conclusion.
 - `historical_context_only` may support comparison or explanation context, but not a current causal edge.
-- `not_used` is valid and must be recorded rather than silently omitted.
+- `not_used` is valid, must have `editorial_use=not_used`, and must not retain current evidence IDs.
 - `unresolved` is valid when current evidence is insufficient.
 - a memory with retrieval status `invalidated` or `resolved` cannot be used as a current premise.
 - `difference_from_previous` must explain what changed, remained unconfirmed, or could not be compared.
@@ -350,7 +353,7 @@ Return an incomplete dossier rather than inventing content when:
 - related assets do not support the proposed transmission
 - multiple explanations remain equally plausible
 - a remembered claim cannot be revalidated with current evidence
-- input hashes or episode dates do not match
+- input hashes, retrieval replay, or episode dates do not match
 
 `reason_unknown`, `unresolved`, and `not_used` are acceptable editorial outcomes.
 
@@ -368,8 +371,12 @@ A dossier fails validation when it lacks or violates:
 - separation of company-direct and NASDAQ-wide claims
 - Expected source classification
 - research input manifest integrity
+- deterministic Query Plan / Context / Report lineage
+- repository-relative path safety
+- exact Report-to-Manifest selected-memory metadata
 - complete classification of selected non-core memory
-- current evidence for a supported, weakened, or invalidated remembered claim
+- current quality evidence for a supported, partially supported, weakened, or invalidated remembered claim
+- complete Evidence ID referential integrity
 - prohibition on memory-only Expected or NASDAQ-wide causal edges
 - prohibition on invalidated/resolved memory as a current premise
 
