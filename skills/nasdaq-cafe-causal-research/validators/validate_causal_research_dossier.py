@@ -124,10 +124,12 @@ def is_memory_reference(value: str) -> bool:
 
 
 def evidence_quality_for_current_use(item: dict[str, Any]) -> bool:
+    source_reference = str(item.get("source_reference", "")).strip()
     return (
         item.get("evidence_class") in {"fact", "reported_interpretation"}
         and item.get("source_tier") in {"tier_1", "tier_2"}
-        and not is_memory_reference(item.get("source_reference", ""))
+        and bool(source_reference)
+        and not is_memory_reference(source_reference)
     )
 
 
@@ -235,6 +237,11 @@ def validate_dossier(
     errors: list[str] = []
     warnings: list[str] = []
     repo_root = repo_root.resolve()
+    contracts_dir = contracts_dir.resolve()
+    if contracts_dir != repo_root and repo_root not in contracts_dir.parents:
+        return ValidationResult(
+            [f"contracts directory escapes repository root: {contracts_dir}"], []
+        )
 
     supplied: dict[str, Path] = {}
     for label, path in (
@@ -366,6 +373,11 @@ def validate_dossier(
     evidence = {item["evidence_id"]: item for item in dossier["evidence"]}
     if len(evidence) != len(dossier["evidence"]):
         errors.append("duplicate evidence_id in dossier")
+    for evidence_id, item in evidence.items():
+        if is_memory_reference(item.get("source_reference", "")):
+            errors.append(
+                f"{evidence_id}: editorial memory cannot be registered as current evidence"
+            )
 
     conclusion_statuses = {
         "supported",
@@ -498,6 +510,17 @@ def validate_dossier(
         ):
             errors.append("Expected cannot be grounded only in editorial memory")
 
+    actual = dossier["expected_actual_gap"]["actual"]
+    actual_ids = actual["evidence_ids"]
+    if actual["statement"].strip() and not actual_ids:
+        errors.append("Actual has a statement but no current evidence")
+    elif actual_ids and all(
+        evidence_id in evidence
+        and is_memory_reference(evidence[evidence_id]["source_reference"])
+        for evidence_id in actual_ids
+    ):
+        errors.append("Actual cannot be grounded only in editorial memory")
+
     for edge in dossier["causal_edges"]:
         edge_evidence = [
             evidence[evidence_id]
@@ -510,12 +533,12 @@ def validate_dossier(
             errors.append(
                 f"{edge['id']}: NASDAQ-wide edge requires current tier_1/tier_2 evidence"
             )
-        if edge_evidence and all(
+        if any(
             is_memory_reference(item.get("source_reference", ""))
             for item in edge_evidence
         ):
             errors.append(
-                f"{edge['id']}: causal edge cannot be supported only by editorial memory"
+                f"{edge['id']}: causal edge cannot reference editorial memory as evidence"
             )
 
     daily_ref = manifest["inputs"]["daily_source_package"]
