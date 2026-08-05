@@ -129,7 +129,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "Seed outputs already committed"
           else
-            git commit -m "Seed approved 2026-07-31 editorial memory [skip ci]"
+            git commit -m "Seed approved 2026-07-31 editorial memory"
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
 
