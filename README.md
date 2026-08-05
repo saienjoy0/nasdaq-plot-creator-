@@ -1,33 +1,79 @@
-# 朝のNASDAQカフェ｜調査・記憶・台本スキル作業庫
+# 朝のNASDAQカフェ｜調査・記憶・台本・日次制作制御
 
-このリポジトリは、朝のNASDAQカフェの情報源正本、因果深掘りスキル、OpenClaw型の選択的長期記憶、台本制作契約を管理する作業庫です。
+このリポジトリは、朝のNASDAQカフェの01〜04正本、因果深掘りスキル、OpenClaw型の選択的長期記憶、最終台本契約、renderer配送契約、日次制作状態を管理する編集制御面です。
 
 ## 目的
 
-毎日の`daily_source_package_YYYY-MM-DD.md`をそのまま要約するのではなく、関連背景、過去経緯、企業関係、供給網、マクロ要因、代替仮説を追加調査し、NASDAQへ届いた因果だけを9シーン台本へ変換します。
+毎日の`daily_source_package_YYYY-MM-DD.md`をそのまま要約するのではなく、関連背景、過去経緯、企業関係、供給網、マクロ要因、代替仮説を追加調査し、NASDAQへ届いた因果だけを狐一人の9シーン台本へ変換します。
 
-同時に、最終承認された過去回から、継続テーマ、当時の仮説、反対材料、次の検証点を記憶します。全履歴を毎回読むのではなく、今日の話題に関係する記憶だけを選択します。
+最終承認された過去回だけを恒久記憶へ昇格し、今日の話題に関係する記憶だけを取得して現在証拠で再検証します。
 
 ## 現在地
 
-2026-08-05時点では、次までmainで完成しています。
+2026-08-05時点で、日次制作制御の実装経路はmainへ接続可能な状態まで完成しています。
 
 ```text
-memory query plan
-→ 関連記憶検索
-→ 決定的retrieval replay
-→ SHA-bound research input manifest
+ユーザーがdaily_source_packageを渡す
+→ 関連記憶検索・replay・SHA固定
 → 現在証拠によるmemory revalidation
-→ causal research dossier v0.2
+→ causal research dossier
+→ ChatGPTが02で編集判断
+→ ChatGPTが01・03で狐の9シーンを完成
+→ ChatGPTが04審問と修正
+→ Primary / Approved Fallback確定
+→ episode package memory usage検証
+→ final production package生成・整合検査
+→ immutable renderer handoff bundle
+→ renderer preview
+→ real-day acceptance
+→ ユーザー目視確認
+→ 明示依頼がある場合だけfinal
+→ publication approval
+→ memory promotion
 ```
 
-まだ、因果調査から最終episode package、画像採用経路、render spec、renderer previewまでを一つの制作契約として接続する工程は完成していません。
+完成済みの制御契約:
 
-現在地、次の実装、MVPゴール、運用ゴールは次を正本とします。
+- 監査可能な記憶検索・安全な昇格
+- PR #6型の現在証拠による記憶再検証
+- episode package内のScene・surface・Evidence単位memory usage
+- 04審問後episode packageからの決定的なIR・spoken script・asset manifest・render spec生成
+- SHA-bound renderer handoff bundle
+- 新しい実日previewのacceptance gate
+- 前進専用・証拠SHA付き日次state machine CLI
 
-- [`designs/CURRENT_STATE_AND_ROADMAP.md`](designs/CURRENT_STATE_AND_ROADMAP.md)
+まだ実績として必要なこと:
 
-文書化はPR #7です。次に着手する実装は、再検証済み記憶を最終episode packageへ安全に接続するPR #8です。
+- 次にユーザーから渡される新しい実日のdaily source packageで全工程を実行する
+- preview MP4をユーザーが目視確認する
+
+2026-07-31 seedは新しい実日のMVP証明には使用しません。preview確認前にfinalへ進みません。
+
+## 日次入口
+
+運用手順は次を正本とします。
+
+- [`docs/DAILY_PRODUCTION_RUNBOOK.md`](docs/DAILY_PRODUCTION_RUNBOOK.md)
+
+開始例:
+
+```bash
+python scripts/run_daily_production.py --workspace . init \
+  --episode-date YYYY-MM-DD \
+  --daily-source-package daily_source_package_YYYY-MM-DD.md \
+  --requested-scope preview \
+  --renderer-commit <40-hex-renderer-commit> \
+  --renderer-contract-version 2.2.0
+```
+
+状態確認:
+
+```bash
+python scripts/run_daily_production.py --workspace . status \
+  --episode-date YYYY-MM-DD
+```
+
+このCLIは工程管理専用です。主役、市場因果、狐の文章、04審問、画像生成、Primary/Fallbackを決めません。
 
 ## 基本フロー
 
@@ -43,60 +89,48 @@ daily_source_package
 → 03_episode_production_spec による9シーン制作
 → 04_entertainment_inquisitor による審問・手直し
 → Primary / Approved Fallbackの最終採用
+→ episode memory annex / final production source
 → spoken script / asset manifest / render spec
-→ 全成果物の整合validator
-→ rendererへの配送
+→ production consistency validator
+→ immutable renderer handoff
 → previewとユーザー確認
 → 明示依頼がある場合だけfinal
 → approved publication record
 → daily / weekly / thread / claim memoryへの昇格
 ```
 
-## ディレクトリ
+## 主なディレクトリ
 
 - `source-of-truth/`：番組の01〜04正本
 - `editorial-memory/`：日次・週次・継続テーマ・仮説・制作知識の記憶
-- `skills/nasdaq-cafe-causal-research/`：台本前段の因果深掘りスキル
-- `skills/nasdaq-cafe-editorial-memory/`：関連記憶の取得と最終回からの記憶昇格
-- `references/`：外部プロジェクトの採用・不採用判断
-- `examples/`：検証用入力と期待出力
-- `verification/`：軽量検査が成功した場合の記録
+- `skills/nasdaq-cafe-causal-research/`：台本前段の因果深掘り
+- `skills/nasdaq-cafe-editorial-memory/`：関連記憶の取得と承認後昇格
+- `skills/nasdaq-cafe-episode-package-memory/`：最終台本内memory usage検査
+- `skills/nasdaq-cafe-final-production/`：episode packageから制作成果物を決定的生成
+- `skills/nasdaq-cafe-renderer-handoff/`：renderer配送bundle
+- `skills/nasdaq-cafe-real-day-acceptance/`：新しい実日preview受入
+- `skills/nasdaq-cafe-daily-production/`：日次state machine
 - `designs/`：実装設計、現在地、ロードマップ
+- `verification/`：検査・acceptance記録
 
 ## 記憶の使い方
 
-調査前の取得は、Query Planからauthoritative retrieverを実行します。
+調査前の取得:
 
 ```bash
 python scripts/editorial_memory_retrieval.py \
-  --query-plan working/memory_query_plan_2026-08-05.json \
-  --context-output working/memory_context_2026-08-05.md \
-  --report-output working/memory_retrieval_report_2026-08-05.json
+  --query-plan working/memory_query_plan_YYYY-MM-DD.json \
+  --context-output working/memory_context_YYYY-MM-DD.md \
+  --report-output working/memory_retrieval_report_YYYY-MM-DD.json
 ```
 
-その後、同一検索結果のreplay確認とSHA固定を行います。
+その後、同一検索結果のreplay確認とSHA固定を行います。記憶は現在の証拠ではありません。過去仮説を当日台本へ使う場合は、現在のtier 1 / tier 2証拠で再検証します。
+
+最終承認後だけ昇格します。
 
 ```bash
-python scripts/build_research_input_manifest.py \
-  --episode-date 2026-08-05 \
-  --market-date 2026-08-04 \
-  --timezone Asia/Tokyo \
-  --information-cutoff 2026-08-05T07:30:00+09:00 \
-  --daily-source-package daily/daily_source_package_2026-08-05.md \
-  --memory-query-plan working/memory_query_plan_2026-08-05.json \
-  --memory-context working/memory_context_2026-08-05.md \
-  --memory-retrieval-report working/memory_retrieval_report_2026-08-05.json \
-  --output research/2026-08-05/research_input_manifest.json
+python scripts/promote_episode_memory.py publication_record_YYYY-MM-DD.json
 ```
-
-最終承認後の昇格：
-
-```bash
-python scripts/promote_episode_memory.py \
-  publication_record_2026-08-05.json
-```
-
-記憶は現在の証拠ではありません。過去の仮説を当日台本へ使う場合は、現在のtier 1 / tier 2証拠で再検証します。
 
 ## 絶対ルール
 
@@ -106,6 +140,6 @@ python scripts/promote_episode_memory.py \
 - 一社の材料をNASDAQ全体の原因へ自動昇格させない
 - 売買助言、目標株価、確定的な将来予測を出さない
 - ドラフト、却下された因果、未採用画像経路を恒久記憶へ入れない
-- 記録のない狐の保有、損益、取引、大学生活上の出来事を記憶として創作しない
+- 記録のない狐の保有、損益、取引、大学生活上の出来事を創作しない
 - preview確認前にfinalへ進まない
 - validator FAIL、未解決画像経路、対象日不一致、古いrender specをrendererへ渡さない
