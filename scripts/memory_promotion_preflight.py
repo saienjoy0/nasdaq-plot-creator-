@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -10,6 +11,47 @@ from memory_promotion_common import (
     extract_episode_date_from_render_spec, ensure_episode_package_matches_date,
     utc_now, _record_expected_hash,
 )
+
+
+def _normalize_validator_report(report: Any) -> Any:
+    """Accept the renderer's production-ready camelCase status fields.
+
+    The normalized object is used only for eligibility checks. The original
+    validator artifact is still hashed and archived byte-for-byte.
+    """
+    if not isinstance(report, Mapping):
+        return report
+    normalized = dict(report)
+    aliases = {
+        "validatorStatus": "validator_status",
+        "overallStatus": "overall_status",
+        "allPassed": "all_passed",
+    }
+    for source_key, target_key in aliases.items():
+        if target_key not in normalized and source_key in normalized:
+            normalized[target_key] = normalized[source_key]
+    return normalized
+
+
+def _extract_renderer_episode_date(spec: Any) -> str | None:
+    """Read the date from both memory-native and renderer-native layouts."""
+    direct = extract_episode_date_from_render_spec(spec)
+    if direct is not None:
+        return direct
+    if not isinstance(spec, Mapping):
+        return None
+    episode = spec.get("episode")
+    if isinstance(episode, Mapping):
+        for key in ("targetDate", "episodeDate", "productionDate"):
+            value = episode.get(key)
+            if isinstance(value, str) and re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", value):
+                return value
+    for key in ("targetDate", "episodeDate", "productionDate"):
+        value = spec.get(key)
+        if isinstance(value, str) and re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", value):
+            return value
+    return None
+
 
 def source_preflight(
     record_path: Path,
@@ -45,12 +87,12 @@ def source_preflight(
                 f"source SHA-256 mismatch for {key}: expected {expected}, got {digests[key].sha256}"
             )
 
-    validator_report = read_json(resolved["validator_report"])
+    validator_report = _normalize_validator_report(read_json(resolved["validator_report"]))
     if not validator_passes(validator_report):
         raise PreflightError("validator report does not contain a formal PASS result")
 
     render_spec = read_json(resolved["render_spec"])
-    render_date = extract_episode_date_from_render_spec(render_spec)
+    render_date = _extract_renderer_episode_date(render_spec)
     if render_date is not None and render_date != record["episode_date"]:
         raise PreflightError(
             f"render spec date {render_date} does not match publication date {record['episode_date']}"
@@ -79,4 +121,3 @@ def source_preflight(
         "generated_at": utc_now(),
     }
     return record, report, resolved
-
