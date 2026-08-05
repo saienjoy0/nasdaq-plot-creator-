@@ -6,10 +6,12 @@ on:
       - "skills/nasdaq-cafe-episode-package-memory/**"
       - "tests/episode-package-memory/**"
       - "tests/episode-package-memory-hardening/**"
+      - "tests/final-production-hardening/**"
       - "skills/nasdaq-cafe-causal-research/**"
       - "scripts/build_research_input_manifest.py"
       - "scripts/editorial_memory_retrieval.py"
       - "scripts/build_final_production_package.py"
+      - "scripts/build_final_production_package_hardened.py"
       - "skills/nasdaq-cafe-final-production/**"
       - "tests/final-production-package/**"
       - ".github/workflows/episode-package-memory-hardening.yml"
@@ -19,10 +21,12 @@ on:
       - "skills/nasdaq-cafe-episode-package-memory/**"
       - "tests/episode-package-memory/**"
       - "tests/episode-package-memory-hardening/**"
+      - "tests/final-production-hardening/**"
       - "skills/nasdaq-cafe-causal-research/**"
       - "scripts/build_research_input_manifest.py"
       - "scripts/editorial_memory_retrieval.py"
       - "scripts/build_final_production_package.py"
+      - "scripts/build_final_production_package_hardened.py"
       - "skills/nasdaq-cafe-final-production/**"
       - "tests/final-production-package/**"
       - ".github/workflows/episode-package-memory-hardening.yml"
@@ -51,7 +55,8 @@ jobs:
             skills/nasdaq-cafe-causal-research/validators/validate_causal_research_dossier.py \
             scripts/build_research_input_manifest.py \
             scripts/editorial_memory_retrieval.py \
-            scripts/build_final_production_package.py
+            scripts/build_final_production_package.py \
+            scripts/build_final_production_package_hardened.py
       - name: Parse schemas
         run: |
           python -m json.tool skills/nasdaq-cafe-episode-package-memory/contracts/episode_package_memory_annex.schema.json >/dev/null
@@ -60,10 +65,12 @@ jobs:
           python -m json.tool skills/nasdaq-cafe-final-production/contracts/final_production_source_annex.schema.json >/dev/null
       - name: Run merged PR8 tests
         run: python -m unittest discover -s tests/episode-package-memory -p 'test_*.py' -v
-      - name: Run hardening tests
+      - name: Run episode-memory hardening tests
         run: python -m unittest discover -s tests/episode-package-memory-hardening -p 'test_*.py' -v
       - name: Run final production package regression
         run: python -m unittest discover -s tests/final-production-package -p 'test_*.py' -v
+      - name: Run guarded final production tests
+        run: python -m unittest discover -s tests/final-production-hardening -p 'test_*.py' -v
       - name: Run PR6 real validation-chain regression
         run: python -m unittest discover -s tests/memory-revalidation -p 'test_*.py' -v
       - name: Run retrieval regression
