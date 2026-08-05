@@ -60,7 +60,7 @@ class Tests(unittest.TestCase):
             self.assertFalse(seen["path"].exists())
             self.assertIn(module.FINAL_BEGIN, package.read_text(encoding="utf-8"))
 
-    def test_malformed_final_annex_fails_before_base_replay(self):
+    def test_malformed_final_annex_fails_before_validation_call(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             package = root / "episode_package_2026-08-06.md"
@@ -71,8 +71,24 @@ class Tests(unittest.TestCase):
                 "<!--BEGIN_FINAL_PRODUCTION_SOURCE-->\n",
                 encoding="utf-8",
             )
-            with self.assertRaises(RuntimeError):
-                module._run_base_validator(root, package)
+            validation_called = False
+
+            def validate_episode_package_memory(*, repo_root, episode_package_path):
+                nonlocal validation_called
+                validation_called = True
+                return Result()
+
+            original = module._load_base_validator
+            module._load_base_validator = lambda repo_root: SimpleNamespace(
+                validate_episode_package_memory=validate_episode_package_memory
+            )
+            try:
+                with self.assertRaises(RuntimeError):
+                    module._run_base_validator(root, package)
+            finally:
+                module._load_base_validator = original
+
+            self.assertFalse(validation_called)
 
 
 if __name__ == "__main__":
