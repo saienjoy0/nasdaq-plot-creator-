@@ -2,9 +2,9 @@
 
 ## Purpose
 
-Close the execution gap between the merged Episode Package Memory Reference contract, deterministic Final Production Package, immutable Renderer Handoff Bundle, and Real-Day Acceptance gate.
+Close the execution gap between Episode Package Memory Reference, deterministic Final Production, Financial Visual Cross-Artifact, immutable Renderer Handoff, Real-Day Acceptance, and the Daily Control Plane.
 
-This change does not add editorial judgment. It validates and transports only content that ChatGPT has already completed under 01–04.
+This change adds no editorial judgment. It validates and transports only content already completed by ChatGPT under 01–04.
 
 ## Canonical package order
 
@@ -17,35 +17,40 @@ public editorial content
 → EOF
 ```
 
-After the memory annex, only whitespace or exactly one Final Production Source annex is allowed. When present, the Final Production Source annex must be final.
+After the memory annex, only whitespace or one Final Production Source annex is allowed. When present, that annex must be final.
 
-## Authoritative execution chain
+## Authoritative production entry
 
 ```text
-validate_episode_package_memory.py
+run_daily_production_hardened.py
+→ validate_episode_package_memory.py
 → validate_episode_package_memory_hardening.py
 → build_final_production_package_hardened.py
+→ Financial Visual Cross-Artifact, when required
 → build_renderer_handoff_hardened.py
 → run_real_day_acceptance_hardened.py
+→ user visual review
 ```
 
-### Episode-memory hardening
+The base Daily, Final Production, Handoff, and Acceptance scripts remain deterministic implementations and unit-test targets. They are not production entrypoints.
 
-- requires Scene 1–9 exactly once and in order;
-- requires exactly one integrated 04 result before the memory annex;
-- fixes cross-annex ordering;
-- verifies package filename date;
-- re-runs the merged PR #8 validator and therefore PR #6 lineage;
-- temporarily removes only the final-production annex during the base PR #8 replay so final-production JSON is not mistaken for public prose;
-- scans supplied public artifacts for MEMREF and internal memory fields.
+## Three-stage evidence
 
-### Guarded Final Production
+### 1. Pre-build
 
-- runs the episode-memory gate before generation;
-- invokes the existing deterministic Final Production builder;
-- scans spoken script, asset manifest, and render spec after generation;
-- deletes generated outputs on post-build failure;
-- atomically persists this evidence into `official_execution_preflight.json`:
+The episode-memory final gate requires:
+
+- Scene 1–9 exactly once and in order;
+- exactly one integrated 04 result;
+- canonical annex ordering;
+- package filename/date agreement;
+- merged PR #8 validation and PR #6 lineage replay.
+
+### 2. Public artifacts
+
+After deterministic Final Production generation, spoken script, asset manifest, and render spec are scanned for MEMREF and internal memory fields. On failure, generated outputs are deleted.
+
+The following evidence is atomically persisted in `official_execution_preflight.json`:
 
 ```json
 {
@@ -56,72 +61,78 @@ validate_episode_package_memory.py
 }
 ```
 
-### Guarded Renderer Handoff
+### 3. Handoff recheck
 
-- rejects a source preflight without complete hardening evidence;
-- invokes the existing immutable handoff builder;
-- verifies that the copied bundle preflight retains the same evidence;
-- deletes a newly created bundle if the evidence is lost after copying.
+Financial Visual Cross-Artifact may update final public files after Final Production. Therefore, immediately before bundle creation, the current episode package, spoken script, asset manifest, and render spec are rechecked.
 
-Because the preflight bytes are SHA-bound in the handoff manifest and bundle ID, the hardening evidence is immutable inside the bundle.
+On success, the preflight becomes:
 
-### Guarded Real-Day Acceptance
+```json
+{
+  "episode_memory_hardening": {
+    "pre_build": "pass",
+    "public_artifacts": "pass",
+    "handoff_recheck": "pass"
+  }
+}
+```
 
-- requires exactly one preflight role in the handoff manifest;
-- loads the bundled preflight and verifies complete hardening evidence;
-- invokes the existing Real-Day Acceptance runner;
-- keeps the existing acceptance-report schema unchanged;
-- records hardening verification as a validation warning rather than adding an unsupported top-level field.
+The base Handoff builder then hashes and copies these final bytes. A newly created bundle is deleted if the copied preflight loses this evidence.
 
-## New fail-closed conditions
+## Guarded Real-Day Acceptance
+
+Real-Day Acceptance requires:
+
+- exactly one preflight role in the handoff manifest;
+- complete three-stage hardening in the bundled preflight;
+- base Real-Day validation PASS;
+- pinned renderer technical PASS and preview MP4;
+- no final render execution.
+
+The existing acceptance-report schema is preserved; verification is recorded in `validation.warnings`.
+
+## Fail-closed conditions
 
 - Scene missing, duplicated, or out of order;
 - missing or duplicated 04 result;
-- arbitrary content after the memory annex;
-- malformed or misplaced Final Production Source annex;
+- malformed or misplaced annexes;
 - package filename/date mismatch;
 - MEMREF or memory internal fields in public artifacts;
-- repo-root escape for output or public-artifact paths;
+- repo-root escape;
 - base PR #8 or PR #6 validation unavailable or failing;
-- post-build leak with generated artifacts left behind;
-- renderer handoff built from an unhardened preflight;
-- acceptance attempted with a bundle that lost hardening evidence.
+- post-build leak with generated artifacts retained;
+- final public files changed after the previous scan without handoff recheck;
+- renderer bundle missing three-stage hardening evidence;
+- Real-Day Acceptance attempted with an unhardened bundle.
 
-## Regression matrix
+## Permanent regression matrix
 
-Permanent CI runs:
+CI runs:
 
-- Episode Package Memory base tests;
-- episode-memory hardening tests;
+- Episode Package Memory base and hardening tests;
 - Final Production base and hardening tests;
+- Financial Visual contract regressions;
 - Renderer Handoff base and hardening tests;
 - Real-Day Acceptance base and hardening tests;
-- Final Episode financial-visual contract regression;
+- Daily Control Plane base and hardening tests;
 - PR #6 memory revalidation;
 - retrieval, promotion, and editorial-memory contract regressions.
 
 ## Responsibility boundary
 
-This hardening does not:
-
-- modify 01–04;
-- select the lead or market causality;
-- create Expected / Actual / Gap;
-- rewrite fox narration;
-- choose financial visuals, recipes, images, Primary, or Fallback;
-- render preview or final;
-- replace the user’s visual review.
+This hardening does not modify 01–04, select the lead or market causality, create Expected / Actual / Gap, rewrite fox narration, choose financial visuals or image routes, render preview/final, or replace user visual review.
 
 ## Goal
 
-A Real-Day Acceptance report may count toward MVP only when the exact chain below is proven:
+MVP proof requires the exact chain:
 
 ```text
 post-inquisition episode package
 → revalidated memory use
-→ leak-free deterministic production artifacts
+→ leak-free production artifacts
+→ handoff-time final-byte recheck
 → immutable hardened preview bundle
-→ pinned renderer technical PASS
+→ renderer technical PASS
 → preview MP4
 → user visual review
 ```
