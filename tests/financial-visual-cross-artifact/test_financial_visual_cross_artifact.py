@@ -99,6 +99,7 @@ class FinancialVisualCrossArtifactTests(unittest.TestCase):
             "financial_recipe_plan.schema.json",
             "financial_visual_diversity_report.schema.json",
             "financial_visual_consistency_report.schema.json",
+            "financial_visual_compatibility.json",
         ):
             (self.repo / "contracts").mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / "contracts" / name, self.repo / "contracts" / name)
@@ -258,6 +259,10 @@ class FinancialVisualCrossArtifactTests(unittest.TestCase):
         self.assertEqual(["aws-expected", "aws-actual", "aws-gap"], beat["objectIds"])
         self.assertEqual(["source-001"], beat["evidenceSourceIds"])
         self.assertEqual("AWS revenue, same quarter and currency", beat["templateConfig"]["comparisonBasis"])
+        self.assertEqual("financial-recipe-plan", beat["templateConfig"]["dataBasis"])
+        self.assertEqual([], beat["templateConfig"]["nodeOrder"])
+        self.assertEqual([], beat["templateConfig"]["laneLabels"])
+        self.assertIsNone(beat["templateConfig"]["outcomeNodeId"])
 
     def test_05_stale_recipe_plan_is_rejected(self):
         plan = json.loads(self.recipe_plan_path.read_text())
@@ -346,6 +351,23 @@ class FinancialVisualCrossArtifactTests(unittest.TestCase):
         report.write_text("{}", encoding="utf-8")
         with self.assertRaisesRegex(cross.CrossArtifactError, "must be omitted"):
             self.integrate(report)
+
+    def test_17_compatibility_matrix_is_sha_bound(self):
+        result = self.integrate()
+        matrix = self.repo / "contracts" / "financial_visual_compatibility.json"
+        self.assertEqual(sha(matrix), result["hashes"]["compatibility_matrix"])
+        report = json.loads((self.production / "verification" / self.date / "financial_visual_consistency_report.json").read_text())
+        self.assertEqual(sha(matrix), report["compatibilityMatrix"]["sha256"])
+        preflight = json.loads((self.production / "verification" / self.date / "official_execution_preflight.json").read_text())
+        self.assertEqual("financial-visual-compat-2026-08", preflight["financial_visuals"]["compatibility_matrix_id"])
+
+    def test_18_compatibility_matrix_mismatch_is_rejected(self):
+        matrix = self.repo / "contracts" / "financial_visual_compatibility.json"
+        value = json.loads(matrix.read_text())
+        value["renderer"]["renderSpecVersion"] = "2.4.0"
+        write_json(matrix, value)
+        with self.assertRaisesRegex(cross.CrossArtifactError, "does not exactly match"):
+            self.integrate()
 
 
 if __name__ == "__main__":

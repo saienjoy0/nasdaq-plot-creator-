@@ -27,6 +27,24 @@ class CrossArtifactError(ValueError):
     pass
 
 
+EXPECTED_COMPATIBILITY_MATRIX = {
+    "matrixId": "financial-visual-compat-2026-08",
+    "status": "pass",
+    "plotCreator": {
+        "repository": "saienjoy0/nasdaq-plot-creator-",
+        "financialIntentVersion": "1.1.0",
+        "financialRecipePlanVersion": "1.0.0",
+        "finalEpisodeContractVersion": "1.0.0",
+    },
+    "renderer": {
+        "repository": "saienjoy0/saienjoy0-nasdaq-cafe-remotion",
+        "renderSpecVersion": "2.3.0",
+        "financialTemplateRegistryVersion": "1.0.0",
+        "financialVisualTraceVersion": "1.0.0",
+    },
+}
+
+
 def canonical_json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
 
@@ -57,6 +75,22 @@ def load_json(path: Path, label: str) -> dict[str, Any]:
 
 def load_schema(path: Path) -> dict[str, Any]:
     return load_json(path, "schema")
+
+
+def validate_compatibility_matrix(
+    path: Path,
+    renderer_schema_version: str,
+) -> tuple[dict[str, Any], str]:
+    matrix = load_json(path, "financial visual compatibility matrix")
+    if matrix != EXPECTED_COMPATIBILITY_MATRIX:
+        raise CrossArtifactError(
+            "financial visual compatibility matrix does not exactly match the approved cross-repository tuple"
+        )
+    if matrix["renderer"]["renderSpecVersion"] != renderer_schema_version:
+        raise CrossArtifactError(
+            "renderer schema version disagrees with financial visual compatibility matrix"
+        )
+    return matrix, sha256_file(path)
 
 
 def validate_schema(payload: dict[str, Any], schema: dict[str, Any], label: str) -> None:
@@ -223,12 +257,17 @@ def apply_selected_plans(
         render_beat["screenState"] = selection["screenState"]
         render_beat["visualTemplate"] = selection["selectedVisualTemplateId"]
         render_beat["templateVariant"] = selection["templateVariant"]
+        causal_step_ids = selection["causalStepIds"]
         render_beat["templateConfig"] = {
             "variant": selection["templateVariant"],
-            "displayOrder": selected_plan["displayOrder"],
             "comparisonBasis": selected_plan["comparisonBasis"],
+            "dataBasis": "financial-recipe-plan",
+            "nodeOrder": causal_step_ids[:4],
+            "laneLabels": [],
+            "outcomeNodeId": causal_step_ids[-1] if causal_step_ids else None,
+            "displayOrder": selected_plan["displayOrder"],
             "metricIds": selection["metricIds"],
-            "causalStepIds": selection["causalStepIds"],
+            "causalStepIds": causal_step_ids,
             "highlightObjectIds": selected_plan["highlightObjectIds"],
         }
         render_beat["objectIds"] = selected_plan["displayOrder"]
@@ -342,6 +381,7 @@ def integrate(
     diversity_schema_path: Path,
     consistency_schema_path: Path,
     diversity_report_path: Path | None = None,
+    compatibility_matrix_path: Path | None = None,
 ) -> dict[str, Any]:
     final_contract_module.validate_contract(
         final_contract_path,
@@ -371,6 +411,13 @@ def integrate(
     date = final_contract["episodeDate"]
     if actual_recipe_plan["episodeDate"] != date:
         raise CrossArtifactError("episode date mismatch between Final Contract and Recipe Plan")
+    compatibility_matrix_path = compatibility_matrix_path or (
+        repo_root / "contracts" / "financial_visual_compatibility.json"
+    )
+    compatibility_matrix, compatibility_matrix_sha = validate_compatibility_matrix(
+        compatibility_matrix_path,
+        renderer_schema_version,
+    )
     paths = _artifact_paths(production_root, date)
     render_spec = load_json(paths["render_spec"], "render spec")
     spoken = paths["spoken_script"].read_text(encoding="utf-8")
@@ -413,6 +460,8 @@ def integrate(
         "selection_count": len(traces),
         "fallback_count": sum(trace["selectedPath"] == "fallback" for trace in traces),
         "fallback_diversity": diversity_status,
+        "compatibility_matrix_id": compatibility_matrix["matrixId"],
+        "compatibility_matrix_sha256": compatibility_matrix_sha,
         "unresolved_states": 0,
     }
     consistency["status"] = "pass"
@@ -432,6 +481,10 @@ def integrate(
         "financialRecipePlan": {
             "path": safe_relative(repo_root, recipe_plan_path, "Financial Recipe Plan"),
             "sha256": recipe_plan_sha,
+        },
+        "compatibilityMatrix": {
+            "path": safe_relative(repo_root, compatibility_matrix_path, "Compatibility Matrix"),
+            "sha256": compatibility_matrix_sha,
         },
         "episodePackageSha256": final_contract["episodePackage"]["sha256"],
         "renderSpec": {
@@ -462,6 +515,7 @@ def integrate(
             "sourceIds": True,
             "displayOrder": True,
             "comparisonBasis": True,
+            "compatibilityMatrix": True,
             "selectedPathFreeze": True,
             "nonSelectedPathAbsent": True,
             "spokenScript": True,
@@ -480,6 +534,7 @@ def integrate(
     artifacts["consistency_report"] = consistency_sha
     artifacts["final_episode_contract"] = sha256_file(final_contract_path)
     artifacts["financial_recipe_plan"] = recipe_plan_sha
+    artifacts["financial_visual_compatibility"] = compatibility_matrix_sha
     artifacts["financial_visual_consistency_report"] = cross_report_sha
     if diversity_report_path is not None:
         artifacts["financial_visual_diversity_report"] = sha256_file(diversity_report_path)
@@ -490,6 +545,8 @@ def integrate(
         "recipe_plan_version": actual_recipe_plan["contractVersion"],
         "final_episode_contract_version": final_contract["contractVersion"],
         "recipe_registry_version": actual_recipe_plan["recipeRegistryVersion"],
+        "compatibility_matrix_id": compatibility_matrix["matrixId"],
+        "compatibility_matrix_sha256": compatibility_matrix_sha,
         "recipe_plan_sha256": recipe_plan_sha,
         "consistency_report_sha256": cross_report_sha,
         "selection_count": len(traces),
@@ -514,6 +571,7 @@ def integrate(
             "render_spec": render_sha,
             "consistency_report": consistency_sha,
             "financial_visual_consistency_report": cross_report_sha,
+            "compatibility_matrix": compatibility_matrix_sha,
             "preflight": sha256_file(paths["preflight"]),
         },
     }
@@ -534,6 +592,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--recipe-plan-schema", type=Path, default=root / "contracts/financial_recipe_plan.schema.json")
     parser.add_argument("--diversity-schema", type=Path, default=root / "contracts/financial_visual_diversity_report.schema.json")
     parser.add_argument("--consistency-schema", type=Path, default=root / "contracts/financial_visual_consistency_report.schema.json")
+    parser.add_argument("--compatibility-matrix", type=Path, default=root / "contracts/financial_visual_compatibility.json")
     parser.add_argument("--report", type=Path)
     args = parser.parse_args(argv)
     try:
@@ -550,6 +609,7 @@ def main(argv: list[str] | None = None) -> int:
             diversity_schema_path=args.diversity_schema,
             consistency_schema_path=args.consistency_schema,
             diversity_report_path=args.diversity_report,
+            compatibility_matrix_path=args.compatibility_matrix,
         )
         code = 0
     except (CrossArtifactError, final_contract_module.ContractError, recipe_compiler.CompileError, OSError) as exc:
