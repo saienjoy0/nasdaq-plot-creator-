@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nasdaq-cafe.local/schemas/production_state.schema.json",
+  "title": "NASDAQ Cafe Production State",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "episode_date", "current_state", "request_sha256", "daily_source_sha256", "invalidated", "transitions"],
+  "properties": {
+    "contract_version": {"const": "1.0.0"},
+    "episode_date": {"type": "string", "format": "date"},
+    "current_state": {
+      "enum": [
+        "intake_ready",
+        "research_inputs_bound",
+        "causal_dossier_valid",
+        "episode_package_final",
+        "memory_usage_valid",
+        "assets_resolved",
+        "production_package_valid",
+        "handoff_ready",
+        "preview_dispatched",
+        "preview_ready",
+        "user_review_pending",
+        "user_preview_approved",
+        "final_requested",
+        "final_completed",
+        "publication_approved",
+        "memory_promoted"
+      ]
+    },
+    "request_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "daily_source_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "invalidated": {"type": "boolean"},
+    "transitions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["state", "evidence"],
+        "properties": {
+          "state": {
+            "enum": [
+              "intake_ready",
+              "research_inputs_bound",
+              "causal_dossier_valid",
+              "episode_package_final",
+              "memory_usage_valid",
+              "assets_resolved",
+              "production_package_valid",
+              "handoff_ready",
+              "preview_dispatched",
+              "preview_ready",
+              "user_review_pending",
+              "user_preview_approved",
+              "final_requested",
+              "final_completed",
+              "publication_approved",
+              "memory_promoted"
+            ]
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object", "additionalProperties": false,
+              "required": ["path", "sha256"],
+              "properties": {
+                "path": {"type": "string", "minLength": 1},
+                "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
