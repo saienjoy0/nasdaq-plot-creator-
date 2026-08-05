@@ -23,11 +23,11 @@ memory query plan
 
 まだ、因果調査から最終episode package、画像採用経路、render spec、renderer previewまでを一つの制作契約として接続する工程は完成していません。
 
-現在地、次のPR、MVPゴール、運用ゴールは次を正本とします。
+現在地、次の実装、MVPゴール、運用ゴールは次を正本とします。
 
 - [`designs/CURRENT_STATE_AND_ROADMAP.md`](designs/CURRENT_STATE_AND_ROADMAP.md)
 
-次に着手するのは、再検証済み記憶を最終episode packageへ安全に接続するPR #7です。
+文書化はPR #7です。次に着手する実装は、再検証済み記憶を最終episode packageへ安全に接続するPR #8です。
 
 ## 基本フロー
 
