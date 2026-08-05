@@ -16,6 +16,12 @@ sys.modules[spec.name] = module
 spec.loader.exec_module(module)
 
 
+class GateResult:
+    def __init__(self, errors=None):
+        self.errors = errors or []
+        self.warnings = []
+
+
 class Tests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -25,9 +31,22 @@ class Tests(unittest.TestCase):
         preflight_dir.mkdir(parents=True)
         self.preflight = preflight_dir / "official_execution_preflight.json"
         self.bundle_root = self.root / "bundles"
+        episode_dir = self.root / f"episodes/{self.date}"
+        episode_dir.mkdir(parents=True)
+        (episode_dir / f"episode_package_{self.date}.md").write_text("package", encoding="utf-8")
+        (episode_dir / f"spoken_script_{self.date}.md").write_text("spoken", encoding="utf-8")
+        (episode_dir / "asset_manifest.json").write_text("{}", encoding="utf-8")
+        render_dir = self.root / f"render-specs/{self.date}"
+        render_dir.mkdir(parents=True)
+        (render_dir / "render_spec.json").write_text("{}", encoding="utf-8")
+        self.gate_calls = []
 
     def tearDown(self):
         self.tmp.cleanup()
+
+    def gate_pass(self, source_root, package, artifacts):
+        self.gate_calls.append((package, list(artifacts)))
+        return GateResult()
 
     def write_preflight(self, hardening=None):
         self.preflight.write_text(
@@ -54,20 +73,28 @@ class Tests(unittest.TestCase):
             "renderer_contract_version": "2.2.0",
         }
 
-    def test_01_pass(self):
+    def build(self, **kwargs):
+        return module.build_handoff_hardened(
+            **self.args(), gate=self.gate_pass, builder=self.builder, **kwargs
+        )
+
+    def test_01_pass_and_persist_handoff_recheck(self):
         self.write_preflight({"pre_build": "pass", "public_artifacts": "pass"})
-        result = module.build_handoff_hardened(**self.args(), builder=self.builder)
+        result = self.build()
         self.assertEqual("pass", result["episode_memory_hardening"])
+        self.assertEqual(1, len(self.gate_calls))
+        current = json.loads(self.preflight.read_text())
+        self.assertEqual(module.HANDOFF_HARDENING, current["episode_memory_hardening"])
 
     def test_02_missing_hardening_rejected(self):
         self.write_preflight(None)
         with self.assertRaises(module.HardenedHandoffError):
-            module.build_handoff_hardened(**self.args(), builder=self.builder)
+            self.build()
 
     def test_03_partial_hardening_rejected(self):
         self.write_preflight({"pre_build": "pass", "public_artifacts": "fail"})
         with self.assertRaises(module.HardenedHandoffError):
-            module.build_handoff_hardened(**self.args(), builder=self.builder)
+            self.build()
 
     def test_04_bundled_loss_deletes_created_bundle(self):
         self.write_preflight({"pre_build": "pass", "public_artifacts": "pass"})
@@ -81,7 +108,9 @@ class Tests(unittest.TestCase):
             return {"status": "created", "bundle_path": str(target)}
 
         with self.assertRaises(module.HardenedHandoffError):
-            module.build_handoff_hardened(**self.args(), builder=bad_builder)
+            module.build_handoff_hardened(
+                **self.args(), gate=self.gate_pass, builder=bad_builder
+            )
         self.assertFalse((self.bundle_root / "bad").exists())
 
     def test_05_noop_loss_is_not_deleted(self):
@@ -96,8 +125,29 @@ class Tests(unittest.TestCase):
             return {"status": "noop", "bundle_path": str(target)}
 
         with self.assertRaises(module.HardenedHandoffError):
-            module.build_handoff_hardened(**self.args(), builder=bad_builder)
+            module.build_handoff_hardened(
+                **self.args(), gate=self.gate_pass, builder=bad_builder
+            )
         self.assertTrue((self.bundle_root / "existing").exists())
+
+    def test_06_handoff_recheck_failure_blocks_builder(self):
+        self.write_preflight({"pre_build": "pass", "public_artifacts": "pass"})
+        builder_called = False
+
+        def gate_fail(source_root, package, artifacts):
+            return GateResult(["late leak"])
+
+        def builder(**kwargs):
+            nonlocal builder_called
+            builder_called = True
+            return {}
+
+        with self.assertRaises(module.HardenedHandoffError) as cm:
+            module.build_handoff_hardened(
+                **self.args(), gate=gate_fail, builder=builder
+            )
+        self.assertIn("handoff-time", str(cm.exception))
+        self.assertFalse(builder_called)
 
 
 if __name__ == "__main__":
