@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nasdaq-cafe.local/schemas/real_day_acceptance_report.schema.json",
+  "title": "NASDAQ Cafe Real-Day Acceptance Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "episode_date", "daily_source", "handoff", "renderer", "preview", "user_review", "validation", "final_render_executed", "mvp_status"],
+  "properties": {
+    "contract_version": {"const": "1.0.0"},
+    "episode_date": {"type": "string", "format": "date"},
+    "daily_source": {
+      "type": "object", "required": ["path", "sha256"],
+      "properties": {"path": {"type": "string"}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+    },
+    "handoff": {
+      "type": "object", "required": ["bundle_id", "manifest_path", "manifest_sha256"],
+      "properties": {
+        "bundle_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "manifest_path": {"type": "string"},
+        "manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "renderer": {
+      "type": "object", "required": ["expected_commit", "observed_commit", "technical_report_sha256"],
+      "properties": {
+        "expected_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "observed_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "technical_report_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "preview": {
+      "type": "object", "required": ["artifact_path", "sha256", "size"],
+      "properties": {
+        "artifact_path": {"type": "string"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "size": {"type": "integer", "minimum": 1}
+      }
+    },
+    "user_review": {
+      "type": "object", "required": ["status", "reviewed_at", "notes"],
+      "properties": {
+        "status": {"enum": ["pending", "approved", "rejected"]},
+        "reviewed_at": {"oneOf": [{"type": "string"}, {"type": "null"}]},
+        "notes": {"type": "string"}
+      }
+    },
+    "validation": {
+      "type": "object", "required": ["status", "errors", "warnings"],
+      "properties": {
+        "status": {"enum": ["pass", "fail"]},
+        "errors": {"type": "array", "items": {"type": "string"}},
+        "warnings": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "final_render_executed": {"const": false},
+    "mvp_status": {"enum": ["preview_ready_user_review_pending", "passed", "failed"]}
+  }
+}
