@@ -1,7 +1,7 @@
 ---
 name: nasdaq-cafe-causal-research
 description: Build an evidence-grounded causal research dossier from a daily NASDAQ source package before editorial selection and script writing.
-version: 0.1.0
+version: 0.2.0
 ---
 
 # NASDAQ Cafe Causal Research
@@ -10,7 +10,7 @@ version: 0.1.0
 
 This skill sits between daily information collection and the editorial decision governed by `02_editorial_bible.md`.
 
-It prevents the system from turning a surface-level list of overnight events directly into a script. It expands the evidence, tests competing explanations, and produces a structured research dossier for the editor.
+It prevents the system from turning a surface-level list of overnight events directly into a script. It expands the evidence, tests competing explanations, revalidates relevant editorial memory against current evidence, and produces a structured research dossier for the editor.
 
 This skill does **not**:
 
@@ -19,12 +19,18 @@ This skill does **not**:
 - generate the nine-scene episode package
 - recommend trades, prices, or portfolio actions
 - overwrite 01–04
+- treat remembered claims as current evidence
+- allow memory retrieval to decide market causality
 
 ## Inputs
 
 Required:
 
 - `daily_source_package_YYYY-MM-DD.md`
+- `working/memory_query_plan_YYYY-MM-DD.json`
+- `working/memory_context_YYYY-MM-DD.md`
+- `working/memory_retrieval_report_YYYY-MM-DD.json`
+- `research/YYYY-MM-DD/research_input_manifest.json`
 - current market session/date and information cutoff
 - `source-of-truth/02_editorial_bible.md`
 - available primary sources and market data
@@ -39,12 +45,15 @@ Optional:
 
 Missing inputs must not be invented. Record them as missing or unknown.
 
+The research input manifest must bind the daily package, query plan, memory context, and retrieval report to the same episode date and their SHA-256 values. Do not proceed with a mismatched or stale manifest.
+
 ## Outputs
 
 Required:
 
 - `research/causal_research_dossier_YYYY-MM-DD.md`
 - `research/causal_research_dossier_YYYY-MM-DD.json`
+- memory revalidation results for every selected non-core memory
 - validator result
 
 The dossier is an editorial research artifact, not public narration.
@@ -54,9 +63,12 @@ The dossier is an editorial research artifact, not public narration.
 ### Stage 0 — Contract and input gate
 
 1. Read project instructions and 01–04.
-2. Record the exact input files, versions, session date, cutoff time, and timezone.
-3. Confirm that the daily package contains enough basic data to begin.
-4. Do not write narration or scene copy at this stage.
+2. Record the exact input files, versions, session date, cutoff time, timezone, and research input manifest.
+3. Confirm that the manifest hashes match the supplied files.
+4. Confirm that the daily package, query plan, retrieval report, and dossier use the same episode date.
+5. Confirm that the daily package contains enough basic data to begin.
+6. Do not write narration or scene copy at this stage.
+7. Treat `memory_context` as historical research leads only.
 
 ### Stage 1 — Overnight contradiction detection
 
@@ -78,6 +90,8 @@ Rank candidates by:
 
 Output a provisional lead only. Final selection remains under 02.
 
+Past memory may suggest questions or comparison points, but it may not raise a candidate's rank without current-session evidence.
+
 ### Stage 2 — Perspective-guided question generation
 
 Use the STORM pattern: discover distinct perspectives before searching deeply.
@@ -94,10 +108,21 @@ Generate questions from at least these perspectives when relevant:
 - rates, dollar, oil, policy, and macro
 - index/sector transmission
 - counter-hypothesis and disconfirming evidence
+- remembered claim revalidation and change from the prior episode
 
 Do not generate a fixed quota merely to fill space. The default range is 8–16 material questions.
 
 Questions must include follow-up potential. A question should be revised when new evidence changes the research direction.
+
+A remembered claim should normally become a research question such as:
+
+```text
+Past memory
+→ what current evidence would support, weaken, or invalidate it?
+→ what has changed since the prior episode?
+```
+
+It must not become an answer by itself.
 
 ### Stage 3 — Parallel specialist research
 
@@ -122,11 +147,14 @@ Recommended research roles:
 
 6. **Historical Context Researcher**
    - prior quarters, prior guidance, when the market evaluation axis changed, unresolved older concerns
+   - use selected memory only to identify prior claims and comparison questions
+   - collect new current evidence before assigning a current revalidation status
 
 7. **Counter-Hypothesis Researcher**
    - alternative causes, contradictory assets, pre-existing price move, absent sector spillover, source dependence
+   - actively test whether a remembered claim has weakened or become invalid
 
-Researchers return evidence items, not polished narrative.
+Researchers return evidence items and memory revalidation findings, not polished narrative.
 
 ### Stage 4 — Evidence normalization
 
@@ -146,7 +174,48 @@ Every material evidence item must record:
 
 Unreadable pages and headline-only material cannot support final causal claims.
 
-### Stage 5 — Dynamic causal map
+Paths under `editorial-memory/`, memory IDs, memory-context files, and retrieval reports are not current evidence. They must never be assigned `E-###` merely to satisfy the contract.
+
+### Stage 5 — Memory revalidation
+
+Every selected non-core item in the retrieval report must receive exactly one result.
+
+Required fields:
+
+- `memory_reference_type`
+- `memory_reference_id`
+- `historical_confidence`
+- `retrieval_use_mode`
+- `revalidation_status`
+- `current_evidence_ids`
+- `difference_from_previous`
+- `editorial_use`
+- `notes`
+
+Allowed `revalidation_status` values:
+
+- `not_used`
+- `supported`
+- `partially_supported`
+- `weakened`
+- `invalidated`
+- `unresolved`
+- `historical_context_only`
+
+Rules:
+
+- `supported`, `partially_supported`, `weakened`, and `invalidated` require current evidence.
+- `supported` requires current tier-1 or tier-2 fact or reported-interpretation evidence.
+- `weakened` and `invalidated` require current contrary evidence.
+- `historical_context_only` may support comparison or explanation context, but not a current causal edge.
+- `not_used` is valid and must be recorded rather than silently omitted.
+- `unresolved` is valid when current evidence is insufficient.
+- a memory with retrieval status `invalidated` or `resolved` cannot be used as a current premise.
+- `difference_from_previous` must explain what changed, remained unconfirmed, or could not be compared.
+
+Core procedural memory is classified in the research input manifest and is not repeated as an editorial claim revalidation entry.
+
+### Stage 6 — Dynamic causal map
 
 Build a causal map rather than a news list.
 
@@ -164,15 +233,18 @@ Each edge must include:
 
 - from and to nodes
 - mechanism
-- supporting evidence IDs
+- supporting current evidence IDs
 - timing alignment
 - confidence
 - strongest alternative explanation
 - whether the edge is required for the final story
+- scope: company direct, sector support, NASDAQ-wide, or context only
 
 Do not keep an edge only because it makes the story smoother.
 
-### Stage 6 — Expected / Actual / Gap
+Memory IDs and memory paths cannot appear as causal-edge evidence. A NASDAQ-wide edge must have current tier-1 or tier-2 evidence and cannot be supported only by historical context.
+
+### Stage 7 — Expected / Actual / Gap
 
 Expected must use one of the categories defined by 02:
 
@@ -183,13 +255,15 @@ Expected must use one of the categories defined by 02:
 - price-derived inference
 - unconfirmed
 
-Record a concrete source for Expected. If it cannot be verified, set it to unconfirmed and do not fabricate a gap.
+Record a concrete current source for Expected. If it cannot be verified, set it to unconfirmed and do not fabricate a gap.
 
 Actual must come from verifiable releases, statistics, decisions, or statements.
 
 Gap explains what changed in the market's understanding, not merely whether a number was above or below a forecast.
 
-### Stage 7 — Timeline and alternative-cause test
+Editorial memory may identify what was discussed in a prior episode, but it cannot be the sole evidence for Expected, Actual, or Gap.
+
+### Stage 8 — Timeline and alternative-cause test
 
 Before connecting a story to price:
 
@@ -198,6 +272,7 @@ Before connecting a story to price:
 - check related stocks and indices
 - check rates, dollar, oil, VIX, and sector behavior when relevant
 - avoid precise intraday wording when intraday data is unavailable
+- test whether remembered explanations still fit the current timing
 
 Classify factors as:
 
@@ -206,7 +281,7 @@ Classify factors as:
 - offsetting factor
 - unresolved factor
 
-### Stage 8 — Research compression
+### Stage 9 — Research compression
 
 Compress specialist findings before editorial synthesis.
 
@@ -217,6 +292,7 @@ Remove:
 - background that cannot reach NASDAQ
 - interesting but nonessential company trivia
 - unsupported interpretations
+- remembered claims that were not revalidated or deliberately retained as historical-only
 
 Preserve:
 
@@ -225,8 +301,9 @@ Preserve:
 - the most credible alternative hypothesis
 - uncertainty that changes wording strength
 - one or more headline-beyond discoveries
+- material differences from prior remembered claims
 
-### Stage 9 — Editorial handoff
+### Stage 10 — Editorial handoff
 
 The dossier must end with:
 
@@ -241,8 +318,11 @@ The dossier must end with:
 - facts that must not enter narration
 - questions still unresolved
 - what to monitor next to validate or weaken the hypothesis
+- `memory_differences`: the limited, revalidated comparison points that may be considered by the editor
 
 The editor then applies 02 and may reject or revise the provisional lead.
+
+The editor must not copy a remembered claim into narration unless its revalidation result permits the intended use and current evidence IDs are available.
 
 ## Stopping conditions
 
@@ -255,6 +335,7 @@ Research can stop when all of the following are true:
 - at least one credible alternative explanation has been tested
 - important contrary evidence is retained
 - the lead can be separated from a NASDAQ-wide cause when necessary
+- every selected non-core memory has a revalidation result
 - additional searches are returning mostly duplicate or non-causal information
 
 Do not stop simply because a predetermined number of links was collected.
@@ -268,14 +349,16 @@ Return an incomplete dossier rather than inventing content when:
 - Expected cannot be established
 - related assets do not support the proposed transmission
 - multiple explanations remain equally plausible
+- a remembered claim cannot be revalidated with current evidence
+- input hashes or episode dates do not match
 
-`reason_unknown` is an acceptable editorial outcome.
+`reason_unknown`, `unresolved`, and `not_used` are acceptable editorial outcomes.
 
 ## Validation
 
-Run the dossier validator before handing off to 02.
+Run the v0.2 dossier validator before handing off to 02.
 
-A dossier fails validation when it lacks:
+A dossier fails validation when it lacks or violates:
 
 - source provenance
 - a contradiction or explicit reason-unknown statement
@@ -284,5 +367,10 @@ A dossier fails validation when it lacks:
 - uncertainty and contrary evidence
 - separation of company-direct and NASDAQ-wide claims
 - Expected source classification
+- research input manifest integrity
+- complete classification of selected non-core memory
+- current evidence for a supported, weakened, or invalidated remembered claim
+- prohibition on memory-only Expected or NASDAQ-wide causal edges
+- prohibition on invalidated/resolved memory as a current premise
 
-Passing validation means the research artifact is structurally complete. It does not prove that the market interpretation is true.
+Passing validation means the research artifact is structurally complete and memory provenance is controlled. It does not prove that the market interpretation is true.
