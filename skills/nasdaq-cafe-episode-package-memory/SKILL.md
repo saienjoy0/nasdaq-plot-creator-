@@ -1,6 +1,6 @@
 ---
 name: nasdaq-cafe-episode-package-memory
-version: 1.0.0
+version: 1.1.0
 description: Validate how revalidated editorial memory is used in the final human-readable episode package without changing editorial meaning.
 ---
 
@@ -18,10 +18,13 @@ The episode package remains the human editorial source of truth. Memory metadata
 - validated causal research dossier v0.2
 - dossier-linked research input manifest
 - manifest-linked memory retrieval report
+- optional generated public artifacts for metadata-leak scanning
 
 ## Contract
 
-The episode package must contain exactly one annex:
+The episode package must contain Scene 1 through Scene 9 exactly once and in order, followed by exactly one integrated `04 興味深さ・わかりやすさ審問結果` section.
+
+The final section must be exactly one Editorial Memory Usage Annex. A Final Production Source annex, when present, appears before the memory annex.
 
 ```text
 <!--BEGIN_EPISODE_MEMORY_ANNEX-->
@@ -31,17 +34,30 @@ The episode package must contain exactly one annex:
 <!--END_EPISODE_MEMORY_ANNEX-->
 ```
 
+No non-whitespace content may appear after the memory annex end marker.
+
 Each public use must contain exactly one marker:
 
 ```text
 <!--MEMREF:MR-001:U-001-->
 ```
 
-The marker must immediately follow the exact anchor text. Markers and the annex are production metadata and must never enter spoken script, captions, telops, render-spec public text, or viewer-visible output.
+The marker must immediately follow the exact anchor text. Markers and the annex are production metadata and must never enter spoken script, captions, telops, asset manifest public fields, render-spec public text, or viewer-visible output.
+
+## Authoritative validation order
+
+Run:
+
+```text
+validate_episode_package_memory.py
+→ validate_episode_package_memory_hardening.py
+```
+
+The hardening validator invokes the base PR #8 validator. A base failure, import failure, PR #6 replay failure, or hardening failure stops production.
 
 ## Validation behavior
 
-The validator:
+The base validator:
 
 1. resolves all paths inside the repository root;
 2. verifies the dossier SHA-256;
@@ -54,8 +70,29 @@ The validator:
 9. blocks unsupported memory use in titles and thumbnails;
 10. blocks concrete fox personal-history claims until a dedicated personal-memory contract exists.
 
+The hardening validator additionally:
+
+1. requires all nine Scenes exactly once and in order;
+2. requires exactly one integrated 04 inquisition result before the memory annex;
+3. requires the memory annex to be the final section;
+4. requires the filename date to match the annex episode date;
+5. scans supplied public artifacts for MEMREF, annex markers, and internal memory fields;
+6. rejects public-artifact paths outside the repository root;
+7. fails closed if the base validator cannot run.
+
+Example:
+
+```bash
+python skills/nasdaq-cafe-episode-package-memory/validators/validate_episode_package_memory_hardening.py \
+  --episode-package episodes/YYYY-MM-DD/episode_package_YYYY-MM-DD.md \
+  --public-artifact episodes/YYYY-MM-DD/spoken_script_YYYY-MM-DD.md \
+  --public-artifact episodes/YYYY-MM-DD/asset_manifest.json \
+  --public-artifact render-specs/YYYY-MM-DD/render_spec.json \
+  --output verification/YYYY-MM-DD/episode_memory_hardening.json
+```
+
 ## Responsibility boundary
 
 This skill does not select the lead, decide market causality, write or improve narration, perform the entertainment inquisition, choose an image path, create a render spec, or render video.
 
-Passing validation means declared memory usage is structurally and evidentially traceable. It does not prove that the editorial interpretation is correct.
+Passing validation means declared memory usage is structurally and evidentially traceable and the submitted package has the required final-package shape. It does not prove that the editorial interpretation is correct.
