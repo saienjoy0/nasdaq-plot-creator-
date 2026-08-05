@@ -3,8 +3,7 @@
 ## 目的
 
 監査可能な編集記憶検索を、当日の因果調査へ安全に接続する。
-
-過去回の仮説をそのまま現在の事実へ変換せず、次の経路を強制する。
+過去の仮説を現在の事実へ直接変換せず、次の経路を強制する。
 
 ```text
 過去記憶
@@ -22,61 +21,50 @@
 ```text
 daily_source_package
 → memory query plan
-→ selective editorial-memory retrieval
-→ research input manifest
+→ deterministic memory retrieval
+→ lineage-verified research input manifest
 → causal research dossier with memory revalidation
 → editorial decision under 02
 → fox narration under 01
 → nine-scene episode package under 03
 ```
 
-## 追加成果物
-
-```text
-research/YYYY-MM-DD/research_input_manifest.json
-research/causal_research_dossier_YYYY-MM-DD.json  # contract_version 0.2.0
-```
-
 ## Research Input Manifest
 
-Manifestは次の入力を固定する。
+`research/YYYY-MM-DD/research_input_manifest.json`は次を固定する。
 
 - daily source package
 - memory query plan
 - memory context
 - memory retrieval report
-- episode date
-- market date
-- timezone
-- information cutoff
+- episode date、market date、timezone、information cutoff
+- repo相対path
 - 各ファイルのSHA-256
 - selected memoryの用途別分類
 
-分類:
+分類は次の4種類。
 
 - `current_revalidation_required`
 - `historical_context_only`
 - `procedural`
 - `not_selected`
 
-`core` memoryはprocedural intakeとして残し、claimレベルの再検証対象にはしない。selected non-core memoryは全件、dossierで一つの再検証結果を持つ。
+`core` memoryはproceduralとして残し、claimレベルの再検証対象にはしない。
+selected non-core memoryは全件、dossierで一つだけ再検証結果を持つ。
 
-## Builder
+## Retrieval Lineage
 
-```bash
-python scripts/build_research_input_manifest.py \
-  --episode-date YYYY-MM-DD \
-  --market-date YYYY-MM-DD \
-  --timezone Asia/Tokyo \
-  --information-cutoff ISO-8601 \
-  --daily-source-package PATH \
-  --memory-query-plan PATH \
-  --memory-context PATH \
-  --memory-retrieval-report PATH \
-  --output research/YYYY-MM-DD/research_input_manifest.json
-```
+同じ日付であるだけでは入力を結合しない。
+Manifest builderはretrieverを同じQuery Planで再実行し、次を検査する。
 
-BuilderはLLMを使わない。schema、日付、存在、SHA、use modeだけを決定的に処理する。
+1. Reportの`query_plan_path`が渡されたQuery Planと一致する
+2. 再実行したContextと渡されたContextがバイト単位で一致する
+3. 再実行したReportと渡されたReportがバイト単位で一致する
+4. Query Plan、Context、Report、Daily packageがrepo/workspace内に存在する
+5. path traversal、絶対path、symlinkによるrepo外参照を拒否する
+6. Manifestにはrepo相対pathだけを保存する
+
+Dossier validatorも同じretrieval replayを再実行する。Manifestの`validation=pass`だけを信用しない。
 
 ## Memory Revalidation
 
@@ -104,122 +92,108 @@ notes
 - `unresolved`
 - `historical_context_only`
 
-`editorial_use`:
-
-- `not_used`
-- `research_lead`
-- `comparison`
-- `counterevidence`
-- `explanation_context`
-- `monitoring_point`
-- `procedural_only`
-
 ## 証拠ルール
 
-- `supported`には現在のtier 1 / tier 2のfactまたはreported interpretationが必要。
-- `weakened`と`invalidated`には現在の反対証拠が必要。
-- `historical_context_only`は比較または説明背景に限る。
-- `not_used`と`unresolved`は正しい結論として許可する。
-- `editorial-memory/`配下のpath、memory ID、memory context、retrieval reportは現在証拠ではない。
-- memoryを`E-###`へ置き換えて契約を満たしてはいけない。
-- memoryはExpected、Actual、causal edge、NASDAQ-wide causeの唯一の根拠になれない。
+結論を持つ次の4状態は、現在のtier 1 / tier 2の`fact`または`reported_interpretation`を必要とする。
 
-## Dossier v0.2
+- `supported`
+- `partially_supported`
+- `weakened`
+- `invalidated`
 
-現行v0.1を上書きせず、次を追加したv0.2 schemaを新設する。
+次は禁止する。
 
-- `research_input_manifest`
-- `memory_revalidation`
-- causal edge `scope`
-- editorial handoff `memory_differences`
+- discovery-only、unavailable、tier 3、unknown、grounded inferenceだけで再検証結論を作る
+- `editorial-memory/`配下のpath、memory ID、context、reportを現在証拠へ変換する
+- memoryだけでExpected、Actual、causal edge、NASDAQ-wide causeを作る
+- invalidated / resolved memoryを現在の因果前提に使う
+- historical contextを現在のcausal edge根拠に使う
+- `not_used`へcurrent evidenceを残す
 
-既存v0.1は互換性のため残す。
+`not_used`と`unresolved`は正しい結論として許可する。
 
-## Validator
+## ManifestとReportの完全照合
 
-```bash
-python skills/nasdaq-cafe-causal-research/validators/validate_causal_research_dossier.py \
-  research/YYYY-MM-DD/causal_research_dossier_YYYY-MM-DD.json \
-  --research-input-manifest research/YYYY-MM-DD/research_input_manifest.json \
-  --memory-retrieval-report working/memory_retrieval_report_YYYY-MM-DD.json
-```
+ValidatorはID集合だけでなく、selected memoryごとに次を完全照合する。
 
-ERROR条件:
+- 正確に一つのbucketだけに存在すること
+- bucketと`use_mode`の一致
+- `requires_current_revalidation`
+- `retrieval_status`
+- memory path
+- provenance paths
+- historical confidence
+
+重複bucket、改変metadata、Reportにないmemory、Manifestから消えたmemoryを拒否する。
+
+## Evidence Reference Integrity
+
+存在確認の対象:
+
+- Expected / Actual
+- research questions
+- timeline
+- causal edges
+- contrary evidence
+- alternative hypothesesのsupporting / weakening evidence
+- memory revalidation current evidence
+
+どの場所でもdossier内に存在しない`E-###`を参照できない。
+
+## Validator ERROR条件
 
 1. dossier / manifest / reportの日付不一致
 2. Manifestまたは入力ファイルのSHA不一致
-3. reportにないmemory IDの参照
-4. selected non-core memoryの再検証漏れ
-5. duplicate revalidation
-6. retrieval use modeまたはhistorical confidenceの不一致
-7. supportedなのに現在証拠がない
-8. supportedにdiscovery-only / unavailable / memory pathを使用
-9. weakened / invalidatedなのに反対証拠がない
-10. invalidated / resolved memoryを現在の前提に利用
-11. historical contextを現在の因果前提に利用
+3. Query Plan・Context・Reportのretrieval replay不一致
+4. repo外path、絶対path、path traversal
+5. selected memoryの重複bucketまたはmetadata改変
+6. selected non-core memoryの再検証漏れ
+7. duplicate revalidation
+8. retrieval use modeまたはhistorical confidenceの不一致
+9. 結論状態に現在の高品質証拠がない
+10. invalidated / resolved memoryの現在利用
+11. historical contextの現在因果利用
 12. Expectedをmemoryだけで作成
 13. NASDAQ-wide edgeに現在のtier 1 / tier 2証拠がない
 14. causal edgeをmemoryだけで支持
-15. dossier内に存在しないevidence IDを参照
-
-WARNING条件:
-
-- historical confidenceがlow
-- current evidenceがtier 2のみ
-- difference_from_previousが空
-- supportedにcontext-only evidenceが含まれる
-
-Validator PASSは構造とprovenanceが揃ったことを示す。市場解釈の正しさを証明しない。
+15. dossier内に存在しないevidence ID参照
+16. daily input provenanceがManifestのpath/SHAと一致しない
 
 ## テスト
 
-13件の決定的unit testを追加する。
+22件の決定的unit testを実行する。
 
-正常系:
+主な正常系:
 
-- manifest生成が決定的
+- Manifest生成の決定性
 - current revalidation required / procedural分類
 - supported
 - weakened
-- historical context only
+- 実retrieverによるend-to-end lineage replay
 
-拒否系:
+主な拒否系:
 
-- 日付不一致
-- supported without evidence
-- memory path as current evidence
-- invalidated current premise
-- selected memory未分類
-- SHA mismatch
+- 同日だが別Query PlanのReport
+- 別検索・改変Context
+- repo外path、絶対path
+- 同じmemoryの複数bucket登録
+- bucketとuse modeの矛盾
+- Manifest selected metadata改変
+- partially supported + discovery-only
+- weakened + unavailable
+- invalidated + tier 3
+- research question内の未知Evidence ID
+- alternative hypothesis内の未知Evidence ID
 - memory-only Expected
 - quality evidenceのないNASDAQ-wide edge
-- unknown evidence ID
 
-新workflowは次を実行する。
-
-- schema syntax
-- new 13 tests
-- existing retrieval tests
-- existing promotion tests
-- existing memory contract validator
-
-## 変更対象
-
-- `AGENTS.md`
-- `scripts/build_research_input_manifest.py`
-- `skills/nasdaq-cafe-causal-research/SKILL.md`
-- `skills/nasdaq-cafe-causal-research/contracts/research_input_manifest.schema.json`
-- `skills/nasdaq-cafe-causal-research/contracts/memory_revalidation.schema.json`
-- `skills/nasdaq-cafe-causal-research/contracts/causal_research_dossier_v0.2.schema.json`
-- `skills/nasdaq-cafe-causal-research/validators/validate_causal_research_dossier.py`
-- `tests/memory-revalidation/**`
-- `.github/workflows/memory-revalidation-bridge.yml`
+新workflowはさらに既存retrieval、promotion、memory contractの回帰検査を行う。
 
 ## 非対象
 
 - 01〜04正本
-- memory retrieval scoring
-- promotion
+- retrieval scoring
+- memory promotion
 - episode package schema
 - render spec
 - renderer
@@ -227,31 +201,6 @@ Validator PASSは構造とprovenanceが揃ったことを示す。市場解釈�
 - 自動因果確定
 - vector DB / Graph DB
 
-## 完了条件
-
-- Manifestがschema-validかつdeterministic
-- 同一episode dateとSHAが固定される
-- selected non-core memoryが全件分類される
-- current evidenceなしのsupportedを拒否
-- memory-only Expected / causal edge / NASDAQ-wide causeを拒否
-- invalidated / resolvedの現在利用を拒否
-- 正常fixtureがPASS
-- 危険fixtureがFAIL
-- 既存retrieval / promotion / contractsが回帰しない
-- GitHub Actionsが編集判断を行わない
-
 ## 次のPR
 
 PR #7で、再検証済みmemoryだけをepisode packageへ接続する。
-
-予定フィールド:
-
-```text
-memory_reference_type
-memory_reference_id
-historical_confidence
-current_revalidation_status
-current_evidence_ids
-difference_from_previous
-editorial_use
-```
