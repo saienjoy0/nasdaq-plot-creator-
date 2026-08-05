@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nasdaq-cafe.local/schemas/episode_package_memory_annex.schema.json",
+  "title": "NASDAQ Cafe Episode Package Memory Annex",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "episode_date", "causal_dossier", "references", "validation_intent"],
+  "properties": {
+    "contract_version": {"const": "1.0.0"},
+    "episode_date": {"type": "string", "format": "date"},
+    "causal_dossier": {"$ref": "#/$defs/fileRef"},
+    "references": {"type": "array", "items": {"$ref": "#/$defs/memoryReference"}},
+    "validation_intent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["past_mentions_complete", "title_thumbnail_checked", "post_inquisition_final"],
+      "properties": {
+        "past_mentions_complete": {"const": true},
+        "title_thumbnail_checked": {"const": true},
+        "post_inquisition_final": {"const": true}
+      }
+    }
+  },
+  "$defs": {
+    "fileRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "memoryReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference_id", "memory_reference_type", "memory_reference_id", "historical_confidence", "current_revalidation_status", "dossier_editorial_use", "dossier_current_evidence_ids", "difference_from_previous", "public_usage_mode", "scope_limit", "usages"],
+      "properties": {
+        "reference_id": {"type": "string", "pattern": "^MR-[0-9]{3}$"},
+        "memory_reference_type": {"enum": ["thread", "claim", "episode", "lesson", "daily", "weekly"]},
+        "memory_reference_id": {"type": "string", "minLength": 1},
+        "historical_confidence": {"enum": ["high", "medium", "low", "unknown"]},
+        "current_revalidation_status": {"enum": ["supported", "partially_supported", "weakened", "invalidated", "unresolved", "historical_context_only", "not_used"]},
+        "dossier_editorial_use": {"enum": ["not_used", "research_lead", "comparison", "counterevidence", "explanation_context", "monitoring_point", "procedural_only"]},
+        "dossier_current_evidence_ids": {"type": "array", "items": {"type": "string", "pattern": "^E-[0-9]{3}$"}, "uniqueItems": true},
+        "difference_from_previous": {"type": "string"},
+        "public_usage_mode": {"enum": ["current_supported_context", "historical_comparison", "change_from_previous", "counterevidence", "correction", "monitoring_point", "internal_only"]},
+        "scope_limit": {"type": "string"},
+        "usages": {"type": "array", "items": {"$ref": "#/$defs/usage"}}
+      }
+    },
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["usage_id", "surface", "scene_id", "anchor_text", "marker", "claim_mode", "evidence_ids", "requires_source_attribution", "wording_strength", "title_thumbnail_permission"],
+      "properties": {
+        "usage_id": {"type": "string", "pattern": "^U-[0-9]{3}$"},
+        "surface": {"enum": ["scene_narration", "scene_connection", "main_telop", "support_telop", "visual_text", "title", "thumbnail", "description"]},
+        "scene_id": {"oneOf": [{"type": "string", "pattern": "^SCENE-0[1-9]$"}, {"type": "null"}]},
+        "anchor_text": {"type": "string", "minLength": 1, "maxLength": 500},
+        "marker": {"type": "string", "pattern": "^<!--MEMREF:MR-[0-9]{3}:U-[0-9]{3}-->$"},
+        "claim_mode": {"enum": ["current_fact", "current_reported_interpretation", "current_grounded_inference", "historical", "change", "correction", "counterevidence", "monitoring"]},
+        "evidence_ids": {"type": "array", "items": {"type": "string", "pattern": "^E-[0-9]{3}$"}, "uniqueItems": true},
+        "requires_source_attribution": {"type": "boolean"},
+        "wording_strength": {"enum": ["direct", "qualified", "historical", "corrective", "uncertain"]},
+        "title_thumbnail_permission": {"enum": ["not_applicable", "allowed", "forbidden"]},
+        "public_difference_summary": {"type": "string"}
+      }
+    }
+  }
+}
