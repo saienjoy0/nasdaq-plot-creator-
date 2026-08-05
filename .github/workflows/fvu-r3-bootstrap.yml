@@ -1,0 +1,40 @@
+name: FVU R3 Bootstrap
+
+on:
+  pull_request:
+    paths:
+      - "scripts/apply-fvu-r3-renderer-compatibility.py"
+      - "contracts/financial_visual_compatibility.json"
+      - ".github/workflows/fvu-r3-bootstrap.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'feat/fvu-r3-renderer-compatibility'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - name: Apply deterministic R3 compatibility patch
+        run: python3 scripts/apply-fvu-r3-renderer-compatibility.py
+      - name: Commit patched contracts and tests
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          git add -- \
+            scripts/financial_visual_cross_artifact.py \
+            contracts/financial_visual_consistency_report.schema.json \
+            tests/financial-visual-cross-artifact/test_financial_visual_cross_artifact.py
+          if git diff --cached --quiet; then
+            echo "No patch required"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Bind renderer 2.3 compatibility into financial artifacts"
+          git push origin "HEAD:${HEAD_REF}"
