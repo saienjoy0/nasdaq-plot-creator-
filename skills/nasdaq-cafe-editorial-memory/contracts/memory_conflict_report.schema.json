@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nasdaq-cafe.local/schemas/memory_conflict_report.schema.json",
+  "title": "NASDAQ Cafe memory conflict report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "episode_date", "blockers", "warnings", "unresolved_count", "safe_to_apply", "generated_at"],
+  "properties": {
+    "contract_version": {"const": "2.0.0"},
+    "episode_date": {"type": "string", "format": "date"},
+    "blockers": {"type": "array", "items": {"$ref": "#/$defs/blocker"}},
+    "warnings": {"type": "array", "items": {"$ref": "#/$defs/warning"}},
+    "unresolved_count": {"type": "integer", "minimum": 0},
+    "safe_to_apply": {"type": "boolean"},
+    "generated_at": {"type": "string", "format": "date-time"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"safe_to_apply": {"const": true}}, "required": ["safe_to_apply"]},
+      "then": {"properties": {"blockers": {"maxItems": 0}, "unresolved_count": {"const": 0}}}
+    }
+  ],
+  "$defs": {
+    "blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["conflict_id", "severity", "type", "target_id", "detail", "resolution_required"],
+      "properties": {
+        "conflict_id": {"type": "string", "minLength": 1},
+        "severity": {"const": "blocker"},
+        "type": {"enum": ["immutable_episode_exists", "hash_mismatch", "claim_identity_collision", "alias_collision", "status_regression", "thread_identity_collision", "missing_provenance", "approval_not_verified", "stale_plan", "path_escape", "other"]},
+        "target_id": {"type": "string", "minLength": 1},
+        "detail": {"type": "string", "minLength": 1},
+        "resolution_required": {"const": true}
+      }
+    },
+    "warning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["warning_id", "severity", "type", "target_id", "detail"],
+      "properties": {
+        "warning_id": {"type": "string", "minLength": 1},
+        "severity": {"const": "warning"},
+        "type": {"enum": ["confidence_jump", "stale_active_claim", "thread_title_changed", "similar_lesson", "evidence_concentration", "other"]},
+        "target_id": {"type": "string", "minLength": 1},
+        "detail": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

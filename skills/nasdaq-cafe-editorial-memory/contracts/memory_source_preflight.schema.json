@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nasdaq-cafe.local/schemas/memory_source_preflight.schema.json",
+  "title": "NASDAQ Cafe memory source preflight",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "status", "episode_date", "approval_status", "publication_record", "source_artifacts", "checks", "generated_at"],
+  "properties": {
+    "contract_version": {"const": "2.0.0"},
+    "status": {"const": "pass"},
+    "episode_date": {"type": "string", "format": "date"},
+    "approval_status": {"enum": ["approved_preview", "published"]},
+    "publication_record": {"$ref": "#/$defs/artifact"},
+    "source_artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["episode_package", "render_spec", "validator_report"],
+      "properties": {
+        "episode_package": {"$ref": "#/$defs/artifact"},
+        "render_spec": {"$ref": "#/$defs/artifact"},
+        "validator_report": {"$ref": "#/$defs/artifact"}
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": {"const": "pass"},
+      "minProperties": 1
+    },
+    "generated_at": {"type": "string", "format": "date-time"}
+  },
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "bytes"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "bytes": {"type": "integer", "minimum": 1}
+      }
+    }
+  }
+}

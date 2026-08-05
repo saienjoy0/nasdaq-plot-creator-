@@ -4,36 +4,19 @@
   "title": "NASDAQ Cafe publication memory record",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "contract_version",
-    "episode_date",
-    "title",
-    "main_story",
-    "story_spine",
-    "central_hypothesis",
-    "contrary_evidence",
-    "watch_next",
-    "topics",
-    "entities",
-    "thread_updates",
-    "claim_updates",
-    "source_paths",
-    "approval"
-  ],
+  "required": ["contract_version", "episode_date", "title", "main_story", "story_spine", "central_hypothesis", "contrary_evidence", "watch_next", "topics", "entities", "thread_updates", "claim_updates", "source_paths", "approval"],
   "properties": {
     "contract_version": {"const": "1.0.0"},
     "episode_date": {"type": "string", "format": "date"},
+    "revision": {"type": "string", "pattern": "^v(?!000)[0-9]{3}$"},
+    "supersedes_revision": {"type": "string", "pattern": "^v(?!000)[0-9]{3}$"},
+    "correction_reason": {"type": "string", "minLength": 1},
     "title": {"type": "string", "minLength": 1},
     "main_story": {"type": "string", "minLength": 1},
     "story_spine": {"type": "string", "minLength": 1},
     "central_hypothesis": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["text", "confidence"],
-      "properties": {
-        "text": {"type": "string", "minLength": 1},
-        "confidence": {"enum": ["high", "medium", "low", "unknown"]}
-      }
+      "type": "object", "additionalProperties": false, "required": ["text", "confidence"],
+      "properties": {"text": {"type": "string", "minLength": 1}, "confidence": {"enum": ["high", "medium", "low", "unknown"]}}
     },
     "contrary_evidence": {"type": "array", "items": {"type": "string"}},
     "watch_next": {"type": "array", "items": {"type": "string"}},
@@ -42,8 +25,7 @@
     "thread_updates": {
       "type": "array",
       "items": {
-        "type": "object",
-        "additionalProperties": false,
+        "type": "object", "additionalProperties": false,
         "required": ["thread_id", "title", "question", "summary", "triggers", "entities", "topics", "claim_ids", "status"],
         "properties": {
           "thread_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
@@ -61,8 +43,7 @@
     "claim_updates": {
       "type": "array",
       "items": {
-        "type": "object",
-        "additionalProperties": false,
+        "type": "object", "additionalProperties": false,
         "required": ["claim_id", "subject", "claim", "status", "confidence", "reason", "evidence_paths", "thread_ids", "entities", "topics"],
         "properties": {
           "claim_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
@@ -78,10 +59,23 @@
         }
       }
     },
+    "alias_updates": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["canonical_id", "display_name", "aliases"],
+        "properties": {
+          "canonical_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
+          "display_name": {"type": "string", "minLength": 1},
+          "aliases": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+          "entity_type": {"enum": ["company", "person", "index", "policy", "technology", "organization", "other"]}
+        }
+      },
+      "default": []
+    },
     "production_lessons": {"type": "array", "items": {"type": "string"}, "default": []},
     "source_paths": {
-      "type": "object",
-      "additionalProperties": false,
+      "type": "object", "additionalProperties": false,
       "required": ["episode_package", "render_spec", "validator_report"],
       "properties": {
         "episode_package": {"type": "string", "minLength": 1},
@@ -89,14 +83,31 @@
         "validator_report": {"type": "string", "minLength": 1}
       }
     },
+    "source_hashes": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "episode_package": {"$ref": "#/$defs/hashDeclaration"},
+        "render_spec": {"$ref": "#/$defs/hashDeclaration"},
+        "validator_report": {"$ref": "#/$defs/hashDeclaration"}
+      }
+    },
     "approval": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["status", "approved_at"],
+      "type": "object", "additionalProperties": false, "required": ["status", "approved_at"],
       "properties": {
         "status": {"enum": ["approved_preview", "published"]},
         "approved_at": {"type": "string", "minLength": 1}
       }
+    }
+  },
+  "$defs": {
+    "hashDeclaration": {
+      "oneOf": [
+        {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        {
+          "type": "object", "additionalProperties": false, "required": ["sha256"],
+          "properties": {"sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "bytes": {"type": "integer", "minimum": 1}}
+        }
+      ]
     }
   }
 }

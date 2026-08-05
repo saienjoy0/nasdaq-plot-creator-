@@ -1,95 +1,50 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://nasdaq-cafe.local/schemas/immutable_episode.schema.json",
-  "title": "NASDAQ Cafe immutable approved episode archive",
+  "title": "NASDAQ Cafe immutable episode revision provenance",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "contract_version",
-    "episode_id",
-    "episode_date",
-    "revision",
-    "immutable",
-    "title",
-    "approval",
-    "source_artifacts",
-    "promoted_at",
-    "memory_outputs"
-  ],
+  "required": ["contract_version", "episode_date", "revision", "supersedes_revision", "correction_reason", "approval_status", "approved_at", "promoted_at", "source_fingerprint", "source_artifacts", "publication_record", "generated_memory_ids", "promotion_plan_digest"],
   "properties": {
-    "contract_version": {"const": "1.0.0"},
-    "episode_id": {
-      "type": "string",
-      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}(?:-r[1-9][0-9]*)?$"
-    },
+    "contract_version": {"const": "2.0.0"},
     "episode_date": {"type": "string", "format": "date"},
-    "revision": {"type": "integer", "minimum": 1},
-    "immutable": {"const": true},
-    "title": {"type": "string", "minLength": 1},
-    "supersedes": {
-      "oneOf": [
-        {"type": "null"},
-        {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}(?:-r[1-9][0-9]*)?$"}
-      ]
-    },
-    "approval": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["status", "approved_at", "approved_by"],
-      "properties": {
-        "status": {"enum": ["approved_preview", "published", "corrected"]},
-        "approved_at": {"type": "string", "format": "date-time"},
-        "approved_by": {"type": "string", "minLength": 1},
-        "note": {"type": "string"}
-      }
-    },
+    "revision": {"type": "string", "pattern": "^v(?!000)[0-9]{3}$"},
+    "supersedes_revision": {"oneOf": [{"type": "null"}, {"type": "string", "pattern": "^v(?!000)[0-9]{3}$"}]},
+    "correction_reason": {"oneOf": [{"type": "null"}, {"type": "string", "minLength": 1}]},
+    "approval_status": {"enum": ["approved_preview", "published"]},
+    "approved_at": {"type": "string", "minLength": 1},
+    "promoted_at": {"oneOf": [{"type": "null"}, {"type": "string", "format": "date-time"}]},
+    "source_fingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
     "source_artifacts": {
-      "type": "object",
-      "additionalProperties": false,
+      "type": "object", "additionalProperties": false,
       "required": ["episode_package", "render_spec", "validator_report"],
       "properties": {
-        "episode_package": {"$ref": "#/$defs/artifact"},
-        "render_spec": {"$ref": "#/$defs/artifact"},
-        "validator_report": {"$ref": "#/$defs/artifact"},
-        "causal_research_dossier": {"$ref": "#/$defs/artifact"},
-        "spoken_script": {"$ref": "#/$defs/artifact"}
+        "episode_package": {"$ref": "#/$defs/sourceArtifact"},
+        "render_spec": {"$ref": "#/$defs/sourceArtifact"},
+        "validator_report": {"$ref": "#/$defs/sourceArtifact"}
       }
     },
-    "promoted_at": {"type": "string", "format": "date-time"},
-    "promotion_record_path": {"type": "string", "minLength": 1},
-    "memory_outputs": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["thread_ids", "claim_ids", "lesson_ids"],
+    "publication_record": {"$ref": "#/$defs/artifact"},
+    "generated_memory_ids": {
+      "type": "object", "additionalProperties": false,
+      "required": ["threads", "claims", "aliases", "lessons"],
       "properties": {
-        "thread_ids": {
-          "type": "array",
-          "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
-          "uniqueItems": true
-        },
-        "claim_ids": {
-          "type": "array",
-          "items": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
-          "uniqueItems": true
-        },
-        "lesson_ids": {
-          "type": "array",
-          "items": {"type": "string", "minLength": 1},
-          "uniqueItems": true
-        }
+        "threads": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "claims": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "aliases": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "lessons": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
       }
-    }
+    },
+    "promotion_plan_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
   },
   "$defs": {
     "artifact": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["path", "sha256", "bytes"],
-      "properties": {
-        "path": {"type": "string", "minLength": 1},
-        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
-        "bytes": {"type": "integer", "minimum": 1}
-      }
+      "type": "object", "additionalProperties": false, "required": ["path", "sha256", "bytes"],
+      "properties": {"path": {"type": "string", "minLength": 1}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "bytes": {"type": "integer", "minimum": 1}}
+    },
+    "sourceArtifact": {
+      "type": "object", "additionalProperties": false, "required": ["original_path", "archive_path", "sha256", "bytes"],
+      "properties": {"original_path": {"type": "string", "minLength": 1}, "archive_path": {"type": "string", "minLength": 1}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "bytes": {"type": "integer", "minimum": 1}}
     }
   }
 }
