@@ -1,0 +1,83 @@
+name: Editorial Memory Retrieval
+
+on:
+  pull_request:
+    paths:
+      - "scripts/editorial_memory_retrieval.py"
+      - "scripts/build_memory_context.py"
+      - "tests/memory-retrieval/**"
+      - "skills/nasdaq-cafe-editorial-memory/contracts/**"
+      - ".github/workflows/editorial-memory-retrieval.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "scripts/editorial_memory_retrieval.py"
+      - "scripts/build_memory_context.py"
+      - "tests/memory-retrieval/**"
+      - "skills/nasdaq-cafe-editorial-memory/contracts/**"
+      - ".github/workflows/editorial-memory-retrieval.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  retrieval-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install validator dependency
+        run: python -m pip install --disable-pip-version-check jsonschema
+
+      - name: Compile retrieval scripts
+        run: |
+          python -m py_compile \
+            scripts/editorial_memory_retrieval.py \
+            scripts/build_memory_context.py
+
+      - name: Run retrieval safety tests
+        run: |
+          python -m unittest discover \
+            -s tests/memory-retrieval \
+            -p 'test_*.py' \
+            -v
+
+      - name: Retrieve the verified AWS seed
+        run: |
+          python scripts/editorial_memory_retrieval.py \
+            --query-plan tests/memory-retrieval/fixtures/aws_query_plan.json \
+            --context-output working/retrieval/aws_context.md \
+            --report-output working/retrieval/aws_report.json
+          grep -F 'ai-capex-payback' working/retrieval/aws_context.md
+          grep -F 'ai-capex-evaluation-axis' working/retrieval/aws_context.md
+          grep -F '現在利用には当日の一次情報で再検証が必要' working/retrieval/aws_context.md
+
+      - name: Reject unrelated memory
+        run: |
+          python scripts/editorial_memory_retrieval.py \
+            --query-plan tests/memory-retrieval/fixtures/unrelated_query_plan.json \
+            --context-output working/retrieval/unrelated_context.md \
+            --report-output working/retrieval/unrelated_report.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          report = json.loads(
+              Path("working/retrieval/unrelated_report.json").read_text(encoding="utf-8")
+          )
+          durable = [
+              item for item in report["selected"] if item["item_type"] != "core"
+          ]
+          assert durable == [], durable
+          assert "no relevant durable memory selected" in report["warnings"]
+          assert report["usage"]["characters"] <= report["limits"]["max_characters"]
+          PY
