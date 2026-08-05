@@ -32,7 +32,6 @@ jobs:
         run: |
           cat bootstrap/pr5/chunk_*.txt | base64 -d > /tmp/pr5.zip
           python - <<'PY'
-          import shutil
           import zipfile
           from pathlib import Path
 
@@ -42,7 +41,6 @@ jobs:
               "test_memory_retrieval_repo.py": "tests/memory-retrieval/test_memory_retrieval.py",
               "aws_query_plan.json": "tests/memory-retrieval/fixtures/aws_query_plan.json",
               "unrelated_query_plan.json": "tests/memory-retrieval/fixtures/unrelated_query_plan.json",
-              "editorial-memory-retrieval.yml": ".github/workflows/editorial-memory-retrieval.yml",
               "PR5_AUDITABLE_MEMORY_RETRIEVAL.md": "designs/PR5_AUDITABLE_MEMORY_RETRIEVAL.md",
           }
           with zipfile.ZipFile("/tmp/pr5.zip") as archive:
@@ -51,9 +49,6 @@ jobs:
                   path = Path(target)
                   path.parent.mkdir(parents=True, exist_ok=True)
                   path.write_bytes(archive.read(source))
-
-          Path(".github/workflows/pr5-bootstrap.yml").unlink()
-          shutil.rmtree("bootstrap/pr5")
           PY
 
       - name: Verify implementation before commit
@@ -77,10 +72,10 @@ jobs:
             tests/memory-retrieval/test_memory_retrieval.py \
             tests/memory-retrieval/fixtures/aws_query_plan.json \
             tests/memory-retrieval/fixtures/unrelated_query_plan.json \
-            .github/workflows/editorial-memory-retrieval.yml \
             designs/PR5_AUDITABLE_MEMORY_RETRIEVAL.md
-          git add -u -- \
-            .github/workflows/pr5-bootstrap.yml \
-            bootstrap/pr5
-          git commit -m "Add auditable editorial memory retrieval"
-          git push origin HEAD:feat/pr5-auditable-memory-retrieval
+          if git diff --cached --quiet; then
+            echo "Retrieval implementation already committed"
+          else
+            git commit -m "Add auditable editorial memory retrieval"
+            git push origin HEAD:feat/pr5-auditable-memory-retrieval
+          fi
