@@ -1,0 +1,89 @@
+name: Daily Production Control Plane
+
+on:
+  pull_request:
+    paths:
+      - "scripts/run_daily_production.py"
+      - "scripts/run_daily_production_hardened.py"
+      - "scripts/build_final_production_package.py"
+      - "scripts/build_final_production_package_hardened.py"
+      - "scripts/build_renderer_handoff.py"
+      - "scripts/build_renderer_handoff_hardened.py"
+      - "scripts/run_real_day_acceptance.py"
+      - "scripts/run_real_day_acceptance_hardened.py"
+      - "skills/nasdaq-cafe-daily-production/**"
+      - "skills/nasdaq-cafe-daily-production-hardening/**"
+      - "tests/daily-production/**"
+      - "tests/daily-production-hardening/**"
+      - "docs/DAILY_PRODUCTION_RUNBOOK.md"
+      - "designs/PR12_DAILY_OPERATIONAL_ENTRY_POINT.md"
+      - ".github/workflows/daily-production.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/run_daily_production.py"
+      - "scripts/run_daily_production_hardened.py"
+      - "scripts/build_final_production_package.py"
+      - "scripts/build_final_production_package_hardened.py"
+      - "scripts/build_renderer_handoff.py"
+      - "scripts/build_renderer_handoff_hardened.py"
+      - "scripts/run_real_day_acceptance.py"
+      - "scripts/run_real_day_acceptance_hardened.py"
+      - "skills/nasdaq-cafe-daily-production/**"
+      - "skills/nasdaq-cafe-daily-production-hardening/**"
+      - "tests/daily-production/**"
+      - "tests/daily-production-hardening/**"
+      - "docs/DAILY_PRODUCTION_RUNBOOK.md"
+      - "designs/PR12_DAILY_OPERATIONAL_ENTRY_POINT.md"
+      - ".github/workflows/daily-production.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install validator dependency
+        run: python -m pip install --disable-pip-version-check jsonschema
+      - name: Compile daily chain
+        run: |
+          python -m py_compile \
+            scripts/run_daily_production.py \
+            scripts/run_daily_production_hardened.py \
+            scripts/build_final_production_package.py \
+            scripts/build_final_production_package_hardened.py \
+            scripts/build_renderer_handoff.py \
+            scripts/build_renderer_handoff_hardened.py \
+            scripts/run_real_day_acceptance.py \
+            scripts/run_real_day_acceptance_hardened.py
+      - name: Parse daily schemas
+        run: |
+          python -m json.tool skills/nasdaq-cafe-daily-production/contracts/production_request.schema.json >/dev/null
+          python -m json.tool skills/nasdaq-cafe-daily-production/contracts/production_state.schema.json >/dev/null
+      - name: Run daily state-machine tests
+        run: python -m unittest discover -s tests/daily-production -p 'test_*.py' -v
+      - name: Run hardened daily entrypoint tests
+        run: python -m unittest discover -s tests/daily-production-hardening -p 'test_*.py' -v
+      - name: Run Real-Day Acceptance regression
+        run: python -m unittest discover -s tests/real-day-acceptance -p 'test_*.py' -v
+      - name: Run hardened Real-Day Acceptance regression
+        run: python -m unittest discover -s tests/real-day-acceptance-hardening -p 'test_*.py' -v
+      - name: Run Renderer Handoff regression
+        run: python -m unittest discover -s tests/renderer-handoff -p 'test_*.py' -v
+      - name: Run hardened Renderer Handoff regression
+        run: python -m unittest discover -s tests/renderer-handoff-hardening -p 'test_*.py' -v
+      - name: Run Final Production regression
+        run: python -m unittest discover -s tests/final-production-package -p 'test_*.py' -v
+      - name: Run hardened Final Production regression
+        run: python -m unittest discover -s tests/final-production-hardening -p 'test_*.py' -v
+      - name: Run Episode Package Memory regression
+        run: python -m unittest discover -s tests/episode-package-memory -p 'test_*.py' -v
+      - name: Run Episode Package Memory hardening regression
+        run: python -m unittest discover -s tests/episode-package-memory-hardening -p 'test_*.py' -v
