@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nasdaq-cafe.local/schemas/entity_aliases.schema.json",
+  "title": "NASDAQ Cafe entity alias registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "entities"],
+  "properties": {
+    "contract_version": {"const": "1.0.0"},
+    "entities": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/entity"}
+    }
+  },
+  "$defs": {
+    "entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entity_id",
+        "canonical_name",
+        "entity_type",
+        "aliases",
+        "tickers",
+        "identifiers",
+        "status",
+        "superseded_by",
+        "updated_at",
+        "source_paths"
+      ],
+      "properties": {
+        "entity_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        "canonical_name": {"type": "string", "minLength": 1},
+        "entity_type": {
+          "enum": [
+            "company",
+            "person",
+            "product",
+            "technology",
+            "policy",
+            "index",
+            "commodity",
+            "currency",
+            "country",
+            "organization",
+            "indicator",
+            "other"
+          ]
+        },
+        "aliases": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        },
+        "tickers": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        },
+        "identifiers": {
+          "type": "object",
+          "additionalProperties": {"type": "string", "minLength": 1}
+        },
+        "status": {"enum": ["active", "merged", "archived"]},
+        "superseded_by": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"}
+          ]
+        },
+        "updated_at": {"type": "string", "format": "date"},
+        "source_paths": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"status": {"const": "merged"}},
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {
+              "superseded_by": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]*$"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
