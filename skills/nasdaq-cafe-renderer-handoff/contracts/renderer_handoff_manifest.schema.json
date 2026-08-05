@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nasdaq-cafe.local/schemas/renderer_handoff_manifest.schema.json",
+  "title": "NASDAQ Cafe Renderer Handoff Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "bundle_id", "episode_date", "mode", "plot_creator", "renderer", "files", "validation", "final_authorized"],
+  "properties": {
+    "contract_version": {"const": "1.0.0"},
+    "bundle_id": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "episode_date": {"type": "string", "format": "date"},
+    "mode": {"enum": ["preview", "final"]},
+    "plot_creator": {
+      "type": "object", "additionalProperties": false,
+      "required": ["repository", "commit"],
+      "properties": {
+        "repository": {"const": "saienjoy0/nasdaq-plot-creator-"},
+        "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+      }
+    },
+    "renderer": {
+      "type": "object", "additionalProperties": false,
+      "required": ["repository", "expected_contract_version", "expected_base_commit"],
+      "properties": {
+        "repository": {"const": "saienjoy0/saienjoy0-nasdaq-cafe-remotion"},
+        "expected_contract_version": {"type": "string", "minLength": 1},
+        "expected_base_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+      }
+    },
+    "files": {
+      "type": "array", "minItems": 6,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["role", "source_path", "destination_path", "sha256", "size", "required"],
+        "properties": {
+          "role": {"type": "string", "minLength": 1},
+          "source_path": {"type": "string", "minLength": 1},
+          "destination_path": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "size": {"type": "integer", "minimum": 0},
+          "required": {"type": "boolean"}
+        }
+      }
+    },
+    "validation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["production_package", "unresolved_states", "source_preflight_sha256"],
+      "properties": {
+        "production_package": {"const": "pass"},
+        "unresolved_states": {"const": 0},
+        "source_preflight_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "final_authorized": {"type": "boolean"},
+    "approval_record": {"oneOf": [{"type": "object"}, {"type": "null"}]}
+  }
+}
