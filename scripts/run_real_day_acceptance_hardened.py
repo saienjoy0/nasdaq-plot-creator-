@@ -103,7 +103,13 @@ def validate_acceptance_hardened(
         raise HardenedAcceptanceError(
             "base real-day acceptance did not return validation PASS"
         )
-    result["episode_memory_hardening"] = "pass"
+    validation = result.get("validation")
+    if not isinstance(validation, dict):
+        raise HardenedAcceptanceError("base acceptance validation must be an object")
+    warnings = validation.setdefault("warnings", [])
+    if not isinstance(warnings, list):
+        raise HardenedAcceptanceError("base acceptance warnings must be an array")
+    warnings.append("episode-memory hardening evidence verified in bundled preflight")
     return result
 
 
