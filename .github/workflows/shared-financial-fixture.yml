@@ -1,0 +1,41 @@
+name: Shared Financial Fixture
+
+on:
+  pull_request:
+    paths:
+      - "shared-fixtures/financial-visual-2.3/**"
+      - "contracts/financial_visual_compatibility.json"
+      - "scripts/verify_shared_financial_fixture.py"
+      - ".github/workflows/shared-financial-fixture.yml"
+  push:
+    branches: [main]
+    paths:
+      - "shared-fixtures/financial-visual-2.3/**"
+      - "contracts/financial_visual_compatibility.json"
+      - "scripts/verify_shared_financial_fixture.py"
+      - ".github/workflows/shared-financial-fixture.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile verifier
+        run: python3 -m py_compile scripts/verify_shared_financial_fixture.py
+      - name: Verify local fixture and SHA bindings
+        run: python3 scripts/verify_shared_financial_fixture.py
+      - name: Compare exact bytes with renderer main
+        run: |
+          set -euo pipefail
+          base="https://raw.githubusercontent.com/saienjoy0/saienjoy0-nasdaq-cafe-remotion/main/shared-fixtures/financial-visual-2.3"
+          curl -fsSL "$base/render_spec.json" -o /tmp/renderer-render_spec.json
+          curl -fsSL "$base/fixture_manifest.json" -o /tmp/renderer-fixture_manifest.json
+          cmp shared-fixtures/financial-visual-2.3/render_spec.json /tmp/renderer-render_spec.json
+          cmp shared-fixtures/financial-visual-2.3/fixture_manifest.json /tmp/renderer-fixture_manifest.json
+          sha256sum shared-fixtures/financial-visual-2.3/render_spec.json
+          sha256sum shared-fixtures/financial-visual-2.3/fixture_manifest.json

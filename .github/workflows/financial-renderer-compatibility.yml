@@ -1,0 +1,77 @@
+name: Financial Renderer Compatibility
+
+on:
+  pull_request:
+    paths:
+      - "contracts/financial_visual_compatibility.json"
+      - "contracts/financial_visual_consistency_report.schema.json"
+      - "scripts/financial_visual_cross_artifact.py"
+      - "tests/financial-visual-cross-artifact/**"
+      - "designs/FINANCIAL_RENDERER_COMPATIBILITY.md"
+      - ".github/workflows/financial-renderer-compatibility.yml"
+      - "contracts/final_episode_contract.schema.json"
+      - "contracts/financial_visual_candidate_plan.schema.json"
+      - "contracts/financial_recipe_plan.schema.json"
+      - "contracts/financial_recipe_registry.json"
+      - "scripts/final_episode_contract.py"
+      - "scripts/financial_recipe_compiler.py"
+  push:
+    branches: [main]
+    paths:
+      - "contracts/financial_visual_compatibility.json"
+      - "contracts/financial_visual_consistency_report.schema.json"
+      - "scripts/financial_visual_cross_artifact.py"
+      - "tests/financial-visual-cross-artifact/**"
+      - "designs/FINANCIAL_RENDERER_COMPATIBILITY.md"
+      - ".github/workflows/financial-renderer-compatibility.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install validator dependency
+        run: python -m pip install --disable-pip-version-check jsonschema
+      - name: Compile Python
+        run: |
+          python -m py_compile \
+            scripts/final_episode_contract.py \
+            scripts/financial_recipe_compiler.py \
+            scripts/financial_visual_cross_artifact.py \
+            tests/final-episode-contract/generate_fixtures.py \
+            tests/financial-visual-cross-artifact/test_financial_visual_cross_artifact.py
+      - name: Parse strict JSON contracts
+        run: |
+          python -m json.tool contracts/financial_visual_compatibility.json >/dev/null
+          python -m json.tool contracts/financial_visual_consistency_report.schema.json >/dev/null
+      - name: Verify exact approved compatibility tuple
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import sys
+          sys.path.insert(0, "scripts")
+          import financial_visual_cross_artifact as cross
+          matrix, digest = cross.validate_compatibility_matrix(
+              Path("contracts/financial_visual_compatibility.json"),
+              "2.3.0",
+          )
+          assert matrix == cross.EXPECTED_COMPATIBILITY_MATRIX
+          assert len(digest) == 64
+          print(matrix["matrixId"], digest)
+          PY
+      - name: Generate deterministic Final Episode fixtures
+        run: python tests/final-episode-contract/generate_fixtures.py
+      - name: Run 18 cross-artifact tests
+        run: python -m unittest discover -s tests/financial-visual-cross-artifact -p 'test_*.py' -v
+      - name: Run Recipe Compiler regression
+        run: python -m unittest discover -s tests/financial-recipe-compiler -p 'test_*.py' -v
+      - name: Run Final Episode Contract regression
+        run: python -m unittest -v tests/test_final_episode_contract.py
