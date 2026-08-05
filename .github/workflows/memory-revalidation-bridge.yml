@@ -1,0 +1,120 @@
+name: Memory Revalidation Bridge
+
+on:
+  pull_request:
+    paths:
+      - "AGENTS.md"
+      - "scripts/build_research_input_manifest.py"
+      - "scripts/editorial_memory_retrieval.py"
+      - "skills/nasdaq-cafe-causal-research/**"
+      - "skills/nasdaq-cafe-editorial-memory/contracts/**"
+      - "tests/memory-revalidation/**"
+      - "tests/memory-retrieval/**"
+      - "designs/PR6_EDITORIAL_MEMORY_REVALIDATION_BRIDGE.md"
+      - ".github/workflows/memory-revalidation-bridge.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "AGENTS.md"
+      - "scripts/build_research_input_manifest.py"
+      - "scripts/editorial_memory_retrieval.py"
+      - "skills/nasdaq-cafe-causal-research/**"
+      - "skills/nasdaq-cafe-editorial-memory/contracts/**"
+      - "tests/memory-revalidation/**"
+      - "tests/memory-retrieval/**"
+      - "designs/PR6_EDITORIAL_MEMORY_REVALIDATION_BRIDGE.md"
+      - ".github/workflows/memory-revalidation-bridge.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  memory-revalidation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install validator dependency
+        run: python -m pip install --disable-pip-version-check jsonschema
+
+      - name: Compile bridge scripts
+        run: |
+          python -m py_compile \
+            scripts/editorial_memory_retrieval.py \
+            scripts/build_research_input_manifest.py \
+            skills/nasdaq-cafe-causal-research/validators/validate_causal_research_dossier.py
+
+      - name: Validate causal research schema syntax
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          contracts = Path("skills/nasdaq-cafe-causal-research/contracts")
+          for path in sorted(contracts.glob("*.schema.json")):
+              json.loads(path.read_text(encoding="utf-8"))
+              print("PASS", path)
+          PY
+
+      - name: Run memory revalidation bridge tests
+        run: |
+          python -m unittest discover \
+            -s tests/memory-revalidation \
+            -p 'test_*.py' \
+            -v
+
+      - name: Verify real retrieval lineage end to end
+        run: |
+          mkdir -p working/pr6-integration research/2026-08-01
+          printf '# Daily source package\n' > working/pr6-integration/daily_source_package_2026-08-01.md
+          python scripts/editorial_memory_retrieval.py \
+            --query-plan tests/memory-retrieval/fixtures/aws_query_plan.json \
+            --context-output working/pr6-integration/memory_context_2026-08-01.md \
+            --report-output working/pr6-integration/memory_retrieval_report_2026-08-01.json
+          python scripts/build_research_input_manifest.py \
+            --episode-date 2026-08-01 \
+            --market-date 2026-07-31 \
+            --timezone Asia/Tokyo \
+            --information-cutoff 2026-08-01T07:30:00+09:00 \
+            --daily-source-package working/pr6-integration/daily_source_package_2026-08-01.md \
+            --memory-query-plan tests/memory-retrieval/fixtures/aws_query_plan.json \
+            --memory-context working/pr6-integration/memory_context_2026-08-01.md \
+            --memory-retrieval-report working/pr6-integration/memory_retrieval_report_2026-08-01.json \
+            --output research/2026-08-01/research_input_manifest.json \
+            --repo-root "$GITHUB_WORKSPACE"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          manifest = json.loads(Path("research/2026-08-01/research_input_manifest.json").read_text(encoding="utf-8"))
+          assert manifest["validation"]["status"] == "pass"
+          assert manifest["inputs"]["memory_query_plan"]["path"] == "tests/memory-retrieval/fixtures/aws_query_plan.json"
+          assert any(item["item_id"] == "ai-capex-evaluation-axis" for item in manifest["memory_intake"]["current_revalidation_required"])
+          PY
+
+      - name: Run existing retrieval safety tests
+        run: |
+          python -m unittest discover \
+            -s tests/memory-retrieval \
+            -p 'test_*.py' \
+            -v
+
+      - name: Run existing promotion safety tests
+        run: |
+          python -m unittest discover \
+            -s tests/memory-promotion \
+            -p 'test_*.py' \
+            -v
+
+      - name: Validate existing editorial memory contracts
+        run: |
+          python skills/nasdaq-cafe-editorial-memory/validators/validate_memory_contracts.py \
+            --require-jsonschema
