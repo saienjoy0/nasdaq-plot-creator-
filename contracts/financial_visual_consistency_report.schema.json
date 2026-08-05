@@ -6,7 +6,7 @@
   "additionalProperties": false,
   "required": [
     "contractVersion", "episodeDate", "status", "finalEpisodeContract",
-    "financialRecipePlan", "episodePackageSha256", "renderSpec",
+    "financialRecipePlan", "compatibilityMatrix", "episodePackageSha256", "renderSpec",
     "spokenScript", "assetManifest", "selectionCount", "fallbackCount",
     "fallbackDiversity", "checks", "errors", "unresolvedStates"
   ],
@@ -16,6 +16,7 @@
     "status": {"const": "pass"},
     "finalEpisodeContract": {"$ref": "#/$defs/fileRef"},
     "financialRecipePlan": {"$ref": "#/$defs/fileRef"},
+    "compatibilityMatrix": {"$ref": "#/$defs/fileRef"},
     "episodePackageSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "renderSpec": {"$ref": "#/$defs/fileRef"},
     "spokenScript": {"$ref": "#/$defs/fileRef"},
@@ -30,7 +31,7 @@
         "episodeDate", "episodePackageSha", "selectedPlanSha", "sceneBeat",
         "cueText", "screenState", "visualTemplate", "templateVariant",
         "objectIds", "sourceIds", "displayOrder", "comparisonBasis",
-        "selectedPathFreeze", "nonSelectedPathAbsent", "spokenScript",
+        "compatibilityMatrix", "selectedPathFreeze", "nonSelectedPathAbsent", "spokenScript",
         "assetManifest", "preflight"
       ],
       "properties": {
@@ -46,6 +47,7 @@
         "sourceIds": {"const": true},
         "displayOrder": {"const": true},
         "comparisonBasis": {"const": true},
+        "compatibilityMatrix": {"const": true},
         "selectedPathFreeze": {"const": true},
         "nonSelectedPathAbsent": {"const": true},
         "spokenScript": {"const": true},

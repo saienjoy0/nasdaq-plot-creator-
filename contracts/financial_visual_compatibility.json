@@ -1,0 +1,16 @@
+{
+  "matrixId": "financial-visual-compat-2026-08",
+  "status": "pass",
+  "plotCreator": {
+    "repository": "saienjoy0/nasdaq-plot-creator-",
+    "financialIntentVersion": "1.1.0",
+    "financialRecipePlanVersion": "1.0.0",
+    "finalEpisodeContractVersion": "1.0.0"
+  },
+  "renderer": {
+    "repository": "saienjoy0/saienjoy0-nasdaq-cafe-remotion",
+    "renderSpecVersion": "2.3.0",
+    "financialTemplateRegistryVersion": "1.0.0",
+    "financialVisualTraceVersion": "1.0.0"
+  }
+}
