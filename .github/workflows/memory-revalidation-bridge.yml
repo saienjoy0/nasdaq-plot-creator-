@@ -1,0 +1,85 @@
+name: Memory Revalidation Bridge
+
+on:
+  pull_request:
+    paths:
+      - "AGENTS.md"
+      - "scripts/build_research_input_manifest.py"
+      - "skills/nasdaq-cafe-causal-research/**"
+      - "tests/memory-revalidation/**"
+      - "designs/PR6_EDITORIAL_MEMORY_REVALIDATION_BRIDGE.md"
+      - ".github/workflows/memory-revalidation-bridge.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "AGENTS.md"
+      - "scripts/build_research_input_manifest.py"
+      - "skills/nasdaq-cafe-causal-research/**"
+      - "tests/memory-revalidation/**"
+      - "designs/PR6_EDITORIAL_MEMORY_REVALIDATION_BRIDGE.md"
+      - ".github/workflows/memory-revalidation-bridge.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  memory-revalidation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install validator dependency
+        run: python -m pip install --disable-pip-version-check jsonschema
+
+      - name: Compile bridge scripts
+        run: |
+          python -m py_compile \
+            scripts/build_research_input_manifest.py \
+            skills/nasdaq-cafe-causal-research/validators/validate_causal_research_dossier.py
+
+      - name: Validate causal research schema syntax
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          contracts = Path("skills/nasdaq-cafe-causal-research/contracts")
+          for path in sorted(contracts.glob("*.schema.json")):
+              json.loads(path.read_text(encoding="utf-8"))
+              print("PASS", path)
+          PY
+
+      - name: Run memory revalidation bridge tests
+        run: |
+          python -m unittest discover \
+            -s tests/memory-revalidation \
+            -p 'test_*.py' \
+            -v
+
+      - name: Run existing retrieval safety tests
+        run: |
+          python -m unittest discover \
+            -s tests/memory-retrieval \
+            -p 'test_*.py' \
+            -v
+
+      - name: Run existing promotion safety tests
+        run: |
+          python -m unittest discover \
+            -s tests/memory-promotion \
+            -p 'test_*.py' \
+            -v
+
+      - name: Validate existing editorial memory contracts
+        run: |
+          python skills/nasdaq-cafe-editorial-memory/validators/validate_memory_contracts.py \
+            --require-jsonschema
