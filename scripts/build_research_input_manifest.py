@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Build a deterministic research input manifest for causal research.
+"""Build a deterministic, lineage-verified research input manifest.
 
-This script does not decide the lead story or current market causality. It only
-freezes the daily input and editorial-memory retrieval artifacts, verifies their
-contracts, hashes them, and classifies selected memory by permitted use mode.
+The builder freezes current production inputs. It does not choose a lead story,
+certify remembered claims, or decide market causality.
 """
 
 from __future__ import annotations
@@ -12,16 +11,20 @@ import argparse
 import hashlib
 import json
 import re
+import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
-from jsonschema import Draft202012Validator
+from jsonschema import Draft202012Validator, FormatChecker
+
+from editorial_memory_retrieval import retrieve
 
 DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
+RetrievalRunner = Callable[..., dict[str, Any]]
 
 
 class ManifestBuildError(ValueError):
-    """Raised when the research input contract cannot be built safely."""
+    """Raised when research intake cannot be frozen safely."""
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -41,10 +44,15 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def format_path(parts: Any) -> str:
+    values = list(parts)
+    return "" if not values else "." + ".".join(str(value) for value in values)
+
+
 def validate_schema(instance: Any, schema_path: Path, label: str) -> None:
     schema = load_json(schema_path)
     errors = sorted(
-        Draft202012Validator(schema).iter_errors(instance),
+        Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(instance),
         key=lambda error: list(error.absolute_path),
     )
     if errors:
@@ -55,11 +63,24 @@ def validate_schema(instance: Any, schema_path: Path, label: str) -> None:
         raise ManifestBuildError(details)
 
 
-def format_path(parts: Any) -> str:
-    values = list(parts)
-    if not values:
-        return ""
-    return "." + ".".join(str(value) for value in values)
+def ensure_repo_path(
+    path: Path,
+    repo_root: Path,
+    label: str,
+    *,
+    must_exist: bool = True,
+) -> Path:
+    root = repo_root.resolve()
+    resolved = path.resolve()
+    if resolved != root and root not in resolved.parents:
+        raise ManifestBuildError(f"{label} escapes repository root: {path}")
+    if must_exist and not resolved.is_file():
+        raise ManifestBuildError(f"missing {label}: {path}")
+    return resolved
+
+
+def repo_relative(path: Path, repo_root: Path) -> str:
+    return path.resolve().relative_to(repo_root.resolve()).as_posix()
 
 
 def date_from_filename(path: Path) -> str | None:
@@ -81,6 +102,19 @@ def normalized_selected_item(item: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def expected_bucket(item: dict[str, Any]) -> str:
+    use_mode = item["use_mode"]
+    if item.get("requires_current_revalidation") or use_mode == "current_revalidation_required":
+        return "current_revalidation_required"
+    if use_mode == "historical_context":
+        return "historical_context_only"
+    if use_mode == "procedural":
+        return "procedural"
+    raise ManifestBuildError(
+        f"unsupported retrieval use_mode for {item['item_id']}: {use_mode}"
+    )
+
+
 def classify_memory(report: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
     intake: dict[str, list[dict[str, Any]]] = {
         "current_revalidation_required": [],
@@ -88,24 +122,13 @@ def classify_memory(report: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
         "procedural": [],
         "not_selected": [],
     }
-
+    seen: set[tuple[str, str]] = set()
     for item in report["selected"]:
-        normalized = normalized_selected_item(item)
-        use_mode = item["use_mode"]
-        if (
-            item.get("requires_current_revalidation")
-            or use_mode == "current_revalidation_required"
-        ):
-            bucket = "current_revalidation_required"
-        elif use_mode == "historical_context":
-            bucket = "historical_context_only"
-        elif use_mode == "procedural":
-            bucket = "procedural"
-        else:
-            raise ManifestBuildError(
-                f"unsupported retrieval use_mode for {item['item_id']}: {use_mode}"
-            )
-        intake[bucket].append(normalized)
+        key = (item["item_type"], item["item_id"])
+        if key in seen:
+            raise ManifestBuildError(f"duplicate selected memory in report: {key}")
+        seen.add(key)
+        intake[expected_bucket(item)].append(normalized_selected_item(item))
 
     for item in report["rejected"]:
         intake["not_selected"].append(
@@ -122,6 +145,46 @@ def classify_memory(report: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
     return intake
 
 
+def verify_retrieval_lineage(
+    *,
+    memory_query_plan: Path,
+    memory_context: Path,
+    memory_retrieval_report: Path,
+    repo_root: Path,
+    editorial_contracts_dir: Path,
+    retrieval_runner: RetrievalRunner = retrieve,
+) -> None:
+    """Replay deterministic retrieval and compare Context and Report bytes."""
+    report = load_json(memory_retrieval_report)
+    declared_query = report.get("query_plan_path")
+    actual_query = repo_relative(memory_query_plan, repo_root)
+    if declared_query != actual_query:
+        raise ManifestBuildError(
+            "retrieval report query_plan_path mismatch: "
+            f"declared={declared_query!r} actual={actual_query!r}"
+        )
+
+    with tempfile.TemporaryDirectory(prefix=".retrieval-replay-", dir=repo_root) as tmp:
+        tmp_root = Path(tmp)
+        replay_context = tmp_root / "context.md"
+        replay_report = tmp_root / "report.json"
+        retrieval_runner(
+            memory_query_plan,
+            replay_context,
+            replay_report,
+            repo_root=repo_root,
+            contracts_dir=editorial_contracts_dir,
+        )
+        if replay_context.read_bytes() != memory_context.read_bytes():
+            raise ManifestBuildError(
+                "memory context does not match deterministic retrieval replay"
+            )
+        if replay_report.read_bytes() != memory_retrieval_report.read_bytes():
+            raise ManifestBuildError(
+                "memory retrieval report does not match deterministic retrieval replay"
+            )
+
+
 def build_manifest(
     *,
     episode_date: str,
@@ -134,67 +197,72 @@ def build_manifest(
     memory_retrieval_report: Path,
     output: Path,
     contracts_dir: Path,
+    repo_root: Path,
+    retrieval_runner: RetrievalRunner = retrieve,
 ) -> dict[str, Any]:
+    repo_root = repo_root.resolve()
     paths = {
-        "daily_source_package": daily_source_package,
-        "memory_query_plan": memory_query_plan,
-        "memory_context": memory_context,
-        "memory_retrieval_report": memory_retrieval_report,
+        "daily_source_package": ensure_repo_path(
+            daily_source_package, repo_root, "daily_source_package"
+        ),
+        "memory_query_plan": ensure_repo_path(
+            memory_query_plan, repo_root, "memory_query_plan"
+        ),
+        "memory_context": ensure_repo_path(memory_context, repo_root, "memory_context"),
+        "memory_retrieval_report": ensure_repo_path(
+            memory_retrieval_report, repo_root, "memory_retrieval_report"
+        ),
     }
-    for label, path in paths.items():
-        if not path.is_file():
-            raise ManifestBuildError(f"missing {label}: {path}")
-
-    query_plan = load_json(memory_query_plan)
-    report = load_json(memory_retrieval_report)
-    validate_schema(
-        query_plan,
+    output = ensure_repo_path(output, repo_root, "output", must_exist=False)
+    contracts_dir = ensure_repo_path(
+        contracts_dir / "research_input_manifest.schema.json",
+        repo_root,
+        "research_input_manifest schema",
+    ).parent
+    editorial_contracts = ensure_repo_path(
         contracts_dir
         / "../../nasdaq-cafe-editorial-memory/contracts/memory_query_plan.schema.json",
+        repo_root,
+        "memory_query_plan schema",
+    ).parent
+
+    query_plan = load_json(paths["memory_query_plan"])
+    report = load_json(paths["memory_retrieval_report"])
+    validate_schema(
+        query_plan,
+        editorial_contracts / "memory_query_plan.schema.json",
         "memory_query_plan",
     )
     validate_schema(
         report,
-        contracts_dir
-        / "../../nasdaq-cafe-editorial-memory/contracts/memory_retrieval_report.schema.json",
+        editorial_contracts / "memory_retrieval_report.schema.json",
         "memory_retrieval_report",
     )
 
     if query_plan["episode_date"] != episode_date:
         raise ManifestBuildError(
-            "episode date mismatch: "
-            f"query plan={query_plan['episode_date']} requested={episode_date}"
+            f"episode date mismatch: query plan={query_plan['episode_date']} requested={episode_date}"
         )
     if report["episode_date"] != episode_date:
         raise ManifestBuildError(
-            "episode date mismatch: "
-            f"retrieval report={report['episode_date']} requested={episode_date}"
+            f"episode date mismatch: retrieval report={report['episode_date']} requested={episode_date}"
         )
 
-    daily_filename_date = date_from_filename(daily_source_package)
-    if daily_filename_date and daily_filename_date != episode_date:
-        raise ManifestBuildError(
-            "episode date mismatch: "
-            f"daily package filename={daily_filename_date} requested={episode_date}"
-        )
-    query_filename_date = date_from_filename(memory_query_plan)
-    if query_filename_date and query_filename_date != episode_date:
-        raise ManifestBuildError(
-            "episode date mismatch: "
-            f"query plan filename={query_filename_date} requested={episode_date}"
-        )
-    context_filename_date = date_from_filename(memory_context)
-    if context_filename_date and context_filename_date != episode_date:
-        raise ManifestBuildError(
-            "episode date mismatch: "
-            f"memory context filename={context_filename_date} requested={episode_date}"
-        )
-    report_filename_date = date_from_filename(memory_retrieval_report)
-    if report_filename_date and report_filename_date != episode_date:
-        raise ManifestBuildError(
-            "episode date mismatch: "
-            f"retrieval report filename={report_filename_date} requested={episode_date}"
-        )
+    for label, path in paths.items():
+        filename_date = date_from_filename(path)
+        if filename_date and filename_date != episode_date:
+            raise ManifestBuildError(
+                f"episode date mismatch: {label} filename={filename_date} requested={episode_date}"
+            )
+
+    verify_retrieval_lineage(
+        memory_query_plan=paths["memory_query_plan"],
+        memory_context=paths["memory_context"],
+        memory_retrieval_report=paths["memory_retrieval_report"],
+        repo_root=repo_root,
+        editorial_contracts_dir=editorial_contracts,
+        retrieval_runner=retrieval_runner,
+    )
 
     manifest = {
         "contract_version": "1.0.0",
@@ -206,19 +274,14 @@ def build_manifest(
         },
         "inputs": {
             label: {
-                "path": path.as_posix(),
+                "path": repo_relative(path, repo_root),
                 "sha256": sha256_file(path),
             }
             for label, path in paths.items()
         },
         "memory_intake": classify_memory(report),
-        "validation": {
-            "status": "pass",
-            "errors": [],
-            "warnings": [],
-        },
+        "validation": {"status": "pass", "errors": [], "warnings": []},
     }
-
     validate_schema(
         manifest,
         contracts_dir / "research_input_manifest.schema.json",
@@ -248,6 +311,7 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=Path("skills/nasdaq-cafe-causal-research/contracts"),
     )
+    parser.add_argument("--repo-root", type=Path, default=Path.cwd())
     return parser.parse_args()
 
 
@@ -265,6 +329,7 @@ def main() -> int:
             memory_retrieval_report=args.memory_retrieval_report,
             output=args.output,
             contracts_dir=args.contracts_dir,
+            repo_root=args.repo_root,
         )
     except ManifestBuildError as exc:
         print(f"FAIL: {exc}")
