@@ -1,0 +1,60 @@
+name: Verify source materialization
+
+on:
+  push:
+    branches:
+      - feat/nasdaq-cafe-research-skill-v0.1
+    paths:
+      - "source-of-truth/**"
+      - "scripts/materialize_sources.py"
+      - "skills/nasdaq-cafe-causal-research/**"
+      - ".github/workflows/verify-source-materialization.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify packed sources without writing
+        run: python scripts/materialize_sources.py --check-only
+
+      - name: Materialize packed sources
+        run: python scripts/materialize_sources.py
+
+      - name: Verify materialized paths, sizes, and hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f source-of-truth/03_episode_production_spec.md
+          test -f source-of-truth/04_entertainment_inquisitor.md
+          test "$(wc -c < source-of-truth/03_episode_production_spec.md)" -eq 101040
+          test "$(wc -c < source-of-truth/04_entertainment_inquisitor.md)" -eq 45895
+          echo "c0e476f36b387961277ffa008d7b2258942e1fe44c475bebe1d79b31b9f4dc3f  source-of-truth/03_episode_production_spec.md" | sha256sum --check --strict
+          echo "62d7807eb01b3433fc3b3f8bce8f6bad96109f1ae2366ec417c35bac8fa47936  source-of-truth/04_entertainment_inquisitor.md" | sha256sum --check --strict
+
+      - name: Compile Python checks
+        run: |
+          python -m py_compile \
+            scripts/materialize_sources.py \
+            skills/nasdaq-cafe-causal-research/validators/validate_causal_dossier.py
+          python skills/nasdaq-cafe-causal-research/validators/validate_causal_dossier.py --help >/dev/null
+
+      - name: Confirm clean generated-source contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          git status --short
+          test -n "$(git status --short source-of-truth/03_episode_production_spec.md source-of-truth/04_entertainment_inquisitor.md)"
+          echo "Materialized files are generated working-tree outputs and are intentionally not committed."
