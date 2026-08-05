@@ -1,0 +1,80 @@
+name: PR5 Bootstrap
+
+on:
+  push:
+    branches:
+      - "feat/pr5-auditable-memory-retrieval"
+    paths:
+      - "bootstrap/pr5/**"
+      - ".github/workflows/pr5-bootstrap.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/pr5-auditable-memory-retrieval
+          fetch-depth: 0
+
+      - name: Materialize retrieval implementation
+        run: |
+          cat bootstrap/pr5/chunk_*.txt | base64 -d > /tmp/pr5.zip
+          python - <<'PY'
+          import shutil
+          import zipfile
+          from pathlib import Path
+
+          mapping = {
+              "editorial_memory_retrieval.py": "scripts/editorial_memory_retrieval.py",
+              "build_memory_context.py": "scripts/build_memory_context.py",
+              "test_memory_retrieval_repo.py": "tests/memory-retrieval/test_memory_retrieval.py",
+              "aws_query_plan.json": "tests/memory-retrieval/fixtures/aws_query_plan.json",
+              "unrelated_query_plan.json": "tests/memory-retrieval/fixtures/unrelated_query_plan.json",
+              "editorial-memory-retrieval.yml": ".github/workflows/editorial-memory-retrieval.yml",
+              "PR5_AUDITABLE_MEMORY_RETRIEVAL.md": "designs/PR5_AUDITABLE_MEMORY_RETRIEVAL.md",
+          }
+          with zipfile.ZipFile("/tmp/pr5.zip") as archive:
+              assert set(mapping).issubset(set(archive.namelist()))
+              for source, target in mapping.items():
+                  path = Path(target)
+                  path.parent.mkdir(parents=True, exist_ok=True)
+                  path.write_bytes(archive.read(source))
+
+          Path(".github/workflows/pr5-bootstrap.yml").unlink()
+          shutil.rmtree("bootstrap/pr5")
+          PY
+
+      - name: Verify implementation before commit
+        run: |
+          python -m pip install --disable-pip-version-check jsonschema
+          python -m py_compile \
+            scripts/editorial_memory_retrieval.py \
+            scripts/build_memory_context.py
+          python -m unittest discover \
+            -s tests/memory-retrieval \
+            -p 'test_*.py' \
+            -v
+
+      - name: Commit completed implementation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- \
+            scripts/editorial_memory_retrieval.py \
+            scripts/build_memory_context.py \
+            tests/memory-retrieval/test_memory_retrieval.py \
+            tests/memory-retrieval/fixtures/aws_query_plan.json \
+            tests/memory-retrieval/fixtures/unrelated_query_plan.json \
+            .github/workflows/editorial-memory-retrieval.yml \
+            designs/PR5_AUDITABLE_MEMORY_RETRIEVAL.md
+          git add -u -- \
+            .github/workflows/pr5-bootstrap.yml \
+            bootstrap/pr5
+          git commit -m "Add auditable editorial memory retrieval"
+          git push origin HEAD:feat/pr5-auditable-memory-retrieval
