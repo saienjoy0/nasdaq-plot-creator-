@@ -1,6 +1,6 @@
 ---
 name: nasdaq-cafe-renderer-handoff
-version: 1.1.0
+version: 1.2.0
 description: Build an immutable, SHA-bound, preview-gated bundle for the Nasdaq Cafe renderer.
 ---
 
@@ -14,7 +14,7 @@ Package only validator-PASS production artifacts and resolved assets for deliver
 
 Use `scripts/build_renderer_handoff_hardened.py`, not the base handoff builder, for production bundles.
 
-The guarded entrypoint requires the source `official_execution_preflight.json` to contain:
+The guarded entrypoint first requires the source `official_execution_preflight.json` to contain Final Production hardening:
 
 ```json
 {
@@ -25,13 +25,27 @@ The guarded entrypoint requires the source `official_execution_preflight.json` t
 }
 ```
 
-It then invokes the deterministic base handoff builder and verifies that the copied bundle preflight retains the same evidence. A newly created bundle is deleted if this post-copy verification fails.
+It then re-runs the episode-memory final gate against the current episode package, spoken script, asset manifest, and render spec. This second check occurs after any Financial Visual Cross-Artifact update and before bundle construction.
+
+On success, it atomically records:
+
+```json
+{
+  "episode_memory_hardening": {
+    "pre_build": "pass",
+    "public_artifacts": "pass",
+    "handoff_recheck": "pass"
+  }
+}
+```
+
+The deterministic base handoff builder then hashes and copies these final bytes. The guarded entrypoint verifies that the copied bundle preflight retains the complete three-stage evidence. A newly created bundle is deleted if this post-copy verification fails.
 
 ## Preview contract
 
 Preview bundles require:
 
-- hardened final-production preflight PASS;
+- complete three-stage episode-memory hardening evidence;
 - zero unresolved states;
 - render-spec date and schema version match;
 - consistency report PASS;
@@ -56,4 +70,4 @@ Preview never auto-promotes to final.
 - same input is idempotent;
 - tampered existing bundles fail closed.
 
-The bundle is transport and provenance only. It performs no market-causality, narration, template, image-path, or publication decision.
+The bundle is transport and provenance only. It performs no market-causality, narration, template, image-path, financial-visual, or publication decision.
