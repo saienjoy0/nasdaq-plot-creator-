@@ -2,7 +2,25 @@
 
 ## Scope
 
-This directory and `scripts/run_daily_production.py` manage deterministic daily production state only.
+This directory and the daily production scripts manage deterministic daily production state only.
+
+## Authoritative entrypoint
+
+Production must use:
+
+```text
+scripts/run_daily_production_hardened.py
+```
+
+`scripts/run_daily_production.py` remains the base state-machine implementation and unit-test target. Do not invoke it directly for production.
+
+The hardening wrapper must inject:
+
+- `build_final_production_package_hardened.py`
+- `build_renderer_handoff_hardened.py`
+- `run_real_day_acceptance_hardened.py`
+
+If any hardened dependency is unavailable, fail closed before running the state machine.
 
 ## Required boundaries
 
@@ -18,4 +36,10 @@ This directory and `scripts/run_daily_production.py` manage deterministic daily 
 
 ## Regression requirement
 
-Changes must preserve PR #8 episode-memory validation, Final Production Package consistency, immutable Renderer Handoff, and Real-Day Acceptance behavior.
+Changes must preserve:
+
+- PR #8 episode-memory validation and final-package hardening;
+- deterministic Final Production Package consistency and metadata-leak rejection;
+- immutable Renderer Handoff with hardened preflight evidence;
+- Real-Day Acceptance with bundled hardening evidence;
+- the original daily state-machine behavior.
