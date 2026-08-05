@@ -1,0 +1,167 @@
+#!/usr/bin/env python3
+"""Authoritative guarded entry point for final production artifact generation."""
+
+from __future__ import annotations
+
+import argparse
+import importlib.util
+import json
+import sys
+from pathlib import Path
+from typing import Any, Callable
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class HardenedBuildError(ValueError):
+    pass
+
+
+def _load_module(name: str, path: Path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    if not spec or not spec.loader:
+        raise HardenedBuildError(f"cannot import {name}: {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _real_gate(repo_root: Path, package: Path, artifacts: list[Path]):
+    module = _load_module(
+        "episode_memory_hardening_gate",
+        repo_root
+        / "skills/nasdaq-cafe-episode-package-memory/validators/validate_episode_package_memory_hardening.py",
+    )
+    return module.validate_hardening(
+        repo_root=repo_root,
+        episode_package=package,
+        public_artifacts=artifacts,
+    )
+
+
+def _real_builder(package: Path, output_root: Path, schema: Path):
+    module = _load_module(
+        "final_production_base_builder",
+        ROOT / "scripts/build_final_production_package.py",
+    )
+    return module.build(package, output_root, schema)
+
+
+def _errors(result: Any) -> list[str]:
+    value = getattr(result, "errors", None)
+    if isinstance(value, list):
+        return list(value)
+    if isinstance(result, dict) and result.get("status") == "fail":
+        errors = result.get("errors", [])
+        return list(errors) if isinstance(errors, list) else [str(errors)]
+    return []
+
+
+def _safe_output_root(repo_root: Path, output_root: Path) -> Path:
+    root = repo_root.resolve()
+    output = output_root.resolve()
+    if output != root and root not in output.parents:
+        raise HardenedBuildError(f"output root escapes repository root: {output_root}")
+    return output
+
+
+def _cleanup_generated(result: dict[str, Any]) -> None:
+    paths = result.get("paths", {})
+    if not isinstance(paths, dict):
+        return
+    for value in paths.values():
+        if not isinstance(value, str):
+            continue
+        path = Path(value)
+        try:
+            if path.is_file():
+                path.unlink()
+        except OSError:
+            pass
+
+
+def build_hardened(
+    package: Path,
+    output_root: Path,
+    schema: Path,
+    *,
+    repo_root: Path = ROOT,
+    gate: Callable[[Path, Path, list[Path]], Any] = _real_gate,
+    builder: Callable[[Path, Path, Path], dict[str, Any]] = _real_builder,
+) -> dict[str, Any]:
+    repo_root = repo_root.resolve()
+    package = package.resolve()
+    output_root = _safe_output_root(repo_root, output_root)
+
+    pre = gate(repo_root, package, [])
+    pre_errors = _errors(pre)
+    if pre_errors:
+        raise HardenedBuildError(
+            "episode-memory pre-build gate failed:\n" + "\n".join(pre_errors)
+        )
+
+    result = builder(package, output_root, schema)
+    if not isinstance(result, dict) or result.get("status") != "pass":
+        raise HardenedBuildError("base final production builder did not return PASS")
+
+    paths = result.get("paths", {})
+    required = ("spoken_script", "asset_manifest", "render_spec")
+    artifacts: list[Path] = []
+    for key in required:
+        value = paths.get(key) if isinstance(paths, dict) else None
+        if not isinstance(value, str):
+            _cleanup_generated(result)
+            raise HardenedBuildError(f"base builder omitted required artifact path: {key}")
+        artifacts.append(Path(value))
+
+    post = gate(repo_root, package, artifacts)
+    post_errors = _errors(post)
+    if post_errors:
+        _cleanup_generated(result)
+        raise HardenedBuildError(
+            "episode-memory public-artifact gate failed:\n" + "\n".join(post_errors)
+        )
+
+    result["episode_memory_hardening"] = {
+        "pre_build": "pass",
+        "public_artifacts": "pass",
+    }
+    return result
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--episode-package", required=True, type=Path)
+    parser.add_argument("--output-root", required=True, type=Path)
+    parser.add_argument(
+        "--schema",
+        type=Path,
+        default=ROOT
+        / "skills/nasdaq-cafe-final-production/contracts/final_production_source_annex.schema.json",
+    )
+    parser.add_argument("--repo-root", type=Path, default=ROOT)
+    parser.add_argument("--report", type=Path)
+    args = parser.parse_args(argv)
+    try:
+        result = build_hardened(
+            args.episode_package,
+            args.output_root,
+            args.schema,
+            repo_root=args.repo_root,
+        )
+        code = 0
+    except (OSError, HardenedBuildError, ValueError, json.JSONDecodeError) as exc:
+        result = {"status": "fail", "errors": [str(exc)]}
+        code = 1
+    text = json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    if args.report:
+        args.report.parent.mkdir(parents=True, exist_ok=True)
+        args.report.write_text(text, encoding="utf-8")
+    else:
+        sys.stdout.write(text)
+    return code
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
