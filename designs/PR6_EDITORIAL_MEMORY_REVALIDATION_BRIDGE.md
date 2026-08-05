@@ -63,6 +63,7 @@ Manifest builderはretrieverを同じQuery Planで再実行し、次を検査す
 4. Query Plan、Context、Report、Daily packageがrepo/workspace内に存在する
 5. path traversal、絶対path、symlinkによるrepo外参照を拒否する
 6. Manifestにはrepo相対pathだけを保存する
+7. Validator schema自体もrepo/workspace外から差し替えられない
 
 Dossier validatorも同じretrieval replayを再実行する。Manifestの`validation=pass`だけを信用しない。
 
@@ -104,8 +105,10 @@ notes
 次は禁止する。
 
 - discovery-only、unavailable、tier 3、unknown、grounded inferenceだけで再検証結論を作る
-- `editorial-memory/`配下のpath、memory ID、context、reportを現在証拠へ変換する
-- memoryだけでExpected、Actual、causal edge、NASDAQ-wide causeを作る
+- 空のsource referenceを現在証拠として扱う
+- `editorial-memory/`配下のpath、memory ID、context、reportを`E-###`へ登録する
+- memoryを他の現在証拠へ混ぜてExpected、Actual、causal edgeへ残す
+- Actualのstatementだけを置き、現在Evidence IDを空にする
 - invalidated / resolved memoryを現在の因果前提に使う
 - historical contextを現在のcausal edge根拠に使う
 - `not_used`へcurrent evidenceを残す
@@ -139,6 +142,7 @@ ValidatorはID集合だけでなく、selected memoryごとに次を完全照合
 - memory revalidation current evidence
 
 どの場所でもdossier内に存在しない`E-###`を参照できない。
+また、editorial memory由来のsource referenceは、他の現在証拠と混在していてもEvidence登録自体を拒否する。
 
 ## Validator ERROR条件
 
@@ -146,22 +150,24 @@ ValidatorはID集合だけでなく、selected memoryごとに次を完全照合
 2. Manifestまたは入力ファイルのSHA不一致
 3. Query Plan・Context・Reportのretrieval replay不一致
 4. repo外path、絶対path、path traversal
-5. selected memoryの重複bucketまたはmetadata改変
-6. selected non-core memoryの再検証漏れ
-7. duplicate revalidation
-8. retrieval use modeまたはhistorical confidenceの不一致
-9. 結論状態に現在の高品質証拠がない
-10. invalidated / resolved memoryの現在利用
-11. historical contextの現在因果利用
-12. Expectedをmemoryだけで作成
-13. NASDAQ-wide edgeに現在のtier 1 / tier 2証拠がない
-14. causal edgeをmemoryだけで支持
-15. dossier内に存在しないevidence ID参照
-16. daily input provenanceがManifestのpath/SHAと一致しない
+5. repo外schema directory
+6. selected memoryの重複bucketまたはmetadata改変
+7. selected non-core memoryの再検証漏れ
+8. duplicate revalidation
+9. retrieval use modeまたはhistorical confidenceの不一致
+10. 結論状態に現在の高品質証拠がない
+11. invalidated / resolved memoryの現在利用
+12. historical contextの現在因果利用
+13. ExpectedまたはActualをmemoryだけで作成
+14. Actual statementに現在証拠がない
+15. NASDAQ-wide edgeに現在のtier 1 / tier 2証拠がない
+16. causal edgeへmemory由来Evidenceを混在させる
+17. dossier内に存在しないevidence ID参照
+18. daily input provenanceがManifestのpath/SHAと一致しない
 
 ## テスト
 
-22件の決定的unit testを実行する。
+25件の決定的unit testを実行する。
 
 主な正常系:
 
@@ -175,7 +181,7 @@ ValidatorはID集合だけでなく、selected memoryごとに次を完全照合
 
 - 同日だが別Query PlanのReport
 - 別検索・改変Context
-- repo外path、絶対path
+- repo外path、絶対path、外部schema directory
 - 同じmemoryの複数bucket登録
 - bucketとuse modeの矛盾
 - Manifest selected metadata改変
@@ -184,6 +190,8 @@ ValidatorはID集合だけでなく、selected memoryごとに次を完全照合
 - invalidated + tier 3
 - research question内の未知Evidence ID
 - alternative hypothesis内の未知Evidence ID
+- Actual statement without Evidence ID
+- memory由来Evidenceと現在Evidenceの混在
 - memory-only Expected
 - quality evidenceのないNASDAQ-wide edge
 
