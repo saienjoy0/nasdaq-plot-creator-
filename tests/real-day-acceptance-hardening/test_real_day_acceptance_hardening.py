@@ -55,7 +55,7 @@ class Tests(unittest.TestCase):
 
     def validator_pass(self, **kwargs):
         return {
-            "validation": {"status": "pass"},
+            "validation": {"status": "pass", "errors": [], "warnings": []},
             "mvp_status": "preview_ready_user_review_pending",
         }
 
@@ -75,7 +75,13 @@ class Tests(unittest.TestCase):
         result = module.validate_acceptance_hardened(
             **self.args(), validator=self.validator_pass
         )
-        self.assertEqual("pass", result["episode_memory_hardening"])
+        self.assertNotIn("episode_memory_hardening", result)
+        self.assertTrue(
+            any(
+                "episode-memory hardening evidence verified" in item
+                for item in result["validation"]["warnings"]
+            )
+        )
 
     def test_02_missing_hardening_rejected(self):
         self.write_bundle(None)
