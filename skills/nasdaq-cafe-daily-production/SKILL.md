@@ -1,6 +1,6 @@
 ---
 name: nasdaq-cafe-daily-production
-version: 1.0.0
+version: 1.1.0
 description: Manage the deterministic daily production lifecycle after the user supplies a Nasdaq Cafe daily source package.
 ---
 
@@ -11,6 +11,24 @@ description: Manage the deterministic daily production lifecycle after the user 
 Provide one safe command-line entry point for the mechanical parts of daily 朝のNASDAQカフェ production.
 
 The user supplies `daily_source_package_YYYY-MM-DD.md`. ChatGPT performs the research, editorial decision, fox narration, 9-Scene production, 04 inquisition, and Primary/Fallback decision. This CLI records and validates the resulting artifacts, builds the production package and preview handoff, and records the preview result.
+
+## Production entrypoint
+
+Use the hardening wrapper:
+
+```bash
+python scripts/run_daily_production_hardened.py --workspace . <command> ...
+```
+
+Do not use `scripts/run_daily_production.py` directly for production. The base script remains the deterministic state-machine implementation and unit-test target.
+
+The wrapper preserves the same state transitions and replaces only these dependencies:
+
+```text
+build-production → hardened Final Production
+build-handoff    → hardened Renderer Handoff
+record-preview   → hardened Real-Day Acceptance
+```
 
 ## It does not do
 
@@ -48,13 +66,13 @@ Final can only be requested after `user_preview_approved`, with an approval reco
 ## Main commands
 
 ```bash
-python scripts/run_daily_production.py --workspace . init ...
-python scripts/run_daily_production.py --workspace . status ...
-python scripts/run_daily_production.py --workspace . advance ...
-python scripts/run_daily_production.py --workspace . build-production ...
-python scripts/run_daily_production.py --workspace . build-handoff ...
-python scripts/run_daily_production.py --workspace . record-preview ...
-python scripts/run_daily_production.py --workspace . request-final --explicit-final ...
+python scripts/run_daily_production_hardened.py --workspace . init ...
+python scripts/run_daily_production_hardened.py --workspace . status ...
+python scripts/run_daily_production_hardened.py --workspace . advance ...
+python scripts/run_daily_production_hardened.py --workspace . build-production ...
+python scripts/run_daily_production_hardened.py --workspace . build-handoff ...
+python scripts/run_daily_production_hardened.py --workspace . record-preview ...
+python scripts/run_daily_production_hardened.py --workspace . request-final --explicit-final ...
 ```
 
 The CLI emits machine-readable JSON and stable error codes. Stop reasons identify the failed lifecycle boundary rather than silently repairing inputs.
