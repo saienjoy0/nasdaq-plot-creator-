@@ -1,4 +1,4 @@
-name: Verify source materialization
+name: Verify editorial contracts
 
 on:
   push:
@@ -6,8 +6,10 @@ on:
       - feat/nasdaq-cafe-research-skill-v0.1
     paths:
       - "source-of-truth/**"
-      - "scripts/materialize_sources.py"
+      - "editorial-memory/**"
+      - "scripts/**"
       - "skills/nasdaq-cafe-causal-research/**"
+      - "skills/nasdaq-cafe-editorial-memory/**"
       - ".github/workflows/verify-source-materialization.yml"
   workflow_dispatch:
 
@@ -48,10 +50,24 @@ jobs:
         run: |
           python -m py_compile \
             scripts/materialize_sources.py \
+            scripts/build_memory_context.py \
+            scripts/promote_episode_memory.py \
             skills/nasdaq-cafe-causal-research/validators/validate_causal_dossier.py
           python skills/nasdaq-cafe-causal-research/validators/validate_causal_dossier.py --help >/dev/null
+          python scripts/promote_episode_memory.py --help >/dev/null
 
-      - name: Confirm clean generated-source contract
+      - name: Smoke test selective memory retrieval
+        run: |
+          python scripts/build_memory_context.py \
+            --date 2026-08-05 \
+            --topic "AI設備投資" \
+            --entity "NASDAQ" \
+            --output working/memory_context_smoke.md
+          test -s working/memory_context_smoke.md
+          grep -F "Selected Memory Context" working/memory_context_smoke.md
+          grep -F "現在の事実を証明する資料ではありません" working/memory_context_smoke.md
+
+      - name: Confirm generated-source contract
         shell: bash
         run: |
           set -euo pipefail
