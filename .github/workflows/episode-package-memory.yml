@@ -1,0 +1,55 @@
+name: Episode Package Memory
+
+on:
+  pull_request:
+    paths:
+      - "skills/nasdaq-cafe-episode-package-memory/**"
+      - "tests/episode-package-memory/**"
+      - "skills/nasdaq-cafe-causal-research/**"
+      - "scripts/build_research_input_manifest.py"
+      - "scripts/editorial_memory_retrieval.py"
+      - "designs/PR8_TO_PR12_IMPLEMENTATION_BLUEPRINT.md"
+      - ".github/workflows/episode-package-memory.yml"
+  push:
+    branches: [main]
+    paths:
+      - "skills/nasdaq-cafe-episode-package-memory/**"
+      - "tests/episode-package-memory/**"
+      - "skills/nasdaq-cafe-causal-research/**"
+      - "scripts/build_research_input_manifest.py"
+      - "scripts/editorial_memory_retrieval.py"
+      - "designs/PR8_TO_PR12_IMPLEMENTATION_BLUEPRINT.md"
+      - ".github/workflows/episode-package-memory.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install validator dependency
+        run: python -m pip install --disable-pip-version-check jsonschema
+      - name: Compile PR8 parser and validator
+        run: |
+          python -m py_compile \
+            skills/nasdaq-cafe-episode-package-memory/parsers/episode_package_memory_parser.py \
+            skills/nasdaq-cafe-episode-package-memory/validators/validate_episode_package_memory.py
+      - name: Parse PR8 schema
+        run: python -m json.tool skills/nasdaq-cafe-episode-package-memory/contracts/episode_package_memory_annex.schema.json >/dev/null
+      - name: Run PR8 positive and adversarial tests
+        run: python -m unittest discover -s tests/episode-package-memory -p 'test_*.py' -v
+      - name: Run PR6 memory revalidation regression
+        run: python -m unittest discover -s tests/memory-revalidation -p 'test_*.py' -v
+      - name: Run retrieval regression
+        run: python -m unittest discover -s tests/memory-retrieval -p 'test_*.py' -v
+      - name: Run promotion regression
+        run: python -m unittest discover -s tests/memory-promotion -p 'test_*.py' -v
+      - name: Validate editorial-memory contracts
+        run: python skills/nasdaq-cafe-editorial-memory/validators/validate_memory_contracts.py --require-jsonschema
