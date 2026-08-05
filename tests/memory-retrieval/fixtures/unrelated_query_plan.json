@@ -1,0 +1,34 @@
+{
+  "contract_version": "1.0.0",
+  "episode_date": "2026-08-01",
+  "lead_candidates": [
+    "Teslaの自動運転"
+  ],
+  "entities": [
+    {
+      "raw": "Tesla",
+      "canonical": "Tesla",
+      "entity_id": null,
+      "resolution": "unresolved"
+    }
+  ],
+  "topics": [
+    "自動運転"
+  ],
+  "technologies": [],
+  "policies": [],
+  "indicators": [],
+  "relations": [],
+  "time_window": {
+    "from": "2026-07-01",
+    "to": "2026-08-01"
+  },
+  "comparison_questions": [],
+  "limits": {
+    "max_threads": 5,
+    "max_claims": 10,
+    "max_episodes": 3,
+    "max_lessons": 3,
+    "max_characters": 12000
+  }
+}
