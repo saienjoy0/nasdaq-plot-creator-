@@ -21,7 +21,7 @@ The hardening gate must invoke the base PR #8 validator and fail if the base val
 - Require one JSON annex and explicit invisible MEMREF markers.
 - Require Scene 1 through Scene 9 exactly once and in order.
 - Require exactly one integrated `04 興味深さ・わかりやすさ審問結果` section before the memory annex.
-- Require the memory annex to be the final section of the episode package. A Final Production Source annex, when used, must appear before it.
+- After the memory annex, allow either whitespace only or exactly one Final Production Source annex. The Final Production Source annex must then be the final section.
 - Re-run the PR #6 validation chain; never trust self-declared PASS fields alone.
 - Keep annex, MEMREF markers, and internal memory fields out of all viewer-facing artifacts.
 - Scan supplied spoken script, captions, telops, asset manifest, and render spec artifacts for metadata leakage.
