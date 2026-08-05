@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nasdaq-cafe.local/schemas/production_state.schema.json",
+  "title": "NASDAQ Cafe Production State",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "episode_date", "current_state", "request_sha256", "daily_source_sha256", "invalidated", "transitions"],
+  "properties": {
+    "contract_version": {"const": "1.0.0"},
+    "episode_date": {"type": "string", "format": "date"},
+    "current_state": {"type": "string"},
+    "request_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "daily_source_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "invalidated": {"type": "boolean"},
+    "transitions": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["state", "evidence"],
+        "properties": {
+          "state": {"type": "string"},
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object", "additionalProperties": false,
+              "required": ["path", "sha256"],
+              "properties": {
+                "path": {"type": "string", "minLength": 1},
+                "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
