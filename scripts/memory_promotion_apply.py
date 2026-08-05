@@ -29,6 +29,10 @@ def verify_plan_and_staging(plan_path: Path, repo_root: Path, contracts_dir: Pat
     run_dir = resolve_repo_path(str(plan["run_directory"]), repo_root)
     if plan_path != run_dir / "promotion_plan.json":
         raise StalePlanError("plan path does not match its declared run directory")
+    dry_run_report = run_dir / "dry_run_report.md"
+    if not dry_run_report.is_file() or dry_run_report.stat().st_size <= 0:
+        raise StalePlanError("dry-run report is missing or empty")
+
     report = read_json(resolve_repo_path(str(plan["conflict_report_path"]), repo_root))
     validate_json_schema(report, contracts_dir / "memory_conflict_report.schema.json")
     if report.get("unresolved_count") != 0 or not report.get("safe_to_apply"):

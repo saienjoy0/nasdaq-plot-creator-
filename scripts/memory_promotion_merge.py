@@ -130,15 +130,16 @@ def merge_aliases(
     record: Mapping[str, Any],
     memory_root: Path,
     episode_ref: str,
+    provenance_path: str,
     staged_values: dict[str, bytes],
 ) -> list[str]:
     path = memory_root / "entity_aliases.json"
     doc = load_json_or(path, {"contract_version": "1.0.0", "entities": []})
     entities = doc.setdefault("entities", [])
     by_id = {
-        str(item.get("canonical_id", item.get("id"))): item
+        str(item.get("entity_id", item.get("canonical_id", item.get("id")))): item
         for item in entities
-        if isinstance(item, dict) and (item.get("canonical_id") or item.get("id"))
+        if isinstance(item, dict) and (item.get("entity_id") or item.get("canonical_id") or item.get("id"))
     }
     generated: list[str] = []
     for update in record.get("alias_updates", []):
@@ -146,22 +147,26 @@ def merge_aliases(
         existing = by_id.get(canonical_id)
         if existing is None:
             existing = {
-                "canonical_id": canonical_id,
-                "display_name": update["display_name"],
-                "aliases": sorted(set(update["aliases"])),
+                "entity_id": canonical_id,
+                "canonical_name": update["display_name"],
                 "entity_type": update.get("entity_type", "company"),
-                "source_episode_revisions": [episode_ref],
+                "aliases": sorted(set(update["aliases"])),
+                "tickers": [],
+                "identifiers": {},
+                "status": "active",
+                "superseded_by": None,
+                "updated_at": record["episode_date"],
+                "source_paths": [provenance_path],
             }
             entities.append(existing)
             by_id[canonical_id] = existing
         else:
-            existing["display_name"] = update["display_name"]
+            existing["canonical_name"] = update["display_name"]
             existing["aliases"] = sorted(set(existing.get("aliases", [])) | set(update["aliases"]))
-            existing["source_episode_revisions"] = sorted(
-                set(existing.get("source_episode_revisions", [])) | {episode_ref}
-            )
+            existing["updated_at"] = record["episode_date"]
+            existing["source_paths"] = sorted(set(existing.get("source_paths", [])) | {provenance_path})
         generated.append(canonical_id)
-    entities.sort(key=lambda item: str(item.get("canonical_id", item.get("id", ""))))
+    entities.sort(key=lambda item: str(item.get("entity_id", item.get("canonical_id", item.get("id", "")))))
     staged_values["editorial-memory/entity_aliases.json"] = pretty_json(doc).encode("utf-8")
     return generated
 
@@ -187,4 +192,3 @@ def merge_lessons(
         text += "\n\n## Promoted lessons\n\n" + "\n".join(additions)
     staged_values["editorial-memory/production-lessons.md"] = (text.rstrip() + "\n").encode("utf-8")
     return generated
-

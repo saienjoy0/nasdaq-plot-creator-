@@ -102,7 +102,7 @@ def detect_conflicts(record: Mapping[str, Any], memory_root: Path) -> tuple[list
     for entity in aliases_doc.get("entities", []):
         if not isinstance(entity, Mapping):
             continue
-        canonical = str(entity.get("canonical_id", entity.get("id", "")))
+        canonical = str(entity.get("entity_id", entity.get("canonical_id", entity.get("id", ""))))
         for alias in entity.get("aliases", []):
             if isinstance(alias, str):
                 alias_owner[alias.casefold()] = canonical
@@ -160,4 +160,3 @@ def detect_conflicts(record: Mapping[str, Any], memory_root: Path) -> tuple[list
             )
 
     return conflicts, warnings
-

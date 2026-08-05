@@ -65,7 +65,7 @@
         "type": "object", "additionalProperties": false,
         "required": ["canonical_id", "display_name", "aliases"],
         "properties": {
-          "canonical_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
+          "canonical_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
           "display_name": {"type": "string", "minLength": 1},
           "aliases": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
           "entity_type": {"enum": ["company", "person", "index", "policy", "technology", "organization", "other"]}

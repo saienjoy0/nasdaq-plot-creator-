@@ -231,11 +231,82 @@ class MemoryPromotionTest(unittest.TestCase):
     def test_alias_collision_blocks(self) -> None:
         self.write_json(
             "editorial-memory/entity_aliases.json",
-            {"contract_version": "1.0.0", "entities": [{"canonical_id": "otherco", "display_name": "Other", "aliases": ["Example Co"]}]},
+            {
+                "contract_version": "1.0.0",
+                "entities": [{
+                    "entity_id": "otherco",
+                    "canonical_name": "Other",
+                    "entity_type": "company",
+                    "aliases": ["Example Co"],
+                    "tickers": [],
+                    "identifiers": {},
+                    "status": "active",
+                    "superseded_by": None,
+                    "updated_at": "2026-08-04",
+                    "source_paths": ["editorial-memory/episodes/2026-08-04/revisions/v001/provenance.json"],
+                }],
+            },
         )
         plan = self.plan()
         self.assertFalse(plan["safe_to_apply"])
         self.assertTrue(any(item["type"] == "alias_collision" for item in plan["conflicts"]))
+
+    def test_thread_identity_collision_blocks(self) -> None:
+        self.write_json(
+            "editorial-memory/threads/index.json",
+            {
+                "contract_version": "1.0.0",
+                "threads": [{
+                    "id": "ai-capex-payback",
+                    "title": "AI投資の回収",
+                    "path": "threads/ai-capex-payback.md",
+                    "triggers": [],
+                    "entities": [],
+                    "topics": [],
+                    "status": "active",
+                    "updated_at": "2026-08-04",
+                }],
+            },
+        )
+        self.write_text(
+            "editorial-memory/threads/ai-capex-payback.md",
+            "# AI投資の回収\n\n## このthreadが答える問い\n\n別の問い\n\n## 更新履歴\n",
+        )
+        plan = self.plan()
+        self.assertFalse(plan["safe_to_apply"])
+        self.assertTrue(any(item["type"] == "thread_identity_collision" for item in plan["conflicts"]))
+
+    def test_explicit_revision_without_correction_reason_is_blocked(self) -> None:
+        self.plan("first")
+        self.apply("first")
+        record = json.loads(self.record_path.read_text())
+        record.update({"revision": "v002", "supersedes_revision": "v001"})
+        self.record_path.write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n")
+        self.write_text("production/episode_package_2026-08-05.md", "# 2026-08-05\n変更\n")
+        plan = self.plan("bad-revision")
+        self.assertFalse(plan["safe_to_apply"])
+        self.assertTrue(any("correction_reason" in item["detail"] for item in plan["conflicts"]))
+
+    def test_tampered_staged_file_is_rejected(self) -> None:
+        self.plan()
+        staged = self.root / "working/memory-promotion/run1/staged/editorial-memory/claim_ledger.json"
+        staged.write_text("{}\n", encoding="utf-8")
+        with self.assertRaises(StalePlanError):
+            self.apply()
+
+    def test_missing_dry_run_report_is_rejected(self) -> None:
+        self.plan()
+        (self.root / "working/memory-promotion/run1/dry_run_report.md").unlink()
+        with self.assertRaises(StalePlanError):
+            self.apply()
+
+    def test_existing_lock_rejects_apply(self) -> None:
+        self.plan()
+        lock = self.root / "working/memory-promotion/.apply.lock"
+        lock.parent.mkdir(parents=True, exist_ok=True)
+        lock.write_text("held\n", encoding="utf-8")
+        with self.assertRaises(PromotionError):
+            self.apply()
 
     def test_stale_plan_is_rejected(self) -> None:
         self.plan()
@@ -256,7 +327,6 @@ class MemoryPromotionTest(unittest.TestCase):
             self.apply(fail_after=2)
         self.assertEqual(before, self.memory_snapshot())
         self.assertFalse((self.root / "working/memory-promotion/.apply.lock").exists())
-
 
     def test_missing_source_is_rejected(self) -> None:
         (self.root / "production/episode_package_2026-08-05.md").unlink()

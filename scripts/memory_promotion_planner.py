@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import json
 import shutil
 from pathlib import Path
 from typing import Any
@@ -83,7 +84,11 @@ def build_plan(
 
         generated_ids["threads"] = merge_threads(record, memory_root, episode_ref, staged_values)
         generated_ids["claims"] = merge_claims(record, memory_root, episode_ref, provenance_path, staged_values)
-        generated_ids["aliases"] = merge_aliases(record, memory_root, episode_ref, staged_values)
+        generated_ids["aliases"] = merge_aliases(record, memory_root, episode_ref, provenance_path, staged_values)
+        validate_json_schema(
+            json.loads(staged_values["editorial-memory/entity_aliases.json"].decode("utf-8")),
+            contracts_dir / "entity_aliases.schema.json",
+        )
         generated_ids["lessons"] = merge_lessons(record, memory_root, episode_ref, staged_values)
 
         index = old_index or {
@@ -256,4 +261,3 @@ def build_plan(
         report_lines.extend(["", "## Blockers", ""] + [f"- {item['detail']}" for item in conflicts])
     (output_dir / "dry_run_report.md").write_text("\n".join(report_lines) + "\n", encoding="utf-8")
     return plan
-
