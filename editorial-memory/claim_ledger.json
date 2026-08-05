@@ -1,4 +1,40 @@
 {
-  "contract_version": "1.0.0",
-  "claims": []
+  "claims": [
+    {
+      "claim": "市場はAI設備投資の金額だけでなく、クラウド売上として回収が確認できるかを評価する。",
+      "claim_id": "ai-capex-evaluation-axis",
+      "confidence": "medium",
+      "entities": [
+        "AWS",
+        "Amazon"
+      ],
+      "first_seen": "2026-07-31",
+      "history": [
+        {
+          "confidence": "medium",
+          "date": "2026-07-31",
+          "episode_revision": "2026-07-31/v001",
+          "evidence_paths": [
+            "memory-seeds/2026-07-31/source/episode_package_2026-07-31.md",
+            "memory-seeds/2026-07-31/source/render_spec.json"
+          ],
+          "provenance_path": "editorial-memory/episodes/2026-07-31/revisions/v001/provenance.json",
+          "reason": "2026-07-31回ではAWS売上が市場予想を上回り、Amazonが上昇した一方、半導体への波及は限定的だったため。",
+          "status": "active"
+        }
+      ],
+      "last_updated": "2026-07-31",
+      "source_episode_revision": "2026-07-31/v001",
+      "status": "active",
+      "subject": "AI設備投資の評価軸",
+      "thread_ids": [
+        "ai-capex-payback"
+      ],
+      "topics": [
+        "AI設備投資",
+        "クラウド"
+      ]
+    }
+  ],
+  "contract_version": "1.0.0"
 }

@@ -1,4 +1,77 @@
 {
   "contract_version": "1.0.0",
-  "entities": []
+  "entities": [
+    {
+      "aliases": [
+        "AMZN",
+        "Amazon",
+        "アマゾン"
+      ],
+      "canonical_name": "Amazon",
+      "entity_id": "amazon",
+      "entity_type": "company",
+      "identifiers": {},
+      "source_paths": [
+        "editorial-memory/episodes/2026-07-31/revisions/v001/provenance.json"
+      ],
+      "status": "active",
+      "superseded_by": null,
+      "tickers": [],
+      "updated_at": "2026-07-31"
+    },
+    {
+      "aliases": [
+        "AWS",
+        "Amazon Web Services",
+        "アマゾンウェブサービス"
+      ],
+      "canonical_name": "AWS",
+      "entity_id": "amazon-web-services",
+      "entity_type": "organization",
+      "identifiers": {},
+      "source_paths": [
+        "editorial-memory/episodes/2026-07-31/revisions/v001/provenance.json"
+      ],
+      "status": "active",
+      "superseded_by": null,
+      "tickers": [],
+      "updated_at": "2026-07-31"
+    },
+    {
+      "aliases": [
+        "AAPL",
+        "Apple",
+        "アップル"
+      ],
+      "canonical_name": "Apple",
+      "entity_id": "apple",
+      "entity_type": "company",
+      "identifiers": {},
+      "source_paths": [
+        "editorial-memory/episodes/2026-07-31/revisions/v001/provenance.json"
+      ],
+      "status": "active",
+      "superseded_by": null,
+      "tickers": [],
+      "updated_at": "2026-07-31"
+    },
+    {
+      "aliases": [
+        "SOXX",
+        "iShares Semiconductor ETF",
+        "半導体ETF"
+      ],
+      "canonical_name": "SOXX",
+      "entity_id": "soxx",
+      "entity_type": "other",
+      "identifiers": {},
+      "source_paths": [
+        "editorial-memory/episodes/2026-07-31/revisions/v001/provenance.json"
+      ],
+      "status": "active",
+      "superseded_by": null,
+      "tickers": [],
+      "updated_at": "2026-07-31"
+    }
+  ]
 }

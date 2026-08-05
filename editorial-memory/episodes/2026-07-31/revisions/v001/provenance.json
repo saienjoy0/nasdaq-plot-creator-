@@ -1,0 +1,52 @@
+{
+  "approval_status": "approved_preview",
+  "approved_at": "2026-08-03T04:43:12.204Z",
+  "contract_version": "2.0.0",
+  "correction_reason": null,
+  "episode_date": "2026-07-31",
+  "generated_memory_ids": {
+    "aliases": [
+      "amazon",
+      "amazon-web-services",
+      "apple",
+      "soxx"
+    ],
+    "claims": [
+      "ai-capex-evaluation-axis"
+    ],
+    "lessons": [],
+    "threads": [
+      "ai-capex-payback"
+    ]
+  },
+  "promoted_at": "2026-08-05T11:02:05Z",
+  "promotion_plan_digest": "08f8729151cf10dfc486873fb321a424aac65ecb575b0177ff2c5df99e7d6b8a",
+  "publication_record": {
+    "bytes": 4554,
+    "path": "memory-seeds/2026-07-31/publication_record.json",
+    "sha256": "2e9a981f2d0b992d07a581d90d55ecc80d300108c42a6316d9f6bf115538e25b"
+  },
+  "revision": "v001",
+  "source_artifacts": {
+    "episode_package": {
+      "archive_path": "editorial-memory/episodes/2026-07-31/revisions/v001/episode_package.md",
+      "bytes": 31940,
+      "original_path": "memory-seeds/2026-07-31/source/episode_package_2026-07-31.md",
+      "sha256": "6cc8f0f924b07b625fec421acab0735a27fbab6caf74a75722674ba7f4aa80b3"
+    },
+    "render_spec": {
+      "archive_path": "editorial-memory/episodes/2026-07-31/revisions/v001/render_spec.json",
+      "bytes": 83844,
+      "original_path": "memory-seeds/2026-07-31/source/render_spec.json",
+      "sha256": "f94a16574d44611efb23e0596274db1cb5f7b2c6b2d5f663dd76042026a2524c"
+    },
+    "validator_report": {
+      "archive_path": "editorial-memory/episodes/2026-07-31/revisions/v001/validator_report.json",
+      "bytes": 536,
+      "original_path": "memory-seeds/2026-07-31/source/validator_report.json",
+      "sha256": "d3e43614275792064e42a234d34ac0c225f50c54aac054f7eb96555d5d451bf9"
+    }
+  },
+  "source_fingerprint": "5256a5c47902a03a8feb865c2b1937545c57f3b88bb489855073e71ed739475d",
+  "supersedes_revision": null
+}
