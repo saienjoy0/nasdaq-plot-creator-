@@ -1,0 +1,2658 @@
+{
+  "schemaVersion": "2.3.0",
+  "episode": {
+    "id": "2099-02-02",
+    "targetDate": "2099-02-02",
+    "marketSession": "TEST SESSION",
+    "informationCutoff": "2099-01-01T00:00:00Z",
+    "episodeType": "composite-story",
+    "durationMode": "shortened",
+    "shortenedReason": "技術検証用フィクスチャ",
+    "fps": 30,
+    "width": 1920,
+    "height": 1080
+  },
+  "editorial": {
+    "leadNews": null,
+    "leadTheme": "TEST LEAD THEME",
+    "targetIndices": [
+      "TEST INDEX"
+    ],
+    "storySpine": "TEST STORY SPINE",
+    "centralHypothesis": "TEST CENTRAL HYPOTHESIS",
+    "confidence": "unknown",
+    "directMaterial": [
+      "TEST DIRECT MATERIAL"
+    ],
+    "nasdaqDrivers": [
+      "TEST NASDAQ DRIVER"
+    ],
+    "amplifiers": [
+      "TEST AMPLIFIER"
+    ],
+    "offsettingFactors": [
+      "TEST OFFSETTING FACTOR"
+    ],
+    "expected": "TEST EXPECTED",
+    "actual": "TEST ACTUAL",
+    "gap": "TEST GAP",
+    "expectedBasisType": "major-reporting",
+    "expectedBasisDetails": "TEST EXPECTED BASIS DETAILS",
+    "expectedSourceIds": [
+      "source-001"
+    ],
+    "timelineBasis": "TEST TIMELINE BASIS",
+    "counterEvidence": [
+      "TEST COUNTER EVIDENCE"
+    ],
+    "verificationPoints": [
+      "TEST VERIFICATION POINT"
+    ]
+  },
+  "publishing": {
+    "recommendedTitle": "TEST TITLE A",
+    "titleCandidates": [
+      "TEST TITLE A",
+      "TEST TITLE B",
+      "TEST TITLE C"
+    ],
+    "recommendedThumbnailText": "TEST THUMBNAIL A",
+    "thumbnailTextCandidates": [
+      "TEST THUMBNAIL A",
+      "TEST THUMBNAIL B",
+      "TEST THUMBNAIL C"
+    ],
+    "description": "TEST DESCRIPTION"
+  },
+  "sources": [
+    {
+      "sourceId": "source-001",
+      "title": "TEST SOURCE TITLE",
+      "publisher": "TEST PUBLISHER",
+      "sourceType": "other",
+      "reference": "test://source-001",
+      "publishedAt": null,
+      "accessedAt": "2099-01-01T00:00:00Z",
+      "usedFor": [
+        "TEST VALIDATION"
+      ],
+      "narrationAttribution": "TEST SOURCE"
+    }
+  ],
+  "review": {
+    "verdict": "approved",
+    "scores": {
+      "openingHook": 4,
+      "storyProgression": 4,
+      "discovery": 4,
+      "clarity": 4,
+      "foxCharacter": 4,
+      "reasonToFinish": 4
+    },
+    "totalScore": 24,
+    "largestDropoffRisk": "TEST RISK",
+    "requiredChanges": [],
+    "changesApplied": [],
+    "titleThumbnailConsistency": "consistent",
+    "approvedForCodex": true
+  },
+  "pronunciations": [
+    {
+      "surface": "TEST SURFACE",
+      "reading": "テスト リーディング"
+    }
+  ],
+  "corrections": [
+    {
+      "correctionId": "correction-001",
+      "original": "TEST ORIGINAL",
+      "corrected": "TEST CORRECTED",
+      "reason": "TEST REASON"
+    }
+  ],
+  "voiceProfileId": "fox-main",
+  "scenes": [
+    {
+      "sceneId": "scene-01",
+      "sceneNumber": 1,
+      "sceneRole": "opening-hook-market-direction-greeting-conclusion",
+      "formalName": "TEST SCENE 1",
+      "purpose": "TEST OPENING INTEGRATED PURPOSE",
+      "causalScope": "nasdaq",
+      "performanceIntent": "TEST PERFORMANCE 1",
+      "evidenceSourceIds": [
+        "source-001"
+      ],
+      "uncertainty": "TEST UNCERTAINTY",
+      "timelineBasis": "TEST TIMELINE BASIS",
+      "expectedBasisType": "major-reporting",
+      "visualMode": "conclusion-card",
+      "initialExpression": "通常",
+      "headline": "TEST HEADLINE 1",
+      "supportingTexts": [
+        "TEST SUPPORT 1"
+      ],
+      "sourceLabel": "TEST SOURCE",
+      "narrationChunks": [
+        {
+          "chunkId": "scene-01-chunk-001",
+          "speechText": "TEST OPENING HOOK。",
+          "captionText": "TEST OPENING HOOK",
+          "expression": "通常",
+          "pauseAfterMs": 100
+        },
+        {
+          "chunkId": "scene-01-chunk-002",
+          "speechText": "TEST INDEX DIRECTION。",
+          "captionText": "TEST INDEX DIRECTION",
+          "expression": "分析",
+          "pauseAfterMs": 100
+        },
+        {
+          "chunkId": "scene-01-chunk-003",
+          "speechText": "TEST SHORT GREETING。",
+          "captionText": "TEST SHORT GREETING",
+          "expression": "ニヤリ",
+          "pauseAfterMs": 100
+        },
+        {
+          "chunkId": "scene-01-chunk-004",
+          "speechText": "TEST CENTRAL CONCLUSION。",
+          "captionText": "TEST CENTRAL CONCLUSION",
+          "expression": "軽い驚き",
+          "pauseAfterMs": 200
+        }
+      ],
+      "visualBeats": [
+        {
+          "beatId": "scene-01-beat-001",
+          "startChunkId": "scene-01-chunk-001",
+          "endChunkId": "scene-01-chunk-001",
+          "narrationStartCue": "TEST OPENING HOOK。",
+          "narrationEndCue": "TEST OPENING HOOK。",
+          "primaryFunction": "Explain",
+          "screenState": "Data",
+          "visualMode": "conclusion-card",
+          "visualTemplate": "conclusion-card",
+          "templateConfig": {
+            "variant": "default",
+            "comparisonBasis": null,
+            "dataBasis": "TEST TIMELINE BASIS",
+            "nodeOrder": [],
+            "laneLabels": [],
+            "outcomeNodeId": null
+          },
+          "sequencePolicy": "explicit",
+          "finalHoldMs": 500,
+          "contentType": "TEST conclusion-card",
+          "screenQuestion": "TEST QUESTION 1-1",
+          "primaryElement": "TEST PRIMARY 1-1",
+          "viewerTexts": [
+            "TEST VIEWER TEXT 1-1"
+          ],
+          "changeCue": "TEST OPENING HOOK",
+          "objectIds": [
+            "scene-01-card-001"
+          ],
+          "assetPlacementIds": [],
+          "assetState": "not-required",
+          "returnScreenState": null,
+          "evidenceSourceIds": [
+            "source-001"
+          ],
+          "expressionChange": null,
+          "fallback": null,
+          "entity": null,
+          "pictureBook": null
+        },
+        {
+          "beatId": "scene-01-beat-002",
+          "startChunkId": "scene-01-chunk-002",
+          "endChunkId": "scene-01-chunk-002",
+          "narrationStartCue": "TEST INDEX DIRECTION。",
+          "narrationEndCue": "TEST INDEX DIRECTION。",
+          "primaryFunction": "Anchor",
+          "screenState": "EntityFocus",
+          "visualMode": "text-focus",
+          "visualTemplate": "entity-card-full",
+          "templateConfig": {
+            "variant": "prebuilt-card",
+            "comparisonBasis": null,
+            "dataBasis": "TEST TIMELINE BASIS",
+            "nodeOrder": [],
+            "laneLabels": [],
+            "outcomeNodeId": null
+          },
+          "sequencePolicy": "static",
+          "finalHoldMs": 500,
+          "contentType": "TEST COMPANY CARD",
+          "screenQuestion": "TEST QUESTION 1-2",
+          "primaryElement": "NVIDIA",
+          "viewerTexts": [
+            "AI計算向け半導体"
+          ],
+          "changeCue": "TEST INDEX DIRECTION",
+          "objectIds": [],
+          "assetPlacementIds": [
+            "scene-01-placement-entity"
+          ],
+          "assetState": "ready",
+          "returnScreenState": "Data",
+          "evidenceSourceIds": [
+            "source-001"
+          ],
+          "expressionChange": null,
+          "fallback": null,
+          "entity": {
+            "subjectType": "company",
+            "displayName": "NVIDIA",
+            "role": "AI計算向け半導体",
+            "firstMentionCue": "TEST INDEX DIRECTION",
+            "variant": "company",
+            "assetId": "company_nvda",
+            "rightsStatus": "not-required",
+            "targetDurationMs": 6000
+          },
+          "pictureBook": null
+        },
+        {
+          "beatId": "scene-01-beat-003",
+          "startChunkId": "scene-01-chunk-003",
+          "endChunkId": "scene-01-chunk-004",
+          "narrationStartCue": "TEST SHORT GREETING。",
+          "narrationEndCue": "TEST CENTRAL CONCLUSION。",
+          "primaryFunction": "Explain",
+          "screenState": "Data",
+          "visualMode": "conclusion-card",
+          "visualTemplate": "conclusion-card",
+          "templateConfig": {
+            "variant": "default",
+            "comparisonBasis": null,
+            "dataBasis": "TEST TIMELINE BASIS",
+            "nodeOrder": [],
+            "laneLabels": [],
+            "outcomeNodeId": null
+          },
+          "sequencePolicy": "explicit",
+          "finalHoldMs": 500,
+          "contentType": "TEST conclusion-card",
+          "screenQuestion": "TEST QUESTION 1-3",
+          "primaryElement": "TEST PRIMARY 1-3",
+          "viewerTexts": [
+            "TEST VIEWER TEXT 1-3"
+          ],
+          "changeCue": "TEST SHORT GREETING",
+          "objectIds": [
+            "scene-01-card-001"
+          ],
+          "assetPlacementIds": [],
+          "assetState": "not-required",
+          "returnScreenState": null,
+          "evidenceSourceIds": [
+            "source-001"
+          ],
+          "expressionChange": null,
+          "fallback": null,
+          "entity": null,
+          "pictureBook": null
+        }
+      ],
+      "cards": [
+        {
+          "cardId": "scene-01-card-001",
+          "role": null,
+          "title": "TEST CARD 1",
+          "lines": [
+            {
+              "label": "TEST LABEL",
+              "value": "TEST VALUE",
+              "tone": "neutral"
+            }
+          ]
+        }
+      ],
+      "numbers": [],
+      "nodes": [],
+      "arrows": [],
+      "visualEvents": [
+        {
+          "eventId": "event-001",
+          "atChunkId": "scene-01-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-01-card-001",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        },
+        {
+          "eventId": "event-002",
+          "atChunkId": "scene-01-chunk-002",
+          "timing": "chunk-start",
+          "action": "set-expression",
+          "targetId": null,
+          "offsetMs": 0,
+          "expression": "分析"
+        },
+        {
+          "eventId": "event-003",
+          "atChunkId": "scene-01-chunk-002",
+          "timing": "chunk-end",
+          "action": "highlight",
+          "targetId": "scene-01-card-001",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "focus-ring",
+          "durationMs": 420,
+          "easingPreset": "smooth-out"
+        }
+      ],
+      "assetPlacements": [
+        {
+          "placementId": "scene-01-placement-background",
+          "assetId": "mainBackground",
+          "role": "background",
+          "region": "full-canvas",
+          "fit": "cover",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-01-placement-foxNormal",
+          "assetId": "foxNormal",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-01-placement-foxAnalysis",
+          "assetId": "foxAnalysis",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-01-placement-foxSmirk",
+          "assetId": "foxSmirk",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-01-placement-foxSlightSurprise",
+          "assetId": "foxSlightSurprise",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-01-placement-foxConfused",
+          "assetId": "foxConfused",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-01-placement-foxAlert",
+          "assetId": "foxAlert",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-01-placement-foxSleepy",
+          "assetId": "foxSleepy",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-01-placement-entity",
+          "assetId": "company_nvda",
+          "role": "entity-card",
+          "region": "main-stage",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": "scene-01-chunk-002",
+          "endChunkId": "scene-01-chunk-002"
+        }
+      ],
+      "transition": {
+        "type": "fade",
+        "durationMs": 300
+      }
+    },
+    {
+      "sceneId": "scene-02",
+      "sceneNumber": 2,
+      "sceneRole": "editorial-body",
+      "formalName": "TEST SCENE 2",
+      "purpose": "TEST PURPOSE 2",
+      "causalScope": "multiple",
+      "performanceIntent": "TEST PERFORMANCE 2",
+      "evidenceSourceIds": [
+        "source-001"
+      ],
+      "uncertainty": "TEST UNCERTAINTY",
+      "timelineBasis": "TEST TIMELINE BASIS",
+      "expectedBasisType": "major-reporting",
+      "visualMode": "number-comparison",
+      "initialExpression": "困惑",
+      "headline": "TEST HEADLINE 2",
+      "supportingTexts": [
+        "TEST SUPPORT 2"
+      ],
+      "sourceLabel": "TEST SOURCE",
+      "narrationChunks": [
+        {
+          "chunkId": "scene-02-chunk-001",
+          "speechText": "TEST SCENE 2 SPEECH 1。",
+          "captionText": "TEST SCENE 2 CAPTION 1",
+          "expression": "困惑",
+          "pauseAfterMs": 100
+        },
+        {
+          "chunkId": "scene-02-chunk-002",
+          "speechText": "TEST SCENE 2 SPEECH 2。",
+          "captionText": "TEST SCENE 2 CAPTION 2",
+          "expression": "警戒",
+          "pauseAfterMs": 200
+        }
+      ],
+      "visualBeats": [
+        {
+          "beatId": "scene-02-beat-001",
+          "startChunkId": "scene-02-chunk-001",
+          "endChunkId": "scene-02-chunk-002",
+          "narrationStartCue": "TEST SCENE 2 SPEECH 1。",
+          "narrationEndCue": "TEST SCENE 2 SPEECH 2。",
+          "primaryFunction": "Explain",
+          "screenState": "Data",
+          "visualMode": "number-comparison",
+          "visualTemplate": "metric-comparison-board",
+          "templateConfig": {
+            "variant": "default",
+            "comparisonBasis": "TEST QUESTION 2-1",
+            "dataBasis": "TEST TIMELINE BASIS",
+            "nodeOrder": [],
+            "laneLabels": [],
+            "outcomeNodeId": null
+          },
+          "sequencePolicy": "explicit",
+          "finalHoldMs": 500,
+          "contentType": "TEST number-comparison",
+          "screenQuestion": "TEST QUESTION 2-1",
+          "primaryElement": "TEST PRIMARY 2-1",
+          "viewerTexts": [
+            "TEST VIEWER TEXT 2-1"
+          ],
+          "changeCue": "TEST SCENE 2 CAPTION 1",
+          "objectIds": [
+            "scene-02-card-001",
+            "scene-02-number-001",
+            "scene-02-number-002"
+          ],
+          "assetPlacementIds": [],
+          "assetState": "not-required",
+          "returnScreenState": null,
+          "evidenceSourceIds": [
+            "source-001"
+          ],
+          "expressionChange": null,
+          "fallback": null,
+          "entity": null,
+          "pictureBook": null
+        }
+      ],
+      "cards": [
+        {
+          "cardId": "scene-02-card-001",
+          "role": null,
+          "title": "TEST CARD 2",
+          "lines": [
+            {
+              "label": "TEST LABEL",
+              "value": "TEST VALUE",
+              "tone": "neutral"
+            }
+          ]
+        }
+      ],
+      "numbers": [
+        {
+          "numberId": "scene-02-number-001",
+          "label": "TEST NUMBER A",
+          "value": "10",
+          "numericValue": 10,
+          "precision": 0,
+          "unit": "%",
+          "comparison": "TEST BASE",
+          "tone": "positive"
+        },
+        {
+          "numberId": "scene-02-number-002",
+          "label": "TEST NUMBER B",
+          "value": "20",
+          "numericValue": 20,
+          "precision": 0,
+          "unit": "%",
+          "comparison": "TEST BASE",
+          "tone": "negative"
+        }
+      ],
+      "nodes": [],
+      "arrows": [],
+      "visualEvents": [
+        {
+          "eventId": "event-004",
+          "atChunkId": "scene-02-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-02-card-001",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        },
+        {
+          "eventId": "event-028",
+          "atChunkId": "scene-02-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-02-number-001",
+          "offsetMs": 620,
+          "expression": null,
+          "motionPreset": "count-up",
+          "durationMs": 680,
+          "easingPreset": "spring-settle"
+        },
+        {
+          "eventId": "event-029",
+          "atChunkId": "scene-02-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-02-number-002",
+          "offsetMs": 1240,
+          "expression": null,
+          "motionPreset": "count-up",
+          "durationMs": 680,
+          "easingPreset": "spring-settle"
+        },
+        {
+          "eventId": "event-005",
+          "atChunkId": "scene-02-chunk-002",
+          "timing": "chunk-start",
+          "action": "set-expression",
+          "targetId": null,
+          "offsetMs": 0,
+          "expression": "警戒"
+        },
+        {
+          "eventId": "event-006",
+          "atChunkId": "scene-02-chunk-002",
+          "timing": "chunk-end",
+          "action": "highlight",
+          "targetId": "scene-02-card-001",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "focus-ring",
+          "durationMs": 420,
+          "easingPreset": "smooth-out"
+        },
+        {
+          "eventId": "event-030",
+          "atChunkId": "scene-02-chunk-002",
+          "timing": "chunk-end",
+          "action": "highlight",
+          "targetId": "scene-02-number-002",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "focus-ring",
+          "durationMs": 420,
+          "easingPreset": "smooth-out"
+        }
+      ],
+      "assetPlacements": [
+        {
+          "placementId": "scene-02-placement-background",
+          "assetId": "mainBackground",
+          "role": "background",
+          "region": "full-canvas",
+          "fit": "cover",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-02-placement-foxNormal",
+          "assetId": "foxNormal",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-02-placement-foxAnalysis",
+          "assetId": "foxAnalysis",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-02-placement-foxSmirk",
+          "assetId": "foxSmirk",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-02-placement-foxSlightSurprise",
+          "assetId": "foxSlightSurprise",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-02-placement-foxConfused",
+          "assetId": "foxConfused",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-02-placement-foxAlert",
+          "assetId": "foxAlert",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-02-placement-foxSleepy",
+          "assetId": "foxSleepy",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        }
+      ],
+      "transition": {
+        "type": "cut",
+        "durationMs": 0
+      }
+    },
+    {
+      "sceneId": "scene-03",
+      "sceneNumber": 3,
+      "sceneRole": "editorial-body",
+      "formalName": "TEST SCENE 3",
+      "purpose": "TEST PURPOSE 3",
+      "causalScope": "multiple",
+      "performanceIntent": "TEST PERFORMANCE 3",
+      "evidenceSourceIds": [
+        "source-001"
+      ],
+      "uncertainty": "TEST UNCERTAINTY",
+      "timelineBasis": "TEST TIMELINE BASIS",
+      "expectedBasisType": "major-reporting",
+      "visualMode": "expected-actual-gap",
+      "initialExpression": "分析",
+      "headline": "TEST HEADLINE 3",
+      "supportingTexts": [
+        "TEST SUPPORT 3"
+      ],
+      "sourceLabel": "TEST SOURCE",
+      "narrationChunks": [
+        {
+          "chunkId": "scene-03-chunk-001",
+          "speechText": "TEST SCENE 3 SPEECH 1。",
+          "captionText": "TEST SCENE 3 CAPTION 1",
+          "expression": "分析",
+          "pauseAfterMs": 100
+        },
+        {
+          "chunkId": "scene-03-chunk-002",
+          "speechText": "TEST SCENE 3 SPEECH 2。",
+          "captionText": "TEST SCENE 3 CAPTION 2",
+          "expression": "困惑",
+          "pauseAfterMs": 200
+        }
+      ],
+      "visualBeats": [
+        {
+          "beatId": "scene-03-beat-001",
+          "startChunkId": "scene-03-chunk-001",
+          "endChunkId": "scene-03-chunk-002",
+          "narrationStartCue": "TEST SCENE 3 SPEECH 1。",
+          "narrationEndCue": "TEST SCENE 3 SPEECH 2。",
+          "primaryFunction": "Explain",
+          "screenState": "Data",
+          "visualMode": "expected-actual-gap",
+          "visualTemplate": "expected-actual-gap-flow",
+          "templateConfig": {
+            "variant": "left-to-right",
+            "comparisonBasis": null,
+            "dataBasis": "TEST TIMELINE BASIS",
+            "nodeOrder": [],
+            "laneLabels": [],
+            "outcomeNodeId": null
+          },
+          "sequencePolicy": "explicit",
+          "finalHoldMs": 900,
+          "contentType": "TEST expected-actual-gap",
+          "screenQuestion": "TEST QUESTION 3-1",
+          "primaryElement": "TEST PRIMARY 3-1",
+          "viewerTexts": [
+            "TEST VIEWER TEXT 3-1"
+          ],
+          "changeCue": "TEST SCENE 3 CAPTION 1",
+          "objectIds": [
+            "scene-03-card-001",
+            "scene-03-card-002",
+            "scene-03-card-003"
+          ],
+          "assetPlacementIds": [],
+          "assetState": "not-required",
+          "returnScreenState": null,
+          "evidenceSourceIds": [
+            "source-001"
+          ],
+          "expressionChange": null,
+          "fallback": null,
+          "entity": null,
+          "pictureBook": null
+        }
+      ],
+      "cards": [
+        {
+          "cardId": "scene-03-card-001",
+          "role": "gap",
+          "title": "TEST GAP",
+          "lines": [
+            {
+              "label": "TEST LABEL",
+              "value": "TEST VALUE",
+              "tone": "neutral"
+            }
+          ]
+        },
+        {
+          "cardId": "scene-03-card-002",
+          "role": "expected",
+          "title": "TEST EXPECTED",
+          "lines": [
+            {
+              "label": "TEST LABEL",
+              "value": "TEST VALUE",
+              "tone": "neutral"
+            }
+          ]
+        },
+        {
+          "cardId": "scene-03-card-003",
+          "role": "actual",
+          "title": "TEST ACTUAL",
+          "lines": [
+            {
+              "label": "TEST LABEL",
+              "value": "TEST VALUE",
+              "tone": "neutral"
+            }
+          ]
+        }
+      ],
+      "numbers": [],
+      "nodes": [],
+      "arrows": [],
+      "visualEvents": [
+        {
+          "eventId": "event-007",
+          "atChunkId": "scene-03-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-03-card-001",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        },
+        {
+          "eventId": "event-031",
+          "atChunkId": "scene-03-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-03-card-002",
+          "offsetMs": 620,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        },
+        {
+          "eventId": "event-032",
+          "atChunkId": "scene-03-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-03-card-003",
+          "offsetMs": 1240,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        },
+        {
+          "eventId": "event-008",
+          "atChunkId": "scene-03-chunk-002",
+          "timing": "chunk-start",
+          "action": "set-expression",
+          "targetId": null,
+          "offsetMs": 0,
+          "expression": "困惑"
+        },
+        {
+          "eventId": "event-009",
+          "atChunkId": "scene-03-chunk-002",
+          "timing": "chunk-end",
+          "action": "highlight",
+          "targetId": "scene-03-card-001",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "focus-ring",
+          "durationMs": 420,
+          "easingPreset": "smooth-out"
+        }
+      ],
+      "assetPlacements": [
+        {
+          "placementId": "scene-03-placement-background",
+          "assetId": "mainBackground",
+          "role": "background",
+          "region": "full-canvas",
+          "fit": "cover",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-03-placement-foxNormal",
+          "assetId": "foxNormal",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-03-placement-foxAnalysis",
+          "assetId": "foxAnalysis",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-03-placement-foxSmirk",
+          "assetId": "foxSmirk",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-03-placement-foxSlightSurprise",
+          "assetId": "foxSlightSurprise",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-03-placement-foxConfused",
+          "assetId": "foxConfused",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-03-placement-foxAlert",
+          "assetId": "foxAlert",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-03-placement-foxSleepy",
+          "assetId": "foxSleepy",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        }
+      ],
+      "transition": {
+        "type": "fade",
+        "durationMs": 300
+      }
+    },
+    {
+      "sceneId": "scene-04",
+      "sceneNumber": 4,
+      "sceneRole": "editorial-body",
+      "formalName": "TEST SCENE 4",
+      "purpose": "TEST PURPOSE 4",
+      "causalScope": "multiple",
+      "performanceIntent": "TEST PERFORMANCE 4",
+      "evidenceSourceIds": [
+        "source-001"
+      ],
+      "uncertainty": "TEST UNCERTAINTY",
+      "timelineBasis": "TEST TIMELINE BASIS",
+      "expectedBasisType": "major-reporting",
+      "visualMode": "number-comparison",
+      "initialExpression": "警戒",
+      "headline": "TEST HEADLINE 4",
+      "supportingTexts": [
+        "TEST SUPPORT 4"
+      ],
+      "sourceLabel": "TEST SOURCE",
+      "narrationChunks": [
+        {
+          "chunkId": "scene-04-chunk-001",
+          "speechText": "TEST SCENE 4 SPEECH 1。",
+          "captionText": "TEST SCENE 4 CAPTION 1",
+          "expression": "警戒",
+          "pauseAfterMs": 100
+        },
+        {
+          "chunkId": "scene-04-chunk-002",
+          "speechText": "TEST SCENE 4 SPEECH 2。",
+          "captionText": "TEST SCENE 4 CAPTION 2",
+          "expression": "通常",
+          "pauseAfterMs": 200
+        }
+      ],
+      "visualBeats": [
+        {
+          "beatId": "vb-04-02",
+          "startChunkId": "scene-04-chunk-001",
+          "endChunkId": "scene-04-chunk-002",
+          "narrationStartCue": "TEST SCENE 4 SPEECH 1。",
+          "narrationEndCue": "TEST SCENE 4 SPEECH 2。",
+          "primaryFunction": "Compare",
+          "screenState": "Chart",
+          "visualMode": "number-comparison",
+          "visualTemplate": "earnings-surprise",
+          "templateConfig": {
+            "variant": "zero-baseline",
+            "comparisonBasis": "AWS revenue, same entity, quarter, currency, and unit",
+            "dataBasis": "financial-recipe-plan",
+            "nodeOrder": [],
+            "laneLabels": [],
+            "outcomeNodeId": null,
+            "displayOrder": [
+              "fvu-aws-expected",
+              "fvu-aws-actual",
+              "fvu-aws-gap"
+            ],
+            "metricIds": [
+              "fvu-aws-expected",
+              "fvu-aws-actual",
+              "fvu-aws-gap"
+            ],
+            "causalStepIds": [],
+            "highlightObjectIds": [
+              "fvu-aws-gap"
+            ]
+          },
+          "sequencePolicy": "explicit",
+          "finalHoldMs": 900,
+          "contentType": "financial-data",
+          "screenQuestion": "予想を上回っても、市場が見た差は何か",
+          "primaryElement": "AWS revenue gap",
+          "viewerTexts": [
+            "Expected $42.3B",
+            "Actual $43.0B",
+            "Gap +$0.7B"
+          ],
+          "changeCue": "TEST SCENE 4 SPEECH 1。",
+          "objectIds": [
+            "fvu-aws-expected",
+            "fvu-aws-actual",
+            "fvu-aws-gap"
+          ],
+          "assetPlacementIds": [],
+          "assetState": "not-required",
+          "returnScreenState": null,
+          "evidenceSourceIds": [
+            "source-001"
+          ],
+          "expressionChange": null,
+          "fallback": null,
+          "entity": null,
+          "pictureBook": null,
+          "templateVariant": "zero-baseline",
+          "financialReturnTarget": "return-to-fox-analysis",
+          "financialVisualTrace": {
+            "contractVersion": "1.0.0",
+            "intentId": "fvi-aws-expectation-gap",
+            "selectedPlanId": "fvp-aws-gap-preferred",
+            "selectedPlanSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "selectedPath": "preferred",
+            "recipeId": "earnings-surprise",
+            "recipePlanSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "finalEpisodeContractSha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "sourceIds": [
+              "source-001"
+            ],
+            "metricIds": [
+              "fvu-aws-expected",
+              "fvu-aws-actual",
+              "fvu-aws-gap"
+            ],
+            "causalStepIds": [],
+            "displayOrder": [
+              "fvu-aws-expected",
+              "fvu-aws-actual",
+              "fvu-aws-gap"
+            ],
+            "comparisonBasis": "AWS revenue, same entity, quarter, currency, and unit",
+            "reasonCodes": []
+          }
+        }
+      ],
+      "cards": [
+        {
+          "cardId": "scene-04-card-001",
+          "role": null,
+          "title": "TEST CARD 4",
+          "lines": [
+            {
+              "label": "TEST LABEL",
+              "value": "TEST VALUE",
+              "tone": "neutral"
+            }
+          ]
+        }
+      ],
+      "numbers": [
+        {
+          "numberId": "fvu-aws-expected",
+          "label": "EXPECTED",
+          "value": "$42.3B",
+          "numericValue": 42.3,
+          "precision": 1,
+          "unit": "billion USD",
+          "comparison": "AWS revenue, 2026 Q2",
+          "tone": "neutral"
+        },
+        {
+          "numberId": "fvu-aws-actual",
+          "label": "ACTUAL",
+          "value": "$43.0B",
+          "numericValue": 43.0,
+          "precision": 1,
+          "unit": "billion USD",
+          "comparison": "AWS revenue, 2026 Q2",
+          "tone": "positive"
+        },
+        {
+          "numberId": "fvu-aws-gap",
+          "label": "GAP",
+          "value": "+$0.7B",
+          "numericValue": 0.7,
+          "precision": 1,
+          "unit": "billion USD",
+          "comparison": "AWS revenue, 2026 Q2",
+          "tone": "emphasis"
+        }
+      ],
+      "nodes": [],
+      "arrows": [],
+      "visualEvents": [
+        {
+          "eventId": "event-010",
+          "atChunkId": "scene-04-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-04-card-001",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        },
+        {
+          "eventId": "event-011",
+          "atChunkId": "scene-04-chunk-002",
+          "timing": "chunk-start",
+          "action": "set-expression",
+          "targetId": null,
+          "offsetMs": 0,
+          "expression": "通常"
+        },
+        {
+          "eventId": "event-012",
+          "atChunkId": "scene-04-chunk-002",
+          "timing": "chunk-end",
+          "action": "highlight",
+          "targetId": "scene-04-card-001",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "focus-ring",
+          "durationMs": 420,
+          "easingPreset": "smooth-out"
+        }
+      ],
+      "assetPlacements": [
+        {
+          "placementId": "scene-04-placement-background",
+          "assetId": "mainBackground",
+          "role": "background",
+          "region": "full-canvas",
+          "fit": "cover",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-04-placement-foxNormal",
+          "assetId": "foxNormal",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-04-placement-foxAnalysis",
+          "assetId": "foxAnalysis",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-04-placement-foxSmirk",
+          "assetId": "foxSmirk",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-04-placement-foxSlightSurprise",
+          "assetId": "foxSlightSurprise",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-04-placement-foxConfused",
+          "assetId": "foxConfused",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-04-placement-foxAlert",
+          "assetId": "foxAlert",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-04-placement-foxSleepy",
+          "assetId": "foxSleepy",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        }
+      ],
+      "transition": {
+        "type": "cut",
+        "durationMs": 0
+      }
+    },
+    {
+      "sceneId": "scene-05",
+      "sceneNumber": 5,
+      "sceneRole": "editorial-body",
+      "formalName": "TEST SCENE 5",
+      "purpose": "TEST PURPOSE 5",
+      "causalScope": "multiple",
+      "performanceIntent": "TEST PERFORMANCE 5",
+      "evidenceSourceIds": [
+        "source-001"
+      ],
+      "uncertainty": "TEST UNCERTAINTY",
+      "timelineBasis": "TEST TIMELINE BASIS",
+      "expectedBasisType": "major-reporting",
+      "visualMode": "chart",
+      "initialExpression": "ニヤリ",
+      "headline": "TEST HEADLINE 5",
+      "supportingTexts": [
+        "TEST SUPPORT 5"
+      ],
+      "sourceLabel": "TEST SOURCE",
+      "narrationChunks": [
+        {
+          "chunkId": "scene-05-chunk-001",
+          "speechText": "TEST SCENE 5 SPEECH 1。",
+          "captionText": "TEST SCENE 5 CAPTION 1",
+          "expression": "ニヤリ",
+          "pauseAfterMs": 100
+        },
+        {
+          "chunkId": "scene-05-chunk-002",
+          "speechText": "TEST SCENE 5 SPEECH 2。",
+          "captionText": "TEST SCENE 5 CAPTION 2",
+          "expression": "分析",
+          "pauseAfterMs": 200
+        }
+      ],
+      "visualBeats": [
+        {
+          "beatId": "scene-05-beat-001",
+          "startChunkId": "scene-05-chunk-001",
+          "endChunkId": "scene-05-chunk-002",
+          "narrationStartCue": "TEST SCENE 5 SPEECH 1。",
+          "narrationEndCue": "TEST SCENE 5 SPEECH 2。",
+          "primaryFunction": "Explain",
+          "screenState": "Chart",
+          "visualMode": "chart",
+          "visualTemplate": "text-focus",
+          "templateConfig": {
+            "variant": "default",
+            "comparisonBasis": null,
+            "dataBasis": "TEST TIMELINE BASIS",
+            "nodeOrder": [],
+            "laneLabels": [],
+            "outcomeNodeId": null
+          },
+          "sequencePolicy": "explicit",
+          "finalHoldMs": 500,
+          "contentType": "TEST chart",
+          "screenQuestion": "TEST QUESTION 5-1",
+          "primaryElement": "TEST PRIMARY 5-1",
+          "viewerTexts": [
+            "TEST VIEWER TEXT 5-1"
+          ],
+          "changeCue": "TEST SCENE 5 CAPTION 1",
+          "objectIds": [
+            "scene-05-card-001",
+            "scene-05-number-001"
+          ],
+          "assetPlacementIds": [],
+          "assetState": "not-required",
+          "returnScreenState": null,
+          "evidenceSourceIds": [
+            "source-001"
+          ],
+          "expressionChange": null,
+          "fallback": null,
+          "entity": null,
+          "pictureBook": null
+        }
+      ],
+      "cards": [
+        {
+          "cardId": "scene-05-card-001",
+          "role": null,
+          "title": "TEST CARD 5",
+          "lines": [
+            {
+              "label": "TEST LABEL",
+              "value": "TEST VALUE",
+              "tone": "neutral"
+            }
+          ]
+        }
+      ],
+      "numbers": [
+        {
+          "numberId": "scene-05-number-001",
+          "label": "TEST CHART VALUE",
+          "value": "30",
+          "numericValue": 30,
+          "precision": 0,
+          "unit": "pt",
+          "comparison": null,
+          "tone": "emphasis"
+        }
+      ],
+      "nodes": [],
+      "arrows": [],
+      "visualEvents": [
+        {
+          "eventId": "event-013",
+          "atChunkId": "scene-05-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-05-card-001",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        },
+        {
+          "eventId": "event-033",
+          "atChunkId": "scene-05-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-05-number-001",
+          "offsetMs": 620,
+          "expression": null,
+          "motionPreset": "count-up",
+          "durationMs": 680,
+          "easingPreset": "spring-settle"
+        },
+        {
+          "eventId": "event-014",
+          "atChunkId": "scene-05-chunk-002",
+          "timing": "chunk-start",
+          "action": "set-expression",
+          "targetId": null,
+          "offsetMs": 0,
+          "expression": "分析"
+        },
+        {
+          "eventId": "event-015",
+          "atChunkId": "scene-05-chunk-002",
+          "timing": "chunk-end",
+          "action": "highlight",
+          "targetId": "scene-05-card-001",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "focus-ring",
+          "durationMs": 420,
+          "easingPreset": "smooth-out"
+        },
+        {
+          "eventId": "event-034",
+          "atChunkId": "scene-05-chunk-002",
+          "timing": "chunk-end",
+          "action": "highlight",
+          "targetId": "scene-05-number-001",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "focus-ring",
+          "durationMs": 420,
+          "easingPreset": "smooth-out"
+        }
+      ],
+      "assetPlacements": [
+        {
+          "placementId": "scene-05-placement-background",
+          "assetId": "mainBackground",
+          "role": "background",
+          "region": "full-canvas",
+          "fit": "cover",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-05-placement-foxNormal",
+          "assetId": "foxNormal",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-05-placement-foxAnalysis",
+          "assetId": "foxAnalysis",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-05-placement-foxSmirk",
+          "assetId": "foxSmirk",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-05-placement-foxSlightSurprise",
+          "assetId": "foxSlightSurprise",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-05-placement-foxConfused",
+          "assetId": "foxConfused",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-05-placement-foxAlert",
+          "assetId": "foxAlert",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-05-placement-foxSleepy",
+          "assetId": "foxSleepy",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        }
+      ],
+      "transition": {
+        "type": "fade",
+        "durationMs": 300
+      }
+    },
+    {
+      "sceneId": "scene-06",
+      "sceneNumber": 6,
+      "sceneRole": "editorial-body",
+      "formalName": "TEST SCENE 6",
+      "purpose": "TEST PURPOSE 6",
+      "causalScope": "multiple",
+      "performanceIntent": "TEST PERFORMANCE 6",
+      "evidenceSourceIds": [
+        "source-001"
+      ],
+      "uncertainty": "TEST UNCERTAINTY",
+      "timelineBasis": "TEST TIMELINE BASIS",
+      "expectedBasisType": "major-reporting",
+      "visualMode": "causal-diagram",
+      "initialExpression": "分析",
+      "headline": "TEST HEADLINE 6",
+      "supportingTexts": [
+        "TEST SUPPORT 6"
+      ],
+      "sourceLabel": "TEST SOURCE",
+      "narrationChunks": [
+        {
+          "chunkId": "scene-06-chunk-001",
+          "speechText": "TEST SCENE 6 SPEECH 1。",
+          "captionText": "TEST SCENE 6 CAPTION 1",
+          "expression": "分析",
+          "pauseAfterMs": 100
+        },
+        {
+          "chunkId": "scene-06-chunk-002",
+          "speechText": "TEST SCENE 6 SPEECH 2。",
+          "captionText": "TEST SCENE 6 CAPTION 2",
+          "expression": "警戒",
+          "pauseAfterMs": 200
+        }
+      ],
+      "visualBeats": [
+        {
+          "beatId": "scene-06-beat-001",
+          "startChunkId": "scene-06-chunk-001",
+          "endChunkId": "scene-06-chunk-002",
+          "narrationStartCue": "TEST SCENE 6 SPEECH 1。",
+          "narrationEndCue": "TEST SCENE 6 SPEECH 2。",
+          "primaryFunction": "Explain",
+          "screenState": "Chart",
+          "visualMode": "causal-diagram",
+          "visualTemplate": "verification-matrix",
+          "templateConfig": {
+            "variant": "strengthen-vs-weaken",
+            "comparisonBasis": null,
+            "dataBasis": "TEST TIMELINE BASIS",
+            "nodeOrder": [
+              "scene-06-node-001",
+              "scene-06-node-002"
+            ],
+            "laneLabels": [
+              "強まる",
+              "弱まる"
+            ],
+            "outcomeNodeId": "scene-06-node-002"
+          },
+          "sequencePolicy": "explicit",
+          "finalHoldMs": 750,
+          "contentType": "TEST causal-diagram",
+          "screenQuestion": "TEST QUESTION 6-1",
+          "primaryElement": "TEST PRIMARY 6-1",
+          "viewerTexts": [
+            "強まる｜TEST VIEWER TEXT 6-1",
+            "弱まる｜TEST UNCERTAINTY"
+          ],
+          "changeCue": "TEST SCENE 6 CAPTION 1",
+          "objectIds": [
+            "scene-06-card-001",
+            "scene-06-node-001",
+            "scene-06-node-002",
+            "scene-06-arrow-001"
+          ],
+          "assetPlacementIds": [],
+          "assetState": "not-required",
+          "returnScreenState": null,
+          "evidenceSourceIds": [
+            "source-001"
+          ],
+          "expressionChange": null,
+          "fallback": null,
+          "entity": null,
+          "pictureBook": null
+        }
+      ],
+      "cards": [
+        {
+          "cardId": "scene-06-card-001",
+          "role": null,
+          "title": "TEST CARD 6",
+          "lines": [
+            {
+              "label": "TEST LABEL",
+              "value": "TEST VALUE",
+              "tone": "neutral"
+            }
+          ]
+        }
+      ],
+      "numbers": [],
+      "nodes": [
+        {
+          "nodeId": "scene-06-node-001",
+          "label": "TEST NODE A"
+        },
+        {
+          "nodeId": "scene-06-node-002",
+          "label": "TEST NODE B"
+        }
+      ],
+      "arrows": [
+        {
+          "arrowId": "scene-06-arrow-001",
+          "fromNodeId": "scene-06-node-001",
+          "toNodeId": "scene-06-node-002",
+          "label": "TEST ARROW"
+        }
+      ],
+      "visualEvents": [
+        {
+          "eventId": "event-016",
+          "atChunkId": "scene-06-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-06-card-001",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        },
+        {
+          "eventId": "event-035",
+          "atChunkId": "scene-06-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-06-node-001",
+          "offsetMs": 620,
+          "expression": null,
+          "motionPreset": "scale-settle",
+          "durationMs": 620,
+          "easingPreset": "spring-settle"
+        },
+        {
+          "eventId": "event-036",
+          "atChunkId": "scene-06-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-06-node-002",
+          "offsetMs": 1240,
+          "expression": null,
+          "motionPreset": "scale-settle",
+          "durationMs": 620,
+          "easingPreset": "spring-settle"
+        },
+        {
+          "eventId": "event-037",
+          "atChunkId": "scene-06-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-06-arrow-001",
+          "offsetMs": 1860,
+          "expression": null,
+          "motionPreset": "draw-line",
+          "durationMs": 720,
+          "easingPreset": "smooth-out"
+        },
+        {
+          "eventId": "event-017",
+          "atChunkId": "scene-06-chunk-002",
+          "timing": "chunk-start",
+          "action": "set-expression",
+          "targetId": null,
+          "offsetMs": 0,
+          "expression": "警戒"
+        },
+        {
+          "eventId": "event-018",
+          "atChunkId": "scene-06-chunk-002",
+          "timing": "chunk-end",
+          "action": "highlight",
+          "targetId": "scene-06-card-001",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "focus-ring",
+          "durationMs": 420,
+          "easingPreset": "smooth-out"
+        },
+        {
+          "eventId": "event-038",
+          "atChunkId": "scene-06-chunk-002",
+          "timing": "chunk-end",
+          "action": "highlight",
+          "targetId": "scene-06-node-002",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "focus-ring",
+          "durationMs": 420,
+          "easingPreset": "smooth-out"
+        }
+      ],
+      "assetPlacements": [
+        {
+          "placementId": "scene-06-placement-background",
+          "assetId": "mainBackground",
+          "role": "background",
+          "region": "full-canvas",
+          "fit": "cover",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-06-placement-foxNormal",
+          "assetId": "foxNormal",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-06-placement-foxAnalysis",
+          "assetId": "foxAnalysis",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-06-placement-foxSmirk",
+          "assetId": "foxSmirk",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-06-placement-foxSlightSurprise",
+          "assetId": "foxSlightSurprise",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-06-placement-foxConfused",
+          "assetId": "foxConfused",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-06-placement-foxAlert",
+          "assetId": "foxAlert",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-06-placement-foxSleepy",
+          "assetId": "foxSleepy",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        }
+      ],
+      "transition": {
+        "type": "cut",
+        "durationMs": 0
+      }
+    },
+    {
+      "sceneId": "scene-07",
+      "sceneNumber": 7,
+      "sceneRole": "editorial-body",
+      "formalName": "TEST SCENE 7",
+      "purpose": "TEST PURPOSE 7",
+      "causalScope": "multiple",
+      "performanceIntent": "TEST PERFORMANCE 7",
+      "evidenceSourceIds": [
+        "source-001"
+      ],
+      "uncertainty": "TEST UNCERTAINTY",
+      "timelineBasis": "TEST TIMELINE BASIS",
+      "expectedBasisType": "major-reporting",
+      "visualMode": "stock-comparison",
+      "initialExpression": "困惑",
+      "headline": "TEST HEADLINE 7",
+      "supportingTexts": [
+        "TEST SUPPORT 7"
+      ],
+      "sourceLabel": "TEST SOURCE",
+      "narrationChunks": [
+        {
+          "chunkId": "scene-07-chunk-001",
+          "speechText": "TEST SCENE 7 SPEECH 1。",
+          "captionText": "TEST SCENE 7 CAPTION 1",
+          "expression": "困惑",
+          "pauseAfterMs": 100
+        },
+        {
+          "chunkId": "scene-07-chunk-002",
+          "speechText": "TEST SCENE 7 SPEECH 2。",
+          "captionText": "TEST SCENE 7 CAPTION 2",
+          "expression": "通常",
+          "pauseAfterMs": 200
+        }
+      ],
+      "visualBeats": [
+        {
+          "beatId": "scene-07-beat-001",
+          "startChunkId": "scene-07-chunk-001",
+          "endChunkId": "scene-07-chunk-002",
+          "narrationStartCue": "TEST SCENE 7 SPEECH 1。",
+          "narrationEndCue": "TEST SCENE 7 SPEECH 2。",
+          "primaryFunction": "Explain",
+          "screenState": "Chart",
+          "visualMode": "stock-comparison",
+          "visualTemplate": "metric-comparison-board",
+          "templateConfig": {
+            "variant": "default",
+            "comparisonBasis": "TEST QUESTION 7-1",
+            "dataBasis": "TEST TIMELINE BASIS",
+            "nodeOrder": [],
+            "laneLabels": [],
+            "outcomeNodeId": null
+          },
+          "sequencePolicy": "explicit",
+          "finalHoldMs": 500,
+          "contentType": "TEST stock-comparison",
+          "screenQuestion": "TEST QUESTION 7-1",
+          "primaryElement": "TEST PRIMARY 7-1",
+          "viewerTexts": [
+            "TEST VIEWER TEXT 7-1"
+          ],
+          "changeCue": "TEST SCENE 7 CAPTION 1",
+          "objectIds": [
+            "scene-07-card-001",
+            "scene-07-number-001",
+            "scene-07-number-002",
+            "scene-07-number-003"
+          ],
+          "assetPlacementIds": [],
+          "assetState": "not-required",
+          "returnScreenState": null,
+          "evidenceSourceIds": [
+            "source-001"
+          ],
+          "expressionChange": null,
+          "fallback": null,
+          "entity": null,
+          "pictureBook": null
+        }
+      ],
+      "cards": [
+        {
+          "cardId": "scene-07-card-001",
+          "role": null,
+          "title": "TEST CARD 7",
+          "lines": [
+            {
+              "label": "TEST LABEL",
+              "value": "TEST VALUE",
+              "tone": "neutral"
+            }
+          ]
+        }
+      ],
+      "numbers": [
+        {
+          "numberId": "scene-07-number-001",
+          "label": "TEST NUMBER A",
+          "value": "10",
+          "numericValue": 10,
+          "precision": 0,
+          "unit": "%",
+          "comparison": "TEST BASE",
+          "tone": "positive"
+        },
+        {
+          "numberId": "scene-07-number-002",
+          "label": "TEST NUMBER B",
+          "value": "20",
+          "numericValue": 20,
+          "precision": 0,
+          "unit": "%",
+          "comparison": "TEST BASE",
+          "tone": "negative"
+        },
+        {
+          "numberId": "scene-07-number-003",
+          "label": "TEST NUMBER C",
+          "value": "30",
+          "numericValue": 30,
+          "precision": 0,
+          "unit": "%",
+          "comparison": "TEST BASE",
+          "tone": "warning"
+        }
+      ],
+      "nodes": [],
+      "arrows": [],
+      "visualEvents": [
+        {
+          "eventId": "event-019",
+          "atChunkId": "scene-07-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-07-card-001",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        },
+        {
+          "eventId": "event-039",
+          "atChunkId": "scene-07-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-07-number-001",
+          "offsetMs": 620,
+          "expression": null,
+          "motionPreset": "count-up",
+          "durationMs": 680,
+          "easingPreset": "spring-settle"
+        },
+        {
+          "eventId": "event-040",
+          "atChunkId": "scene-07-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-07-number-002",
+          "offsetMs": 1240,
+          "expression": null,
+          "motionPreset": "count-up",
+          "durationMs": 680,
+          "easingPreset": "spring-settle"
+        },
+        {
+          "eventId": "event-041",
+          "atChunkId": "scene-07-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-07-number-003",
+          "offsetMs": 1860,
+          "expression": null,
+          "motionPreset": "count-up",
+          "durationMs": 680,
+          "easingPreset": "spring-settle"
+        },
+        {
+          "eventId": "event-020",
+          "atChunkId": "scene-07-chunk-002",
+          "timing": "chunk-start",
+          "action": "set-expression",
+          "targetId": null,
+          "offsetMs": 0,
+          "expression": "通常"
+        },
+        {
+          "eventId": "event-021",
+          "atChunkId": "scene-07-chunk-002",
+          "timing": "chunk-end",
+          "action": "highlight",
+          "targetId": "scene-07-card-001",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "focus-ring",
+          "durationMs": 420,
+          "easingPreset": "smooth-out"
+        },
+        {
+          "eventId": "event-042",
+          "atChunkId": "scene-07-chunk-002",
+          "timing": "chunk-end",
+          "action": "highlight",
+          "targetId": "scene-07-number-003",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "focus-ring",
+          "durationMs": 420,
+          "easingPreset": "smooth-out"
+        }
+      ],
+      "assetPlacements": [
+        {
+          "placementId": "scene-07-placement-background",
+          "assetId": "mainBackground",
+          "role": "background",
+          "region": "full-canvas",
+          "fit": "cover",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-07-placement-foxNormal",
+          "assetId": "foxNormal",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-07-placement-foxAnalysis",
+          "assetId": "foxAnalysis",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-07-placement-foxSmirk",
+          "assetId": "foxSmirk",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-07-placement-foxSlightSurprise",
+          "assetId": "foxSlightSurprise",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-07-placement-foxConfused",
+          "assetId": "foxConfused",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-07-placement-foxAlert",
+          "assetId": "foxAlert",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-07-placement-foxSleepy",
+          "assetId": "foxSleepy",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        }
+      ],
+      "transition": {
+        "type": "fade",
+        "durationMs": 300
+      }
+    },
+    {
+      "sceneId": "scene-08",
+      "sceneNumber": 8,
+      "sceneRole": "editorial-body",
+      "formalName": "TEST SCENE 8",
+      "purpose": "TEST PURPOSE 8",
+      "causalScope": "multiple",
+      "performanceIntent": "TEST PERFORMANCE 8",
+      "evidenceSourceIds": [
+        "source-001"
+      ],
+      "uncertainty": "TEST UNCERTAINTY",
+      "timelineBasis": "TEST TIMELINE BASIS",
+      "expectedBasisType": "major-reporting",
+      "visualMode": "verification-points",
+      "initialExpression": "警戒",
+      "headline": "TEST HEADLINE 8",
+      "supportingTexts": [
+        "TEST SUPPORT 8"
+      ],
+      "sourceLabel": "TEST SOURCE",
+      "narrationChunks": [
+        {
+          "chunkId": "scene-08-chunk-001",
+          "speechText": "TEST SCENE 8 SPEECH 1。",
+          "captionText": "TEST SCENE 8 CAPTION 1",
+          "expression": "警戒",
+          "pauseAfterMs": 100
+        },
+        {
+          "chunkId": "scene-08-chunk-002",
+          "speechText": "TEST SCENE 8 SPEECH 2。",
+          "captionText": "TEST SCENE 8 CAPTION 2",
+          "expression": "分析",
+          "pauseAfterMs": 200
+        }
+      ],
+      "visualBeats": [
+        {
+          "beatId": "scene-08-beat-001",
+          "startChunkId": "scene-08-chunk-001",
+          "endChunkId": "scene-08-chunk-002",
+          "narrationStartCue": "TEST SCENE 8 SPEECH 1。",
+          "narrationEndCue": "TEST SCENE 8 SPEECH 2。",
+          "primaryFunction": "Explain",
+          "screenState": "Data",
+          "visualMode": "verification-points",
+          "visualTemplate": "verification-checklist",
+          "templateConfig": {
+            "variant": "default",
+            "comparisonBasis": null,
+            "dataBasis": "TEST TIMELINE BASIS",
+            "nodeOrder": [],
+            "laneLabels": [],
+            "outcomeNodeId": null
+          },
+          "sequencePolicy": "explicit",
+          "finalHoldMs": 500,
+          "contentType": "TEST verification-points",
+          "screenQuestion": "TEST QUESTION 8-1",
+          "primaryElement": "TEST PRIMARY 8-1",
+          "viewerTexts": [
+            "TEST VIEWER TEXT 8-1"
+          ],
+          "changeCue": "TEST SCENE 8 CAPTION 1",
+          "objectIds": [
+            "scene-08-card-001",
+            "scene-08-card-002",
+            "scene-08-card-003"
+          ],
+          "assetPlacementIds": [],
+          "assetState": "not-required",
+          "returnScreenState": null,
+          "evidenceSourceIds": [
+            "source-001"
+          ],
+          "expressionChange": null,
+          "fallback": null,
+          "entity": null,
+          "pictureBook": null
+        }
+      ],
+      "cards": [
+        {
+          "cardId": "scene-08-card-001",
+          "role": null,
+          "title": "TEST CARD 8",
+          "lines": [
+            {
+              "label": "TEST LABEL",
+              "value": "TEST VALUE",
+              "tone": "neutral"
+            }
+          ]
+        },
+        {
+          "cardId": "scene-08-card-002",
+          "role": null,
+          "title": "TEST VERIFY 2",
+          "lines": [
+            {
+              "label": "TEST LABEL",
+              "value": "TEST VALUE",
+              "tone": "neutral"
+            }
+          ]
+        },
+        {
+          "cardId": "scene-08-card-003",
+          "role": null,
+          "title": "TEST VERIFY 3",
+          "lines": [
+            {
+              "label": "TEST LABEL",
+              "value": "TEST VALUE",
+              "tone": "neutral"
+            }
+          ]
+        }
+      ],
+      "numbers": [],
+      "nodes": [],
+      "arrows": [],
+      "visualEvents": [
+        {
+          "eventId": "event-022",
+          "atChunkId": "scene-08-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-08-card-001",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        },
+        {
+          "eventId": "event-043",
+          "atChunkId": "scene-08-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-08-card-002",
+          "offsetMs": 620,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        },
+        {
+          "eventId": "event-044",
+          "atChunkId": "scene-08-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-08-card-003",
+          "offsetMs": 1240,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        },
+        {
+          "eventId": "event-023",
+          "atChunkId": "scene-08-chunk-002",
+          "timing": "chunk-start",
+          "action": "set-expression",
+          "targetId": null,
+          "offsetMs": 0,
+          "expression": "分析"
+        },
+        {
+          "eventId": "event-024",
+          "atChunkId": "scene-08-chunk-002",
+          "timing": "chunk-end",
+          "action": "highlight",
+          "targetId": "scene-08-card-001",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "focus-ring",
+          "durationMs": 420,
+          "easingPreset": "smooth-out"
+        },
+        {
+          "eventId": "event-045",
+          "atChunkId": "scene-08-chunk-002",
+          "timing": "chunk-end",
+          "action": "highlight",
+          "targetId": "scene-08-card-003",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "focus-ring",
+          "durationMs": 420,
+          "easingPreset": "smooth-out"
+        }
+      ],
+      "assetPlacements": [
+        {
+          "placementId": "scene-08-placement-background",
+          "assetId": "mainBackground",
+          "role": "background",
+          "region": "full-canvas",
+          "fit": "cover",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-08-placement-foxNormal",
+          "assetId": "foxNormal",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-08-placement-foxAnalysis",
+          "assetId": "foxAnalysis",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-08-placement-foxSmirk",
+          "assetId": "foxSmirk",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-08-placement-foxSlightSurprise",
+          "assetId": "foxSlightSurprise",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-08-placement-foxConfused",
+          "assetId": "foxConfused",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-08-placement-foxAlert",
+          "assetId": "foxAlert",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-08-placement-foxSleepy",
+          "assetId": "foxSleepy",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        }
+      ],
+      "transition": {
+        "type": "cut",
+        "durationMs": 0
+      }
+    },
+    {
+      "sceneId": "scene-09",
+      "sceneNumber": 9,
+      "sceneRole": "closing-recap-sendoff-goodnight",
+      "formalName": "TEST SCENE 9",
+      "purpose": "TEST FIXED CLOSING PURPOSE",
+      "causalScope": "nasdaq",
+      "performanceIntent": "TEST PERFORMANCE 9",
+      "evidenceSourceIds": [
+        "source-001"
+      ],
+      "uncertainty": "TEST UNCERTAINTY",
+      "timelineBasis": "TEST TIMELINE BASIS",
+      "expectedBasisType": "major-reporting",
+      "visualMode": "text-focus",
+      "initialExpression": "眠そう",
+      "headline": "TEST HEADLINE 9",
+      "supportingTexts": [
+        "TEST SUPPORT 9"
+      ],
+      "sourceLabel": "TEST SOURCE",
+      "narrationChunks": [
+        {
+          "chunkId": "scene-09-chunk-001",
+          "speechText": "TEST SHORT RECAP。",
+          "captionText": "TEST SHORT RECAP",
+          "expression": "眠そう",
+          "pauseAfterMs": 100
+        },
+        {
+          "chunkId": "scene-09-chunk-002",
+          "speechText": "いってらっしゃい。",
+          "captionText": "いってらっしゃい",
+          "expression": "ニヤリ",
+          "pauseAfterMs": 100
+        },
+        {
+          "chunkId": "scene-09-chunk-003",
+          "speechText": "狐側のおやすみなさい。",
+          "captionText": "狐側のおやすみなさい",
+          "expression": "眠そう",
+          "pauseAfterMs": 200
+        }
+      ],
+      "visualBeats": [
+        {
+          "beatId": "scene-09-beat-001",
+          "startChunkId": "scene-09-chunk-001",
+          "endChunkId": "scene-09-chunk-003",
+          "narrationStartCue": "TEST SHORT RECAP。",
+          "narrationEndCue": "狐側のおやすみなさい。",
+          "primaryFunction": "Explain",
+          "screenState": "Data",
+          "visualMode": "text-focus",
+          "visualTemplate": "text-focus",
+          "templateConfig": {
+            "variant": "default",
+            "comparisonBasis": null,
+            "dataBasis": "TEST TIMELINE BASIS",
+            "nodeOrder": [],
+            "laneLabels": [],
+            "outcomeNodeId": null
+          },
+          "sequencePolicy": "explicit",
+          "finalHoldMs": 500,
+          "contentType": "TEST text-focus",
+          "screenQuestion": "TEST QUESTION 9-1",
+          "primaryElement": "TEST PRIMARY 9-1",
+          "viewerTexts": [
+            "TEST VIEWER TEXT 9-1"
+          ],
+          "changeCue": "TEST SHORT RECAP",
+          "objectIds": [
+            "scene-09-card-001"
+          ],
+          "assetPlacementIds": [],
+          "assetState": "not-required",
+          "returnScreenState": null,
+          "evidenceSourceIds": [
+            "source-001"
+          ],
+          "expressionChange": null,
+          "fallback": null,
+          "entity": null,
+          "pictureBook": null
+        }
+      ],
+      "cards": [
+        {
+          "cardId": "scene-09-card-001",
+          "role": null,
+          "title": "TEST CARD 9",
+          "lines": [
+            {
+              "label": "TEST LABEL",
+              "value": "TEST VALUE",
+              "tone": "neutral"
+            }
+          ]
+        }
+      ],
+      "numbers": [],
+      "nodes": [],
+      "arrows": [],
+      "visualEvents": [
+        {
+          "eventId": "event-025",
+          "atChunkId": "scene-09-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-09-card-001",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        },
+        {
+          "eventId": "event-026",
+          "atChunkId": "scene-09-chunk-002",
+          "timing": "chunk-start",
+          "action": "set-expression",
+          "targetId": null,
+          "offsetMs": 0,
+          "expression": "ニヤリ"
+        },
+        {
+          "eventId": "event-027",
+          "atChunkId": "scene-09-chunk-002",
+          "timing": "chunk-end",
+          "action": "highlight",
+          "targetId": "scene-09-card-001",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "focus-ring",
+          "durationMs": 420,
+          "easingPreset": "smooth-out"
+        }
+      ],
+      "assetPlacements": [
+        {
+          "placementId": "scene-09-placement-background",
+          "assetId": "mainBackground",
+          "role": "background",
+          "region": "full-canvas",
+          "fit": "cover",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-09-placement-foxNormal",
+          "assetId": "foxNormal",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-09-placement-foxAnalysis",
+          "assetId": "foxAnalysis",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-09-placement-foxSmirk",
+          "assetId": "foxSmirk",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-09-placement-foxSlightSurprise",
+          "assetId": "foxSlightSurprise",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-09-placement-foxConfused",
+          "assetId": "foxConfused",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-09-placement-foxAlert",
+          "assetId": "foxAlert",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-09-placement-foxSleepy",
+          "assetId": "foxSleepy",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        }
+      ],
+      "transition": {
+        "type": "none",
+        "durationMs": 0
+      }
+    }
+  ],
+  "financialVisualContract": {
+    "contractVersion": "1.0.0",
+    "intentVersion": "1.1.0",
+    "recipePlanVersion": "1.0.0",
+    "recipeRegistryVersion": "1.0.0",
+    "finalEpisodeContractVersion": "1.0.0",
+    "recipePlanSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "selectionCount": 1
+  }
+}
