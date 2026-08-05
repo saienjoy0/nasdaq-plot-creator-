@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nasdaq-cafe.local/schemas/publication_record.schema.json",
+  "title": "NASDAQ Cafe publication memory record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "episode_date",
+    "title",
+    "main_story",
+    "story_spine",
+    "central_hypothesis",
+    "contrary_evidence",
+    "watch_next",
+    "topics",
+    "entities",
+    "thread_updates",
+    "claim_updates",
+    "source_paths",
+    "approval"
+  ],
+  "properties": {
+    "contract_version": {"const": "1.0.0"},
+    "episode_date": {"type": "string", "format": "date"},
+    "title": {"type": "string", "minLength": 1},
+    "main_story": {"type": "string", "minLength": 1},
+    "story_spine": {"type": "string", "minLength": 1},
+    "central_hypothesis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "confidence"],
+      "properties": {
+        "text": {"type": "string", "minLength": 1},
+        "confidence": {"enum": ["high", "medium", "low", "unknown"]}
+      }
+    },
+    "contrary_evidence": {"type": "array", "items": {"type": "string"}},
+    "watch_next": {"type": "array", "items": {"type": "string"}},
+    "topics": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "entities": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "thread_updates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["thread_id", "title", "question", "summary", "triggers", "entities", "topics", "claim_ids", "status"],
+        "properties": {
+          "thread_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+          "title": {"type": "string", "minLength": 1},
+          "question": {"type": "string", "minLength": 1},
+          "summary": {"type": "string", "minLength": 1},
+          "triggers": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+          "entities": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+          "topics": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+          "claim_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+          "status": {"enum": ["active", "resolved", "archived"]}
+        }
+      }
+    },
+    "claim_updates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["claim_id", "subject", "claim", "status", "confidence", "reason", "evidence_paths", "thread_ids", "entities", "topics"],
+        "properties": {
+          "claim_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
+          "subject": {"type": "string", "minLength": 1},
+          "claim": {"type": "string", "minLength": 1},
+          "status": {"enum": ["active", "strengthened", "weakened", "resolved", "invalidated", "unknown"]},
+          "confidence": {"enum": ["high", "medium", "low", "unknown"]},
+          "reason": {"type": "string", "minLength": 1},
+          "evidence_paths": {"type": "array", "items": {"type": "string"}},
+          "thread_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+          "entities": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+          "topics": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+        }
+      }
+    },
+    "production_lessons": {"type": "array", "items": {"type": "string"}, "default": []},
+    "source_paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["episode_package", "render_spec", "validator_report"],
+      "properties": {
+        "episode_package": {"type": "string", "minLength": 1},
+        "render_spec": {"type": "string", "minLength": 1},
+        "validator_report": {"type": "string", "minLength": 1}
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "approved_at"],
+      "properties": {
+        "status": {"enum": ["approved_preview", "published"]},
+        "approved_at": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

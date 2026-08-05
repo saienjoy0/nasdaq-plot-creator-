@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nasdaq-cafe.local/schemas/memory_query_plan.schema.json",
+  "title": "NASDAQ Cafe editorial memory query plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "episode_date",
+    "lead_candidates",
+    "entities",
+    "topics",
+    "technologies",
+    "policies",
+    "indicators",
+    "relations",
+    "time_window",
+    "comparison_questions",
+    "limits"
+  ],
+  "properties": {
+    "contract_version": {"const": "1.0.0"},
+    "episode_date": {"type": "string", "format": "date"},
+    "lead_candidates": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "entities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["raw", "canonical", "entity_id", "resolution"],
+        "properties": {
+          "raw": {"type": "string", "minLength": 1},
+          "canonical": {"type": "string", "minLength": 1},
+          "entity_id": {
+            "oneOf": [
+              {"type": "null"},
+              {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"}
+            ]
+          },
+          "resolution": {"enum": ["exact", "alias", "unresolved"]}
+        }
+      }
+    },
+    "topics": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "technologies": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "policies": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "indicators": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "relations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source", "relation", "target"],
+        "properties": {
+          "source": {"type": "string", "minLength": 1},
+          "relation": {"type": "string", "minLength": 1},
+          "target": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "time_window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to"],
+      "properties": {
+        "from": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "format": "date"}
+          ]
+        },
+        "to": {"type": "string", "format": "date"}
+      }
+    },
+    "comparison_questions": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_threads", "max_claims", "max_episodes", "max_lessons", "max_characters"],
+      "properties": {
+        "max_threads": {"type": "integer", "minimum": 0, "maximum": 5},
+        "max_claims": {"type": "integer", "minimum": 0, "maximum": 10},
+        "max_episodes": {"type": "integer", "minimum": 0, "maximum": 3},
+        "max_lessons": {"type": "integer", "minimum": 0, "maximum": 3},
+        "max_characters": {"type": "integer", "minimum": 1000, "maximum": 30000}
+      }
+    }
+  }
+}

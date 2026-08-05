@@ -1,0 +1,115 @@
+name: Verify editorial contracts
+
+on:
+  push:
+    branches:
+      - feat/nasdaq-cafe-research-skill-v0.1
+    paths:
+      - "source-of-truth/**"
+      - "editorial-memory/**"
+      - "scripts/**"
+      - "skills/nasdaq-cafe-causal-research/**"
+      - "skills/nasdaq-cafe-editorial-memory/**"
+      - ".github/workflows/verify-source-materialization.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify packed sources without writing
+        run: python scripts/materialize_sources.py --check-only
+
+      - name: Materialize packed sources
+        run: python scripts/materialize_sources.py
+
+      - name: Verify materialized paths, sizes, and hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f source-of-truth/03_episode_production_spec.md
+          test -f source-of-truth/04_entertainment_inquisitor.md
+          test "$(wc -c < source-of-truth/03_episode_production_spec.md)" -eq 101040
+          test "$(wc -c < source-of-truth/04_entertainment_inquisitor.md)" -eq 45895
+          echo "c0e476f36b387961277ffa008d7b2258942e1fe44c475bebe1d79b31b9f4dc3f  source-of-truth/03_episode_production_spec.md" | sha256sum --check --strict
+          echo "62d7807eb01b3433fc3b3f8bce8f6bad96109f1ae2366ec417c35bac8fa47936  source-of-truth/04_entertainment_inquisitor.md" | sha256sum --check --strict
+
+      - name: Compile Python checks
+        run: |
+          python -m py_compile \
+            scripts/materialize_sources.py \
+            scripts/build_memory_context.py \
+            scripts/promote_episode_memory.py \
+            skills/nasdaq-cafe-causal-research/validators/validate_causal_dossier.py
+          python skills/nasdaq-cafe-causal-research/validators/validate_causal_dossier.py --help >/dev/null
+          python scripts/promote_episode_memory.py --help >/dev/null
+
+      - name: Smoke test selective memory retrieval
+        run: |
+          python scripts/build_memory_context.py \
+            --date 2026-08-05 \
+            --topic "AI設備投資" \
+            --entity "NASDAQ" \
+            --output working/memory_context_smoke.md
+          test -s working/memory_context_smoke.md
+          grep -F "Selected Memory Context" working/memory_context_smoke.md
+          grep -F "現在の事実を証明する資料ではありません" working/memory_context_smoke.md
+
+      - name: Confirm generated-source contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          git status --short
+          test -n "$(git status --short source-of-truth/03_episode_production_spec.md source-of-truth/04_entertainment_inquisitor.md)"
+          echo "Materialized files are generated working-tree outputs and are intentionally not committed."
+
+      - name: Publish successful verification marker
+        shell: bash
+        env:
+          VERIFIED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p verification
+          python - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          marker = {
+              "status": "pass",
+              "verified_commit": os.environ["VERIFIED_SHA"],
+              "verified_at": datetime.now(timezone.utc).isoformat(),
+              "checks": {
+                  "source_materialization": "pass",
+                  "source_hashes": "pass",
+                  "python_compile": "pass",
+                  "memory_retrieval_smoke": "pass"
+              },
+              "source_hashes": {
+                  "03_episode_production_spec.md": "c0e476f36b387961277ffa008d7b2258942e1fe44c475bebe1d79b31b9f4dc3f",
+                  "04_entertainment_inquisitor.md": "62d7807eb01b3433fc3b3f8bce8f6bad96109f1ae2366ec417c35bac8fa47936"
+              }
+          }
+          Path("verification/editorial-contracts-pass.json").write_text(
+              json.dumps(marker, ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- verification/editorial-contracts-pass.json
+          git commit -m "ci: record successful editorial contract verification"
+          git push
