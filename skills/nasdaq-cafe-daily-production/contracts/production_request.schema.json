@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nasdaq-cafe.local/schemas/production_request.schema.json",
+  "title": "NASDAQ Cafe Production Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "episode_date", "requested_scope", "daily_source", "renderer", "approvals"],
+  "properties": {
+    "contract_version": {"const": "1.0.0"},
+    "episode_date": {"type": "string", "format": "date"},
+    "requested_scope": {"enum": ["package", "preview"]},
+    "daily_source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "renderer": {
+      "type": "object", "additionalProperties": false,
+      "required": ["repository", "commit", "contract_version"],
+      "properties": {
+        "repository": {"const": "saienjoy0/saienjoy0-nasdaq-cafe-remotion"},
+        "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "contract_version": {"type": "string", "minLength": 1}
+      }
+    },
+    "approvals": {
+      "type": "object", "additionalProperties": false,
+      "required": ["preview_requested", "final_requested", "memory_promotion_requested"],
+      "properties": {
+        "preview_requested": {"type": "boolean"},
+        "final_requested": {"const": false},
+        "memory_promotion_requested": {"const": false}
+      }
+    }
+  }
+}
