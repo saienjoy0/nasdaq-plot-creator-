@@ -1,0 +1,64 @@
+name: Episode Package Memory Hardening
+
+on:
+  pull_request:
+    paths:
+      - "skills/nasdaq-cafe-episode-package-memory/**"
+      - "tests/episode-package-memory/**"
+      - "tests/episode-package-memory-hardening/**"
+      - "skills/nasdaq-cafe-causal-research/**"
+      - "scripts/build_research_input_manifest.py"
+      - "scripts/editorial_memory_retrieval.py"
+      - ".github/workflows/episode-package-memory-hardening.yml"
+  push:
+    branches: [main]
+    paths:
+      - "skills/nasdaq-cafe-episode-package-memory/**"
+      - "tests/episode-package-memory/**"
+      - "tests/episode-package-memory-hardening/**"
+      - "skills/nasdaq-cafe-causal-research/**"
+      - "scripts/build_research_input_manifest.py"
+      - "scripts/editorial_memory_retrieval.py"
+      - ".github/workflows/episode-package-memory-hardening.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hardening:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install validator dependency
+        run: python -m pip install --disable-pip-version-check jsonschema
+      - name: Compile validators
+        run: |
+          python -m py_compile \
+            skills/nasdaq-cafe-episode-package-memory/parsers/episode_package_memory_parser.py \
+            skills/nasdaq-cafe-episode-package-memory/validators/validate_episode_package_memory.py \
+            skills/nasdaq-cafe-episode-package-memory/validators/validate_episode_package_memory_hardening.py \
+            skills/nasdaq-cafe-causal-research/validators/validate_causal_research_dossier.py \
+            scripts/build_research_input_manifest.py \
+            scripts/editorial_memory_retrieval.py
+      - name: Parse schemas
+        run: |
+          python -m json.tool skills/nasdaq-cafe-episode-package-memory/contracts/episode_package_memory_annex.schema.json >/dev/null
+          python -m json.tool skills/nasdaq-cafe-causal-research/contracts/causal_research_dossier_v0.2.schema.json >/dev/null
+          python -m json.tool skills/nasdaq-cafe-causal-research/contracts/research_input_manifest.schema.json >/dev/null
+      - name: Run merged PR8 tests
+        run: python -m unittest discover -s tests/episode-package-memory -p 'test_*.py' -v
+      - name: Run hardening tests
+        run: python -m unittest discover -s tests/episode-package-memory-hardening -p 'test_*.py' -v
+      - name: Run PR6 real validation-chain regression
+        run: python -m unittest discover -s tests/memory-revalidation -p 'test_*.py' -v
+      - name: Run retrieval regression
+        run: python -m unittest discover -s tests/memory-retrieval -p 'test_*.py' -v
+      - name: Run promotion regression
+        run: python -m unittest discover -s tests/memory-promotion -p 'test_*.py' -v
+      - name: Validate editorial-memory contracts
+        run: python skills/nasdaq-cafe-editorial-memory/validators/validate_memory_contracts.py --require-jsonschema
