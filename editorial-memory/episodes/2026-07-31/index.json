@@ -1,0 +1,15 @@
+{
+  "contract_version": "2.0.0",
+  "current_revision": "v001",
+  "episode_date": "2026-07-31",
+  "revisions": [
+    {
+      "approval_status": "approved_preview",
+      "approved_at": "2026-08-03T04:43:12.204Z",
+      "correction_reason": null,
+      "revision": "v001",
+      "source_fingerprint": "5256a5c47902a03a8feb865c2b1937545c57f3b88bb489855073e71ed739475d",
+      "supersedes_revision": null
+    }
+  ]
+}

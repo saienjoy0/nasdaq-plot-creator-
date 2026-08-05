@@ -1,4 +1,26 @@
 {
   "contract_version": "1.0.0",
-  "threads": []
+  "threads": [
+    {
+      "entities": [
+        "AWS",
+        "Amazon"
+      ],
+      "id": "ai-capex-payback",
+      "last_episode_revision": "2026-07-31/v001",
+      "path": "threads/ai-capex-payback.md",
+      "status": "active",
+      "title": "AI設備投資の回収",
+      "topics": [
+        "AI設備投資",
+        "クラウド"
+      ],
+      "triggers": [
+        "AI設備投資",
+        "AWS",
+        "クラウド売上"
+      ],
+      "updated_at": "2026-07-31"
+    }
+  ]
 }

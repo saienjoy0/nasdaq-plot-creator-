@@ -1,0 +1,42 @@
+{
+  "contract_version": "1.0.0",
+  "episode_date": "2026-07-31",
+  "generated_memory_ids": {
+    "aliases": [
+      "amazon",
+      "amazon-web-services",
+      "apple",
+      "soxx"
+    ],
+    "claims": [
+      "ai-capex-evaluation-axis"
+    ],
+    "lessons": [],
+    "threads": [
+      "ai-capex-payback"
+    ]
+  },
+  "repeat_result": "noop",
+  "revision": "v001",
+  "seed_id": "2026-07-31-v001",
+  "source_commit": "73548074495ab22c66fa2a25da6a59b0d19cafa3",
+  "source_files": {
+    "episode_package": {
+      "local_path": "memory-seeds/2026-07-31/source/episode_package_2026-07-31.md",
+      "remote_path": "episode-packages/2026-07-31/episode_package_2026-07-31.md",
+      "sha256": "6cc8f0f924b07b625fec421acab0735a27fbab6caf74a75722674ba7f4aa80b3"
+    },
+    "render_spec": {
+      "local_path": "memory-seeds/2026-07-31/source/render_spec.json",
+      "remote_path": "render-specs/2026-07-31/render_spec.json",
+      "sha256": "f94a16574d44611efb23e0596274db1cb5f7b2c6b2d5f663dd76042026a2524c"
+    },
+    "validator_report": {
+      "local_path": "memory-seeds/2026-07-31/source/validator_report.json",
+      "remote_path": "render-specs/2026-07-31/production_ready.json",
+      "sha256": "d3e43614275792064e42a234d34ac0c225f50c54aac054f7eb96555d5d451bf9"
+    }
+  },
+  "source_repository": "saienjoy0/saienjoy0-nasdaq-cafe-remotion",
+  "status": "verified"
+}
