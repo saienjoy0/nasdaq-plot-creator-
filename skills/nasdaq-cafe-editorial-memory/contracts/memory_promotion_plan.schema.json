@@ -1,42 +1,32 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://nasdaq-cafe.local/schemas/memory_promotion_plan.schema.json",
-  "title": "NASDAQ Cafe editorial memory promotion plan",
+  "title": "NASDAQ Cafe editorial memory promotion plan v2",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "contract_version",
-    "episode_id",
-    "publication_record_path",
-    "immutable_episode_path",
-    "mode",
-    "approval",
-    "source_hashes",
-    "operations",
-    "conflicts",
-    "warnings",
-    "safe_to_apply",
-    "generated_at"
-  ],
+  "required": ["contract_version", "episode_id", "episode_date", "revision", "publication_record_path", "run_directory", "mode", "execution_state", "approval", "source_preflight_path", "conflict_report_path", "source_fingerprint", "source_hashes", "operations", "conflicts", "warnings", "safe_to_apply", "noop", "generated_at", "plan_digest"],
   "properties": {
-    "contract_version": {"const": "1.0.0"},
-    "episode_id": {
-      "type": "string",
-      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}(?:-r[1-9][0-9]*)?$"
-    },
+    "contract_version": {"const": "2.0.0"},
+    "episode_id": {"type": "string", "format": "date"},
+    "episode_date": {"type": "string", "format": "date"},
+    "revision": {"type": "string", "pattern": "^v[0-9]{3}$"},
     "publication_record_path": {"type": "string", "minLength": 1},
-    "immutable_episode_path": {"type": "string", "minLength": 1},
-    "mode": {"enum": ["dry_run", "apply"]},
+    "run_directory": {"type": "string", "minLength": 1},
+    "mode": {"const": "apply"},
+    "execution_state": {"const": "planned"},
     "approval": {
       "type": "object",
       "additionalProperties": false,
       "required": ["status", "approved_at", "verified"],
       "properties": {
-        "status": {"enum": ["approved_preview", "published", "corrected"]},
-        "approved_at": {"type": "string", "format": "date-time"},
+        "status": {"enum": ["approved_preview", "published"]},
+        "approved_at": {"type": "string", "minLength": 1},
         "verified": {"const": true}
       }
     },
+    "source_preflight_path": {"type": "string", "minLength": 1},
+    "conflict_report_path": {"type": "string", "minLength": 1},
+    "source_fingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
     "source_hashes": {
       "type": "object",
       "additionalProperties": false,
@@ -44,108 +34,66 @@
       "properties": {
         "episode_package": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
         "render_spec": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
-        "validator_report": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
-        "causal_research_dossier": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+        "validator_report": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
       }
     },
-    "operations": {
-      "type": "array",
-      "items": {"$ref": "#/$defs/operation"}
-    },
-    "conflicts": {
-      "type": "array",
-      "items": {"$ref": "#/$defs/conflict"}
-    },
-    "warnings": {
-      "type": "array",
-      "items": {"type": "string", "minLength": 1}
-    },
+    "operations": {"type": "array", "items": {"$ref": "#/$defs/operation"}},
+    "conflicts": {"type": "array", "items": {"$ref": "#/$defs/blocker"}},
+    "warnings": {"type": "array", "items": {"$ref": "#/$defs/warning"}},
     "safe_to_apply": {"type": "boolean"},
-    "generated_at": {"type": "string", "format": "date-time"}
+    "noop": {"type": "boolean"},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "plan_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
   },
   "allOf": [
     {
-      "if": {
-        "properties": {"mode": {"const": "apply"}},
-        "required": ["mode"]
-      },
-      "then": {
-        "properties": {
-          "safe_to_apply": {"const": true},
-          "conflicts": {"maxItems": 0}
-        }
-      }
+      "if": {"properties": {"safe_to_apply": {"const": true}}, "required": ["safe_to_apply"]},
+      "then": {"properties": {"conflicts": {"maxItems": 0}}}
+    },
+    {
+      "if": {"properties": {"noop": {"const": true}}, "required": ["noop"]},
+      "then": {"properties": {"operations": {"maxItems": 0}, "safe_to_apply": {"const": true}}}
     }
   ],
   "$defs": {
+    "blocker": {
+      "type": "object", "additionalProperties": false,
+      "required": ["conflict_id", "severity", "type", "target_id", "detail", "resolution_required"],
+      "properties": {
+        "conflict_id": {"type": "string", "minLength": 1},
+        "severity": {"const": "blocker"},
+        "type": {"enum": ["immutable_episode_exists", "hash_mismatch", "claim_identity_collision", "alias_collision", "status_regression", "thread_identity_collision", "missing_provenance", "approval_not_verified", "stale_plan", "path_escape", "other"]},
+        "target_id": {"type": "string", "minLength": 1},
+        "detail": {"type": "string", "minLength": 1},
+        "resolution_required": {"const": true}
+      }
+    },
+    "warning": {
+      "type": "object", "additionalProperties": false,
+      "required": ["warning_id", "severity", "type", "target_id", "detail"],
+      "properties": {
+        "warning_id": {"type": "string", "minLength": 1},
+        "severity": {"const": "warning"},
+        "type": {"enum": ["confidence_jump", "stale_active_claim", "thread_title_changed", "similar_lesson", "evidence_concentration", "other"]},
+        "target_id": {"type": "string", "minLength": 1},
+        "detail": {"type": "string", "minLength": 1}
+      }
+    },
     "operation": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "operation_id",
-        "action",
-        "target_type",
-        "target_id",
-        "path",
-        "before_sha256",
-        "after_sha256",
-        "reason",
-        "provenance_paths"
-      ],
+      "required": ["operation_id", "action", "target_type", "target_id", "path", "before_sha256", "after_sha256", "bytes", "reason", "provenance_paths"],
       "properties": {
         "operation_id": {"type": "string", "minLength": 1},
         "action": {"enum": ["create", "append", "update", "archive", "noop"]},
         "target_type": {"enum": ["episode", "daily", "weekly", "thread", "claim", "entity_alias", "lesson", "active_context"]},
         "target_id": {"type": "string", "minLength": 1},
-        "path": {"type": "string", "minLength": 1},
-        "before_sha256": {
-          "oneOf": [
-            {"type": "null"},
-            {"type": "string", "pattern": "^[a-f0-9]{64}$"}
-          ]
-        },
-        "after_sha256": {
-          "oneOf": [
-            {"type": "null"},
-            {"type": "string", "pattern": "^[a-f0-9]{64}$"}
-          ]
-        },
+        "path": {"type": "string", "pattern": "^editorial-memory/"},
+        "before_sha256": {"oneOf": [{"type": "null"}, {"type": "string", "pattern": "^[a-f0-9]{64}$"}]},
+        "after_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "bytes": {"type": "integer", "minimum": 1},
         "reason": {"type": "string", "minLength": 1},
-        "provenance_paths": {
-          "type": "array",
-          "minItems": 1,
-          "items": {"type": "string", "minLength": 1},
-          "uniqueItems": true
-        },
-        "supersedes": {
-          "oneOf": [
-            {"type": "null"},
-            {"type": "string", "minLength": 1}
-          ]
-        }
-      }
-    },
-    "conflict": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["conflict_id", "type", "target_id", "detail", "resolution_required"],
-      "properties": {
-        "conflict_id": {"type": "string", "minLength": 1},
-        "type": {
-          "enum": [
-            "immutable_episode_exists",
-            "hash_mismatch",
-            "claim_identity_collision",
-            "alias_collision",
-            "status_regression",
-            "missing_provenance",
-            "approval_not_verified",
-            "other"
-          ]
-        },
-        "target_id": {"type": "string", "minLength": 1},
-        "detail": {"type": "string", "minLength": 1},
-        "resolution_required": {"const": true}
+        "provenance_paths": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}, "uniqueItems": true}
       }
     }
   }

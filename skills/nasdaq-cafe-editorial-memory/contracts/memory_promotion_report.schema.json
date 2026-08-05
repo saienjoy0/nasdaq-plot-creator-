@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nasdaq-cafe.local/schemas/memory_promotion_report.schema.json",
+  "title": "NASDAQ Cafe memory promotion apply report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "status", "episode_date", "revision", "plan_digest", "changed_paths", "git_commit", "applied_at"],
+  "properties": {
+    "contract_version": {"const": "2.0.0"},
+    "status": {"enum": ["applied", "noop"]},
+    "episode_date": {"type": "string", "format": "date"},
+    "revision": {"type": "string", "pattern": "^v(?!000)[0-9]{3}$"},
+    "plan_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "changed_paths": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "git_commit": {"oneOf": [{"type": "null"}, {"type": "string", "pattern": "^[a-f0-9]{40}$"}]},
+    "applied_at": {"type": "string", "format": "date-time"}
+  }
+}

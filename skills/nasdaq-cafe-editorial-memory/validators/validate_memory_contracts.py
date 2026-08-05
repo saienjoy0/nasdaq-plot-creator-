@@ -1,39 +1,27 @@
 #!/usr/bin/env python3
-"""Validate NASDAQ Cafe editorial-memory schemas and seed files.
+"""Validate editorial-memory schemas, fixtures, seeds, and safety invariants.
 
-This validator checks contract syntax unconditionally. When jsonschema is
-installed, it also validates representative fixtures and negative invariants.
-It does not validate market causality or certify remembered claims as current.
+This validator checks storage contracts only. It never decides market causality,
+which hypotheses should be promoted, or whether a remembered claim is currently
+true.
 """
 
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import sys
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[3]
 CONTRACTS = ROOT / "skills" / "nasdaq-cafe-editorial-memory" / "contracts"
-
-SCHEMAS = {
-    "immutable_episode": CONTRACTS / "immutable_episode.schema.json",
-    "temporal_claim": CONTRACTS / "temporal_claim.schema.json",
-    "entity_aliases": CONTRACTS / "entity_aliases.schema.json",
-    "memory_query_plan": CONTRACTS / "memory_query_plan.schema.json",
-    "memory_retrieval_report": CONTRACTS / "memory_retrieval_report.schema.json",
-    "memory_promotion_plan": CONTRACTS / "memory_promotion_plan.schema.json",
-    "publication_record": CONTRACTS / "publication_record.schema.json",
-}
-
 REQUIRED_FILES = [
     ROOT / "editorial-memory" / "memory_policy.md",
     ROOT / "editorial-memory" / "core" / "fox_editorial_state.md",
     ROOT / "editorial-memory" / "entity_aliases.json",
 ]
-
 HASH = "a" * 64
 
 
@@ -41,185 +29,178 @@ def load_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def sample_documents() -> dict[str, dict[str, Any]]:
-    return {
-        "immutable_episode": {
-            "contract_version": "1.0.0",
-            "episode_id": "2026-08-05",
-            "episode_date": "2026-08-05",
-            "revision": 1,
-            "immutable": True,
-            "title": "Sample",
-            "supersedes": None,
-            "approval": {
-                "status": "approved_preview",
-                "approved_at": "2026-08-05T08:00:00+09:00",
-                "approved_by": "user",
-                "note": "fixture",
-            },
-            "source_artifacts": {
-                "episode_package": {"path": "episode.md", "sha256": HASH, "bytes": 100},
-                "render_spec": {"path": "render.json", "sha256": HASH, "bytes": 100},
-                "validator_report": {"path": "validator.json", "sha256": HASH, "bytes": 100},
-            },
-            "promoted_at": "2026-08-05T09:00:00+09:00",
-            "promotion_record_path": "promotion.json",
-            "memory_outputs": {"thread_ids": [], "claim_ids": [], "lesson_ids": []},
+def samples() -> dict[str, dict[str, Any]]:
+    artifact = {"path": "production/file.json", "sha256": HASH, "bytes": 100}
+    source_artifact = {
+        "original_path": "production/file.json",
+        "archive_path": "editorial-memory/episodes/2026-08-05/revisions/v001/file.json",
+        "sha256": HASH,
+        "bytes": 100,
+    }
+    blocker = {
+        "conflict_id": "c1",
+        "severity": "blocker",
+        "type": "hash_mismatch",
+        "target_id": "2026-08-05",
+        "detail": "fixture",
+        "resolution_required": True,
+    }
+    publication = {
+        "contract_version": "1.0.0",
+        "episode_date": "2026-08-05",
+        "title": "Sample",
+        "main_story": "Sample story",
+        "story_spine": "Sample spine",
+        "central_hypothesis": {"text": "Sample hypothesis", "confidence": "medium"},
+        "contrary_evidence": [],
+        "watch_next": [],
+        "topics": [],
+        "entities": [],
+        "thread_updates": [],
+        "claim_updates": [],
+        "alias_updates": [],
+        "production_lessons": [],
+        "source_paths": {
+            "episode_package": "production/episode.md",
+            "render_spec": "render-specs/2026-08-05/render_spec.json",
+            "validator_report": "production/validator.json",
         },
-        "temporal_claim": {
+        "approval": {"status": "approved_preview", "approved_at": "2026-08-05T08:00:00Z"},
+    }
+    promotion_plan = {
+        "contract_version": "2.0.0",
+        "episode_id": "2026-08-05",
+        "episode_date": "2026-08-05",
+        "revision": "v001",
+        "publication_record_path": "production/publication_record_2026-08-05.json",
+        "run_directory": "working/memory-promotion/2026-08-05",
+        "mode": "apply",
+        "execution_state": "planned",
+        "approval": {"status": "approved_preview", "approved_at": "2026-08-05T08:00:00Z", "verified": True},
+        "source_preflight_path": "working/memory-promotion/2026-08-05/source_preflight.json",
+        "conflict_report_path": "working/memory-promotion/2026-08-05/conflict_report.json",
+        "source_fingerprint": HASH,
+        "source_hashes": {"episode_package": HASH, "render_spec": HASH, "validator_report": HASH},
+        "operations": [],
+        "conflicts": [],
+        "warnings": [],
+        "safe_to_apply": True,
+        "noop": True,
+        "generated_at": "2026-08-05T09:00:00Z",
+        "plan_digest": HASH,
+    }
+    return {
+        "publication_record.schema.json": publication,
+        "immutable_episode.schema.json": {
+            "contract_version": "2.0.0",
+            "episode_date": "2026-08-05",
+            "revision": "v001",
+            "supersedes_revision": None,
+            "correction_reason": None,
+            "approval_status": "approved_preview",
+            "approved_at": "2026-08-05T08:00:00Z",
+            "promoted_at": "2026-08-05T09:00:00Z",
+            "source_fingerprint": HASH,
+            "source_artifacts": {
+                "episode_package": source_artifact,
+                "render_spec": source_artifact,
+                "validator_report": source_artifact,
+            },
+            "publication_record": artifact,
+            "generated_memory_ids": {"threads": [], "claims": [], "aliases": [], "lessons": []},
+            "promotion_plan_digest": HASH,
+        },
+        "memory_source_preflight.schema.json": {
+            "contract_version": "2.0.0",
+            "status": "pass",
+            "episode_date": "2026-08-05",
+            "approval_status": "approved_preview",
+            "publication_record": artifact,
+            "source_artifacts": {
+                "episode_package": artifact,
+                "render_spec": artifact,
+                "validator_report": artifact,
+            },
+            "checks": {"approval": "pass"},
+            "generated_at": "2026-08-05T09:00:00Z",
+        },
+        "memory_conflict_report.schema.json": {
+            "contract_version": "2.0.0",
+            "episode_date": "2026-08-05",
+            "blockers": [],
+            "warnings": [],
+            "unresolved_count": 0,
+            "safe_to_apply": True,
+            "generated_at": "2026-08-05T09:00:00Z",
+        },
+        "memory_promotion_plan.schema.json": promotion_plan,
+        "memory_promotion_report.schema.json": {
+            "contract_version": "2.0.0",
+            "status": "applied",
+            "episode_date": "2026-08-05",
+            "revision": "v001",
+            "plan_digest": HASH,
+            "changed_paths": ["editorial-memory/daily/2026-08-05.md"],
+            "git_commit": "a" * 40,
+            "applied_at": "2026-08-05T09:00:00Z",
+        },
+        "temporal_claim.schema.json": {
             "contract_version": "2.0.0",
             "claim_id": "ai-capex-evaluation-axis",
             "subject": "AI設備投資",
-            "claim": "市場の評価軸は回収速度へ移りつつある",
+            "claim": "市場は回収経路も評価する",
             "status": "active",
             "confidence": "medium",
-            "first_observed_at": "2026-07-10",
+            "first_observed_at": "2026-08-05",
             "last_observed_at": "2026-08-05",
-            "valid_from": "2026-07-10",
+            "valid_from": "2026-08-05",
             "valid_to": None,
             "supersedes": None,
-            "episode_ids": ["2026-07-10", "2026-08-05"],
-            "evidence_paths": ["episodes/2026-08-05/provenance.json"],
+            "episode_ids": ["2026-08-05"],
+            "evidence_paths": ["editorial-memory/episodes/2026-08-05/revisions/v001/provenance.json"],
             "counter_evidence": [],
-            "thread_ids": ["ai-capex-monetization"],
-            "entities": ["Microsoft"],
-            "topics": ["AI設備投資"],
+            "thread_ids": [],
+            "entities": [],
+            "topics": [],
             "current_use": "premise_after_revalidation",
-            "history": [
-                {
-                    "date": "2026-08-05",
-                    "episode_id": "2026-08-05",
-                    "status": "active",
-                    "confidence": "medium",
-                    "reason": "fixture",
-                    "evidence_paths": ["episodes/2026-08-05/provenance.json"],
-                    "counter_evidence": [],
-                }
-            ],
+            "history": [{
+                "date": "2026-08-05",
+                "episode_id": "2026-08-05",
+                "status": "active",
+                "confidence": "medium",
+                "reason": "fixture",
+                "evidence_paths": ["editorial-memory/episodes/2026-08-05/revisions/v001/provenance.json"],
+                "counter_evidence": [],
+            }],
         },
-        "entity_aliases": {
+        "entity_aliases.schema.json": {
             "contract_version": "1.0.0",
-            "entities": [
-                {
-                    "entity_id": "microsoft",
-                    "canonical_name": "Microsoft",
-                    "entity_type": "company",
-                    "aliases": ["Microsoft", "MSFT", "マイクロソフト"],
-                    "tickers": ["MSFT"],
-                    "identifiers": {},
-                    "status": "active",
-                    "superseded_by": None,
-                    "updated_at": "2026-08-05",
-                    "source_paths": ["episodes/2026-08-05/provenance.json"],
-                }
-            ],
+            "entities": [{
+                "entity_id": "microsoft",
+                "canonical_name": "Microsoft",
+                "entity_type": "company",
+                "aliases": ["Microsoft", "MSFT"],
+                "tickers": ["MSFT"],
+                "identifiers": {},
+                "status": "active",
+                "superseded_by": None,
+                "updated_at": "2026-08-05",
+                "source_paths": ["editorial-memory/episodes/2026-08-05/revisions/v001/provenance.json"],
+            }],
         },
-        "memory_query_plan": {
-            "contract_version": "1.0.0",
-            "episode_date": "2026-08-05",
-            "lead_candidates": ["AI設備投資"],
-            "entities": [
-                {
-                    "raw": "MSFT",
-                    "canonical": "Microsoft",
-                    "entity_id": "microsoft",
-                    "resolution": "alias",
-                }
-            ],
-            "topics": ["AI設備投資"],
-            "technologies": ["データセンター"],
-            "policies": [],
-            "indicators": ["米10年債利回り"],
-            "relations": [
-                {"source": "Microsoft", "relation": "invests_in", "target": "データセンター"}
-            ],
-            "time_window": {"from": "2026-05-01", "to": "2026-08-05"},
-            "comparison_questions": ["前回から評価軸は変わったか"],
-            "limits": {
-                "max_threads": 5,
-                "max_claims": 10,
-                "max_episodes": 3,
-                "max_lessons": 3,
-                "max_characters": 12000,
-            },
-        },
-        "memory_retrieval_report": {
-            "contract_version": "1.0.0",
-            "episode_date": "2026-08-05",
-            "query_plan_path": "working/memory_query_plan_2026-08-05.json",
-            "selected": [
-                {
-                    "item_type": "claim",
-                    "item_id": "ai-capex-evaluation-axis",
-                    "path": "editorial-memory/claim_ledger.json",
-                    "score": 18,
-                    "reasons": ["entity alias match", "active claim"],
-                    "provenance_paths": ["episodes/2026-07-10/provenance.json"],
-                    "status": "active",
-                    "use_mode": "current_revalidation_required",
-                    "requires_current_revalidation": True,
-                    "historical_confidence": "medium",
-                    "episode_ids": ["2026-07-10"],
-                }
-            ],
-            "rejected": [],
-            "limits": {
-                "max_threads": 5,
-                "max_claims": 10,
-                "max_episodes": 3,
-                "max_lessons": 3,
-                "max_characters": 12000,
-            },
-            "usage": {"threads": 0, "claims": 1, "episodes": 0, "lessons": 0, "characters": 500},
-            "diversity": {
-                "distinct_episode_ids": ["2026-07-10"],
-                "distinct_thread_ids": [],
-                "duplicate_groups_removed": 0,
-            },
-            "warnings": [],
-        },
-        "memory_promotion_plan": {
-            "contract_version": "1.0.0",
-            "episode_id": "2026-08-05",
-            "publication_record_path": "publication_record_2026-08-05.json",
-            "immutable_episode_path": "editorial-memory/episodes/2026-08-05/publication_record.v1.json",
-            "mode": "dry_run",
-            "approval": {
-                "status": "approved_preview",
-                "approved_at": "2026-08-05T08:00:00+09:00",
-                "verified": True,
-            },
-            "source_hashes": {
-                "episode_package": HASH,
-                "render_spec": HASH,
-                "validator_report": HASH,
-            },
-            "operations": [],
-            "conflicts": [],
-            "warnings": [],
-            "safe_to_apply": True,
-            "generated_at": "2026-08-05T09:00:00+09:00",
-        },
+        "_blocker": blocker,
     }
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--require-jsonschema",
-        action="store_true",
-        help="Fail when the jsonschema package is unavailable.",
-    )
+    parser.add_argument("--require-jsonschema", action="store_true")
     args = parser.parse_args()
-
     failures: list[str] = []
-    schema_ids: set[str] = set()
     schemas: dict[str, Any] = {}
+    ids: set[str] = set()
 
-    for name, path in SCHEMAS.items():
-        if not path.exists():
-            failures.append(f"missing schema: {path.relative_to(ROOT)}")
-            continue
+    for path in sorted(CONTRACTS.glob("*.schema.json")):
         try:
             schema = load_json(path)
         except Exception as exc:  # noqa: BLE001
@@ -228,97 +209,67 @@ def main() -> int:
         schema_id = schema.get("$id")
         if not isinstance(schema_id, str) or not schema_id:
             failures.append(f"missing $id: {path.relative_to(ROOT)}")
-        elif schema_id in schema_ids:
+        elif schema_id in ids:
             failures.append(f"duplicate $id: {schema_id}")
         else:
-            schema_ids.add(schema_id)
-        schemas[name] = schema
+            ids.add(schema_id)
+        schemas[path.name] = schema
 
     for path in REQUIRED_FILES:
         if not path.exists():
             failures.append(f"missing required file: {path.relative_to(ROOT)}")
-
-    alias_seed = ROOT / "editorial-memory" / "entity_aliases.json"
-    if alias_seed.exists():
-        try:
-            load_json(alias_seed)
-        except Exception as exc:  # noqa: BLE001
-            failures.append(f"invalid seed JSON {alias_seed.relative_to(ROOT)}: {exc}")
 
     try:
         import jsonschema  # type: ignore
     except ImportError:
         if args.require_jsonschema:
             failures.append("jsonschema package is required but unavailable")
-        else:
-            print("WARN: jsonschema unavailable; fixture validation skipped")
     else:
-        for name, sample in sample_documents().items():
-            schema = schemas.get(name)
-            if schema is None:
-                continue
+        fixture_set = samples()
+        for name, schema in schemas.items():
             try:
                 jsonschema.Draft202012Validator.check_schema(schema)
-                jsonschema.Draft202012Validator(schema, format_checker=jsonschema.FormatChecker()).validate(sample)
+                sample = fixture_set.get(name)
+                if sample is not None:
+                    jsonschema.Draft202012Validator(
+                        schema, format_checker=jsonschema.FormatChecker()
+                    ).validate(sample)
             except Exception as exc:  # noqa: BLE001
                 failures.append(f"fixture failed for {name}: {exc}")
 
-        alias_schema = schemas.get("entity_aliases")
-        if alias_schema is not None and alias_seed.exists():
+        alias_seed = ROOT / "editorial-memory" / "entity_aliases.json"
+        if alias_seed.exists() and "entity_aliases.schema.json" in schemas:
             try:
-                jsonschema.Draft202012Validator(alias_schema).validate(load_json(alias_seed))
+                jsonschema.Draft202012Validator(schemas["entity_aliases.schema.json"]).validate(load_json(alias_seed))
             except Exception as exc:  # noqa: BLE001
                 failures.append(f"entity alias seed failed schema: {exc}")
 
-        temporal_schema = schemas.get("temporal_claim")
-        if temporal_schema is not None:
-            invalid = sample_documents()["temporal_claim"]
-            invalid["status"] = "invalidated"
-            invalid["valid_to"] = None
-            invalid["current_use"] = "premise_after_revalidation"
-            try:
-                jsonschema.Draft202012Validator(
-                    temporal_schema,
-                    format_checker=jsonschema.FormatChecker(),
-                ).validate(invalid)
-            except jsonschema.ValidationError:
-                pass
-            else:
-                failures.append("temporal_claim accepted invalidated claim as current premise")
+        temporal = copy.deepcopy(fixture_set["temporal_claim.schema.json"])
+        temporal.update({"status": "invalidated", "valid_to": None, "current_use": "premise_after_revalidation"})
+        try:
+            jsonschema.Draft202012Validator(schemas["temporal_claim.schema.json"]).validate(temporal)
+        except jsonschema.ValidationError:
+            pass
+        else:
+            failures.append("temporal claim accepted invalidated claim as current premise")
 
-        promotion_schema = schemas.get("memory_promotion_plan")
-        if promotion_schema is not None:
-            unsafe_apply = sample_documents()["memory_promotion_plan"]
-            unsafe_apply["mode"] = "apply"
-            unsafe_apply["safe_to_apply"] = False
-            unsafe_apply["conflicts"] = [
-                {
-                    "conflict_id": "c1",
-                    "type": "hash_mismatch",
-                    "target_id": "2026-08-05",
-                    "detail": "fixture",
-                    "resolution_required": True,
-                }
-            ]
-            try:
-                jsonschema.Draft202012Validator(
-                    promotion_schema,
-                    format_checker=jsonschema.FormatChecker(),
-                ).validate(unsafe_apply)
-            except jsonschema.ValidationError:
-                pass
-            else:
-                failures.append("promotion plan accepted unsafe apply with conflicts")
+        unsafe = copy.deepcopy(fixture_set["memory_promotion_plan.schema.json"])
+        unsafe.update({"noop": False, "safe_to_apply": True, "conflicts": [fixture_set["_blocker"]]})
+        try:
+            jsonschema.Draft202012Validator(schemas["memory_promotion_plan.schema.json"]).validate(unsafe)
+        except jsonschema.ValidationError:
+            pass
+        else:
+            failures.append("promotion plan accepted safe_to_apply=true with blockers")
 
     if failures:
-        for item in failures:
-            print(f"FAIL: {item}")
+        for failure in failures:
+            print(f"FAIL: {failure}")
         return 1
-
     print(f"PASS: {len(schemas)} schemas parsed")
-    print("PASS: required policy and core-memory files exist")
-    print("PASS: seed registry parsed")
-    print("PASS: memory contract invariants")
+    print("PASS: representative v1/v2 fixtures")
+    print("PASS: required policy, core-memory, and seed files")
+    print("PASS: memory safety invariants")
     return 0
 
 

@@ -1,0 +1,76 @@
+name: Editorial Memory Promotion Tests
+
+on:
+  pull_request:
+    paths:
+      - "scripts/plan_memory_promotion.py"
+      - "scripts/apply_memory_promotion.py"
+      - "scripts/memory_promotion_*.py"
+      - "scripts/promote_episode_memory.py"
+      - "skills/nasdaq-cafe-editorial-memory/contracts/**"
+      - "tests/memory-promotion/**"
+      - "skills/nasdaq-cafe-editorial-memory/validators/validate_memory_contracts.py"
+      - ".github/workflows/editorial-memory-promotion-tests.yml"
+  push:
+    branches:
+      - "feat/pr2-safe-memory-promotion"
+    paths:
+      - "scripts/plan_memory_promotion.py"
+      - "scripts/apply_memory_promotion.py"
+      - "scripts/memory_promotion_*.py"
+      - "scripts/promote_episode_memory.py"
+      - "skills/nasdaq-cafe-editorial-memory/contracts/**"
+      - "tests/memory-promotion/**"
+      - "skills/nasdaq-cafe-editorial-memory/validators/validate_memory_contracts.py"
+      - ".github/workflows/editorial-memory-promotion-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  safe-promotion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install contract validator
+        run: python -m pip install --disable-pip-version-check jsonschema
+
+      - name: Compile promotion scripts
+        run: |
+          python -m py_compile \
+            scripts/memory_promotion_common.py \
+            scripts/memory_promotion_preflight.py \
+            scripts/memory_promotion_conflicts.py \
+            scripts/memory_promotion_merge.py \
+            scripts/memory_promotion_planner.py \
+            scripts/memory_promotion_apply.py \
+            scripts/memory_promotion_lib.py \
+            scripts/plan_memory_promotion.py \
+            scripts/apply_memory_promotion.py \
+            scripts/promote_episode_memory.py \
+            skills/nasdaq-cafe-editorial-memory/validators/validate_memory_contracts.py
+
+      - name: Validate JSON schema syntax
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          for path in Path("skills/nasdaq-cafe-editorial-memory/contracts").glob("*.schema.json"):
+              json.loads(path.read_text(encoding="utf-8"))
+              print("PASS", path)
+          PY
+
+      - name: Validate editorial memory contracts
+        run: python skills/nasdaq-cafe-editorial-memory/validators/validate_memory_contracts.py --require-jsonschema
+
+      - name: Run safe-promotion tests
+        run: python -m unittest discover -s tests/memory-promotion -p 'test_*.py' -v
