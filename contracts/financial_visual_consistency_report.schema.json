@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.nasdaq-cafe.local/financial_visual_consistency_report.schema.json",
+  "title": "NASDAQ Cafe Financial Visual Consistency Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contractVersion", "episodeDate", "status", "finalEpisodeContract",
+    "financialRecipePlan", "episodePackageSha256", "renderSpec",
+    "spokenScript", "assetManifest", "selectionCount", "fallbackCount",
+    "fallbackDiversity", "checks", "errors", "unresolvedStates"
+  ],
+  "properties": {
+    "contractVersion": {"const": "1.0.0"},
+    "episodeDate": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+    "status": {"const": "pass"},
+    "finalEpisodeContract": {"$ref": "#/$defs/fileRef"},
+    "financialRecipePlan": {"$ref": "#/$defs/fileRef"},
+    "episodePackageSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "renderSpec": {"$ref": "#/$defs/fileRef"},
+    "spokenScript": {"$ref": "#/$defs/fileRef"},
+    "assetManifest": {"$ref": "#/$defs/fileRef"},
+    "selectionCount": {"type": "integer", "minimum": 0},
+    "fallbackCount": {"type": "integer", "minimum": 0},
+    "fallbackDiversity": {"enum": ["not-required", "pass"]},
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "episodeDate", "episodePackageSha", "selectedPlanSha", "sceneBeat",
+        "cueText", "screenState", "visualTemplate", "templateVariant",
+        "objectIds", "sourceIds", "displayOrder", "comparisonBasis",
+        "selectedPathFreeze", "nonSelectedPathAbsent", "spokenScript",
+        "assetManifest", "preflight"
+      ],
+      "properties": {
+        "episodeDate": {"const": true},
+        "episodePackageSha": {"const": true},
+        "selectedPlanSha": {"const": true},
+        "sceneBeat": {"const": true},
+        "cueText": {"const": true},
+        "screenState": {"const": true},
+        "visualTemplate": {"const": true},
+        "templateVariant": {"const": true},
+        "objectIds": {"const": true},
+        "sourceIds": {"const": true},
+        "displayOrder": {"const": true},
+        "comparisonBasis": {"const": true},
+        "selectedPathFreeze": {"const": true},
+        "nonSelectedPathAbsent": {"const": true},
+        "spokenScript": {"const": true},
+        "assetManifest": {"const": true},
+        "preflight": {"const": true}
+      }
+    },
+    "errors": {"type": "array", "maxItems": 0},
+    "unresolvedStates": {"const": 0}
+  },
+  "$defs": {
+    "fileRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    }
+  }
+}
