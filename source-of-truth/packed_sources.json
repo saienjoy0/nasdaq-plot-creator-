@@ -1,0 +1,29 @@
+{
+  "contract_version": "1.0.0",
+  "sources": [
+    {
+      "logical_path": "source-of-truth/03_episode_production_spec.md",
+      "source_name": "03_episode_production_spec_v2.5.0(1).md",
+      "encoding": "gzip+base64-concatenated",
+      "parts": [
+        "source-of-truth/packed/03_episode_production_spec/part-00.b64",
+        "source-of-truth/packed/03_episode_production_spec/part-01.b64",
+        "source-of-truth/packed/03_episode_production_spec/part-02.b64",
+        "source-of-truth/packed/03_episode_production_spec/part-03.b64"
+      ],
+      "raw_bytes": 101040,
+      "sha256": "c0e476f36b387961277ffa008d7b2258942e1fe44c475bebe1d79b31b9f4dc3f"
+    },
+    {
+      "logical_path": "source-of-truth/04_entertainment_inquisitor.md",
+      "source_name": "04_entertainment_inquisitor_v2.5.0(1).md",
+      "encoding": "gzip+base64-concatenated",
+      "parts": [
+        "source-of-truth/packed/04_entertainment_inquisitor/part-00.b64",
+        "source-of-truth/packed/04_entertainment_inquisitor/part-01.b64"
+      ],
+      "raw_bytes": 45895,
+      "sha256": "62d7807eb01b3433fc3b3f8bce8f6bad96109f1ae2366ec417c35bac8fa47936"
+    }
+  ]
+}
