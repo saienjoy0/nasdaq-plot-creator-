@@ -1,31 +1,19 @@
 # Episode Memory Final Gate Hardening
 
-## 現在地
+## 目的
 
-mainには次まで実装済みである。
+PR #8のeditorial-memory監査、Final Production Package、Renderer Handoffの間に残る実行上の隙間を閉じる。
 
-```text
-PR #8  Episode Package Memory Reference
-PR #9  Financial Visual Intent boundary
-PR #10 Final Production Package Contract
-```
-
-このhardeningは、PR #8とPR #10の間に残った実行上の隙間を閉じる。
+この変更は編集判断を追加しない。既にChatGPTが01〜04に従って完成させた内容について、最終package形状と公開成果物へのmetadata漏出を決定的に検査する。
 
 ## 解決する問題
 
-PR #8の基本validatorはmemory ID、status、Evidence ID、MEMREF marker、Scene/surfaceを監査する。
-PR #10のbuilderはfinal production artifactsを決定的に生成する。
+- PR #8 base validatorだけではScene 1〜9の完全性と04審問統合を最終ゲートとして固定していなかった
+- Memory AnnexとFinal Production Source Annexの順序を横断的に固定していなかった
+- Final Production builderをPR #8検証なしで直接実行できた
+- 生成後にMEMREFまたはmemory internal fieldsが漏れた場合、生成済みpreflightが残る余地があった
 
-ただし、両者を別々に呼べる状態では次が保証されない。
-
-- 人間向けepisode packageにScene 1〜9が正確に一度ずつある
-- 04審問結果が最終packageへ一度だけ統合されている
-- Memory AnnexとFinal Production Source Annexの順序が固定される
-- PR #8 validatorを通さずPR #10 builderだけを呼ばない
-- 生成後のspoken script、asset manifest、render specへmemory metadataが漏れた場合、preflight PASSを残さない
-
-## 正式なAnnex順序
+## 正式Annex順序
 
 ```text
 公開編集内容
@@ -36,8 +24,7 @@ PR #10のbuilderはfinal production artifactsを決定的に生成する。
 → EOF
 ```
 
-Memory Annexの後は、空白またはFinal Production Source Annex一件だけを許可する。
-Final Production Source Annexが存在する場合、それが最終sectionである。
+Memory Annexの後は空白、またはFinal Production Source Annex一件だけを許可する。Final Production Source Annexがある場合、それが最終sectionである。
 
 ## 正式実行入口
 
@@ -49,11 +36,11 @@ validate_episode_package_memory.py
 
 `build_final_production_package_hardened.py`は次を行う。
 
-1. PR #8 base validatorとPR #6 replayを含むpre-build hardening
-2. PR #10 base builderによる成果物生成
-3. spoken script、asset manifest、render specのmetadata漏出再検査
-4. post-build検査失敗時は生成物を削除
-5. preflight PASSを残さずFAILで停止
+1. base PR #8 validatorとPR #6 replayを含むpre-build gate
+2. base Final Production builderによる決定的生成
+3. spoken script、asset manifest、render specのpost-build漏出検査
+4. post-build FAIL時の生成物削除
+5. hardening PASSを返さない限り下流handoffへ進ませない
 
 ## 追加停止条件
 
@@ -61,44 +48,32 @@ validate_episode_package_memory.py
 - 04審問結果なし、または複数
 - Memory Annex後の任意本文
 - Final Production Source Annexの重複、逆順、末尾以外への配置
-- packageファイル名とmemory episode dateの不一致
+- package filenameとmemory episode dateの不一致
 - public artifactsへのMEMREF、Annex marker、internal memory fields混入
 - output rootまたはpublic artifact pathのrepo外脱出
-- base PR #8 validatorの失敗または実行不能
-- post-build gate失敗後も生成物が残る状態
+- base PR #8 validatorのFAILまたは実行不能
+- post-build FAIL後に生成物が残る状態
 
-## 検査集合
+## 回帰検査
 
-```text
-PR #8 tests                         55
-Episode-memory hardening tests      17
-Final-production package tests      30
-Guarded final-production tests       6
-PR #6 memory-revalidation tests     25
-Retrieval / promotion / contracts regressions
-```
+- merged PR #8 tests
+- episode-memory hardening tests
+- Final Production Package tests
+- guarded Final Production tests
+- PR #6 memory-revalidation tests
+- retrieval tests
+- promotion tests
+- editorial-memory contract validator
 
-## 境界
+## 非目的
 
-このhardeningは次を変更しない。
+- 01〜04の変更
+- 主役、市場因果、Expected / Actual / Gapの決定
+- 狐ナレーションの修正
+- Visual Beatや画像経路の編集判断
+- rendererの変更
+- previewやfinalの自動承認
 
-- 01〜04
-- 主役、市場因果、Expected / Actual / Gap
-- 狐ナレーション
-- Visual Beatの意味
-- Primary / Approved Fallbackの編集判断
-- renderer
-- preview / final承認
+## 次の実運用ゲート
 
-## 次の工程
-
-このgateがmainへ入った後、次はRenderer Handoff Bundleである。
-
-```text
-validator済みproduction artifacts
-→ handoff_manifest.json
-→ 対象日・契約版・SHA固定
-→ renderer preview workflow
-```
-
-Real-Day End-to-End Acceptanceで、新しい当日資料一件をpreview MP4まで通した時点をMVPとする。
+このhardeningがmainへ入った後、Real-Day End-to-End Acceptanceでは、hardening済みFinal Production成果物とSHA固定Renderer Handoff Bundleだけをpreview検査対象にする。
