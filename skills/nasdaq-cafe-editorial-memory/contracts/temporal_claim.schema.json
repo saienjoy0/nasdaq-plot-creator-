@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nasdaq-cafe.local/schemas/temporal_claim.schema.json",
+  "title": "NASDAQ Cafe temporal editorial claim",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "claim_id",
+    "subject",
+    "claim",
+    "status",
+    "confidence",
+    "first_observed_at",
+    "last_observed_at",
+    "valid_from",
+    "valid_to",
+    "episode_ids",
+    "evidence_paths",
+    "counter_evidence",
+    "thread_ids",
+    "entities",
+    "topics",
+    "history"
+  ],
+  "properties": {
+    "contract_version": {"const": "2.0.0"},
+    "claim_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "subject": {"type": "string", "minLength": 1},
+    "claim": {"type": "string", "minLength": 1},
+    "status": {
+      "enum": ["active", "strengthened", "weakened", "resolved", "invalidated", "unknown"]
+    },
+    "confidence": {"enum": ["high", "medium", "low", "unknown"]},
+    "first_observed_at": {"type": "string", "format": "date"},
+    "last_observed_at": {"type": "string", "format": "date"},
+    "valid_from": {"type": "string", "format": "date"},
+    "valid_to": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "string", "format": "date"}
+      ]
+    },
+    "supersedes": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"}
+      ],
+      "default": null
+    },
+    "episode_ids": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}(?:-r[1-9][0-9]*)?$"
+      },
+      "uniqueItems": true
+    },
+    "evidence_paths": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "counter_evidence": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "thread_ids": {
+      "type": "array",
+      "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+      "uniqueItems": true
+    },
+    "entities": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "topics": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "current_use": {
+      "enum": ["premise_after_revalidation", "historical_context_only", "excluded"],
+      "default": "premise_after_revalidation"
+    },
+    "history": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "date",
+          "episode_id",
+          "status",
+          "confidence",
+          "reason",
+          "evidence_paths",
+          "counter_evidence"
+        ],
+        "properties": {
+          "date": {"type": "string", "format": "date"},
+          "episode_id": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}(?:-r[1-9][0-9]*)?$"
+          },
+          "status": {
+            "enum": ["active", "strengthened", "weakened", "resolved", "invalidated", "unknown"]
+          },
+          "confidence": {"enum": ["high", "medium", "low", "unknown"]},
+          "reason": {"type": "string", "minLength": 1},
+          "evidence_paths": {
+            "type": "array",
+            "minItems": 1,
+            "items": {"type": "string", "minLength": 1},
+            "uniqueItems": true
+          },
+          "counter_evidence": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1},
+            "uniqueItems": true
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"status": {"enum": ["resolved", "invalidated"]}},
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "valid_to": {"type": "string", "format": "date"},
+          "current_use": {"enum": ["historical_context_only", "excluded"]}
+        }
+      }
+    }
+  ]
+}
