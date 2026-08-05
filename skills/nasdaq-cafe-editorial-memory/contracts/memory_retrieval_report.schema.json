@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nasdaq-cafe.local/schemas/memory_retrieval_report.schema.json",
+  "title": "NASDAQ Cafe editorial memory retrieval report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "episode_date",
+    "query_plan_path",
+    "selected",
+    "rejected",
+    "limits",
+    "usage",
+    "diversity",
+    "warnings"
+  ],
+  "properties": {
+    "contract_version": {"const": "1.0.0"},
+    "episode_date": {"type": "string", "format": "date"},
+    "query_plan_path": {"type": "string", "minLength": 1},
+    "selected": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/result"}
+    },
+    "rejected": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/rejected"}
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_threads", "max_claims", "max_episodes", "max_lessons", "max_characters"],
+      "properties": {
+        "max_threads": {"type": "integer", "minimum": 0, "maximum": 5},
+        "max_claims": {"type": "integer", "minimum": 0, "maximum": 10},
+        "max_episodes": {"type": "integer", "minimum": 0, "maximum": 3},
+        "max_lessons": {"type": "integer", "minimum": 0, "maximum": 3},
+        "max_characters": {"type": "integer", "minimum": 1000, "maximum": 30000}
+      }
+    },
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["threads", "claims", "episodes", "lessons", "characters"],
+      "properties": {
+        "threads": {"type": "integer", "minimum": 0, "maximum": 5},
+        "claims": {"type": "integer", "minimum": 0, "maximum": 10},
+        "episodes": {"type": "integer", "minimum": 0, "maximum": 3},
+        "lessons": {"type": "integer", "minimum": 0, "maximum": 3},
+        "characters": {"type": "integer", "minimum": 0}
+      }
+    },
+    "diversity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["distinct_episode_ids", "distinct_thread_ids", "duplicate_groups_removed"],
+      "properties": {
+        "distinct_episode_ids": {
+          "type": "array",
+          "items": {"type": "string"},
+          "uniqueItems": true
+        },
+        "distinct_thread_ids": {
+          "type": "array",
+          "items": {"type": "string"},
+          "uniqueItems": true
+        },
+        "duplicate_groups_removed": {"type": "integer", "minimum": 0}
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    }
+  },
+  "$defs": {
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item_type",
+        "item_id",
+        "path",
+        "score",
+        "reasons",
+        "provenance_paths",
+        "status",
+        "use_mode",
+        "requires_current_revalidation"
+      ],
+      "properties": {
+        "item_type": {"enum": ["core", "thread", "claim", "episode", "lesson", "weekly", "daily"]},
+        "item_id": {"type": "string", "minLength": 1},
+        "path": {"type": "string", "minLength": 1},
+        "score": {"type": "integer"},
+        "reasons": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "provenance_paths": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        },
+        "status": {"type": "string", "minLength": 1},
+        "use_mode": {"enum": ["current_revalidation_required", "historical_context", "procedural"]},
+        "requires_current_revalidation": {"type": "boolean"},
+        "historical_confidence": {"enum": ["high", "medium", "low", "unknown"]},
+        "episode_ids": {
+          "type": "array",
+          "items": {"type": "string"},
+          "uniqueItems": true
+        }
+      }
+    },
+    "rejected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["item_type", "item_id", "reason"],
+      "properties": {
+        "item_type": {"enum": ["thread", "claim", "episode", "lesson", "weekly", "daily"]},
+        "item_id": {"type": "string", "minLength": 1},
+        "reason": {
+          "enum": [
+            "low_relevance",
+            "invalidated_current_use",
+            "resolved_not_needed",
+            "missing_provenance",
+            "duplicate",
+            "diversity_limit",
+            "count_limit",
+            "character_limit",
+            "archived",
+            "outside_time_window"
+          ]
+        },
+        "detail": {"type": "string"}
+      }
+    }
+  }
+}
