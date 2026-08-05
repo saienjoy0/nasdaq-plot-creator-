@@ -1,0 +1,63 @@
+name: Daily Production Control Plane
+
+on:
+  pull_request:
+    paths:
+      - "scripts/run_daily_production.py"
+      - "skills/nasdaq-cafe-daily-production/**"
+      - "tests/daily-production/**"
+      - "docs/DAILY_PRODUCTION_RUNBOOK.md"
+      - "designs/PR12_DAILY_OPERATIONAL_ENTRY_POINT.md"
+      - ".github/workflows/daily-production.yml"
+      - "scripts/build_final_production_package.py"
+      - "scripts/build_renderer_handoff.py"
+      - "scripts/run_real_day_acceptance.py"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/run_daily_production.py"
+      - "skills/nasdaq-cafe-daily-production/**"
+      - "tests/daily-production/**"
+      - "docs/DAILY_PRODUCTION_RUNBOOK.md"
+      - "designs/PR12_DAILY_OPERATIONAL_ENTRY_POINT.md"
+      - ".github/workflows/daily-production.yml"
+      - "scripts/build_final_production_package.py"
+      - "scripts/build_renderer_handoff.py"
+      - "scripts/run_real_day_acceptance.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install validator dependency
+        run: python -m pip install --disable-pip-version-check jsonschema
+      - name: Compile daily chain
+        run: |
+          python -m py_compile \
+            scripts/run_daily_production.py \
+            scripts/build_final_production_package.py \
+            scripts/build_renderer_handoff.py \
+            scripts/run_real_day_acceptance.py
+      - name: Parse daily schemas
+        run: |
+          python -m json.tool skills/nasdaq-cafe-daily-production/contracts/production_request.schema.json >/dev/null
+          python -m json.tool skills/nasdaq-cafe-daily-production/contracts/production_state.schema.json >/dev/null
+      - name: Run PR12 daily tests
+        run: python -m unittest discover -s tests/daily-production -p 'test_*.py' -v
+      - name: Run PR11 acceptance regression
+        run: python -m unittest discover -s tests/real-day-acceptance -p 'test_*.py' -v
+      - name: Run PR10 handoff regression
+        run: python -m unittest discover -s tests/renderer-handoff -p 'test_*.py' -v
+      - name: Run PR9 production regression
+        run: python -m unittest discover -s tests/final-production-package -p 'test_*.py' -v
+      - name: Run PR8 memory-use regression
+        run: python -m unittest discover -s tests/episode-package-memory -p 'test_*.py' -v
