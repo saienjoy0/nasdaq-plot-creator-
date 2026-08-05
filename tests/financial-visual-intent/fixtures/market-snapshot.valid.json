@@ -1,0 +1,69 @@
+{
+  "contractVersion": "1.0.0",
+  "episodeDate": "2026-07-31",
+  "intentId": "fvi-market-close-pulse",
+  "kind": "market-snapshot",
+  "sceneIds": ["scene-01"],
+  "metrics": [
+    {
+      "metricId": "nasdaq-close",
+      "label": "NASDAQ Composite",
+      "role": "market",
+      "valueText": "+1.00%",
+      "numericValue": 1.0,
+      "unit": "%",
+      "currency": null,
+      "period": "regular-close",
+      "entityId": "index-nasdaq-composite",
+      "sessionDate": "2026-07-31",
+      "sourceIds": ["source-001"]
+    },
+    {
+      "metricId": "amzn-close",
+      "label": "Amazon",
+      "role": "market",
+      "valueText": "+15.32%",
+      "numericValue": 15.32,
+      "unit": "%",
+      "currency": null,
+      "period": "regular-close",
+      "entityId": "company-amzn",
+      "sessionDate": "2026-07-31",
+      "sourceIds": ["source-001"]
+    },
+    {
+      "metricId": "aapl-close",
+      "label": "Apple",
+      "role": "market",
+      "valueText": "-7.35%",
+      "numericValue": -7.35,
+      "unit": "%",
+      "currency": null,
+      "period": "regular-close",
+      "entityId": "company-aapl",
+      "sessionDate": "2026-07-31",
+      "sourceIds": ["source-001"]
+    },
+    {
+      "metricId": "soxx-close",
+      "label": "SOXX",
+      "role": "market",
+      "valueText": "+0.07%",
+      "numericValue": 0.07,
+      "unit": "%",
+      "currency": null,
+      "period": "regular-close",
+      "entityId": "etf-soxx",
+      "sessionDate": "2026-07-31",
+      "sourceIds": ["source-001"]
+    }
+  ],
+  "causalSteps": [],
+  "sourceIds": ["source-001"],
+  "dataPrecision": "market-close",
+  "chartPolicy": "no-series",
+  "preferredRecipe": "market-pulse-grid",
+  "fallbackRecipe": "opening-contradiction",
+  "status": "approved",
+  "editorialNote": null
+}

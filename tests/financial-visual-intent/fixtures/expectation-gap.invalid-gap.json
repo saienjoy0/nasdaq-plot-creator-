@@ -1,0 +1,56 @@
+{
+  "contractVersion": "1.0.0",
+  "episodeDate": "2026-07-31",
+  "intentId": "fvi-invalid-gap",
+  "kind": "expectation-gap",
+  "sceneIds": ["scene-03"],
+  "metrics": [
+    {
+      "metricId": "expected",
+      "label": "Expected",
+      "role": "expected",
+      "valueText": "100",
+      "numericValue": 100,
+      "unit": "USD",
+      "currency": "USD",
+      "period": "2026-Q2",
+      "entityId": "company-x",
+      "sessionDate": null,
+      "sourceIds": ["source-001"]
+    },
+    {
+      "metricId": "actual",
+      "label": "Actual",
+      "role": "actual",
+      "valueText": "110",
+      "numericValue": 110,
+      "unit": "USD",
+      "currency": "USD",
+      "period": "2026-Q2",
+      "entityId": "company-x",
+      "sessionDate": null,
+      "sourceIds": ["source-001"]
+    },
+    {
+      "metricId": "gap",
+      "label": "Gap",
+      "role": "gap",
+      "valueText": "+25",
+      "numericValue": 25,
+      "unit": "USD",
+      "currency": "USD",
+      "period": "2026-Q2",
+      "entityId": "company-x",
+      "sessionDate": null,
+      "sourceIds": ["source-001"]
+    }
+  ],
+  "causalSteps": [],
+  "sourceIds": ["source-001"],
+  "dataPrecision": "reported-result",
+  "chartPolicy": "no-series",
+  "preferredRecipe": "earnings-surprise",
+  "fallbackRecipe": "expected-anchor",
+  "status": "approved",
+  "editorialNote": null
+}

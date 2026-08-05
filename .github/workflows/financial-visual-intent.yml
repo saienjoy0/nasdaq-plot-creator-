@@ -1,0 +1,61 @@
+name: Financial Visual Intent Contract
+
+on:
+  pull_request:
+    paths:
+      - "contracts/financial_visual_intent.schema.json"
+      - "scripts/financial_visual_intent.py"
+      - "tests/test_financial_visual_intent.py"
+      - "tests/financial-visual-intent/**"
+      - "designs/FINANCIAL_VISUAL_INTENT_CONTRACT.md"
+      - ".github/workflows/financial-visual-intent.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "contracts/financial_visual_intent.schema.json"
+      - "scripts/financial_visual_intent.py"
+      - "tests/test_financial_visual_intent.py"
+      - "tests/financial-visual-intent/**"
+      - "designs/FINANCIAL_VISUAL_INTENT_CONTRACT.md"
+      - ".github/workflows/financial-visual-intent.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile validator
+        run: python -m py_compile scripts/financial_visual_intent.py
+
+      - name: Validate schema syntax
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path("contracts/financial_visual_intent.schema.json")
+          json.loads(path.read_text(encoding="utf-8"))
+          print("PASS", path)
+          PY
+
+      - name: Run contract tests
+        run: python -m unittest -v tests/test_financial_visual_intent.py
+
+      - name: Validate and compile representative fixtures
+        run: |
+          python scripts/financial_visual_intent.py validate tests/financial-visual-intent/fixtures/expectation-gap.valid.json
+          python scripts/financial_visual_intent.py compile tests/financial-visual-intent/fixtures/expectation-gap.valid.json --output /tmp/expectation-gap.plan.json
+          python scripts/financial_visual_intent.py validate tests/financial-visual-intent/fixtures/market-snapshot.valid.json
+          python scripts/financial_visual_intent.py compile tests/financial-visual-intent/fixtures/market-snapshot.valid.json --output /tmp/market-snapshot.plan.json

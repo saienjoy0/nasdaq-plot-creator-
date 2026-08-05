@@ -1,0 +1,56 @@
+{
+  "contractVersion": "1.0.0",
+  "episodeDate": "2026-07-31",
+  "intentId": "fvi-aws-expectation-gap",
+  "kind": "expectation-gap",
+  "sceneIds": ["scene-03"],
+  "metrics": [
+    {
+      "metricId": "aws-expected",
+      "label": "AWS売上市場予想",
+      "role": "expected",
+      "valueText": "405.7億ドル",
+      "numericValue": 405.7,
+      "unit": "億ドル",
+      "currency": "USD",
+      "period": "2026-Q2",
+      "entityId": "company-amzn-aws",
+      "sessionDate": null,
+      "sourceIds": ["source-003"]
+    },
+    {
+      "metricId": "aws-actual",
+      "label": "AWS売上実績",
+      "role": "actual",
+      "valueText": "422.3億ドル",
+      "numericValue": 422.3,
+      "unit": "億ドル",
+      "currency": "USD",
+      "period": "2026-Q2",
+      "entityId": "company-amzn-aws",
+      "sessionDate": null,
+      "sourceIds": ["source-001"]
+    },
+    {
+      "metricId": "aws-gap",
+      "label": "市場予想との差",
+      "role": "gap",
+      "valueText": "+16.6億ドル",
+      "numericValue": 16.6,
+      "unit": "億ドル",
+      "currency": "USD",
+      "period": "2026-Q2",
+      "entityId": "company-amzn-aws",
+      "sessionDate": null,
+      "sourceIds": ["source-001", "source-003"]
+    }
+  ],
+  "causalSteps": [],
+  "sourceIds": ["source-001", "source-003"],
+  "dataPrecision": "reported-result",
+  "chartPolicy": "no-series",
+  "preferredRecipe": "earnings-surprise",
+  "fallbackRecipe": "expected-anchor",
+  "status": "approved",
+  "editorialNote": "予想と実績の比較基準が一致する場合だけ使用する。"
+}
