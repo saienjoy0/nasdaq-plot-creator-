@@ -1,6 +1,6 @@
 ---
 name: nasdaq-cafe-real-day-acceptance
-version: 1.0.0
+version: 1.1.0
 description: Verify a new real daily source package reaches a technically valid preview while final remains unexecuted.
 ---
 
@@ -8,12 +8,29 @@ description: Verify a new real daily source package reaches a technically valid 
 
 ## Purpose
 
-Prove the full daily production path on a new real episode after PR #8–#10 contracts are satisfied.
+Prove the full daily production path on a new real episode after memory, research, episode, final-production, and renderer-handoff contracts are satisfied.
+
+## Mandatory guarded entrypoint
+
+Use `scripts/run_real_day_acceptance_hardened.py` for MVP evidence.
+
+Before invoking the base acceptance runner, it verifies that the immutable handoff manifest contains exactly one preflight role and that the bundled preflight still carries:
+
+```json
+{
+  "episode_memory_hardening": {
+    "pre_build": "pass",
+    "public_artifacts": "pass"
+  }
+}
+```
+
+The base acceptance runner must then return validation PASS. A technically valid preview without this complete production evidence is not accepted as MVP proof.
 
 ## Required evidence
 
 - non-empty `daily_source_package_YYYY-MM-DD.md` for a date other than the 2026-07-31 seed;
-- immutable preview handoff manifest and all bundle files;
+- immutable hardened preview handoff manifest and all bundle files;
 - renderer technical report from the pinned renderer commit;
 - non-empty preview MP4 with verified SHA;
 - optional user visual-review record.
