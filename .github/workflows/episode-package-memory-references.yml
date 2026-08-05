@@ -1,0 +1,36 @@
+name: Episode Package Memory References
+
+on:
+  pull_request:
+    paths:
+      - "skills/nasdaq-cafe-episode-production/**"
+      - "tests/episode-memory-references/**"
+      - "designs/PR8_EPISODE_PACKAGE_MEMORY_REFERENCES.md"
+      - ".github/workflows/episode-package-memory-references.yml"
+  push:
+    branches: [main]
+    paths:
+      - "skills/nasdaq-cafe-episode-production/**"
+      - "tests/episode-memory-references/**"
+      - "designs/PR8_EPISODE_PACKAGE_MEMORY_REFERENCES.md"
+      - ".github/workflows/episode-package-memory-references.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile validator
+        run: python -m py_compile skills/nasdaq-cafe-episode-production/validators/validate_episode_memory_references.py
+      - name: Parse schema
+        run: python -m json.tool skills/nasdaq-cafe-episode-production/contracts/episode_package_memory_reference.schema.json >/dev/null
+      - name: Run tests
+        run: python -m unittest discover -s tests/episode-memory-references -p 'test_*.py' -v
