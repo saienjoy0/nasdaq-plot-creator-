@@ -1,0 +1,43 @@
+name: Final Production Package
+
+on:
+  pull_request:
+    paths:
+      - "scripts/build_final_production_package.py"
+      - "skills/nasdaq-cafe-final-production/**"
+      - "tests/final-production-package/**"
+      - "designs/PR9_FINAL_PRODUCTION_PACKAGE_CONTRACT.md"
+      - ".github/workflows/final-production-package.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/build_final_production_package.py"
+      - "skills/nasdaq-cafe-final-production/**"
+      - "tests/final-production-package/**"
+      - "designs/PR9_FINAL_PRODUCTION_PACKAGE_CONTRACT.md"
+      - ".github/workflows/final-production-package.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --disable-pip-version-check jsonschema
+      - name: Compile builder
+        run: python -m py_compile scripts/build_final_production_package.py
+      - name: Parse schema
+        run: python -m json.tool skills/nasdaq-cafe-final-production/contracts/final_production_source_annex.schema.json >/dev/null
+      - name: Run PR9 tests
+        run: python -m unittest discover -s tests/final-production-package -p 'test_*.py' -v
+      - name: Run PR8 regression
+        run: python -m unittest discover -s tests/episode-package-memory -p 'test_*.py' -v
+      - name: Run PR6 regression
+        run: python -m unittest discover -s tests/memory-revalidation -p 'test_*.py' -v
