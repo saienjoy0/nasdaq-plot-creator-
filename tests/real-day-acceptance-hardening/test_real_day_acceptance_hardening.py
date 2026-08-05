@@ -71,14 +71,14 @@ class Tests(unittest.TestCase):
         }
 
     def test_01_pass(self):
-        self.write_bundle({"pre_build": "pass", "public_artifacts": "pass"})
+        self.write_bundle(dict(module.REQUIRED_HARDENING))
         result = module.validate_acceptance_hardened(
             **self.args(), validator=self.validator_pass
         )
         self.assertNotIn("episode_memory_hardening", result)
         self.assertTrue(
             any(
-                "episode-memory hardening evidence verified" in item
+                "handoff-time public-artifact recheck verified" in item
                 for item in result["validation"]["warnings"]
             )
         )
@@ -91,14 +91,14 @@ class Tests(unittest.TestCase):
             )
 
     def test_03_partial_hardening_rejected(self):
-        self.write_bundle({"pre_build": "pass", "public_artifacts": "fail"})
+        self.write_bundle({"pre_build": "pass", "public_artifacts": "pass"})
         with self.assertRaises(module.HardenedAcceptanceError):
             module.validate_acceptance_hardened(
                 **self.args(), validator=self.validator_pass
             )
 
     def test_04_duplicate_preflight_role_rejected(self):
-        self.write_bundle({"pre_build": "pass", "public_artifacts": "pass"})
+        self.write_bundle(dict(module.REQUIRED_HARDENING))
         value = json.loads(self.manifest.read_text())
         value["files"].append(dict(value["files"][0]))
         self.manifest.write_text(json.dumps(value))
@@ -108,7 +108,7 @@ class Tests(unittest.TestCase):
             )
 
     def test_05_base_acceptance_must_pass(self):
-        self.write_bundle({"pre_build": "pass", "public_artifacts": "pass"})
+        self.write_bundle(dict(module.REQUIRED_HARDENING))
 
         def validator_fail(**kwargs):
             return {"validation": {"status": "fail"}}
