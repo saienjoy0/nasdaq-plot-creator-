@@ -84,7 +84,7 @@ jobs:
           report = json.loads(Path("memory-seeds/2026-07-31/seed_report.json").read_text(encoding="utf-8"))
 
           assert index["current_revision"] == "v001"
-          assert index["revisions"] == ["v001"]
+          assert [item["revision"] for item in index["revisions"]] == ["v001"]
           assert report["status"] == "verified"
           assert report["repeat_result"] == "noop"
           assert [item["claim_id"] for item in ledger["claims"]] == ["ai-capex-evaluation-axis"]
