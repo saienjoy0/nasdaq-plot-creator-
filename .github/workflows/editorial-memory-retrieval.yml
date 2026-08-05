@@ -7,6 +7,7 @@ on:
       - "scripts/build_memory_context.py"
       - "tests/memory-retrieval/**"
       - "skills/nasdaq-cafe-editorial-memory/contracts/**"
+      - "designs/PR5_AUDITABLE_MEMORY_RETRIEVAL.md"
       - ".github/workflows/editorial-memory-retrieval.yml"
   push:
     branches:
@@ -16,6 +17,7 @@ on:
       - "scripts/build_memory_context.py"
       - "tests/memory-retrieval/**"
       - "skills/nasdaq-cafe-editorial-memory/contracts/**"
+      - "designs/PR5_AUDITABLE_MEMORY_RETRIEVAL.md"
       - ".github/workflows/editorial-memory-retrieval.yml"
   workflow_dispatch:
 
