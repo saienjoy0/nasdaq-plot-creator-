@@ -3,33 +3,41 @@ name: Episode Memory Final Gate
 on:
   pull_request:
     paths:
+      - "AGENTS.md"
       - "skills/nasdaq-cafe-episode-package-memory/**"
       - "skills/nasdaq-cafe-final-production/**"
       - "skills/nasdaq-cafe-renderer-handoff/**"
       - "skills/nasdaq-cafe-real-day-acceptance/**"
+      - "skills/nasdaq-cafe-daily-production-hardening/**"
       - "scripts/build_final_production_package_hardened.py"
       - "scripts/build_renderer_handoff_hardened.py"
       - "scripts/run_real_day_acceptance_hardened.py"
+      - "scripts/run_daily_production_hardened.py"
       - "tests/episode-package-memory-hardening/**"
       - "tests/final-production-hardening/**"
       - "tests/renderer-handoff-hardening/**"
       - "tests/real-day-acceptance-hardening/**"
+      - "tests/daily-production-hardening/**"
       - "designs/EPISODE_MEMORY_FINAL_GATE_HARDENING.md"
       - ".github/workflows/episode-memory-final-gate.yml"
   push:
     branches: [main]
     paths:
+      - "AGENTS.md"
       - "skills/nasdaq-cafe-episode-package-memory/**"
       - "skills/nasdaq-cafe-final-production/**"
       - "skills/nasdaq-cafe-renderer-handoff/**"
       - "skills/nasdaq-cafe-real-day-acceptance/**"
+      - "skills/nasdaq-cafe-daily-production-hardening/**"
       - "scripts/build_final_production_package_hardened.py"
       - "scripts/build_renderer_handoff_hardened.py"
       - "scripts/run_real_day_acceptance_hardened.py"
+      - "scripts/run_daily_production_hardened.py"
       - "tests/episode-package-memory-hardening/**"
       - "tests/final-production-hardening/**"
       - "tests/renderer-handoff-hardening/**"
       - "tests/real-day-acceptance-hardening/**"
+      - "tests/daily-production-hardening/**"
       - "designs/EPISODE_MEMORY_FINAL_GATE_HARDENING.md"
       - ".github/workflows/episode-memory-final-gate.yml"
   workflow_dispatch:
@@ -40,7 +48,7 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -62,7 +70,9 @@ jobs:
             scripts/build_renderer_handoff.py \
             scripts/build_renderer_handoff_hardened.py \
             scripts/run_real_day_acceptance.py \
-            scripts/run_real_day_acceptance_hardened.py
+            scripts/run_real_day_acceptance_hardened.py \
+            scripts/run_daily_production.py \
+            scripts/run_daily_production_hardened.py
       - name: Parse contract schemas
         run: |
           python -m json.tool skills/nasdaq-cafe-episode-package-memory/contracts/episode_package_memory_annex.schema.json >/dev/null
@@ -71,6 +81,8 @@ jobs:
           python -m json.tool skills/nasdaq-cafe-final-production/contracts/final_production_source_annex.schema.json >/dev/null
           python -m json.tool skills/nasdaq-cafe-renderer-handoff/contracts/renderer_handoff_manifest.schema.json >/dev/null
           python -m json.tool skills/nasdaq-cafe-real-day-acceptance/contracts/real_day_acceptance_report.schema.json >/dev/null
+          python -m json.tool skills/nasdaq-cafe-daily-production/contracts/production_request.schema.json >/dev/null
+          python -m json.tool skills/nasdaq-cafe-daily-production/contracts/production_state.schema.json >/dev/null
       - name: Run episode-memory base tests
         run: python -m unittest discover -s tests/episode-package-memory -p 'test_*.py' -v
       - name: Run episode-memory hardening tests
@@ -87,6 +99,10 @@ jobs:
         run: python -m unittest discover -s tests/real-day-acceptance -p 'test_*.py' -v
       - name: Run real-day hardening tests
         run: python -m unittest discover -s tests/real-day-acceptance-hardening -p 'test_*.py' -v
+      - name: Run daily control-plane base tests
+        run: python -m unittest discover -s tests/daily-production -p 'test_*.py' -v
+      - name: Run daily control-plane hardening tests
+        run: python -m unittest discover -s tests/daily-production-hardening -p 'test_*.py' -v
       - name: Run final-episode financial visual regression
         run: python -m unittest tests/test_final_episode_contract.py -v
       - name: Run PR6 memory-revalidation regression
