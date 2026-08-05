@@ -1,0 +1,99 @@
+name: Episode Memory Final Gate
+
+on:
+  pull_request:
+    paths:
+      - "skills/nasdaq-cafe-episode-package-memory/**"
+      - "skills/nasdaq-cafe-final-production/**"
+      - "skills/nasdaq-cafe-renderer-handoff/**"
+      - "skills/nasdaq-cafe-real-day-acceptance/**"
+      - "scripts/build_final_production_package_hardened.py"
+      - "scripts/build_renderer_handoff_hardened.py"
+      - "scripts/run_real_day_acceptance_hardened.py"
+      - "tests/episode-package-memory-hardening/**"
+      - "tests/final-production-hardening/**"
+      - "tests/renderer-handoff-hardening/**"
+      - "tests/real-day-acceptance-hardening/**"
+      - "designs/EPISODE_MEMORY_FINAL_GATE_HARDENING.md"
+      - ".github/workflows/episode-memory-final-gate.yml"
+  push:
+    branches: [main]
+    paths:
+      - "skills/nasdaq-cafe-episode-package-memory/**"
+      - "skills/nasdaq-cafe-final-production/**"
+      - "skills/nasdaq-cafe-renderer-handoff/**"
+      - "skills/nasdaq-cafe-real-day-acceptance/**"
+      - "scripts/build_final_production_package_hardened.py"
+      - "scripts/build_renderer_handoff_hardened.py"
+      - "scripts/run_real_day_acceptance_hardened.py"
+      - "tests/episode-package-memory-hardening/**"
+      - "tests/final-production-hardening/**"
+      - "tests/renderer-handoff-hardening/**"
+      - "tests/real-day-acceptance-hardening/**"
+      - "designs/EPISODE_MEMORY_FINAL_GATE_HARDENING.md"
+      - ".github/workflows/episode-memory-final-gate.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install validator dependency
+        run: python -m pip install --disable-pip-version-check jsonschema
+      - name: Compile final-gate code
+        run: |
+          python -m py_compile \
+            skills/nasdaq-cafe-episode-package-memory/parsers/episode_package_memory_parser.py \
+            skills/nasdaq-cafe-episode-package-memory/validators/validate_episode_package_memory.py \
+            skills/nasdaq-cafe-episode-package-memory/validators/validate_episode_package_memory_hardening.py \
+            skills/nasdaq-cafe-causal-research/validators/validate_causal_research_dossier.py \
+            scripts/build_research_input_manifest.py \
+            scripts/editorial_memory_retrieval.py \
+            scripts/build_final_production_package.py \
+            scripts/build_final_production_package_hardened.py \
+            scripts/build_renderer_handoff.py \
+            scripts/build_renderer_handoff_hardened.py \
+            scripts/run_real_day_acceptance.py \
+            scripts/run_real_day_acceptance_hardened.py
+      - name: Parse contract schemas
+        run: |
+          python -m json.tool skills/nasdaq-cafe-episode-package-memory/contracts/episode_package_memory_annex.schema.json >/dev/null
+          python -m json.tool skills/nasdaq-cafe-causal-research/contracts/causal_research_dossier_v0.2.schema.json >/dev/null
+          python -m json.tool skills/nasdaq-cafe-causal-research/contracts/research_input_manifest.schema.json >/dev/null
+          python -m json.tool skills/nasdaq-cafe-final-production/contracts/final_production_source_annex.schema.json >/dev/null
+          python -m json.tool skills/nasdaq-cafe-renderer-handoff/contracts/renderer_handoff_manifest.schema.json >/dev/null
+          python -m json.tool skills/nasdaq-cafe-real-day-acceptance/contracts/real_day_acceptance_report.schema.json >/dev/null
+      - name: Run episode-memory base tests
+        run: python -m unittest discover -s tests/episode-package-memory -p 'test_*.py' -v
+      - name: Run episode-memory hardening tests
+        run: python -m unittest discover -s tests/episode-package-memory-hardening -p 'test_*.py' -v
+      - name: Run final-production base tests
+        run: python -m unittest discover -s tests/final-production-package -p 'test_*.py' -v
+      - name: Run final-production hardening tests
+        run: python -m unittest discover -s tests/final-production-hardening -p 'test_*.py' -v
+      - name: Run renderer-handoff base tests
+        run: python -m unittest discover -s tests/renderer-handoff -p 'test_*.py' -v
+      - name: Run renderer-handoff hardening tests
+        run: python -m unittest discover -s tests/renderer-handoff-hardening -p 'test_*.py' -v
+      - name: Run real-day base tests
+        run: python -m unittest discover -s tests/real-day-acceptance -p 'test_*.py' -v
+      - name: Run real-day hardening tests
+        run: python -m unittest discover -s tests/real-day-acceptance-hardening -p 'test_*.py' -v
+      - name: Run final-episode financial visual regression
+        run: python -m unittest tests/test_final_episode_contract.py -v
+      - name: Run PR6 memory-revalidation regression
+        run: python -m unittest discover -s tests/memory-revalidation -p 'test_*.py' -v
+      - name: Run retrieval regression
+        run: python -m unittest discover -s tests/memory-retrieval -p 'test_*.py' -v
+      - name: Run promotion regression
+        run: python -m unittest discover -s tests/memory-promotion -p 'test_*.py' -v
+      - name: Validate editorial-memory contracts
+        run: python skills/nasdaq-cafe-editorial-memory/validators/validate_memory_contracts.py --require-jsonschema
