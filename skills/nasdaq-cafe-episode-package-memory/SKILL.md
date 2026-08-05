@@ -10,7 +10,7 @@ description: Validate how revalidated editorial memory is used in the final huma
 
 This skill validates the bridge from a validated causal research dossier to the final, post-inquisition `episode_package_YYYY-MM-DD.md`.
 
-The episode package remains the human editorial source of truth. Memory metadata is stored in one machine-readable annex at the end of the package, and each public use is marked by an invisible HTML comment immediately after the exact anchor text.
+The episode package remains the human editorial source of truth. Memory metadata is stored in one machine-readable annex after the public and 04 sections, and each public use is marked by an invisible HTML comment immediately after the exact anchor text.
 
 ## Required inputs
 
@@ -24,7 +24,7 @@ The episode package remains the human editorial source of truth. Memory metadata
 
 The episode package must contain Scene 1 through Scene 9 exactly once and in order, followed by exactly one integrated `04 興味深さ・わかりやすさ審問結果` section.
 
-The final section must be exactly one Editorial Memory Usage Annex. A Final Production Source annex, when present, appears before the memory annex.
+The Editorial Memory Usage Annex follows the 04 section:
 
 ```text
 <!--BEGIN_EPISODE_MEMORY_ANNEX-->
@@ -34,7 +34,7 @@ The final section must be exactly one Editorial Memory Usage Annex. A Final Prod
 <!--END_EPISODE_MEMORY_ANNEX-->
 ```
 
-No non-whitespace content may appear after the memory annex end marker.
+After the memory annex, the package may contain only whitespace or exactly one Final Production Source annex. When the Final Production Source annex is present, it must be the final section.
 
 Each public use must contain exactly one marker:
 
@@ -74,11 +74,12 @@ The hardening validator additionally:
 
 1. requires all nine Scenes exactly once and in order;
 2. requires exactly one integrated 04 inquisition result before the memory annex;
-3. requires the memory annex to be the final section;
-4. requires the filename date to match the annex episode date;
-5. scans supplied public artifacts for MEMREF, annex markers, and internal memory fields;
-6. rejects public-artifact paths outside the repository root;
-7. fails closed if the base validator cannot run.
+3. allows only the Final Production Source annex after the memory annex;
+4. requires the Final Production Source annex to be last when present;
+5. requires the filename date to match the memory annex episode date;
+6. scans supplied public artifacts for MEMREF, annex markers, and internal memory fields;
+7. rejects public-artifact paths outside the repository root;
+8. fails closed if the base validator cannot run.
 
 Example:
 
