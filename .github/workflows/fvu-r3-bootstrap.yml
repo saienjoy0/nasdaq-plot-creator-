@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "scripts/apply-fvu-r3-renderer-compatibility.py"
+      - "scripts/fix-fvu-r3-bootstrap-anchor.py"
       - "contracts/financial_visual_compatibility.json"
       - ".github/workflows/fvu-r3-bootstrap.yml"
 
@@ -20,6 +21,8 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
+      - name: Fix temporary patch anchor
+        run: python3 scripts/fix-fvu-r3-bootstrap-anchor.py
       - name: Apply deterministic R3 compatibility patch
         run: python3 scripts/apply-fvu-r3-renderer-compatibility.py
       - name: Commit patched contracts and tests
