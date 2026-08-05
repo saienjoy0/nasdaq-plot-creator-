@@ -31,8 +31,8 @@
       "required": ["preview_requested", "final_requested", "memory_promotion_requested"],
       "properties": {
         "preview_requested": {"type": "boolean"},
-        "final_requested": {"const": false},
-        "memory_promotion_requested": {"const": false}
+        "final_requested": {"type": "boolean"},
+        "memory_promotion_requested": {"type": "boolean"}
       }
     }
   }
