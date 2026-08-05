@@ -26,8 +26,10 @@ External projects are references only. They may improve research and memory mech
 
 ```text
 daily_source_package
+→ memory query plan
 → selective editorial-memory retrieval
-→ causal research dossier
+→ research input manifest
+→ causal research dossier with memory revalidation
 → editorial decision under 02
 → fox narration under 01
 → nine-scene episode package under 03
@@ -43,6 +45,8 @@ daily_source_package
 
 Never skip the causal research dossier when the daily input contains more than a simple confirmed single-cause event.
 
+The research input manifest is an immutable intake record for the current production attempt. It freezes the daily package, memory query plan, memory context, retrieval report, their episode date, and their SHA-256 values. It does not choose the lead or certify any remembered claim as current truth.
+
 ## Editorial-memory behavior
 
 Before causal research:
@@ -51,8 +55,12 @@ Before causal research:
 - Read yesterday's daily record and the current ISO-week record when present.
 - Select at most five relevant topic threads using today's lead candidates, entities, policies, technologies, and indicators.
 - Select related claim-ledger entries.
-- Build `working/memory_context_YYYY-MM-DD.md` with `scripts/build_memory_context.py`.
+- Build `working/memory_context_YYYY-MM-DD.md` with the authoritative retrieval script.
+- Build `research/YYYY-MM-DD/research_input_manifest.json` with `scripts/build_research_input_manifest.py`.
 - Treat memory as a list of past observations and research leads, not as current evidence.
+- Classify every selected non-core memory as used, not used, unresolved, weakened, invalidated, or historical context in the causal research dossier.
+- Require current evidence before a remembered claim can be marked supported or used as a current causal premise.
+- Never use a memory ID or a path under `editorial-memory/` as an evidence ID.
 
 After final approval:
 
@@ -61,7 +69,7 @@ After final approval:
 - Use `scripts/promote_episode_memory.py` to update the daily record, topic threads, and claim ledger.
 - Never promote drafts, rejected causal explanations, unused image paths, or pre-inquisition narration.
 
-The fox may refer to a previous episode only when a corresponding daily/thread/claim record exists. Never invent remembered trades, holdings, losses, university incidents, or personal experiences.
+The fox may refer to a previous episode only when a corresponding daily/thread/claim record exists and the current episode records how that memory was revalidated or restricted to historical context. Never invent remembered trades, holdings, losses, university incidents, or personal experiences.
 
 ## Research behavior
 
@@ -75,6 +83,9 @@ The fox may refer to a previous episode only when a corresponding daily/thread/c
 - Do not create an Expected value after the fact.
 - Do not elevate a single-company event into a NASDAQ-wide cause without index, sector, timing, and alternative-explanation checks.
 - Revalidate any remembered claim against current evidence before using it as a factual premise.
+- Do not use editorial memory as the sole basis for Expected, Actual, a causal edge, or a NASDAQ-wide conclusion.
+- Record `difference_from_previous` when a past claim is used for comparison or current revalidation.
+- `reason_unknown`, `unresolved`, and `not_used` are valid outcomes.
 
 ## External project adoption
 
@@ -90,8 +101,10 @@ Do not import trading recommendations, target prices, autonomous portfolio decis
 
 ## Output contract
 
-The causal research skill produces evidence and candidate explanations. It does not make the final editorial decision and does not write the final narration.
+The causal research skill produces evidence, explicit memory revalidation results, and candidate explanations. It does not make the final editorial decision and does not write the final narration.
 
 The memory skill retrieves past context and promotes approved conclusions. It does not certify current truth and does not change 01–04.
+
+The research input manifest and dossier validator provide structural and provenance safety. A passing validator does not prove that the market interpretation is correct.
 
 The final decision remains governed by 02, then converted by 01 and 03, then reviewed by 04.
