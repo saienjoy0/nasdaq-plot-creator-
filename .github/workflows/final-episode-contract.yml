@@ -1,0 +1,62 @@
+name: Final Episode Financial Visual Contract
+
+on:
+  pull_request:
+    paths:
+      - "contracts/final_episode_contract.schema.json"
+      - "contracts/financial_visual_candidate_plan.schema.json"
+      - "scripts/final_episode_contract.py"
+      - "tests/test_final_episode_contract.py"
+      - "tests/final-episode-contract/**"
+      - "designs/FINAL_EPISODE_FINANCIAL_VISUAL_CONTRACT.md"
+      - ".github/workflows/final-episode-contract.yml"
+  push:
+    branches: [main]
+    paths:
+      - "contracts/final_episode_contract.schema.json"
+      - "contracts/financial_visual_candidate_plan.schema.json"
+      - "scripts/final_episode_contract.py"
+      - "tests/test_final_episode_contract.py"
+      - "tests/final-episode-contract/**"
+      - "designs/FINAL_EPISODE_FINANCIAL_VISUAL_CONTRACT.md"
+      - ".github/workflows/final-episode-contract.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install validator dependency
+        run: python -m pip install --disable-pip-version-check jsonschema
+      - name: Compile validator and fixture generator
+        run: |
+          python -m py_compile \
+            scripts/final_episode_contract.py \
+            tests/final-episode-contract/generate_fixtures.py
+      - name: Parse schemas
+        run: |
+          python -m json.tool contracts/final_episode_contract.schema.json >/dev/null
+          python -m json.tool contracts/financial_visual_candidate_plan.schema.json >/dev/null
+      - name: Rebuild deterministic fixtures twice
+        run: |
+          python tests/final-episode-contract/generate_fixtures.py > /tmp/fixture-sha-1
+          sha256sum tests/final-episode-contract/fixtures/* > /tmp/fixture-files-1
+          python tests/final-episode-contract/generate_fixtures.py > /tmp/fixture-sha-2
+          sha256sum tests/final-episode-contract/fixtures/* > /tmp/fixture-files-2
+          diff -u /tmp/fixture-sha-1 /tmp/fixture-sha-2
+          diff -u /tmp/fixture-files-1 /tmp/fixture-files-2
+      - name: Run positive and adversarial tests
+        run: python -m unittest -v tests/test_final_episode_contract.py
+      - name: Validate representative final contract
+        run: |
+          python scripts/final_episode_contract.py \
+            tests/final-episode-contract/fixtures/final_episode_contract.valid.json \
+            --repo-root .

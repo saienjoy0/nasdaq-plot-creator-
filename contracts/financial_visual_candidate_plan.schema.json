@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.nasdaq-cafe.local/financial_visual_candidate_plan.schema.json",
+  "title": "NASDAQ Cafe Financial Visual Candidate Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "planVersion", "planId", "intentId", "path", "recipeId",
+    "visualTemplateId", "templateVariant", "sceneId", "visualBeatId",
+    "screenState", "metricIds", "causalStepIds", "displayOrder",
+    "comparisonBasis", "highlightObjectIds", "headlineRef",
+    "screenQuestionRef", "startCueRef", "endCueRef", "returnTargetRef",
+    "sourceIds"
+  ],
+  "properties": {
+    "planVersion": {"const": "1.0.0"},
+    "planId": {"type": "string", "pattern": "^fvp-[a-z0-9][a-z0-9._-]{2,100}$"},
+    "intentId": {"type": "string", "pattern": "^fvi-[a-z0-9][a-z0-9._-]{2,80}$"},
+    "path": {"enum": ["preferred", "fallback"]},
+    "recipeId": {
+      "enum": [
+        "market-pulse-grid", "opening-contradiction", "earnings-surprise",
+        "expected-anchor", "dual-asset-split", "split-opposition",
+        "macro-pressure", "causal-build", "source-receipt", "news-media"
+      ]
+    },
+    "visualTemplateId": {
+      "enum": [
+        "market-pulse-grid", "opening-contradiction", "earnings-surprise",
+        "expected-actual-bullet", "metric-comparison-board", "text-focus",
+        "dual-asset-split", "split-comparison", "macro-pressure",
+        "causal-lane", "source-receipt", "news-media"
+      ]
+    },
+    "templateVariant": {
+      "enum": [
+        "default", "zero-baseline", "center-zero", "left-to-right",
+        "two-lane", "grid", "receipt", "pressure-lane"
+      ]
+    },
+    "sceneId": {"type": "string", "pattern": "^scene-0[1-9]$"},
+    "visualBeatId": {"type": "string", "pattern": "^vb-0[1-9]-[0-9]{2}$"},
+    "screenState": {"enum": ["Data", "Chart", "EntityFocus", "MainWithEntity", "PictureBook", "News"]},
+    "metricIds": {
+      "type": "array", "maxItems": 6, "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"}
+    },
+    "causalStepIds": {
+      "type": "array", "maxItems": 4, "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"}
+    },
+    "displayOrder": {
+      "type": "array", "minItems": 1, "maxItems": 10, "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"}
+    },
+    "comparisonBasis": {"type": "string", "minLength": 1, "maxLength": 240},
+    "highlightObjectIds": {
+      "type": "array", "maxItems": 4, "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"}
+    },
+    "headlineRef": {"type": "string", "pattern": "^episode://scene-0[1-9]/vb-0[1-9]-[0-9]{2}/(?:headline|fallbackHeadline)$"},
+    "screenQuestionRef": {"type": "string", "pattern": "^episode://scene-0[1-9]/vb-0[1-9]-[0-9]{2}/(?:screenQuestion|fallbackQuestion)$"},
+    "startCueRef": {"type": "string", "pattern": "^episode://scene-0[1-9]/vb-0[1-9]-[0-9]{2}/startCue$"},
+    "endCueRef": {"type": "string", "pattern": "^episode://scene-0[1-9]/vb-0[1-9]-[0-9]{2}/endCue$"},
+    "returnTargetRef": {"type": "string", "pattern": "^episode://scene-0[1-9]/vb-0[1-9]-[0-9]{2}/returnTarget$"},
+    "sourceIds": {
+      "type": "array", "minItems": 1, "maxItems": 8, "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^source-[0-9]{3}$"}
+    }
+  },
+  "anyOf": [
+    {"properties": {"metricIds": {"minItems": 1}}},
+    {"properties": {"causalStepIds": {"minItems": 1}}}
+  ]
+}
