@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   verify:
@@ -74,3 +74,42 @@ jobs:
           git status --short
           test -n "$(git status --short source-of-truth/03_episode_production_spec.md source-of-truth/04_entertainment_inquisitor.md)"
           echo "Materialized files are generated working-tree outputs and are intentionally not committed."
+
+      - name: Publish successful verification marker
+        shell: bash
+        env:
+          VERIFIED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p verification
+          python - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          marker = {
+              "status": "pass",
+              "verified_commit": os.environ["VERIFIED_SHA"],
+              "verified_at": datetime.now(timezone.utc).isoformat(),
+              "checks": {
+                  "source_materialization": "pass",
+                  "source_hashes": "pass",
+                  "python_compile": "pass",
+                  "memory_retrieval_smoke": "pass"
+              },
+              "source_hashes": {
+                  "03_episode_production_spec.md": "c0e476f36b387961277ffa008d7b2258942e1fe44c475bebe1d79b31b9f4dc3f",
+                  "04_entertainment_inquisitor.md": "62d7807eb01b3433fc3b3f8bce8f6bad96109f1ae2366ec417c35bac8fa47936"
+              }
+          }
+          Path("verification/editorial-contracts-pass.json").write_text(
+              json.dumps(marker, ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- verification/editorial-contracts-pass.json
+          git commit -m "ci: record successful editorial contract verification"
+          git push
