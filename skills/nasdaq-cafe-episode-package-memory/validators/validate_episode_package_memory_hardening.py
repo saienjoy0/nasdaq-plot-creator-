@@ -20,6 +20,8 @@ from typing import Any, Callable, Iterable
 
 ANNEX_BEGIN = "<!--BEGIN_EPISODE_MEMORY_ANNEX-->"
 ANNEX_END = "<!--END_EPISODE_MEMORY_ANNEX-->"
+FINAL_BEGIN = "<!--BEGIN_FINAL_PRODUCTION_SOURCE-->"
+FINAL_END = "<!--END_FINAL_PRODUCTION_SOURCE-->"
 SCENE_HEADING_RE = re.compile(
     r"(?im)^#{2,4}\s*(?:B\.\s*)?(?:Scene|SCENE)[\s\-]*(0?[1-9])(?:\b|｜|\|)"
 )
@@ -179,8 +181,27 @@ def validate_hardening(
 
     annex, annex_start, annex_end = _extract_annex(text, errors)
     if annex is not None:
-        if text[annex_end:].strip():
-            errors.append("episode memory annex must be the final section of the episode package")
+        tail = text[annex_end:]
+        if tail.strip():
+            final_begin_count = tail.count(FINAL_BEGIN)
+            final_end_count = tail.count(FINAL_END)
+            if final_begin_count != 1 or final_end_count != 1:
+                errors.append(
+                    "only one Final Production Source annex may follow the episode memory annex: "
+                    f"begin={final_begin_count} end={final_end_count}"
+                )
+            else:
+                final_start = tail.index(FINAL_BEGIN)
+                final_end_start = tail.index(FINAL_END)
+                final_end = final_end_start + len(FINAL_END)
+                if tail[:final_start].strip():
+                    errors.append(
+                        "no content may appear between memory annex and Final Production Source annex"
+                    )
+                if final_end_start <= final_start:
+                    errors.append("Final Production Source annex end appears before begin")
+                if tail[final_end:].strip():
+                    errors.append("Final Production Source annex must be the final section")
         episode_date = annex.get("episode_date")
         if isinstance(episode_date, str) and episode_date not in package.name:
             errors.append(
