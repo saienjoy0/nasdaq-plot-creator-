@@ -1,0 +1,44 @@
+name: Renderer Handoff Bundle
+
+on:
+  pull_request:
+    paths:
+      - "scripts/build_renderer_handoff.py"
+      - "skills/nasdaq-cafe-renderer-handoff/**"
+      - "tests/renderer-handoff/**"
+      - "designs/PR10_RENDERER_HANDOFF_BUNDLE.md"
+      - ".github/workflows/renderer-handoff-bundle.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/build_renderer_handoff.py"
+      - "skills/nasdaq-cafe-renderer-handoff/**"
+      - "tests/renderer-handoff/**"
+      - "designs/PR10_RENDERER_HANDOFF_BUNDLE.md"
+      - ".github/workflows/renderer-handoff-bundle.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile handoff builder
+        run: python -m py_compile scripts/build_renderer_handoff.py
+      - name: Parse manifest schema
+        run: python -m json.tool skills/nasdaq-cafe-renderer-handoff/contracts/renderer_handoff_manifest.schema.json >/dev/null
+      - name: Run PR10 tests
+        run: python -m unittest discover -s tests/renderer-handoff -p 'test_*.py' -v
+      - name: Run PR9 regression
+        run: |
+          python -m pip install --disable-pip-version-check jsonschema
+          python -m unittest discover -s tests/final-production-package -p 'test_*.py' -v
+      - name: Run PR8 regression
+        run: python -m unittest discover -s tests/episode-package-memory -p 'test_*.py' -v
