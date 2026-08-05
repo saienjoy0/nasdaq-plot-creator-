@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nasdaq-cafe.local/schemas/final_production_source_annex.schema.json",
+  "title": "NASDAQ Cafe Final Production Source Annex",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "episode_date", "post_inquisition", "image_resolution", "renderer_contract", "asset_catalog", "render_spec"],
+  "properties": {
+    "contract_version": {"const": "1.0.0"},
+    "episode_date": {"type": "string", "format": "date"},
+    "post_inquisition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "required_changes_applied", "unresolved_required_changes"],
+      "properties": {
+        "status": {"enum": ["pass", "conditional_pass"]},
+        "required_changes_applied": {"const": true},
+        "unresolved_required_changes": {"const": 0}
+      }
+    },
+    "image_resolution": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "selected_path", "unresolved_count", "routes"],
+      "properties": {
+        "status": {"const": "resolved"},
+        "selected_path": {"enum": ["primary", "fallback", "not-required"]},
+        "unresolved_count": {"const": 0},
+        "routes": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["beat_id", "selected_path", "selected_asset_id", "primary_asset_id", "fallback_asset_id"],
+            "properties": {
+              "beat_id": {"type": "string", "minLength": 1},
+              "selected_path": {"enum": ["primary", "fallback", "not-required"]},
+              "selected_asset_id": {"type": ["string", "null"]},
+              "primary_asset_id": {"type": ["string", "null"]},
+              "fallback_asset_id": {"type": ["string", "null"]}
+            }
+          }
+        }
+      }
+    },
+    "renderer_contract": {
+      "type": "object", "additionalProperties": false,
+      "required": ["repository", "schema_version"],
+      "properties": {
+        "repository": {"const": "saienjoy0/saienjoy0-nasdaq-cafe-remotion"},
+        "schema_version": {"type": "string", "minLength": 1}
+      }
+    },
+    "asset_catalog": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["asset_id", "path", "media_type", "status", "sha256"],
+        "properties": {
+          "asset_id": {"type": "string", "minLength": 1},
+          "path": {"type": "string", "minLength": 1},
+          "media_type": {"enum": ["image", "video", "audio", "data", "font", "other"]},
+          "status": {"enum": ["ready", "not-required"]},
+          "sha256": {"oneOf": [{"type": "string", "pattern": "^[0-9a-f]{64}$"}, {"type": "null"}]}
+        }
+      }
+    },
+    "render_spec": {
+      "type": "object",
+      "required": ["schemaVersion", "episode", "review", "scenes"],
+      "properties": {
+        "schemaVersion": {"type": "string", "minLength": 1},
+        "episode": {"type": "object", "required": ["targetDate"]},
+        "review": {"type": "object", "required": ["verdict", "approvedForCodex"]},
+        "scenes": {"type": "array", "minItems": 9, "maxItems": 9}
+      }
+    }
+  }
+}
