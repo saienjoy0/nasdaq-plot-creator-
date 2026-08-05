@@ -44,7 +44,9 @@ def annex(date="2026-08-06"):
     }
 
 
-def build_package(*, scenes=None, include_inquisition=True, tail="", date="2026-08-06"):
+def build_package(
+    *, scenes=None, include_inquisition=True, tail="", date="2026-08-06", final_annex=False
+):
     scenes = list(range(1, 10)) if scenes is None else scenes
     blocks = [
         f"## B. Scene {number}｜Test\n### ナレーション\nScene {number}.\n"
@@ -63,7 +65,14 @@ def build_package(*, scenes=None, include_inquisition=True, tail="", date="2026-
         + "\n```\n"
         "<!--END_EPISODE_MEMORY_ANNEX-->"
     )
-    return "\n".join(blocks) + tail
+    text = "\n".join(blocks)
+    if final_annex:
+        text += (
+            "\n<!--BEGIN_FINAL_PRODUCTION_SOURCE-->\n"
+            "```json\n{}\n```\n"
+            "<!--END_FINAL_PRODUCTION_SOURCE-->"
+        )
+    return text + tail
 
 
 class HardeningTests(unittest.TestCase):
@@ -92,9 +101,19 @@ class HardeningTests(unittest.TestCase):
     def test_01_valid_final_package_passes(self):
         self.assertEqual([], self.validate().errors)
 
-    def test_02_annex_must_be_final(self):
+    def test_02_only_final_source_annex_may_follow_memory_annex(self):
         self.package.write_text(
             build_package(tail="\n## Extra\nnot allowed\n"), encoding="utf-8"
+        )
+        self.assertFail("only one Final Production Source annex")
+
+    def test_02b_final_source_annex_after_memory_passes(self):
+        self.package.write_text(build_package(final_annex=True), encoding="utf-8")
+        self.assertEqual([], self.validate().errors)
+
+    def test_02c_final_source_annex_must_be_last(self):
+        self.package.write_text(
+            build_package(final_annex=True, tail="\nextra"), encoding="utf-8"
         )
         self.assertFail("must be the final section")
 
