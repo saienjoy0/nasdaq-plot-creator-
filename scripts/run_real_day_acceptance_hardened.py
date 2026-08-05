@@ -11,6 +11,11 @@ from pathlib import Path
 from typing import Any, Callable
 
 ROOT = Path(__file__).resolve().parents[1]
+REQUIRED_HARDENING = {
+    "pre_build": "pass",
+    "public_artifacts": "pass",
+    "handoff_recheck": "pass",
+}
 
 
 class HardenedAcceptanceError(ValueError):
@@ -69,8 +74,7 @@ def _verify_bundle_hardening(bundle_root: Path, manifest_path: Path) -> None:
         preflight = json.loads(preflight_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise HardenedAcceptanceError(f"invalid bundled preflight: {exc}") from exc
-    wanted = {"pre_build": "pass", "public_artifacts": "pass"}
-    if not isinstance(preflight, dict) or preflight.get("episode_memory_hardening") != wanted:
+    if not isinstance(preflight, dict) or preflight.get("episode_memory_hardening") != REQUIRED_HARDENING:
         raise HardenedAcceptanceError(
             "bundled preflight lacks complete episode-memory hardening evidence"
         )
@@ -109,7 +113,9 @@ def validate_acceptance_hardened(
     warnings = validation.setdefault("warnings", [])
     if not isinstance(warnings, list):
         raise HardenedAcceptanceError("base acceptance warnings must be an array")
-    warnings.append("episode-memory hardening evidence verified in bundled preflight")
+    warnings.append(
+        "episode-memory hardening and handoff-time public-artifact recheck verified in bundled preflight"
+    )
     return result
 
 
