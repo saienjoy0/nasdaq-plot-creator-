@@ -1,0 +1,60 @@
+name: Editorial Memory Contracts
+
+on:
+  pull_request:
+    paths:
+      - "editorial-memory/**"
+      - "skills/nasdaq-cafe-editorial-memory/**"
+      - "scripts/build_memory_context.py"
+      - "scripts/promote_episode_memory.py"
+      - ".github/workflows/editorial-memory-contracts.yml"
+  push:
+    branches:
+      - "feat/nasdaq-cafe-research-skill-v0.1"
+    paths:
+      - "editorial-memory/**"
+      - "skills/nasdaq-cafe-editorial-memory/**"
+      - "scripts/build_memory_context.py"
+      - "scripts/promote_episode_memory.py"
+      - ".github/workflows/editorial-memory-contracts.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-memory-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install validator dependency
+        run: python -m pip install --disable-pip-version-check jsonschema
+
+      - name: Compile memory scripts
+        run: |
+          python -m py_compile \
+            scripts/build_memory_context.py \
+            scripts/promote_episode_memory.py \
+            skills/nasdaq-cafe-editorial-memory/validators/validate_memory_contracts.py
+
+      - name: Validate memory contracts
+        run: |
+          python skills/nasdaq-cafe-editorial-memory/validators/validate_memory_contracts.py \
+            --require-jsonschema
+
+      - name: Smoke test empty-memory retrieval
+        run: |
+          python scripts/build_memory_context.py \
+            --date 2026-08-05 \
+            --topic "AI設備投資" \
+            --entity "Microsoft" \
+            --output working/memory_context_ci.md
+          test -s working/memory_context_ci.md
