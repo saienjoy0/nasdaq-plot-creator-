@@ -36,6 +36,7 @@ daily_source_package
 → nine-scene episode package under 03
 → entertainment inquisition under 04
 → image path resolution
+→ hardened daily control plane
 → guarded final production generation
 → hardened renderer handoff
 → preview
@@ -96,7 +97,13 @@ The fox may refer to a previous episode only when a corresponding daily/thread/c
 
 ## Mandatory execution gates
 
-Production-facing execution must use the guarded entrypoints:
+Production-facing execution begins with:
+
+```text
+run_daily_production_hardened.py
+```
+
+That wrapper preserves the existing forward-only state machine and injects only the guarded dependencies below:
 
 ```text
 validate_episode_package_memory.py
@@ -106,7 +113,7 @@ validate_episode_package_memory.py
 → run_real_day_acceptance_hardened.py
 ```
 
-Do not use the base Final Production, Renderer Handoff, or Real-Day Acceptance scripts as production entrypoints.
+Do not use the base Daily Production, Final Production, Renderer Handoff, or Real-Day Acceptance scripts as production entrypoints.
 
 The guarded chain must prove:
 
