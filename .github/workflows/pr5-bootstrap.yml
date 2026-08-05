@@ -7,6 +7,12 @@ on:
     paths:
       - "bootstrap/pr5/**"
       - ".github/workflows/pr5-bootstrap.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "bootstrap/pr5/**"
+      - ".github/workflows/pr5-bootstrap.yml"
 
 permissions:
   contents: write
