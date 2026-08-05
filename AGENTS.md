@@ -36,8 +36,10 @@ daily_source_package
 → nine-scene episode package under 03
 → entertainment inquisition under 04
 → image path resolution
-→ render_spec generation and validation
+→ guarded final production generation
+→ hardened renderer handoff
 → preview
+→ hardened real-day acceptance
 → user visual review
 → final only after explicit request
 → approved publication record
@@ -91,6 +93,33 @@ The fox may refer to a previous episode only when a corresponding daily/thread/c
 - Every Evidence ID referenced from questions, alternatives, timeline, causal edges, Expected / Actual, contrary evidence, or memory revalidation must exist in the dossier.
 - Record `difference_from_previous` when a past claim is used for comparison or current revalidation.
 - `reason_unknown`, `unresolved`, and `not_used` are valid outcomes.
+
+## Mandatory execution gates
+
+Production-facing execution must use the guarded entrypoints:
+
+```text
+validate_episode_package_memory.py
+→ validate_episode_package_memory_hardening.py
+→ build_final_production_package_hardened.py
+→ build_renderer_handoff_hardened.py
+→ run_real_day_acceptance_hardened.py
+```
+
+Do not use the base Final Production, Renderer Handoff, or Real-Day Acceptance scripts as production entrypoints.
+
+The guarded chain must prove:
+
+- Scene 1–9 exactly once and in order;
+- one integrated 04 result;
+- canonical Memory Annex and Final Production Source Annex ordering;
+- PR #8 and PR #6 replay PASS;
+- no MEMREF or memory internal metadata in public artifacts;
+- persisted hardening PASS in `official_execution_preflight.json`;
+- the immutable handoff bundle retains the hardened preflight;
+- Real-Day Acceptance reads that bundled evidence before counting the preview path.
+
+A failed post-build or post-copy hardening check must remove newly generated outputs and must not leave an authorized preflight or newly created bundle.
 
 ## External project adoption
 
