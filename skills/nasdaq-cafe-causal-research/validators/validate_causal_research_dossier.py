@@ -1,21 +1,30 @@
 #!/usr/bin/env python3
-"""Validate causal research dossier v0.2 and editorial-memory revalidation.
-
-Passing this validator means the artifact is structurally complete and that
-past memory has not silently become current evidence. It does not certify that
-the editorial interpretation is true.
-"""
+"""Validate causal dossier v0.2 and the complete memory-revalidation chain."""
 
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
-from jsonschema import Draft202012Validator
+from jsonschema import Draft202012Validator, FormatChecker
+
+ROOT = Path(__file__).resolve().parents[3]
+SCRIPTS = ROOT / "scripts"
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
+
+from build_research_input_manifest import (  # noqa: E402
+    ManifestBuildError,
+    expected_bucket,
+    normalized_selected_item,
+    verify_retrieval_lineage,
+)
+from editorial_memory_retrieval import retrieve  # noqa: E402
 
 
 @dataclass
@@ -40,11 +49,7 @@ def load_json(path: Path) -> dict[str, Any]:
 
 
 def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def format_json_path(parts: Iterable[Any]) -> str:
@@ -52,32 +57,60 @@ def format_json_path(parts: Iterable[Any]) -> str:
     return ".".join(str(value) for value in values) or "<root>"
 
 
-def schema_errors(
-    instance: Any,
-    schema_path: Path,
-    label: str,
-) -> list[str]:
+def schema_errors(instance: Any, schema_path: Path, label: str) -> list[str]:
     try:
         schema = load_json(schema_path)
     except (OSError, json.JSONDecodeError) as exc:
         return [f"{label}: cannot load schema {schema_path}: {exc}"]
+    validator = Draft202012Validator(schema, format_checker=FormatChecker())
     return [
         f"{label}.{format_json_path(error.absolute_path)}: {error.message}"
         for error in sorted(
-            Draft202012Validator(schema).iter_errors(instance),
+            validator.iter_errors(instance),
             key=lambda item: list(item.absolute_path),
         )
     ]
 
 
-def resolve_path(value: str, repo_root: Path, anchor: Path) -> Path:
+def resolve_repo_reference(
+    value: str,
+    repo_root: Path,
+    label: str,
+    errors: list[str],
+) -> Path | None:
     path = Path(value)
     if path.is_absolute():
-        return path
-    repo_candidate = repo_root / path
-    if repo_candidate.exists():
-        return repo_candidate
-    return anchor.parent / path
+        errors.append(f"{label}: absolute paths are forbidden: {value}")
+        return None
+    root = repo_root.resolve()
+    resolved = (root / path).resolve()
+    if resolved != root and root not in resolved.parents:
+        errors.append(f"{label}: path escapes repository root: {value}")
+        return None
+    if not resolved.is_file():
+        errors.append(f"{label}: referenced file does not exist: {value}")
+        return None
+    return resolved
+
+
+def validate_file_hash(
+    *,
+    label: str,
+    declared_path: str,
+    declared_sha: str,
+    repo_root: Path,
+    errors: list[str],
+) -> Path | None:
+    resolved = resolve_repo_reference(declared_path, repo_root, label, errors)
+    if not resolved:
+        return None
+    actual = sha256_file(resolved)
+    if actual != declared_sha:
+        errors.append(
+            f"{label}: SHA-256 mismatch for {declared_path}: "
+            f"declared={declared_sha} actual={actual}"
+        )
+    return resolved
 
 
 def is_memory_reference(value: str) -> bool:
@@ -98,40 +131,96 @@ def evidence_quality_for_current_use(item: dict[str, Any]) -> bool:
     )
 
 
-def flatten_manifest_selected(manifest: dict[str, Any]) -> dict[tuple[str, str], dict[str, Any]]:
-    selected: dict[tuple[str, str], dict[str, Any]] = {}
+def manifest_selected(
+    manifest: dict[str, Any], errors: list[str]
+) -> dict[tuple[str, str], tuple[str, dict[str, Any]]]:
+    result: dict[tuple[str, str], tuple[str, dict[str, Any]]] = {}
     for bucket in (
         "current_revalidation_required",
         "historical_context_only",
         "procedural",
     ):
         for item in manifest["memory_intake"][bucket]:
-            item = dict(item)
-            item["_manifest_bucket"] = bucket
-            selected[(item["item_type"], item["item_id"])] = item
-    return selected
+            key = (item["item_type"], item["item_id"])
+            if key in result:
+                errors.append(
+                    f"manifest selected memory appears in multiple buckets: {key}"
+                )
+            else:
+                result[key] = (bucket, item)
+    return result
 
 
-def validate_file_hash(
-    *,
-    label: str,
-    declared_path: str,
-    declared_sha: str,
-    repo_root: Path,
-    anchor: Path,
-    errors: list[str],
-) -> Path | None:
-    resolved = resolve_path(declared_path, repo_root, anchor)
-    if not resolved.is_file():
-        errors.append(f"{label}: referenced file does not exist: {declared_path}")
-        return None
-    actual = sha256_file(resolved)
-    if actual != declared_sha:
-        errors.append(
-            f"{label}: SHA-256 mismatch for {declared_path}: "
-            f"declared={declared_sha} actual={actual}"
+def report_selected(
+    report: dict[str, Any], errors: list[str]
+) -> dict[tuple[str, str], dict[str, Any]]:
+    result: dict[tuple[str, str], dict[str, Any]] = {}
+    for item in report["selected"]:
+        key = (item["item_type"], item["item_id"])
+        if key in result:
+            errors.append(f"duplicate selected memory in retrieval report: {key}")
+        else:
+            result[key] = item
+    return result
+
+
+def compare_manifest_to_report(
+    manifest: dict[str, Any], report: dict[str, Any], errors: list[str]
+) -> tuple[
+    dict[tuple[str, str], tuple[str, dict[str, Any]]],
+    dict[tuple[str, str], dict[str, Any]],
+]:
+    manifest_items = manifest_selected(manifest, errors)
+    report_items = report_selected(report, errors)
+    if set(manifest_items) != set(report_items):
+        missing = sorted(set(report_items) - set(manifest_items))
+        extra = sorted(set(manifest_items) - set(report_items))
+        if missing:
+            errors.append(f"manifest omits selected memory: {missing}")
+        if extra:
+            errors.append(f"manifest contains memory not selected by report: {extra}")
+
+    for key in sorted(set(manifest_items) & set(report_items)):
+        bucket, manifest_item = manifest_items[key]
+        report_item = report_items[key]
+        try:
+            wanted_bucket = expected_bucket(report_item)
+        except ManifestBuildError as exc:
+            errors.append(str(exc))
+            continue
+        if bucket != wanted_bucket:
+            errors.append(
+                f"{key}: manifest bucket={bucket} but retrieval requires {wanted_bucket}"
+            )
+        wanted_item = normalized_selected_item(report_item)
+        if manifest_item != wanted_item:
+            errors.append(
+                f"{key}: manifest selected metadata differs from retrieval report"
+            )
+    return manifest_items, report_items
+
+
+def collect_all_evidence_references(dossier: dict[str, Any]) -> list[tuple[str, list[str]]]:
+    refs: list[tuple[str, list[str]]] = [
+        ("expected", dossier["expected_actual_gap"]["expected"]["evidence_ids"]),
+        ("actual", dossier["expected_actual_gap"]["actual"]["evidence_ids"]),
+    ]
+    for question in dossier["research_questions"]:
+        refs.append((f"research question {question['id']}", question.get("evidence_ids", [])))
+    for edge in dossier["causal_edges"]:
+        refs.append((f"causal edge {edge['id']}", edge["evidence_ids"]))
+    for item in dossier["timeline"]:
+        refs.append((f"timeline {item['id']}", item["evidence_ids"]))
+    for item in dossier["contrary_evidence"]:
+        refs.append(("contrary evidence", item["evidence_ids"]))
+    for alt in dossier["alternative_hypotheses"]:
+        refs.append(
+            (f"alternative hypothesis {alt['id']} supporting", alt["supporting_evidence_ids"])
         )
-    return resolved
+        refs.append(
+            (f"alternative hypothesis {alt['id']} weakening", alt["weakening_evidence_ids"])
+        )
+    return refs
 
 
 def validate_dossier(
@@ -141,24 +230,37 @@ def validate_dossier(
     *,
     contracts_dir: Path,
     repo_root: Path,
+    retrieval_runner=retrieve,
 ) -> ValidationResult:
     errors: list[str] = []
     warnings: list[str] = []
+    repo_root = repo_root.resolve()
+
+    supplied: dict[str, Path] = {}
+    for label, path in (
+        ("dossier", dossier_path),
+        ("manifest", manifest_path),
+        ("retrieval report", retrieval_report_path),
+    ):
+        try:
+            resolved = path.resolve()
+            if resolved != repo_root and repo_root not in resolved.parents:
+                errors.append(f"{label}: supplied path escapes repository root: {path}")
+            elif not resolved.is_file():
+                errors.append(f"{label}: file does not exist: {path}")
+            else:
+                supplied[label] = resolved
+        except OSError as exc:
+            errors.append(f"{label}: cannot resolve path {path}: {exc}")
+    if errors:
+        return ValidationResult(sorted(set(errors)), warnings)
 
     try:
-        dossier = load_json(dossier_path)
+        dossier = load_json(supplied["dossier"])
+        manifest = load_json(supplied["manifest"])
+        report = load_json(supplied["retrieval report"])
     except (OSError, json.JSONDecodeError) as exc:
-        return ValidationResult([f"dossier: cannot read {dossier_path}: {exc}"], [])
-    try:
-        manifest = load_json(manifest_path)
-    except (OSError, json.JSONDecodeError) as exc:
-        return ValidationResult([f"manifest: cannot read {manifest_path}: {exc}"], [])
-    try:
-        report = load_json(retrieval_report_path)
-    except (OSError, json.JSONDecodeError) as exc:
-        return ValidationResult(
-            [f"retrieval report: cannot read {retrieval_report_path}: {exc}"], []
-        )
+        return ValidationResult([f"cannot read validation input: {exc}"], [])
 
     errors.extend(
         schema_errors(
@@ -174,23 +276,26 @@ def validate_dossier(
             "manifest",
         )
     )
-    report_schema = (
-        contracts_dir
-        / "../../nasdaq-cafe-editorial-memory/contracts/memory_retrieval_report.schema.json"
+    editorial_contracts = (
+        contracts_dir / "../../nasdaq-cafe-editorial-memory/contracts"
+    ).resolve()
+    errors.extend(
+        schema_errors(
+            report,
+            editorial_contracts / "memory_retrieval_report.schema.json",
+            "retrieval_report",
+        )
     )
-    errors.extend(schema_errors(report, report_schema, "retrieval_report"))
     if errors:
-        return ValidationResult(errors, warnings)
+        return ValidationResult(sorted(set(errors)), warnings)
 
     if dossier["episode_date"] != manifest["episode_date"]:
         errors.append(
-            "episode date mismatch: "
-            f"dossier={dossier['episode_date']} manifest={manifest['episode_date']}"
+            f"episode date mismatch: dossier={dossier['episode_date']} manifest={manifest['episode_date']}"
         )
     if dossier["episode_date"] != report["episode_date"]:
         errors.append(
-            "episode date mismatch: "
-            f"dossier={dossier['episode_date']} report={report['episode_date']}"
+            f"episode date mismatch: dossier={dossier['episode_date']} report={report['episode_date']}"
         )
     if dossier["session"] != manifest["session"]:
         errors.append("dossier session does not match research input manifest session")
@@ -203,75 +308,56 @@ def validate_dossier(
         declared_path=dossier_manifest_ref["path"],
         declared_sha=dossier_manifest_ref["sha256"],
         repo_root=repo_root,
-        anchor=dossier_path,
         errors=errors,
     )
-    if resolved_manifest and resolved_manifest.resolve() != manifest_path.resolve():
+    if resolved_manifest and resolved_manifest != supplied["manifest"]:
         errors.append(
             "dossier research_input_manifest path does not resolve to the supplied manifest"
         )
 
-    manifest_inputs = manifest["inputs"]
     resolved_inputs: dict[str, Path | None] = {}
-    for label, file_ref in manifest_inputs.items():
+    for label, file_ref in manifest["inputs"].items():
         resolved_inputs[label] = validate_file_hash(
             label=f"manifest.inputs.{label}",
             declared_path=file_ref["path"],
             declared_sha=file_ref["sha256"],
             repo_root=repo_root,
-            anchor=manifest_path,
             errors=errors,
         )
-
     resolved_report = resolved_inputs.get("memory_retrieval_report")
-    if resolved_report and resolved_report.resolve() != retrieval_report_path.resolve():
+    if resolved_report and resolved_report != supplied["retrieval report"]:
         errors.append(
             "manifest memory_retrieval_report path does not resolve to the supplied report"
         )
 
-    selected_from_manifest = flatten_manifest_selected(manifest)
-    selected_from_report = {
-        (item["item_type"], item["item_id"]): item
-        for item in report["selected"]
-        if item["item_type"] != "core"
-    }
+    query_path = resolved_inputs.get("memory_query_plan")
+    context_path = resolved_inputs.get("memory_context")
+    if query_path and context_path and resolved_report:
+        try:
+            verify_retrieval_lineage(
+                memory_query_plan=query_path,
+                memory_context=context_path,
+                memory_retrieval_report=resolved_report,
+                repo_root=repo_root,
+                editorial_contracts_dir=editorial_contracts,
+                retrieval_runner=retrieval_runner,
+            )
+        except ManifestBuildError as exc:
+            errors.append(f"retrieval lineage: {exc}")
 
-    report_core = [
-        item for item in report["selected"] if item["item_type"] == "core"
-    ]
-    if report_core:
-        procedural_core = {
-            (item["item_type"], item["item_id"])
-            for item in manifest["memory_intake"]["procedural"]
-        }
-        for core in report_core:
-            if ("core", core["item_id"]) not in procedural_core:
-                errors.append(
-                    f"selected core memory is not classified as procedural: {core['item_id']}"
-                )
+    _, report_items = compare_manifest_to_report(manifest, report, errors)
+    report_non_core = {key: item for key, item in report_items.items() if key[0] != "core"}
 
-    manifest_non_core = {
-        key: item for key, item in selected_from_manifest.items() if key[0] != "core"
-    }
-    if set(manifest_non_core) != set(selected_from_report):
-        missing = sorted(set(selected_from_report) - set(manifest_non_core))
-        extra = sorted(set(manifest_non_core) - set(selected_from_report))
-        if missing:
-            errors.append(f"manifest omits selected memory: {missing}")
-        if extra:
-            errors.append(f"manifest contains memory not selected by report: {extra}")
-
-    revalidations = dossier["memory_revalidation"]
     entries: dict[tuple[str, str], dict[str, Any]] = {}
-    for entry in revalidations:
+    for entry in dossier["memory_revalidation"]:
         key = (entry["memory_reference_type"], entry["memory_reference_id"])
         if key in entries:
             errors.append(f"duplicate memory revalidation entry: {key}")
-        entries[key] = entry
-
-    if set(entries) != set(selected_from_report):
-        missing = sorted(set(selected_from_report) - set(entries))
-        extra = sorted(set(entries) - set(selected_from_report))
+        else:
+            entries[key] = entry
+    if set(entries) != set(report_non_core):
+        missing = sorted(set(report_non_core) - set(entries))
+        extra = sorted(set(entries) - set(report_non_core))
         if missing:
             errors.append(f"selected memory has no revalidation result: {missing}")
         if extra:
@@ -281,24 +367,26 @@ def validate_dossier(
     if len(evidence) != len(dossier["evidence"]):
         errors.append("duplicate evidence_id in dossier")
 
-    supported_statuses = {
-        "supported", "partially_supported", "weakened", "invalidated"
+    conclusion_statuses = {
+        "supported",
+        "partially_supported",
+        "weakened",
+        "invalidated",
     }
     current_editorial_uses = {
-        "research_lead", "comparison", "counterevidence",
-        "explanation_context", "monitoring_point"
+        "research_lead",
+        "comparison",
+        "counterevidence",
+        "explanation_context",
+        "monitoring_point",
     }
 
     for key, entry in entries.items():
-        report_item = selected_from_report.get(key)
-        manifest_item = manifest_non_core.get(key)
-        if not report_item or not manifest_item:
+        report_item = report_non_core.get(key)
+        if not report_item:
             continue
-
         if entry["retrieval_use_mode"] != report_item["use_mode"]:
-            errors.append(
-                f"{key}: retrieval_use_mode differs from retrieval report"
-            )
+            errors.append(f"{key}: retrieval_use_mode differs from retrieval report")
         if entry["historical_confidence"] != report_item.get(
             "historical_confidence", "unknown"
         ):
@@ -309,46 +397,44 @@ def validate_dossier(
         current_ids = entry["current_evidence_ids"]
 
         if report_item.get("status") in {"invalidated", "resolved"} and status not in {
-            "historical_context_only", "not_used"
+            "historical_context_only",
+            "not_used",
         }:
             errors.append(
                 f"{key}: {report_item.get('status')} memory cannot be a current premise"
             )
-
         if report_item["use_mode"] == "historical_context" and status not in {
-            "historical_context_only", "not_used"
+            "historical_context_only",
+            "not_used",
         }:
             errors.append(
                 f"{key}: historical-context retrieval cannot be marked {status}"
             )
-        if status == "historical_context_only" and report_item[
-            "use_mode"
-        ] != "historical_context":
+        if status == "historical_context_only" and report_item["use_mode"] != "historical_context":
             errors.append(
                 f"{key}: historical_context_only requires historical_context retrieval"
             )
-        if status == "not_used" and editorial_use != "not_used":
-            errors.append(f"{key}: not_used status requires editorial_use=not_used")
-        if editorial_use == "procedural_only" and report_item[
-            "use_mode"
-        ] != "procedural":
-            errors.append(f"{key}: procedural_only requires procedural retrieval")
-        if editorial_use in current_editorial_uses and status in {
-            "not_used", "unresolved"
-        }:
+        if status == "not_used":
+            if editorial_use != "not_used":
+                errors.append(f"{key}: not_used status requires editorial_use=not_used")
+            if current_ids:
+                errors.append(f"{key}: not_used must not retain current_evidence_ids")
+        if editorial_use == "procedural_only":
+            errors.append(f"{key}: non-core memory cannot use editorial_use=procedural_only")
+        if editorial_use in current_editorial_uses and status in {"not_used", "unresolved"}:
             errors.append(
                 f"{key}: editorial_use={editorial_use} is incompatible with status={status}"
             )
-        if (
-            status == "historical_context_only"
-            and editorial_use not in {"comparison", "explanation_context", "not_used"}
-        ):
+        if status == "historical_context_only" and editorial_use not in {
+            "comparison",
+            "explanation_context",
+            "not_used",
+        }:
             errors.append(
-                f"{key}: historical_context_only permits only comparison, "
-                "explanation_context, or not_used"
+                f"{key}: historical_context_only permits only comparison, explanation_context, or not_used"
             )
 
-        if status in supported_statuses and not current_ids:
+        if status in conclusion_statuses and not current_ids:
             errors.append(f"{key}: {status} requires current_evidence_ids")
         if editorial_use == "research_lead" and not current_ids:
             errors.append(f"{key}: research_lead requires current evidence")
@@ -365,23 +451,19 @@ def validate_dossier(
                     f"{key}: past memory cannot be used as current evidence ({evidence_id})"
                 )
 
-        if status == "supported":
-            if not current_evidence:
-                pass
-            elif not all(evidence_quality_for_current_use(item) for item in current_evidence):
+        if status in conclusion_statuses and current_evidence:
+            if not all(evidence_quality_for_current_use(item) for item in current_evidence):
                 errors.append(
-                    f"{key}: supported requires tier_1/tier_2 current fact or "
-                    "reported interpretation evidence"
+                    f"{key}: {status} requires tier_1/tier_2 current fact or reported interpretation evidence"
                 )
-        if status in {"weakened", "invalidated"} and not current_evidence:
-            errors.append(f"{key}: {status} requires current contrary evidence")
-        if (
-            report_item.get("requires_current_revalidation")
-            and status not in {
-                "not_used", "supported", "partially_supported",
-                "weakened", "invalidated", "unresolved"
-            }
-        ):
+        if report_item.get("requires_current_revalidation") and status not in {
+            "not_used",
+            "supported",
+            "partially_supported",
+            "weakened",
+            "invalidated",
+            "unresolved",
+        }:
             errors.append(
                 f"{key}: current-revalidation-required memory has invalid status {status}"
             )
@@ -394,30 +476,19 @@ def validate_dossier(
             warnings.append(f"{key}: current evidence is tier_2 only")
         if status != "not_used" and not entry["difference_from_previous"].strip():
             warnings.append(f"{key}: difference_from_previous is empty")
-        if any(
+        if status == "supported" and any(
             item.get("directness") == "context" for item in current_evidence
-        ) and status == "supported":
+        ):
             warnings.append(f"{key}: supported status includes context-only evidence")
 
-    all_evidence_id_fields: list[tuple[str, list[str]]] = []
-    expected_ids = dossier["expected_actual_gap"]["expected"]["evidence_ids"]
-    actual_ids = dossier["expected_actual_gap"]["actual"]["evidence_ids"]
-    all_evidence_id_fields.append(("expected", expected_ids))
-    all_evidence_id_fields.append(("actual", actual_ids))
-    for edge in dossier["causal_edges"]:
-        all_evidence_id_fields.append((f"causal edge {edge['id']}", edge["evidence_ids"]))
-    for item in dossier["timeline"]:
-        all_evidence_id_fields.append((f"timeline {item['id']}", item["evidence_ids"]))
-    for item in dossier["contrary_evidence"]:
-        all_evidence_id_fields.append(("contrary evidence", item["evidence_ids"]))
-
-    for label, ids in all_evidence_id_fields:
+    for label, ids in collect_all_evidence_references(dossier):
         for evidence_id in ids:
             if evidence_id not in evidence:
                 errors.append(f"{label}: unknown evidence id {evidence_id}")
 
-    expected_basis = dossier["expected_actual_gap"]["expected"]["basis_class"]
-    if expected_basis not in {"unconfirmed", "not_applicable"}:
+    expected = dossier["expected_actual_gap"]["expected"]
+    expected_ids = expected["evidence_ids"]
+    if expected["basis_class"] not in {"unconfirmed", "not_applicable"}:
         if not expected_ids:
             errors.append("Expected is confirmed/classified but has no current evidence")
         elif all(
@@ -433,12 +504,13 @@ def validate_dossier(
             for evidence_id in edge["evidence_ids"]
             if evidence_id in evidence
         ]
-        if edge["scope"] == "nasdaq_wide":
-            if not any(evidence_quality_for_current_use(item) for item in edge_evidence):
-                errors.append(
-                    f"{edge['id']}: NASDAQ-wide edge requires current tier_1/tier_2 evidence"
-                )
-        if all(
+        if edge["scope"] == "nasdaq_wide" and not any(
+            evidence_quality_for_current_use(item) for item in edge_evidence
+        ):
+            errors.append(
+                f"{edge['id']}: NASDAQ-wide edge requires current tier_1/tier_2 evidence"
+            )
+        if edge_evidence and all(
             is_memory_reference(item.get("source_reference", ""))
             for item in edge_evidence
         ):
@@ -446,22 +518,18 @@ def validate_dossier(
                 f"{edge['id']}: causal edge cannot be supported only by editorial memory"
             )
 
-    for item in dossier["evidence"]:
-        if item["source_tier"] in {"discovery_only", "unavailable"}:
-            used_by_supported = any(
-                item["evidence_id"] in entry["current_evidence_ids"]
-                and entry["revalidation_status"] == "supported"
-                for entry in entries.values()
-            )
-            if used_by_supported:
-                errors.append(
-                    f"{item['evidence_id']}: discovery-only/unavailable evidence "
-                    "cannot support revalidation"
-                )
+    daily_ref = manifest["inputs"]["daily_source_package"]
+    if not any(
+        item["role"] == "daily_input"
+        and item["path_or_reference"] == daily_ref["path"]
+        and item["version_or_hash"] == daily_ref["sha256"]
+        for item in dossier["input_provenance"]
+    ):
+        errors.append(
+            "input_provenance must include the manifest-bound daily source package path and SHA-256"
+        )
 
-    warnings[:] = sorted(set(warnings))
-    errors[:] = sorted(set(errors))
-    return ValidationResult(errors, warnings)
+    return ValidationResult(sorted(set(errors)), sorted(set(warnings)))
 
 
 def parse_args() -> argparse.Namespace:
