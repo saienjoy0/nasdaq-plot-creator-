@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.nasdaq-cafe.local/financial_visual_diversity_report.schema.json",
+  "title": "NASDAQ Cafe Financial Visual Diversity Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contractVersion", "episodeDate", "recipePlanSha256", "status",
+    "reviewedAfterFallback", "checks", "reviewNote"
+  ],
+  "properties": {
+    "contractVersion": {"const": "1.0.0"},
+    "episodeDate": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+    "recipePlanSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "status": {"const": "pass"},
+    "reviewedAfterFallback": {"const": true},
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "screenStateTypesAtLeast3", "nonAnalysisBeatsAtLeast2",
+        "frontBackMajorChange", "noFourConsecutiveSameState",
+        "heroCardCondition", "returnTargetsConfirmed"
+      ],
+      "properties": {
+        "screenStateTypesAtLeast3": {"const": true},
+        "nonAnalysisBeatsAtLeast2": {"const": true},
+        "frontBackMajorChange": {"const": true},
+        "noFourConsecutiveSameState": {"const": true},
+        "heroCardCondition": {"const": true},
+        "returnTargetsConfirmed": {"const": true}
+      }
+    },
+    "reviewNote": {"type": "string", "minLength": 1, "maxLength": 1000}
+  }
+}
