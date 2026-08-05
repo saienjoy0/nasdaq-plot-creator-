@@ -72,7 +72,9 @@ jobs:
             scripts/run_real_day_acceptance.py \
             scripts/run_real_day_acceptance_hardened.py \
             scripts/run_daily_production.py \
-            scripts/run_daily_production_hardened.py
+            scripts/run_daily_production_hardened.py \
+            scripts/final_episode_contract.py \
+            tests/final-episode-contract/generate_fixtures.py
       - name: Parse contract schemas
         run: |
           python -m json.tool skills/nasdaq-cafe-episode-package-memory/contracts/episode_package_memory_annex.schema.json >/dev/null
@@ -83,6 +85,8 @@ jobs:
           python -m json.tool skills/nasdaq-cafe-real-day-acceptance/contracts/real_day_acceptance_report.schema.json >/dev/null
           python -m json.tool skills/nasdaq-cafe-daily-production/contracts/production_request.schema.json >/dev/null
           python -m json.tool skills/nasdaq-cafe-daily-production/contracts/production_state.schema.json >/dev/null
+          python -m json.tool contracts/final_episode_contract.schema.json >/dev/null
+          python -m json.tool contracts/financial_visual_candidate_plan.schema.json >/dev/null
       - name: Run episode-memory base tests
         run: python -m unittest discover -s tests/episode-package-memory -p 'test_*.py' -v
       - name: Run episode-memory hardening tests
@@ -103,8 +107,21 @@ jobs:
         run: python -m unittest discover -s tests/daily-production -p 'test_*.py' -v
       - name: Run daily control-plane hardening tests
         run: python -m unittest discover -s tests/daily-production-hardening -p 'test_*.py' -v
+      - name: Rebuild deterministic financial-visual fixtures twice
+        run: |
+          python tests/final-episode-contract/generate_fixtures.py > /tmp/fixture-sha-1
+          sha256sum tests/final-episode-contract/fixtures/* > /tmp/fixture-files-1
+          python tests/final-episode-contract/generate_fixtures.py > /tmp/fixture-sha-2
+          sha256sum tests/final-episode-contract/fixtures/* > /tmp/fixture-files-2
+          diff -u /tmp/fixture-sha-1 /tmp/fixture-sha-2
+          diff -u /tmp/fixture-files-1 /tmp/fixture-files-2
       - name: Run final-episode financial visual regression
-        run: python -m unittest tests/test_final_episode_contract.py -v
+        run: python -m unittest -v tests/test_final_episode_contract.py
+      - name: Validate representative final-episode financial visual contract
+        run: |
+          python scripts/final_episode_contract.py \
+            tests/final-episode-contract/fixtures/final_episode_contract.valid.json \
+            --repo-root .
       - name: Run PR6 memory-revalidation regression
         run: python -m unittest discover -s tests/memory-revalidation -p 'test_*.py' -v
       - name: Run retrieval regression
