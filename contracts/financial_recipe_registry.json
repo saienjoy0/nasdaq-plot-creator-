@@ -1,0 +1,77 @@
+{
+  "registryVersion": "1.0.0",
+  "intentKinds": {
+    "market-snapshot": {
+      "preferredRecipeId": "market-pulse-grid",
+      "fallbackRecipeId": "opening-contradiction"
+    },
+    "expectation-gap": {
+      "preferredRecipeId": "earnings-surprise",
+      "fallbackRecipeId": "expected-anchor"
+    },
+    "entity-divergence": {
+      "preferredRecipeId": "dual-asset-split",
+      "fallbackRecipeId": "split-opposition"
+    },
+    "macro-transmission": {
+      "preferredRecipeId": "macro-pressure",
+      "fallbackRecipeId": "causal-build"
+    },
+    "source-evidence": {
+      "preferredRecipeId": "source-receipt",
+      "fallbackRecipeId": "news-media"
+    }
+  },
+  "recipes": {
+    "market-pulse-grid": {
+      "path": "preferred",
+      "allowedIntentKinds": ["market-snapshot"],
+      "allowedVisualTemplateIds": ["market-pulse-grid"]
+    },
+    "opening-contradiction": {
+      "path": "fallback",
+      "allowedIntentKinds": ["market-snapshot"],
+      "allowedVisualTemplateIds": ["opening-contradiction"]
+    },
+    "earnings-surprise": {
+      "path": "preferred",
+      "allowedIntentKinds": ["expectation-gap"],
+      "allowedVisualTemplateIds": ["earnings-surprise"]
+    },
+    "expected-anchor": {
+      "path": "fallback",
+      "allowedIntentKinds": ["expectation-gap"],
+      "allowedVisualTemplateIds": ["expected-actual-bullet", "metric-comparison-board", "text-focus"]
+    },
+    "dual-asset-split": {
+      "path": "preferred",
+      "allowedIntentKinds": ["entity-divergence"],
+      "allowedVisualTemplateIds": ["dual-asset-split"]
+    },
+    "split-opposition": {
+      "path": "fallback",
+      "allowedIntentKinds": ["entity-divergence"],
+      "allowedVisualTemplateIds": ["split-comparison"]
+    },
+    "macro-pressure": {
+      "path": "preferred",
+      "allowedIntentKinds": ["macro-transmission"],
+      "allowedVisualTemplateIds": ["macro-pressure"]
+    },
+    "causal-build": {
+      "path": "fallback",
+      "allowedIntentKinds": ["macro-transmission"],
+      "allowedVisualTemplateIds": ["causal-lane"]
+    },
+    "source-receipt": {
+      "path": "preferred",
+      "allowedIntentKinds": ["source-evidence"],
+      "allowedVisualTemplateIds": ["source-receipt"]
+    },
+    "news-media": {
+      "path": "fallback",
+      "allowedIntentKinds": ["source-evidence"],
+      "allowedVisualTemplateIds": ["news-media"]
+    }
+  }
+}
