@@ -1,0 +1,41 @@
+{
+  "contract_version": "1.0.0",
+  "episode_date": "2026-08-01",
+  "lead_candidates": [
+    "AWSのAI設備投資回収"
+  ],
+  "entities": [
+    {
+      "raw": "AWS",
+      "canonical": "AWS",
+      "entity_id": "amazon-web-services",
+      "resolution": "exact"
+    }
+  ],
+  "topics": [
+    "AI設備投資",
+    "クラウド"
+  ],
+  "technologies": [],
+  "policies": [],
+  "indicators": [],
+  "relations": [
+    {
+      "source": "AI設備投資",
+      "relation": "売上として回収",
+      "target": "AWS"
+    }
+  ],
+  "time_window": {
+    "from": "2026-07-01",
+    "to": "2026-08-01"
+  },
+  "comparison_questions": [],
+  "limits": {
+    "max_threads": 5,
+    "max_claims": 10,
+    "max_episodes": 3,
+    "max_lessons": 3,
+    "max_characters": 12000
+  }
+}
