@@ -28,6 +28,7 @@ External projects are references only. They may improve research and memory mech
 daily_source_package
 → memory query plan
 → selective editorial-memory retrieval
+→ deterministic retrieval replay
 → research input manifest
 → causal research dossier with memory revalidation
 → editorial decision under 02
@@ -45,7 +46,7 @@ daily_source_package
 
 Never skip the causal research dossier when the daily input contains more than a simple confirmed single-cause event.
 
-The research input manifest is an immutable intake record for the current production attempt. It freezes the daily package, memory query plan, memory context, retrieval report, their episode date, and their SHA-256 values. It does not choose the lead or certify any remembered claim as current truth.
+The research input manifest is an immutable intake record for the current production attempt. It freezes the daily package, memory query plan, memory context, retrieval report, their episode date, and their SHA-256 values. The builder and dossier validator must replay deterministic retrieval and verify that Query Plan, Context, and Report are one result. It does not choose the lead or certify any remembered claim as current truth.
 
 ## Editorial-memory behavior
 
@@ -56,11 +57,13 @@ Before causal research:
 - Select at most five relevant topic threads using today's lead candidates, entities, policies, technologies, and indicators.
 - Select related claim-ledger entries.
 - Build `working/memory_context_YYYY-MM-DD.md` with the authoritative retrieval script.
+- Replay retrieval and require byte-identical Context and Report before creating the research input manifest.
 - Build `research/YYYY-MM-DD/research_input_manifest.json` with `scripts/build_research_input_manifest.py`.
+- Store and accept only repository-relative paths that remain inside the workspace root.
 - Treat memory as a list of past observations and research leads, not as current evidence.
 - Classify every selected non-core memory as used, not used, unresolved, weakened, invalidated, or historical context in the causal research dossier.
-- Require current evidence before a remembered claim can be marked supported or used as a current causal premise.
-- Never use a memory ID or a path under `editorial-memory/` as an evidence ID.
+- Require current tier-1 or tier-2 fact or reported-interpretation evidence before a remembered claim can be marked supported, partially supported, weakened, or invalidated.
+- Never register a memory ID, memory path, memory context, or retrieval report as an `E-###` evidence item.
 
 After final approval:
 
@@ -84,6 +87,8 @@ The fox may refer to a previous episode only when a corresponding daily/thread/c
 - Do not elevate a single-company event into a NASDAQ-wide cause without index, sector, timing, and alternative-explanation checks.
 - Revalidate any remembered claim against current evidence before using it as a factual premise.
 - Do not use editorial memory as the sole basis for Expected, Actual, a causal edge, or a NASDAQ-wide conclusion.
+- Actual with a non-empty statement requires current Evidence IDs.
+- Every Evidence ID referenced from questions, alternatives, timeline, causal edges, Expected / Actual, contrary evidence, or memory revalidation must exist in the dossier.
 - Record `difference_from_previous` when a past claim is used for comparison or current revalidation.
 - `reason_unknown`, `unresolved`, and `not_used` are valid outcomes.
 
@@ -105,6 +110,6 @@ The causal research skill produces evidence, explicit memory revalidation result
 
 The memory skill retrieves past context and promotes approved conclusions. It does not certify current truth and does not change 01–04.
 
-The research input manifest and dossier validator provide structural and provenance safety. A passing validator does not prove that the market interpretation is correct.
+The research input manifest and dossier validator provide structural, lineage, path, and provenance safety. A passing validator does not prove that the market interpretation is correct.
 
 The final decision remains governed by 02, then converted by 01 and 03, then reviewed by 04.
