@@ -1,0 +1,259 @@
+name: PR2 Real Episode Acceptance
+
+on:
+  pull_request:
+    paths:
+      - "scripts/memory_promotion_preflight.py"
+      - ".github/workflows/pr2-real-episode-acceptance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-episode-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install validator dependency
+        run: python -m pip install --disable-pip-version-check jsonschema
+
+      - name: Discover a self-consistent 2026-07-31 snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          import urllib.parse
+          import urllib.request
+          from pathlib import Path
+
+          owner_repo = "saienjoy0/saienjoy0-nasdaq-cafe-remotion"
+          ready_path = "render-specs/2026-07-31/production_ready.json"
+          package_path = "episode-packages/2026-07-31/episode_package_2026-07-31.md"
+          render_path = "render-specs/2026-07-31/render_spec.json"
+          token = os.environ["GH_TOKEN"]
+          headers = {
+              "Accept": "application/vnd.github+json",
+              "Authorization": f"Bearer {token}",
+              "X-GitHub-Api-Version": "2022-11-28",
+              "User-Agent": "nasdaq-cafe-memory-acceptance",
+          }
+
+          def fetch(url: str, *, auth: bool = False) -> bytes:
+              request = urllib.request.Request(url, headers=headers if auth else {"User-Agent": headers["User-Agent"]})
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  return response.read()
+
+          query = urllib.parse.urlencode({"path": ready_path, "per_page": 100})
+          commits = json.loads(fetch(f"https://api.github.com/repos/{owner_repo}/commits?{query}", auth=True))
+          checked = []
+          selected = None
+          for item in commits:
+              sha = item["sha"]
+              raw_base = f"https://raw.githubusercontent.com/{owner_repo}/{sha}"
+              try:
+                  ready_bytes = fetch(f"{raw_base}/{ready_path}")
+                  ready = json.loads(ready_bytes)
+                  package_bytes = fetch(f"{raw_base}/{package_path}")
+                  render_bytes = fetch(f"{raw_base}/{render_path}")
+              except Exception as exc:
+                  checked.append({"sha": sha, "error": str(exc)})
+                  continue
+              actual_package = hashlib.sha256(package_bytes).hexdigest()
+              actual_render = hashlib.sha256(render_bytes).hexdigest()
+              expected_package = ready.get("episodePackageSha256")
+              expected_render = ready.get("renderSpecSha256")
+              result = {
+                  "sha": sha,
+                  "validatorStatus": ready.get("validatorStatus"),
+                  "consistencyStatus": ready.get("consistencyStatus"),
+                  "unresolvedStateCount": ready.get("unresolvedStateCount"),
+                  "expectedPackage": expected_package,
+                  "actualPackage": actual_package,
+                  "expectedRender": expected_render,
+                  "actualRender": actual_render,
+              }
+              checked.append(result)
+              if (
+                  str(ready.get("validatorStatus", "")).lower() == "pass"
+                  and str(ready.get("consistencyStatus", "")).lower() == "pass"
+                  and ready.get("unresolvedStateCount") == 0
+                  and expected_package == actual_package
+                  and expected_render == actual_render
+              ):
+                  selected = (sha, ready, ready_bytes, package_bytes, render_bytes)
+                  break
+
+          output = Path("working/real-episode-acceptance/2026-07-31")
+          output.mkdir(parents=True, exist_ok=True)
+          (output / "snapshot_scan.json").write_text(
+              json.dumps({"checked": checked}, ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          if selected is None:
+              raise SystemExit("No self-consistent production-ready snapshot found")
+
+          sha, ready, ready_bytes, package_bytes, render_bytes = selected
+          (output / "episode_package_2026-07-31.md").write_bytes(package_bytes)
+          (output / "render_spec.json").write_bytes(render_bytes)
+          (output / "validator_report.json").write_bytes(ready_bytes)
+          (output / "selected_snapshot.json").write_text(
+              json.dumps({"commit": sha, "production_ready": ready}, ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          print(f"SELECTED_SNAPSHOT {sha}")
+          print(f"PACKAGE_SHA {ready['episodePackageSha256']}")
+          print(f"RENDER_SHA {ready['renderSpecSha256']}")
+          PY
+
+      - name: Build publication record from the final package
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path("working/real-episode-acceptance/2026-07-31")
+          ready = json.loads((root / "validator_report.json").read_text(encoding="utf-8"))
+          record = {
+              "contract_version": "1.0.0",
+              "episode_date": "2026-07-31",
+              "title": "Amazon急騰でも半導体は横ばい　NASDAQが見たAI投資の答え",
+              "main_story": "Amazon決算でAWS売上が市場予想を上回り、AI投資の回収証拠として評価されたこと",
+              "story_spine": "AmazonではAWSの予想超過がAI投資の回収証拠として株価を押し上げ、NASDAQ全体では大型クラウド株の上昇が金利上昇とApple安を上回った一方、半導体への波及は限定的だった。",
+              "central_hypothesis": {
+                  "text": "昨夜の市場はAI設備投資の金額より、クラウド売上として回収が確認できるかを評価した。",
+                  "confidence": "medium"
+              },
+              "contrary_evidence": [
+                  "米10年債利回りは約4.75%へ上昇",
+                  "Appleは7.35%下落",
+                  "SOXXは0.07%高、AMDは1.90%安で半導体全面高ではない",
+                  "市場セッション日付のメタデータと記事本文に一日のずれがある"
+              ],
+              "watch_next": [
+                  "他のクラウド企業でもAI投資と売上成長が同時に続くか",
+                  "米10年債利回りが4.7%台でさらに上昇するか",
+                  "半導体が大型クラウド株の上昇へ追いつくか"
+              ],
+              "topics": ["AI設備投資", "クラウド", "NASDAQ"],
+              "entities": ["Amazon", "AWS", "Apple", "SOXX"],
+              "thread_updates": [{
+                  "thread_id": "ai-capex-payback",
+                  "title": "AI設備投資の回収",
+                  "question": "AI設備投資は売上としてどの程度回収されているか",
+                  "summary": "AWSの予想超過は、AI設備投資を支出額ではなく回収証拠で評価する材料になった。一方、半導体への波及は限定的だった。",
+                  "triggers": ["AI設備投資", "クラウド売上", "AWS"],
+                  "entities": ["Amazon", "AWS"],
+                  "topics": ["AI設備投資", "クラウド"],
+                  "claim_ids": ["ai-capex-evaluation-axis"],
+                  "status": "active"
+              }],
+              "claim_updates": [{
+                  "claim_id": "ai-capex-evaluation-axis",
+                  "subject": "AI設備投資の評価軸",
+                  "claim": "市場はAI設備投資の金額だけでなく、クラウド売上として回収が確認できるかを評価する。",
+                  "status": "active",
+                  "confidence": "medium",
+                  "reason": "2026-07-31回ではAWS売上が市場予想を上回り、Amazonが上昇した一方、半導体への波及は限定的だったため。",
+                  "evidence_paths": [
+                      "working/real-episode-acceptance/2026-07-31/episode_package_2026-07-31.md",
+                      "working/real-episode-acceptance/2026-07-31/render_spec.json"
+                  ],
+                  "thread_ids": ["ai-capex-payback"],
+                  "entities": ["Amazon", "AWS"],
+                  "topics": ["AI設備投資", "クラウド"]
+              }],
+              "alias_updates": [],
+              "production_lessons": [],
+              "source_paths": {
+                  "episode_package": "working/real-episode-acceptance/2026-07-31/episode_package_2026-07-31.md",
+                  "render_spec": "working/real-episode-acceptance/2026-07-31/render_spec.json",
+                  "validator_report": "working/real-episode-acceptance/2026-07-31/validator_report.json"
+              },
+              "source_hashes": {
+                  "episode_package": ready["episodePackageSha256"],
+                  "render_spec": ready["renderSpecSha256"]
+              },
+              "approval": {
+                  "status": "approved_preview",
+                  "approved_at": ready["createdAt"]
+              }
+          }
+          (root / "publication_record_2026-07-31.json").write_text(
+              json.dumps(record, ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8"
+          )
+          PY
+
+      - name: Verify dry-run, apply, provenance, and no-op
+        run: |
+          set -euo pipefail
+          ACCEPTANCE_DIR="working/real-episode-acceptance/2026-07-31"
+          RUN1="working/memory-promotion/acceptance-2026-07-31"
+          RUN2="working/memory-promotion/acceptance-2026-07-31-noop"
+
+          git diff --exit-code -- editorial-memory
+          python scripts/plan_memory_promotion.py \
+            "$ACCEPTANCE_DIR/publication_record_2026-07-31.json" \
+            --output "$RUN1" | tee /tmp/plan.log
+          grep -F "SAFE_TO_APPLY true" /tmp/plan.log
+          grep -F "NOOP false" /tmp/plan.log
+          git diff --exit-code -- editorial-memory
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          run = Path("working/memory-promotion/acceptance-2026-07-31")
+          preflight = json.loads((run / "source_preflight.json").read_text())
+          conflicts = json.loads((run / "conflict_report.json").read_text())
+          plan = json.loads((run / "promotion_plan.json").read_text())
+          assert preflight["status"] == "pass"
+          assert preflight["checks"]["validator_report"] == "pass"
+          assert preflight["checks"]["episode_date_consistency"] == "pass"
+          assert conflicts["unresolved_count"] == 0
+          assert plan["revision"] == "v001"
+          assert plan["safe_to_apply"] is True
+          assert plan["noop"] is False
+          staged = run / "staged/editorial-memory/episodes/2026-07-31/revisions/v001"
+          for name in ("publication_record.json", "episode_package.md", "render_spec.json", "validator_report.json", "episode_summary.md", "provenance.json"):
+              assert (staged / name).is_file(), name
+          PY
+
+          python scripts/apply_memory_promotion.py "$RUN1/promotion_plan.json" --apply --no-commit | tee /tmp/apply.log
+          grep -F "STATUS applied" /tmp/apply.log
+          grep -F "REVISION v001" /tmp/apply.log
+
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          episode_root = Path("editorial-memory/episodes/2026-07-31")
+          archive = episode_root / "revisions/v001"
+          index = json.loads((episode_root / "index.json").read_text())
+          provenance = json.loads((archive / "provenance.json").read_text())
+          ready = json.loads(Path("working/real-episode-acceptance/2026-07-31/validator_report.json").read_text())
+          assert index["current_revision"] == "v001"
+          assert provenance["generated_memory_ids"]["threads"] == ["ai-capex-payback"]
+          assert provenance["generated_memory_ids"]["claims"] == ["ai-capex-evaluation-axis"]
+          assert hashlib.sha256((archive / "episode_package.md").read_bytes()).hexdigest() == ready["episodePackageSha256"]
+          assert hashlib.sha256((archive / "render_spec.json").read_bytes()).hexdigest() == ready["renderSpecSha256"]
+          PY
+
+          python scripts/plan_memory_promotion.py \
+            "$ACCEPTANCE_DIR/publication_record_2026-07-31.json" \
+            --output "$RUN2" | tee /tmp/noop-plan.log
+          grep -F "SAFE_TO_APPLY true" /tmp/noop-plan.log
+          grep -F "NOOP true" /tmp/noop-plan.log
+          python scripts/apply_memory_promotion.py "$RUN2/promotion_plan.json" --apply --no-commit | tee /tmp/noop-apply.log
+          grep -F "STATUS noop" /tmp/noop-apply.log
