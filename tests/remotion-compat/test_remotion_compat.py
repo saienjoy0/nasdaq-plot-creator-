@@ -8,6 +8,9 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+SCRIPTS = ROOT / "scripts"
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
 
 def load_module(name: str, path: Path):
     spec = importlib.util.spec_from_file_location(name, path)
