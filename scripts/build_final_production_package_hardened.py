@@ -6,16 +6,15 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any, Callable
 
 ROOT = Path(__file__).resolve().parents[1]
 
-
 class HardenedBuildError(ValueError):
     pass
-
 
 def _load_module(name: str, path: Path):
     spec = importlib.util.spec_from_file_location(name, path)
@@ -26,27 +25,28 @@ def _load_module(name: str, path: Path):
     spec.loader.exec_module(module)
     return module
 
-
 def _real_gate(repo_root: Path, package: Path, artifacts: list[Path]):
     module = _load_module(
         "episode_memory_hardening_gate",
-        repo_root
-        / "skills/nasdaq-cafe-episode-package-memory/validators/validate_episode_package_memory_hardening.py",
+        repo_root / "skills/nasdaq-cafe-episode-package-memory/validators/validate_episode_package_memory_hardening.py",
     )
     return module.validate_hardening(
-        repo_root=repo_root,
-        episode_package=package,
-        public_artifacts=artifacts,
+        repo_root=repo_root, episode_package=package, public_artifacts=artifacts,
     )
-
 
 def _real_builder(package: Path, output_root: Path, schema: Path):
     module = _load_module(
-        "final_production_base_builder",
-        ROOT / "scripts/build_final_production_package.py",
+        "final_production_base_builder", ROOT / "scripts/build_final_production_package.py"
     )
     return module.build(package, output_root, schema)
 
+def _real_renderer_finalizer(*, output_root: Path, date: str, renderer_root: Path):
+    module = _load_module(
+        "renderer_package_finalizer", ROOT / "scripts/finalize_renderer_package.py"
+    )
+    return module.finalize(
+        output_root=output_root, date=date, renderer_root=renderer_root
+    )
 
 def _errors(result: Any) -> list[str]:
     value = getattr(result, "errors", None)
@@ -57,14 +57,12 @@ def _errors(result: Any) -> list[str]:
         return list(errors) if isinstance(errors, list) else [str(errors)]
     return []
 
-
 def _safe_output_root(repo_root: Path, output_root: Path) -> Path:
     root = repo_root.resolve()
     output = output_root.resolve()
     if output != root and root not in output.parents:
         raise HardenedBuildError(f"output root escapes repository root: {output_root}")
     return output
-
 
 def _cleanup_generated(result: dict[str, Any]) -> None:
     paths = result.get("paths", {})
@@ -80,7 +78,6 @@ def _cleanup_generated(result: dict[str, Any]) -> None:
         except OSError:
             pass
 
-
 def _persist_preflight_hardening(preflight_path: Path) -> None:
     try:
         value = json.loads(preflight_path.read_text(encoding="utf-8"))
@@ -93,14 +90,35 @@ def _persist_preflight_hardening(preflight_path: Path) -> None:
             "preflight must be a PASS object before hardening can be persisted"
         )
     value["episode_memory_hardening"] = {
-        "pre_build": "pass",
-        "public_artifacts": "pass",
+        "pre_build": "pass", "public_artifacts": "pass",
     }
     text = json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     tmp = preflight_path.with_name(preflight_path.name + ".hardening.tmp")
     tmp.write_text(text, encoding="utf-8")
     tmp.replace(preflight_path)
 
+def _production_date(paths: dict[str, Any]) -> str:
+    value = paths.get("render_spec")
+    if not isinstance(value, str):
+        raise HardenedBuildError("base builder omitted render_spec path")
+    date = Path(value).parent.name
+    if len(date) != 10:
+        raise HardenedBuildError(f"cannot derive episode date from {value}")
+    return date
+
+def _merge_finalizer_result(result: dict[str, Any], finalized: dict[str, Any]) -> None:
+    if not isinstance(finalized, dict) or finalized.get("status") != "pass":
+        raise HardenedBuildError("renderer finalizer did not return PASS")
+    final_paths = finalized.get("paths", {})
+    if not isinstance(final_paths, dict):
+        raise HardenedBuildError("renderer finalizer omitted paths")
+    result.setdefault("paths", {}).update(final_paths)
+    final_hashes = finalized.get("hashes", {})
+    if isinstance(final_hashes, dict):
+        result.setdefault("hashes", {}).update(final_hashes)
+    result["renderer_finalization"] = {
+        "status": "pass", "renderer_validation": "pass",
+    }
 
 def build_hardened(
     package: Path,
@@ -110,22 +128,39 @@ def build_hardened(
     repo_root: Path = ROOT,
     gate: Callable[[Path, Path, list[Path]], Any] = _real_gate,
     builder: Callable[[Path, Path, Path], dict[str, Any]] = _real_builder,
+    renderer_finalizer: Callable[..., dict[str, Any]] = _real_renderer_finalizer,
 ) -> dict[str, Any]:
     repo_root = repo_root.resolve()
     package = package.resolve()
     output_root = _safe_output_root(repo_root, output_root)
-
     pre = gate(repo_root, package, [])
     pre_errors = _errors(pre)
     if pre_errors:
         raise HardenedBuildError(
             "episode-memory pre-build gate failed:\n" + "\n".join(pre_errors)
         )
-
     result = builder(package, output_root, schema)
     if not isinstance(result, dict) or result.get("status") != "pass":
         raise HardenedBuildError("base final production builder did not return PASS")
-
+    paths = result.get("paths", {})
+    date = _production_date(paths if isinstance(paths, dict) else {})
+    renderer_root_value = os.environ.get("NASDAQ_CAFE_RENDERER_ROOT")
+    request_exists = (output_root / "working" / date / "production_request.json").is_file()
+    if renderer_root_value:
+        try:
+            finalized = renderer_finalizer(
+                output_root=output_root, date=date,
+                renderer_root=Path(renderer_root_value),
+            )
+            _merge_finalizer_result(result, finalized)
+        except Exception:
+            _cleanup_generated(result)
+            raise
+    elif request_exists:
+        _cleanup_generated(result)
+        raise HardenedBuildError(
+            "NASDAQ_CAFE_RENDERER_ROOT is required for production renderer validation"
+        )
     paths = result.get("paths", {})
     required = ("spoken_script", "asset_manifest", "render_spec")
     artifacts: list[Path] = []
@@ -135,7 +170,6 @@ def build_hardened(
             _cleanup_generated(result)
             raise HardenedBuildError(f"base builder omitted required artifact path: {key}")
         artifacts.append(Path(value))
-
     post = gate(repo_root, package, artifacts)
     post_errors = _errors(post)
     if post_errors:
@@ -143,7 +177,6 @@ def build_hardened(
         raise HardenedBuildError(
             "episode-memory public-artifact gate failed:\n" + "\n".join(post_errors)
         )
-
     preflight_value = paths.get("preflight") if isinstance(paths, dict) else None
     if not isinstance(preflight_value, str):
         _cleanup_generated(result)
@@ -153,34 +186,26 @@ def build_hardened(
     except Exception:
         _cleanup_generated(result)
         raise
-
     result["episode_memory_hardening"] = {
-        "pre_build": "pass",
-        "public_artifacts": "pass",
+        "pre_build": "pass", "public_artifacts": "pass",
         "preflight_persisted": "pass",
     }
     return result
-
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--episode-package", required=True, type=Path)
     parser.add_argument("--output-root", required=True, type=Path)
     parser.add_argument(
-        "--schema",
-        type=Path,
-        default=ROOT
-        / "skills/nasdaq-cafe-final-production/contracts/final_production_source_annex.schema.json",
+        "--schema", type=Path,
+        default=ROOT / "skills/nasdaq-cafe-final-production/contracts/final_production_source_annex.schema.json",
     )
     parser.add_argument("--repo-root", type=Path, default=ROOT)
     parser.add_argument("--report", type=Path)
     args = parser.parse_args(argv)
     try:
         result = build_hardened(
-            args.episode_package,
-            args.output_root,
-            args.schema,
-            repo_root=args.repo_root,
+            args.episode_package, args.output_root, args.schema, repo_root=args.repo_root,
         )
         code = 0
     except (OSError, HardenedBuildError, ValueError, json.JSONDecodeError) as exc:
@@ -193,7 +218,6 @@ def main(argv: list[str] | None = None) -> int:
     else:
         sys.stdout.write(text)
     return code
-
 
 if __name__ == "__main__":
     raise SystemExit(main())
