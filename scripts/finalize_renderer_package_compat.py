@@ -15,9 +15,100 @@ ALLOWED_EXPECTED_BASIS = {
     "analyst-view", "price-inference", "unconfirmed",
 }
 TRANSIENT_SCREEN_STATES = {"EntityFocus", "MainWithEntity", "PictureBook", "News"}
+NUMBER_MODES = {"number-comparison", "stock-comparison"}
 
 class CompatibilityFinalizationError(ValueError):
     pass
+
+def _card_by_id(scene: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {
+        item["cardId"]: item
+        for item in scene.get("cards", [])
+        if isinstance(item, dict) and isinstance(item.get("cardId"), str)
+    }
+
+def _number_ids(scene: dict[str, Any]) -> set[str]:
+    return {
+        item["numberId"]
+        for item in scene.get("numbers", [])
+        if isinstance(item, dict) and isinstance(item.get("numberId"), str)
+    }
+
+def _materialize_numbers_from_card_lines(scene: dict[str, Any], beat: dict[str, Any]) -> None:
+    existing_numbers = _number_ids(scene)
+    if len([item for item in beat.get("objectIds", []) if item in existing_numbers]) >= 2:
+        return
+    cards = _card_by_id(scene)
+    referenced_cards = [cards[item] for item in beat.get("objectIds", []) if item in cards]
+    if not referenced_cards:
+        raise CompatibilityFinalizationError(
+            f"{scene.get('sceneId')}/{beat.get('beatId')}: number comparison has no approved card data"
+        )
+    generated: list[str] = []
+    numbers = scene.setdefault("numbers", [])
+    for card_index, card in enumerate(referenced_cards, start=1):
+        for line_index, line in enumerate(card.get("lines", []), start=1):
+            if not isinstance(line, dict) or not isinstance(line.get("value"), str):
+                continue
+            number_id = f"{beat['beatId']}.card-{card_index:02d}.line-{line_index:02d}"
+            if number_id not in existing_numbers:
+                numbers.append({
+                    "numberId": number_id,
+                    "label": str(line.get("label") or card.get("title") or line_index),
+                    "value": line["value"],
+                    "unit": "",
+                    "comparison": None,
+                    "tone": line.get("tone", "neutral"),
+                })
+                existing_numbers.add(number_id)
+            generated.append(number_id)
+    if len(generated) < 2:
+        raise CompatibilityFinalizationError(
+            f"{scene.get('sceneId')}/{beat.get('beatId')}: fewer than two approved numeric display lines"
+        )
+    beat["objectIds"] = generated
+
+def _materialize_expected_actual_gap(scene: dict[str, Any], beat: dict[str, Any]) -> None:
+    cards = _card_by_id(scene)
+    referenced = [cards[item] for item in beat.get("objectIds", []) if item in cards]
+    if not referenced or len(referenced[0].get("lines", [])) < 3:
+        raise CompatibilityFinalizationError(
+            f"{scene.get('sceneId')}/{beat.get('beatId')}: Expected/Actual/Gap source card is incomplete"
+        )
+    source_lines = referenced[0]["lines"][:3]
+    roles = ("expected", "actual", "gap")
+    generated_cards: list[dict[str, Any]] = []
+    generated_ids: list[str] = []
+    for role, line in zip(roles, source_lines, strict=True):
+        card_id = f"{scene['sceneId']}-card-{role}"
+        generated_ids.append(card_id)
+        generated_cards.append({
+            "cardId": card_id,
+            "role": role,
+            "title": role.capitalize(),
+            "lines": [{
+                "label": str(line.get("label") or role),
+                "value": str(line["value"]),
+                "tone": line.get("tone", "neutral"),
+            }],
+        })
+    scene["cards"] = generated_cards
+    beat["objectIds"] = generated_ids
+
+def _canonical_visual_data(scene: dict[str, Any]) -> None:
+    beats = scene.get("visualBeats", [])
+    for beat_index, beat in enumerate(beats):
+        mode = beat.get("visualMode")
+        if mode in NUMBER_MODES:
+            _materialize_numbers_from_card_lines(scene, beat)
+        elif mode == "expected-actual-gap":
+            if beat_index == 0:
+                _materialize_expected_actual_gap(scene, beat)
+            else:
+                beat["visualMode"] = "text-focus"
+                beat["objectIds"] = []
+    if beats:
+        scene["visualMode"] = beats[0]["visualMode"]
 
 def _canonical_scene_contract(render_spec: dict[str, Any]) -> None:
     scenes = render_spec.get("scenes", [])
@@ -34,6 +125,7 @@ def _canonical_scene_contract(render_spec: dict[str, Any]) -> None:
         scene["sceneRole"] = expected_role
         if scene.get("expectedBasisType") not in ALLOWED_EXPECTED_BASIS:
             scene["expectedBasisType"] = None
+        _canonical_visual_data(scene)
         beats = scene.get("visualBeats", [])
         for beat_index, beat in enumerate(beats):
             next_beat = beats[beat_index + 1] if beat_index + 1 < len(beats) else None
