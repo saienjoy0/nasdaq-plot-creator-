@@ -1,4 +1,5 @@
 name: Visual Grammar Cross Artifact
+# VG-5 verifies byte mirrors, independent report recomputation, and immutable handoff.
 
 on:
   pull_request:
