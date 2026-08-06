@@ -6,6 +6,7 @@ on:
       - "daily-inputs/**"
       - "working/**/memory_query_plan.json"
       - "working/**/financial_visual_bindings.json"
+      - "working/**/terminal_assembly_bindings.json"
       - "research/**"
       - "episodes/**"
       - "render-specs/**"
@@ -15,6 +16,7 @@ on:
       - "scripts/materialize_renderer_sources.py"
       - "scripts/materialize_financial_contract_1_0.py"
       - "scripts/financial_final_episode_contract_1_0.py"
+      - "scripts/remotion_template_data.py"
       - "scripts/finalize_renderer_package.py"
       - "scripts/finalize_renderer_package_compat.py"
       - "scripts/build_final_production_package_hardened.py"
@@ -84,6 +86,7 @@ jobs:
               root / f"daily-inputs/{date}/daily_source_package_{date}.md",
               root / f"working/{date}/memory_query_plan.json",
               root / f"working/{date}/financial_visual_bindings.json",
+              root / f"working/{date}/terminal_assembly_bindings.json",
               root / f"episodes/{date}/episode_package_public_{date}.md",
               root / f"render-specs/{date}/render_spec.json",
               root / f"research/{date}/causal_research_dossier.template.json",
@@ -92,6 +95,7 @@ jobs:
               root / "scripts/materialize_renderer_sources.py",
               root / "scripts/materialize_financial_contract_1_0.py",
               root / "scripts/financial_final_episode_contract_1_0.py",
+              root / "scripts/remotion_template_data.py",
               root / "scripts/finalize_renderer_package_compat.py",
           ]
           for path in required:
@@ -103,6 +107,7 @@ jobs:
           for path in (
               root / f"working/{date}/memory_query_plan.json",
               root / f"working/{date}/financial_visual_bindings.json",
+              root / f"working/{date}/terminal_assembly_bindings.json",
               root / f"render-specs/{date}/render_spec.json",
               root / f"research/{date}/causal_research_dossier.template.json",
               root / "contracts/financial_visual_compatibility_2_4.json",
@@ -120,6 +125,11 @@ jobs:
           )
           if bindings.get("episodeDate") != date:
               raise SystemExit("financial visual bindings date mismatch")
+          terminal = json.loads(
+              (root / f"working/{date}/terminal_assembly_bindings.json").read_text(encoding="utf-8")
+          )
+          if terminal.get("episodeDate") != date:
+              raise SystemExit("terminal assembly bindings date mismatch")
           spec = json.loads(
               (root / f"render-specs/{date}/render_spec.json").read_text(encoding="utf-8")
           )
@@ -141,6 +151,7 @@ jobs:
             scripts/materialize_daily_episode.py \
             scripts/materialize_financial_contract_1_0.py \
             scripts/financial_final_episode_contract_1_0.py \
+            scripts/remotion_template_data.py \
             scripts/finalize_renderer_package.py \
             scripts/finalize_renderer_package_compat.py \
             scripts/build_final_production_package_hardened.py \
