@@ -200,6 +200,21 @@ def _materialize_causal_template(scene: dict[str, Any], beat: dict[str, Any]) ->
     config["outcomeNodeId"] = node_ids[-1]
 
 
+def _normalize_impossible_major_shifts(render_spec: dict[str, Any]) -> None:
+    previous: dict[str, Any] | None = None
+    for scene in render_spec.get("scenes", []):
+        for beat in scene.get("visualBeats", []):
+            if (
+                previous is not None
+                and beat.get("transitionRole") == "major-shift"
+                and beat.get("visualTemplate") == previous.get("visualTemplate")
+                and beat.get("templateConfig", {}).get("variant")
+                == previous.get("templateConfig", {}).get("variant")
+            ):
+                beat["transitionRole"] = "continuation"
+            previous = beat
+
+
 def materialize_template_data(render_spec: dict[str, Any]) -> None:
     scenes = render_spec.get("scenes")
     if not isinstance(scenes, list):
@@ -214,3 +229,4 @@ def materialize_template_data(render_spec: dict[str, Any]) -> None:
         beats = scene.get("visualBeats", [])
         if beats:
             scene["visualMode"] = beats[0]["visualMode"]
+    _normalize_impossible_major_shifts(render_spec)
