@@ -10,6 +10,7 @@ on:
       - "episodes/**"
       - "render-specs/**"
       - "contracts/financial_visual_compatibility.json"
+      - "contracts/financial_visual_compatibility_2_4.json"
       - "scripts/materialize_daily_episode.py"
       - "scripts/materialize_renderer_sources.py"
       - "scripts/finalize_renderer_package.py"
@@ -83,6 +84,7 @@ jobs:
               root / f"episodes/{date}/episode_package_public_{date}.md",
               root / f"render-specs/{date}/render_spec.json",
               root / f"research/{date}/causal_research_dossier.template.json",
+              root / "contracts/financial_visual_compatibility_2_4.json",
               root / "scripts/materialize_daily_episode.py",
               root / "scripts/materialize_renderer_sources.py",
               root / "scripts/finalize_renderer_package.py",
@@ -98,6 +100,7 @@ jobs:
               root / f"working/{date}/financial_visual_bindings.json",
               root / f"render-specs/{date}/render_spec.json",
               root / f"research/{date}/causal_research_dossier.template.json",
+              root / "contracts/financial_visual_compatibility_2_4.json",
           ):
               value = json.loads(path.read_text(encoding="utf-8"))
               if not isinstance(value, dict):
@@ -160,6 +163,9 @@ jobs:
           python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state episode_package_final --evidence "episodes/$EPISODE_DATE/episode_package_$EPISODE_DATE.md"
           python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state memory_usage_valid --evidence "research/$EPISODE_DATE/causal_dossier_validation.json"
           python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state assets_resolved --evidence "verification/$EPISODE_DATE/asset_resolution_log.json" "verification/$EPISODE_DATE/image_generation_log.json"
+
+      - name: Activate isolated Remotion 2.4 compatibility tuple
+        run: cp contracts/financial_visual_compatibility_2_4.json contracts/financial_visual_compatibility.json
 
       - name: Build, convert and validate production package
         shell: bash
