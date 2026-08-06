@@ -78,13 +78,23 @@ class Tests(unittest.TestCase):
             **self.args(), gate=self.gate_pass, builder=self.builder, **kwargs
         )
 
-    def test_01_pass_and_persist_handoff_recheck(self):
-        self.write_preflight({"pre_build": "pass", "public_artifacts": "pass"})
+    def test_01_pass_bundles_recheck_and_restores_source(self):
+        self.write_preflight(module.BASE_HARDENING)
+        original = self.preflight.read_bytes()
         result = self.build()
         self.assertEqual("pass", result["episode_memory_hardening"])
         self.assertEqual(1, len(self.gate_calls))
-        current = json.loads(self.preflight.read_text())
-        self.assertEqual(module.HANDOFF_HARDENING, current["episode_memory_hardening"])
+        self.assertEqual(original, self.preflight.read_bytes())
+        bundled = json.loads(
+            (
+                self.bundle_root
+                / "x/production/official_execution_preflight.json"
+            ).read_text()
+        )
+        self.assertEqual(
+            module.HANDOFF_HARDENING,
+            bundled["episode_memory_hardening"],
+        )
 
     def test_02_missing_hardening_rejected(self):
         self.write_preflight(None)
@@ -96,8 +106,9 @@ class Tests(unittest.TestCase):
         with self.assertRaises(module.HardenedHandoffError):
             self.build()
 
-    def test_04_bundled_loss_deletes_created_bundle(self):
-        self.write_preflight({"pre_build": "pass", "public_artifacts": "pass"})
+    def test_04_bundled_loss_deletes_created_bundle_and_restores_source(self):
+        self.write_preflight(module.BASE_HARDENING)
+        original = self.preflight.read_bytes()
 
         def bad_builder(**kwargs):
             target = self.bundle_root / "bad"
@@ -112,9 +123,11 @@ class Tests(unittest.TestCase):
                 **self.args(), gate=self.gate_pass, builder=bad_builder
             )
         self.assertFalse((self.bundle_root / "bad").exists())
+        self.assertEqual(original, self.preflight.read_bytes())
 
-    def test_05_noop_loss_is_not_deleted(self):
-        self.write_preflight({"pre_build": "pass", "public_artifacts": "pass"})
+    def test_05_noop_loss_is_not_deleted_and_source_is_restored(self):
+        self.write_preflight(module.BASE_HARDENING)
+        original = self.preflight.read_bytes()
 
         def bad_builder(**kwargs):
             target = self.bundle_root / "existing"
@@ -129,9 +142,11 @@ class Tests(unittest.TestCase):
                 **self.args(), gate=self.gate_pass, builder=bad_builder
             )
         self.assertTrue((self.bundle_root / "existing").exists())
+        self.assertEqual(original, self.preflight.read_bytes())
 
     def test_06_handoff_recheck_failure_blocks_builder(self):
-        self.write_preflight({"pre_build": "pass", "public_artifacts": "pass"})
+        self.write_preflight(module.BASE_HARDENING)
+        original = self.preflight.read_bytes()
         builder_called = False
 
         def gate_fail(source_root, package, artifacts):
@@ -148,6 +163,20 @@ class Tests(unittest.TestCase):
             )
         self.assertIn("handoff-time", str(cm.exception))
         self.assertFalse(builder_called)
+        self.assertEqual(original, self.preflight.read_bytes())
+
+    def test_07_builder_exception_restores_source(self):
+        self.write_preflight(module.BASE_HARDENING)
+        original = self.preflight.read_bytes()
+
+        def exploding_builder(**kwargs):
+            raise RuntimeError("boom")
+
+        with self.assertRaises(RuntimeError):
+            module.build_handoff_hardened(
+                **self.args(), gate=self.gate_pass, builder=exploding_builder
+            )
+        self.assertEqual(original, self.preflight.read_bytes())
 
 
 if __name__ == "__main__":
