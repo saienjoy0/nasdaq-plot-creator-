@@ -166,8 +166,12 @@ class RemotionCompatibilityTests(unittest.TestCase):
             },
             beat["templateConfig"]["reactionTimeline"],
         )
-        self.assertEqual({"type": "none", "durationMs": 0}, render["scenes"][8]["transition"])
-        self.assertEqual("closing-recap-sendoff-goodnight", render["scenes"][8]["sceneRole"])
+        terminal = render["scenes"][8]
+        self.assertEqual({"type": "none", "durationMs": 0}, terminal["transition"])
+        self.assertEqual("closing-recap-sendoff-goodnight", terminal["sceneRole"])
+        self.assertEqual("final-assembly", terminal["visualBeats"][0]["visualTemplate"])
+        self.assertEqual("assembly", terminal["visualBeats"][0]["visualGrammarId"])
+        self.assertEqual("closing", terminal["visualBeats"][0]["transitionRole"])
 
     def test_08_sequence_policy_matches_transformed_objects(self):
         render = self.canonical()
