@@ -149,7 +149,7 @@
       "preferred": {
         "recipeId": "dual-asset-split",
         "visualTemplateId": "dual-asset-split",
-        "templateVariant": "default",
+        "templateVariant": "center-zero",
         "screenState": "Chart",
         "metricIds": [
           "metric.nvidia.close-return",
@@ -166,7 +166,7 @@
       "fallback": {
         "recipeId": "split-opposition",
         "visualTemplateId": "split-comparison",
-        "templateVariant": "default",
+        "templateVariant": "two-lane",
         "screenState": "Chart",
         "metricIds": [
           "metric.nvidia.close-return",
