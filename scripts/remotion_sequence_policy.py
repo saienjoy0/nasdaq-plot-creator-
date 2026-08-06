@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Resolve Remotion sequencePolicy from transformed objects and approved events."""
+"""Resolve template variants and sequencePolicy after renderer projection."""
 
 from __future__ import annotations
 
 from typing import Any
+
+import remotion_template_variant
 
 
 class SequencePolicyError(ValueError):
@@ -11,6 +13,7 @@ class SequencePolicyError(ValueError):
 
 
 def resolve_sequence_policies(render_spec: dict[str, Any]) -> None:
+    remotion_template_variant.normalize_single_variant_templates(render_spec)
     scenes = render_spec.get("scenes")
     if not isinstance(scenes, list):
         raise SequencePolicyError("render spec scenes must be an array")
