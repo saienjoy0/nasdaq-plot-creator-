@@ -105,11 +105,16 @@ jobs:
           python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state assets_resolved --evidence "verification/$EPISODE_DATE/asset_resolution_log.json" "verification/$EPISODE_DATE/image_generation_log.json"
 
       - name: Build and validate production package
+        shell: bash
         run: |
-          python scripts/run_daily_production_hardened.py --workspace . build-production \
-            --episode-date "$EPISODE_DATE" \
-            --episode-package "episodes/$EPISODE_DATE/episode_package_$EPISODE_DATE.md"
-          python scripts/run_daily_production_hardened.py --workspace . status --episode-date "$EPISODE_DATE"
+          set -o pipefail
+          mkdir -p "verification/$EPISODE_DATE"
+          {
+            python scripts/run_daily_production_hardened.py --workspace . build-production \
+              --episode-date "$EPISODE_DATE" \
+              --episode-package "episodes/$EPISODE_DATE/episode_package_$EPISODE_DATE.md"
+            python scripts/run_daily_production_hardened.py --workspace . status --episode-date "$EPISODE_DATE"
+          } 2>&1 | tee "verification/$EPISODE_DATE/build-production.log"
 
       - name: Build immutable preview handoff
         run: |
