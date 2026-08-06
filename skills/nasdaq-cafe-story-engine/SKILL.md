@@ -38,6 +38,8 @@ Start a separate invocation/context. Give it the baseline, Claim Ledger, selecte
 
 Review the complete production package, not narration alone. Each finding must name exact Scene IDs/field paths, viewer effect, required fix and claims/evidence to preserve. Any unresolved Critical finding blocks finalization.
 
+A shadow run that only isolates the Critic input artifact must declare `critic_isolation_mode=logical_shadow` and `production_eligible=false`. Production mode requires `critic_isolation_mode=separate_invocation`; distinct string IDs alone do not prove independence.
+
 ## Pass E — Targeted Rewrite
 
 Patch only finding-linked fields. Full regeneration is not the default. General Scene reordering is forbidden. `move_explanation_block` may move comparison or explanation only when real chronology remains unchanged.
@@ -56,4 +58,4 @@ Normally use one Critic → patch → re-review cycle. A second round is allowed
 - `episodes/YYYY-MM-DD/episode_package_YYYY-MM-DD.md`
 - `verification/YYYY-MM-DD/story_engine_validation_report.json`
 
-Run `validators/validate_story_engine_hardening.py`. Passing the validator does not itself prove the story is interesting; that judgment belongs to the independent Critic.
+Run `validators/validate_story_engine_hardening.py`. Passing the validator does not itself prove the story is interesting; that judgment belongs to the independent Critic and the user's A/B review.

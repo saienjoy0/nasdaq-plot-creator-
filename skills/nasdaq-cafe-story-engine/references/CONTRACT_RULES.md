@@ -1,21 +1,12 @@
-# Unified Story Engine contract rules
+# Story Engine Contract Rules
 
-## Adopted patterns
-
-- Doza Assist: story roles, adjacent redundancy, turn/reveal/button, information-only rejection and Scene deletion test.
-- OpenMontage: angle comparison, information gap, BUT/THEREFORE, progressive revelation and artifact-specific critique. No code or prompt copy because the inspected project is AGPL-3.0.
-- video_explainer: Analyze → Finding → Patch → Apply → Verify as a clean-room pattern only.
-- Toonflow: Decision / Execution / Supervision separation.
-- ViMax: one versioned artifact, checkpoints and immutable snapshots.
-
-## Claim Ledger
-
-Every public causal claim binds claim type, scope, confidence, evidence, counterevidence and required modality. Rewrite may not promote inference to fact, strengthen confidence, widen company scope to Nasdaq-primary, remove uncertainty/counterevidence or reorder chronology for drama.
-
-## Critical creative codes
-
-`REPEATED_CONCLUSION`, `NO_BELIEF_CHANGE`, `NO_NEW_EVIDENCE_OR_MEANING`, `HOOK_EXHAUSTS_THE_STORY`, `NO_UNDERSTANDING_UPDATE`, `NO_LATE_PAYOFF`, `ENDING_NOT_BOOKENDED`, `PERMUTABLE_SCENES`, `PROCEDURAL_NARRATION`, `ABSTRACT_EDITORIAL_LANGUAGE`, `FOX_VOICE_ABSENT`, `COUNTEREVIDENCE_UNUSED`, `TITLE_PROMISE_NOT_RECOVERED`, `VISUALS_REPEAT_NARRATION`, `VISUAL_VARIETY_COLLAPSED`.
-
-## Allowed patch families
-
-Targeted rewrite, repetition removal, reveal delay, information-gap strengthening, procedural-bridge replacement, callback addition, jargon simplification, counterevidence/causality restoration, telop compression, visual-mode change and chronology-safe explanation-block movement.
+- One Skill contains Pass A–G; Daily Production states are not expanded in the shadow phase.
+- Facts, Expected / Actual / Gap, chronology, causal scope, confidence and counterevidence are immutable editorial baseline fields.
+- The Author draft is frozen by SHA before Critic review.
+- Every Critical finding identifies Scenes, field paths, viewer effect, required fix and Claim/Evidence preservation requirements.
+- Rewrite patches must reference existing findings and may not silently regenerate the whole episode.
+- Review rounds are sequential and limited to two.
+- Open loops are limited to two and must close or become evidence-backed unresolved by Scene 8.
+- A deterministic validator proves structure and lineage, not entertainment quality.
+- `logical_shadow` is not production independence. It requires `production_eligible=false` and emits `W_LOGICAL_SHADOW_CRITIC`.
+- Production requires `critic_isolation_mode=separate_invocation`, a passing final review and explicit user acceptance.
