@@ -1,0 +1,28 @@
+{
+  "reportVersion": "1.0.0",
+  "status": "PASS",
+  "scope": "VG-1 Final Episode Contract closure",
+  "checks": {
+    "finalContractVersionIs1_1_0": true,
+    "visualGrammarSidecarRequired": true,
+    "visualGrammarRootVersionRequired": true,
+    "visualGrammarRequiredOnEveryBeat": true,
+    "expectedConfirmedExplicit": true,
+    "scene5ExceptionExplicit": true
+  },
+  "fixture": {
+    "status": "PASS",
+    "contractVersion": "1.1.0",
+    "visualGrammarContractVersion": "1.0.0",
+    "episodeDate": "2026-07-31",
+    "episodePackageSha256": "044005efe4a2f7ca71671bae1e5d22e70725c028789be58701bf824218e96625",
+    "visualGrammarSidecarSha256": "a6751b6499cc145d8d09f0a0e5c33e936ef22acee4b6e34ff6b108a61ae45072",
+    "sceneCount": 9,
+    "visualBeatCount": 12,
+    "semanticGrammarCount": 9,
+    "majorShiftCount": 8,
+    "intentCount": 1,
+    "candidatePlanCount": 2
+  },
+  "failures": []
+}

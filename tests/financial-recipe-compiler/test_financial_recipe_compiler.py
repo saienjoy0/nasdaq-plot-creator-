@@ -24,6 +24,8 @@ class FinancialRecipeCompilerTests(unittest.TestCase):
             "financial_visual_candidate_plan.schema.json",
             "financial_recipe_registry.json",
             "financial_recipe_plan.schema.json",
+            "visual_grammar_semantics.json",
+            "visual_grammar_semantics.schema.json",
         ):
             (self.repo / "contracts").mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / "contracts" / name, self.repo / "contracts" / name)
@@ -31,6 +33,7 @@ class FinancialRecipeCompilerTests(unittest.TestCase):
         fixture_dir.mkdir(parents=True)
         shutil.copy2(FIX / "episode_package_2026-07-31.md", fixture_dir)
         shutil.copy2(FIX / "final_episode_contract.valid.json", fixture_dir)
+        shutil.copy2(FIX / "visual_grammar_sidecar.valid.json", fixture_dir)
         self.contract_path = fixture_dir / "final_episode_contract.valid.json"
 
     def tearDown(self):
