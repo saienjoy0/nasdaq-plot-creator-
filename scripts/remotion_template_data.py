@@ -184,11 +184,10 @@ def _materialize_causal_template(scene: dict[str, Any], beat: dict[str, Any]) ->
                     }
                 )
                 existing_arrow_ids.add(arrow_id)
-    ordered_objects: list[str] = []
-    for index, node_id in enumerate(node_ids):
-        ordered_objects.append(node_id)
-        if index < len(arrow_ids):
-            ordered_objects.append(arrow_ids[index])
+    ordered_objects: list[str] = [node_ids[0]]
+    for index in range(1, len(node_ids)):
+        ordered_objects.append(node_ids[index])
+        ordered_objects.append(arrow_ids[index - 1])
     beat["objectIds"] = ordered_objects
     beat["visualMode"] = "causal-diagram"
     config = beat.get("templateConfig")
