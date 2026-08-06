@@ -18,6 +18,12 @@ from typing import Any
 
 from jsonschema import Draft202012Validator
 
+from visual_grammar_report_recompute import (
+    VisualGrammarReportRecomputeError,
+    validate_structural_report_against_render,
+    validate_timing_report_metrics,
+)
+
 
 class VisualGrammarCrossArtifactError(ValueError):
     pass
@@ -265,6 +271,13 @@ def authorize_visual_grammar_handoff(
 
     compatibility = _compatibility_map(renderer_compatibility)
     _validate_timing_rows(timing_report, measured_render_beats, compatibility)
+    try:
+        validate_structural_report_against_render(
+            render_spec, structural_report, semantics_registry
+        )
+        validate_timing_report_metrics(timing_report)
+    except VisualGrammarReportRecomputeError as exc:
+        raise VisualGrammarCrossArtifactError(str(exc)) from exc
     actual_fallback_ids = _fallback_beat_ids(measured_render_beats)
     reported_fallback_ids = sorted(timing_report["selectedFallbackBeatIds"])
     if actual_fallback_ids != reported_fallback_ids:

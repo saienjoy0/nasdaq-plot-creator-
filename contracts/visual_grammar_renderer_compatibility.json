@@ -1,0 +1,291 @@
+{
+  "contractVersion": "1.0.0",
+  "templates": [
+    {
+      "visualTemplateId": "opening-contradiction",
+      "allowedGrammarIds": [
+        "contradiction"
+      ],
+      "appearanceClass": "open-hero",
+      "dominantSurface": "open-canvas",
+      "stageShell": "OpenHeroStage",
+      "motionLanguage": "open-hero"
+    },
+    {
+      "visualTemplateId": "market-pulse-grid",
+      "allowedGrammarIds": [
+        "evidence",
+        "reaction"
+      ],
+      "appearanceClass": "metric-board",
+      "dominantSurface": "card-board",
+      "stageShell": "MetricBoardStage",
+      "motionLanguage": "metric-board"
+    },
+    {
+      "visualTemplateId": "earnings-surprise",
+      "allowedGrammarIds": [
+        "gap"
+      ],
+      "appearanceClass": "progressive-chart",
+      "dominantSurface": "plot",
+      "stageShell": "ProgressiveChartStage",
+      "motionLanguage": "progressive-chart"
+    },
+    {
+      "visualTemplateId": "dual-asset-split",
+      "allowedGrammarIds": [
+        "comparison"
+      ],
+      "appearanceClass": "split-comparison",
+      "dominantSurface": "split",
+      "stageShell": "SplitComparisonStage",
+      "motionLanguage": "split-comparison"
+    },
+    {
+      "visualTemplateId": "macro-pressure",
+      "allowedGrammarIds": [
+        "causal"
+      ],
+      "appearanceClass": "causal-path",
+      "dominantSurface": "network",
+      "stageShell": "CausalPathStage",
+      "motionLanguage": "causal-path"
+    },
+    {
+      "visualTemplateId": "source-receipt",
+      "allowedGrammarIds": [
+        "evidence"
+      ],
+      "appearanceClass": "document-media",
+      "dominantSurface": "media",
+      "stageShell": "DocumentMediaStage",
+      "motionLanguage": "document-reveal"
+    },
+    {
+      "visualTemplateId": "hero-number",
+      "allowedGrammarIds": [
+        "contradiction",
+        "entity",
+        "evidence"
+      ],
+      "appearanceClass": "open-hero",
+      "dominantSurface": "open-canvas",
+      "stageShell": "OpenHeroStage",
+      "motionLanguage": "open-hero"
+    },
+    {
+      "visualTemplateId": "closing-recap",
+      "allowedGrammarIds": [
+        "assembly"
+      ],
+      "appearanceClass": "assembly-map",
+      "dominantSurface": "assembly",
+      "stageShell": "AssemblyStage",
+      "motionLanguage": "assembly"
+    },
+    {
+      "visualTemplateId": "final-assembly",
+      "allowedGrammarIds": [
+        "assembly"
+      ],
+      "appearanceClass": "assembly-map",
+      "dominantSurface": "assembly",
+      "stageShell": "AssemblyStage",
+      "motionLanguage": "assembly"
+    },
+    {
+      "visualTemplateId": "conclusion-card",
+      "allowedGrammarIds": [
+        "assembly",
+        "bridge-text"
+      ],
+      "appearanceClass": "text-bridge",
+      "dominantSurface": "text",
+      "stageShell": "TextBridgeStage",
+      "motionLanguage": "text-bridge"
+    },
+    {
+      "visualTemplateId": "expected-actual-bullet",
+      "allowedGrammarIds": [
+        "gap"
+      ],
+      "appearanceClass": "progressive-chart",
+      "dominantSurface": "plot",
+      "stageShell": "ProgressiveChartStage",
+      "motionLanguage": "progressive-chart"
+    },
+    {
+      "visualTemplateId": "expected-actual-gap-flow",
+      "allowedGrammarIds": [
+        "gap"
+      ],
+      "appearanceClass": "progressive-chart",
+      "dominantSurface": "plot",
+      "stageShell": "ProgressiveChartStage",
+      "motionLanguage": "progressive-chart"
+    },
+    {
+      "visualTemplateId": "metric-comparison-board",
+      "allowedGrammarIds": [
+        "evidence"
+      ],
+      "appearanceClass": "metric-board",
+      "dominantSurface": "card-board",
+      "stageShell": "MetricBoardStage",
+      "motionLanguage": "metric-board"
+    },
+    {
+      "visualTemplateId": "index-return-bars",
+      "allowedGrammarIds": [
+        "comparison",
+        "reaction"
+      ],
+      "appearanceClass": "split-comparison",
+      "dominantSurface": "split",
+      "stageShell": "SplitComparisonStage",
+      "motionLanguage": "split-comparison"
+    },
+    {
+      "visualTemplateId": "diverging-stock-bars",
+      "allowedGrammarIds": [
+        "comparison"
+      ],
+      "appearanceClass": "split-comparison",
+      "dominantSurface": "split",
+      "stageShell": "SplitComparisonStage",
+      "motionLanguage": "split-comparison"
+    },
+    {
+      "visualTemplateId": "split-comparison",
+      "allowedGrammarIds": [
+        "comparison"
+      ],
+      "appearanceClass": "split-comparison",
+      "dominantSurface": "split",
+      "stageShell": "SplitComparisonStage",
+      "motionLanguage": "split-comparison"
+    },
+    {
+      "visualTemplateId": "focus-matrix",
+      "allowedGrammarIds": [
+        "comparison",
+        "evidence"
+      ],
+      "appearanceClass": "matrix-grid",
+      "dominantSurface": "matrix",
+      "stageShell": "MatrixStage",
+      "motionLanguage": "matrix-grid"
+    },
+    {
+      "visualTemplateId": "causal-lane",
+      "allowedGrammarIds": [
+        "causal"
+      ],
+      "appearanceClass": "causal-path",
+      "dominantSurface": "network",
+      "stageShell": "CausalPathStage",
+      "motionLanguage": "causal-path"
+    },
+    {
+      "visualTemplateId": "tailwind-headwind",
+      "allowedGrammarIds": [
+        "causal",
+        "evidence"
+      ],
+      "appearanceClass": "dual-lane",
+      "dominantSurface": "split",
+      "stageShell": "DualLaneStage",
+      "motionLanguage": "dual-lane"
+    },
+    {
+      "visualTemplateId": "evidence-boundary",
+      "allowedGrammarIds": [
+        "evidence"
+      ],
+      "appearanceClass": "dual-lane",
+      "dominantSurface": "split",
+      "stageShell": "DualLaneStage",
+      "motionLanguage": "dual-lane"
+    },
+    {
+      "visualTemplateId": "verification-checklist",
+      "allowedGrammarIds": [
+        "verification"
+      ],
+      "appearanceClass": "verification-gates",
+      "dominantSurface": "matrix",
+      "stageShell": "VerificationGateStage",
+      "motionLanguage": "verification-gates"
+    },
+    {
+      "visualTemplateId": "verification-matrix",
+      "allowedGrammarIds": [
+        "verification"
+      ],
+      "appearanceClass": "verification-gates",
+      "dominantSurface": "matrix",
+      "stageShell": "VerificationGateStage",
+      "motionLanguage": "verification-gates"
+    },
+    {
+      "visualTemplateId": "analogy-steps",
+      "allowedGrammarIds": [
+        "analogy"
+      ],
+      "appearanceClass": "picturebook-canvas",
+      "dominantSurface": "picturebook",
+      "stageShell": "PictureBookStage",
+      "motionLanguage": "picturebook",
+      "variantOverrides": [
+        {
+          "variant": "left-to-right",
+          "appearanceClass": "causal-path",
+          "dominantSurface": "network",
+          "stageShell": "CausalPathStage",
+          "motionLanguage": "causal-path"
+        }
+      ]
+    },
+    {
+      "visualTemplateId": "entity-card-full",
+      "allowedGrammarIds": [
+        "entity"
+      ],
+      "appearanceClass": "entity-canvas",
+      "dominantSurface": "entity",
+      "stageShell": "EntityStage",
+      "motionLanguage": "entity-focus"
+    },
+    {
+      "visualTemplateId": "news-media",
+      "allowedGrammarIds": [
+        "evidence"
+      ],
+      "appearanceClass": "document-media",
+      "dominantSurface": "media",
+      "stageShell": "DocumentMediaStage",
+      "motionLanguage": "document-reveal"
+    },
+    {
+      "visualTemplateId": "event-reaction-timeline",
+      "allowedGrammarIds": [
+        "reaction"
+      ],
+      "appearanceClass": "timeline-track",
+      "dominantSurface": "plot",
+      "stageShell": "TimelineStage",
+      "motionLanguage": "timeline-track"
+    },
+    {
+      "visualTemplateId": "text-focus",
+      "allowedGrammarIds": [
+        "bridge-text"
+      ],
+      "appearanceClass": "text-bridge",
+      "dominantSurface": "text",
+      "stageShell": "TextBridgeStage",
+      "motionLanguage": "text-bridge"
+    }
+  ]
+}
