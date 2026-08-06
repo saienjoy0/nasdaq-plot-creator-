@@ -176,6 +176,8 @@ def _canonical_scene_contract(render_spec: dict[str, Any]) -> None:
         scene["sceneRole"] = expected_role
         if scene.get("expectedBasisType") not in ALLOWED_EXPECTED_BASIS:
             scene["expectedBasisType"] = None
+        if index == 8:
+            scene["transition"] = {"type": "none", "durationMs": 0}
         _canonical_visual_data(scene, used_event_ids)
         beats = scene.get("visualBeats", [])
         for beat_index, beat in enumerate(beats):
