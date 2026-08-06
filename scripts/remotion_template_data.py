@@ -14,6 +14,7 @@ class TemplateDataError(ValueError):
 
 
 NUMERIC_TEMPLATE_IDS = {"diverging-stock-bars", "index-return-bars"}
+SHARED_UNIT_TEMPLATE_IDS = {"diverging-stock-bars", "index-return-bars"}
 CAUSAL_TEMPLATE_IDS = {"causal-lane", "macro-pressure"}
 NUMBER_RE = re.compile(r"[+-]?\d+(?:\.\d+)?")
 
@@ -40,7 +41,9 @@ def _parse_numeric_text(text: str) -> tuple[str, str, float, int, str]:
     return label, value, numeric, precision, unit
 
 
-def _normalize_referenced_numbers(scene: dict[str, Any], beat: dict[str, Any]) -> None:
+def _normalize_referenced_numbers(
+    scene: dict[str, Any], beat: dict[str, Any]
+) -> list[dict[str, Any]]:
     number_map = {
         item.get("numberId"): item
         for item in scene.get("numbers", [])
@@ -64,6 +67,7 @@ def _normalize_referenced_numbers(scene: dict[str, Any], beat: dict[str, Any]) -
         number["numericValue"] = numeric
         number["precision"] = precision
         number["unit"] = unit
+    return numbers
 
 
 def _single_approved_card_id(scene: dict[str, Any], beat: dict[str, Any]) -> str:
@@ -81,7 +85,19 @@ def _single_approved_card_id(scene: dict[str, Any], beat: dict[str, Any]) -> str
     return cards[0]["cardId"]
 
 
+def _use_mixed_metric_template(beat: dict[str, Any]) -> None:
+    beat["visualTemplate"] = "metric-comparison-board"
+    beat["templateVariant"] = "default"
+    config = beat.get("templateConfig")
+    if not isinstance(config, dict):
+        raise TemplateDataError(
+            f"{beat.get('beatId')}: numeric templateConfig missing"
+        )
+    config["variant"] = "default"
+
+
 def _materialize_numeric_template(scene: dict[str, Any], beat: dict[str, Any]) -> None:
+    original_template = beat.get("visualTemplate")
     number_ids = {
         item.get("numberId")
         for item in scene.get("numbers", [])
@@ -102,7 +118,10 @@ def _materialize_numeric_template(scene: dict[str, Any], beat: dict[str, Any]) -
         if referenced_card_count == 0:
             beat["objectIds"] = [_single_approved_card_id(scene, beat)]
         remotion_240_projection._materialize_numbers_from_card_lines(scene, beat)
-    _normalize_referenced_numbers(scene, beat)
+    numbers = _normalize_referenced_numbers(scene, beat)
+    units = {item.get("unit", "") for item in numbers}
+    if original_template in SHARED_UNIT_TEMPLATE_IDS and len(units) != 1:
+        _use_mixed_metric_template(beat)
     beat["visualMode"] = "number-comparison"
 
 
