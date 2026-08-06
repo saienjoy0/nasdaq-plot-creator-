@@ -1,0 +1,73 @@
+{
+  "contractVersion": "1.0.0",
+  "grammarPhases": ["establish", "develop", "resolve"],
+  "transitionRoles": ["continue", "major-shift", "return", "close"],
+  "grammars": [
+    {
+      "grammarId": "contradiction",
+      "meaning": "方向、矛盾、問いを提示し、視聴者が確認すべき中心問題を固定する",
+      "candidateScenes": [1, 2],
+      "allowedPhases": ["establish", "develop"],
+      "prohibitions": ["原因や結論をRendererが自動推論しない"]
+    },
+    {
+      "grammarId": "evidence",
+      "meaning": "確認済みの資料、事実、数字、発表時刻と解釈の境界を示す",
+      "candidateScenes": [3, 6],
+      "allowedPhases": ["establish", "develop"],
+      "prohibitions": ["未確認情報を事実として表示しない"]
+    },
+    {
+      "grammarId": "gap",
+      "meaning": "Expected、Actual、Gapを同じ比較基準上で順序立てて示す",
+      "candidateScenes": [4],
+      "allowedPhases": ["develop", "resolve"],
+      "prohibitions": ["Expectedの根拠がない回に強制適用しない"]
+    },
+    {
+      "grammarId": "causal",
+      "meaning": "世界の出来事から企業、金利、半導体、大型テックを経てNASDAQへ届く経路を示す",
+      "candidateScenes": [5, 6],
+      "allowedPhases": ["develop", "resolve"],
+      "prohibitions": ["因果ノードや矢印をRendererが補完しない"]
+    },
+    {
+      "grammarId": "reaction",
+      "meaning": "発表時刻と確認可能な価格反応を同じ時間基準上で示す",
+      "candidateScenes": [6],
+      "allowedPhases": ["develop", "resolve"],
+      "prohibitions": ["分足未確認時に細かな折れ線を描かない"]
+    },
+    {
+      "grammarId": "comparison",
+      "meaning": "企業、銘柄、セクター、材料の反応差を共通の評価軸で比較する",
+      "candidateScenes": [7],
+      "allowedPhases": ["develop", "resolve"],
+      "prohibitions": ["単純な上昇率ランキングへ置き換えない"]
+    },
+    {
+      "grammarId": "verification",
+      "meaning": "中心仮説が強まる条件と弱まる条件を同じ重さで示す",
+      "candidateScenes": [8],
+      "allowedPhases": ["develop", "resolve"],
+      "prohibitions": ["予定表や強気材料だけの一覧へ置き換えない"]
+    },
+    {
+      "grammarId": "assembly",
+      "meaning": "Scene 1から8で提示済みの要素だけを使い、矛盾、答え、留保を結論へ組み立てる",
+      "candidateScenes": [9],
+      "allowedPhases": ["resolve"],
+      "prohibitions": ["新しい数字、証拠、因果を追加しない"]
+    }
+  ],
+  "stageCompatibility": [
+    {"grammarId": "contradiction", "allowedStageIds": ["contradiction-stage"]},
+    {"grammarId": "evidence", "allowedStageIds": ["evidence-stage"]},
+    {"grammarId": "gap", "allowedStageIds": ["gap-stage"]},
+    {"grammarId": "causal", "allowedStageIds": ["causal-stage"]},
+    {"grammarId": "reaction", "allowedStageIds": ["reaction-stage"]},
+    {"grammarId": "comparison", "allowedStageIds": ["comparison-stage"]},
+    {"grammarId": "verification", "allowedStageIds": ["verification-stage"]},
+    {"grammarId": "assembly", "allowedStageIds": ["assembly-stage"]}
+  ]
+}
