@@ -28,6 +28,10 @@ finalizer = load_module(
     "finalize_renderer_package_test",
     ROOT / "scripts/finalize_renderer_package.py",
 )
+compat = load_module(
+    "finalize_renderer_package_compat_test",
+    ROOT / "scripts/finalize_renderer_package_compat.py",
+)
 
 class RemotionCompatibilityTests(unittest.TestCase):
     date = "2026-08-06"
@@ -37,6 +41,34 @@ class RemotionCompatibilityTests(unittest.TestCase):
         self.bindings_path = ROOT / f"working/{self.date}/financial_visual_bindings.json"
         self.raw = json.loads(self.render_path.read_text(encoding="utf-8"))
         self.bindings = json.loads(self.bindings_path.read_text(encoding="utf-8"))
+
+    def normalized(self):
+        normalized, mapping = sources.normalize_render_base(self.raw)
+        sources._financial_contract(
+            render=normalized,
+            bindings=self.bindings,
+            source_to_canonical=mapping,
+        )
+        sources._contract_scenes(normalized)
+        return normalized, mapping
+
+    def strict(self):
+        normalized, _ = self.normalized()
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            final_contract = root / "final.json"
+            semantics = root / "semantics.json"
+            compatibility = root / "compatibility.json"
+            final_contract.write_text("{}\n", encoding="utf-8")
+            semantics.write_text("{}\n", encoding="utf-8")
+            compatibility.write_text("{}\n", encoding="utf-8")
+            projected = finalizer._strict_renderer_projection(
+                normalized,
+                final_contract_path=final_contract,
+                semantics_path=semantics,
+                renderer_compatibility_path=compatibility,
+            )
+        return projected
 
     def test_01_producer_projection_preserves_narration(self):
         before = [
@@ -93,27 +125,7 @@ class RemotionCompatibilityTests(unittest.TestCase):
         )
 
     def test_04_strict_projection_flattens_visual_grammar(self):
-        normalized, mapping = sources.normalize_render_base(self.raw)
-        sources._financial_contract(
-            render=normalized,
-            bindings=self.bindings,
-            source_to_canonical=mapping,
-        )
-        sources._contract_scenes(normalized)
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            final_contract = root / "final.json"
-            semantics = root / "semantics.json"
-            compatibility = root / "compatibility.json"
-            final_contract.write_text("{}\n", encoding="utf-8")
-            semantics.write_text("{}\n", encoding="utf-8")
-            compatibility.write_text("{}\n", encoding="utf-8")
-            projected = finalizer._strict_renderer_projection(
-                normalized,
-                final_contract_path=final_contract,
-                semantics_path=semantics,
-                renderer_compatibility_path=compatibility,
-            )
+        projected = self.strict()
         self.assertEqual(18, projected["visualGrammarContract"]["beatCount"])
         for scene in projected["scenes"]:
             for beat in scene["visualBeats"]:
@@ -121,6 +133,54 @@ class RemotionCompatibilityTests(unittest.TestCase):
                 self.assertIn("transitionRole", beat)
                 self.assertNotIn("visualGrammar", beat)
                 self.assertNotIn("visualBeatId", beat)
+
+    def test_05_approved_card_lines_become_renderer_data_objects(self):
+        projected = self.strict()
+        before_speech = [
+            chunk["speechText"]
+            for scene in projected["scenes"]
+            for chunk in scene["narrationChunks"]
+        ]
+        compat._canonical_scene_contract(projected)
+        after_speech = [
+            chunk["speechText"]
+            for scene in projected["scenes"]
+            for chunk in scene["narrationChunks"]
+        ]
+        self.assertEqual(before_speech, after_speech)
+
+        scene3 = projected["scenes"][2]
+        number_ids = {item["numberId"] for item in scene3["numbers"]}
+        self.assertGreaterEqual(len(number_ids), 6)
+        for beat in scene3["visualBeats"]:
+            self.assertEqual("number-comparison", beat["visualMode"])
+            self.assertGreaterEqual(len([item for item in beat["objectIds"] if item in number_ids]), 2)
+
+        scene4 = projected["scenes"][3]
+        self.assertEqual(
+            {"expected", "actual", "gap"},
+            {item["role"] for item in scene4["cards"]},
+        )
+        self.assertEqual("expected-actual-gap", scene4["visualBeats"][0]["visualMode"])
+        self.assertEqual("text-focus", scene4["visualBeats"][1]["visualMode"])
+        self.assertEqual([], scene4["visualBeats"][1]["objectIds"])
+
+    def test_06_scene_roles_and_return_states_are_canonical(self):
+        projected = self.strict()
+        compat._canonical_scene_contract(projected)
+        self.assertEqual(
+            "opening-hook-market-direction-greeting-conclusion",
+            projected["scenes"][0]["sceneRole"],
+        )
+        self.assertEqual(
+            "closing-recap-sendoff-goodnight",
+            projected["scenes"][8]["sceneRole"],
+        )
+        for scene in projected["scenes"]:
+            beats = scene["visualBeats"]
+            for index, beat in enumerate(beats[:-1]):
+                if beat["returnScreenState"] is not None:
+                    self.assertEqual(beats[index + 1]["screenState"], beat["returnScreenState"])
 
 if __name__ == "__main__":
     unittest.main()
