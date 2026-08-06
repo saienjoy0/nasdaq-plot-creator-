@@ -1,0 +1,17 @@
+{
+  "contractVersion": "1.0.0",
+  "episodeDate": "2026-08-06",
+  "bindings": [
+    {
+      "visualBeatId": "vb-06-01",
+      "visualTemplate": "event-reaction-timeline",
+      "templateVariant": "official-time-plus-close",
+      "precision": "official-time-plus-close",
+      "eventOrderIds": [
+        "scene-06-card-001"
+      ],
+      "seriesObjectIds": [],
+      "evidenceBasis": "8月4日16:30 ETのSpaceX説明会、17:00 ETのAMD説明会、8月5日の通常取引終値。分足系列は使用しない。"
+    }
+  ]
+}
