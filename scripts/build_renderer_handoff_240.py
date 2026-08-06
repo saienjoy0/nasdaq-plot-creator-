@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 EXTRA_ROLES = {
     "final_episode_contract": "working/{date}/final_episode_contract.json",
     "financial_recipe_plan": "working/{date}/financial_recipe_plan.json",
+    "terminal_assembly_binding": "working/{date}/terminal_assembly_bindings.json",
     "financial_visual_consistency_report": "verification/{date}/financial_visual_consistency_report.json",
     "visual_grammar_structural_report": "verification/{date}/visual_grammar_structural_report.json",
     "renderer_validation_report": "verification/{date}/renderer_validation_report.json",
