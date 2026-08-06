@@ -5,12 +5,20 @@ on:
     paths:
       - "daily-inputs/**"
       - "working/**/memory_query_plan.json"
+      - "working/**/financial_visual_bindings.json"
       - "research/**"
       - "episodes/**"
       - "render-specs/**"
+      - "contracts/financial_visual_compatibility.json"
       - "scripts/materialize_daily_episode.py"
+      - "scripts/materialize_renderer_sources.py"
+      - "scripts/finalize_renderer_package.py"
+      - "scripts/build_final_production_package_hardened.py"
+      - "scripts/build_renderer_handoff_240.py"
+      - "scripts/build_renderer_handoff_hardened.py"
       - "scripts/run_daily_production_hardened.py"
       - "tests/daily-production-hardening/**"
+      - "tests/remotion-compat/**"
       - ".github/workflows/validate-daily-production-package.yml"
   workflow_dispatch:
     inputs:
@@ -25,16 +33,36 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       EPISODE_DATE: ${{ inputs.episode_date || '2026-08-06' }}
       RENDERER_COMMIT: 750f993bd00cf2f67fdb4ab18907e82ed0dc68df
       RENDERER_CONTRACT_VERSION: 2.4.0
+      NASDAQ_CAFE_RENDERER_ROOT: ${{ github.workspace }}/.renderer
     steps:
       - uses: actions/checkout@v4
+
+      - name: Checkout pinned Remotion renderer
+        uses: actions/checkout@v4
+        with:
+          repository: saienjoy0/saienjoy0-nasdaq-cafe-remotion
+          ref: ${{ env.RENDERER_COMMIT }}
+          path: .renderer
+          persist-credentials: false
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: .renderer/package-lock.json
+
+      - name: Install pinned renderer dependencies
+        working-directory: .renderer
+        run: npm ci
 
       - name: Verify committed daily inputs
         run: |
@@ -51,10 +79,13 @@ jobs:
           required = [
               root / f"daily-inputs/{date}/daily_source_package_{date}.md",
               root / f"working/{date}/memory_query_plan.json",
+              root / f"working/{date}/financial_visual_bindings.json",
               root / f"episodes/{date}/episode_package_public_{date}.md",
               root / f"render-specs/{date}/render_spec.json",
               root / f"research/{date}/causal_research_dossier.template.json",
               root / "scripts/materialize_daily_episode.py",
+              root / "scripts/materialize_renderer_sources.py",
+              root / "scripts/finalize_renderer_package.py",
           ]
           for path in required:
               resolved = path.resolve()
@@ -64,16 +95,26 @@ jobs:
                   raise SystemExit(f"Missing or empty required input: {path.relative_to(root)}")
           for path in (
               root / f"working/{date}/memory_query_plan.json",
+              root / f"working/{date}/financial_visual_bindings.json",
               root / f"render-specs/{date}/render_spec.json",
               root / f"research/{date}/causal_research_dossier.template.json",
           ):
               value = json.loads(path.read_text(encoding="utf-8"))
               if not isinstance(value, dict):
                   raise SystemExit(f"JSON root must be an object: {path.relative_to(root)}")
-          query = json.loads((root / f"working/{date}/memory_query_plan.json").read_text(encoding="utf-8"))
+          query = json.loads(
+              (root / f"working/{date}/memory_query_plan.json").read_text(encoding="utf-8")
+          )
           if query.get("episode_date") != date:
               raise SystemExit("memory query plan date mismatch")
-          spec = json.loads((root / f"render-specs/{date}/render_spec.json").read_text(encoding="utf-8"))
+          bindings = json.loads(
+              (root / f"working/{date}/financial_visual_bindings.json").read_text(encoding="utf-8")
+          )
+          if bindings.get("episodeDate") != date:
+              raise SystemExit("financial visual bindings date mismatch")
+          spec = json.loads(
+              (root / f"render-specs/{date}/render_spec.json").read_text(encoding="utf-8")
+          )
           episode = spec.get("episode", {})
           if episode.get("id") != date or episode.get("targetDate") != date:
               raise SystemExit("render spec date mismatch")
@@ -83,10 +124,17 @@ jobs:
       - name: Install validator dependency
         run: python -m pip install --disable-pip-version-check jsonschema
 
-      - name: Run hardening wrapper regression test
+      - name: Run compatibility and hardening regression tests
         run: |
+          python tests/remotion-compat/test_remotion_compat.py
           python tests/daily-production-hardening/test_daily_production_hardening.py
-          python -m py_compile scripts/run_daily_production_hardened.py
+          python -m py_compile \
+            scripts/materialize_renderer_sources.py \
+            scripts/materialize_daily_episode.py \
+            scripts/finalize_renderer_package.py \
+            scripts/build_final_production_package_hardened.py \
+            scripts/build_renderer_handoff_240.py \
+            scripts/run_daily_production_hardened.py
 
       - name: Materialize lineage-bound episode package
         shell: bash
@@ -113,7 +161,7 @@ jobs:
           python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state memory_usage_valid --evidence "research/$EPISODE_DATE/causal_dossier_validation.json"
           python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state assets_resolved --evidence "verification/$EPISODE_DATE/asset_resolution_log.json" "verification/$EPISODE_DATE/image_generation_log.json"
 
-      - name: Build and validate production package
+      - name: Build, convert and validate production package
         shell: bash
         run: |
           set -o pipefail
