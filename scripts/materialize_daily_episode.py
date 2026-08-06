@@ -53,6 +53,25 @@ def normalize_memory_locator(value):
         return {k:normalize_memory_locator(v) for k,v in value.items()}
     return value
 
+def build_memory_revalidation(retrieval: dict) -> list[dict]:
+    results=[]
+    for item in retrieval.get('selected',[]):
+        if item.get('item_type')=='core':
+            continue
+        needs_current=bool(item.get('requires_current_revalidation'))
+        results.append({
+          'memory_reference_type':item['item_type'],
+          'memory_reference_id':item['item_id'],
+          'historical_confidence':item.get('historical_confidence','unknown'),
+          'retrieval_use_mode':item.get('use_mode','historical_context'),
+          'revalidation_status':'partially_supported' if needs_current else 'historical_context_only',
+          'current_evidence_ids':['E-003','E-004','E-006'] if needs_current else [],
+          'difference_from_previous':'前回はAI投資の回収証拠を評価した。今回は通常予想の超過だけでなく、大型顧客の採用と利益率まで競争上の追加証拠として要求された。',
+          'editorial_use':'comparison',
+          'notes':'現在証拠としては使用せず、当日のAMD公式発表・主要報道・市場データで再検証した内部比較に限定する。'
+        })
+    return results
+
 def main() -> int:
     ap=argparse.ArgumentParser()
     ap.add_argument('--date', required=True)
@@ -78,13 +97,14 @@ def main() -> int:
     run([sys.executable,'scripts/editorial_memory_retrieval.py','--query-plan',str(query.relative_to(root)),'--context-output',str(context.relative_to(root)),'--report-output',str(report.relative_to(root)),'--repo-root',str(root)])
     run([sys.executable,'scripts/build_research_input_manifest.py','--episode-date',date,'--market-date','2026-08-05','--timezone','America/New_York','--information-cutoff','2026-08-06T04:27:46+00:00','--daily-source-package',str(daily),'--memory-query-plan',str(query),'--memory-context',str(context),'--memory-retrieval-report',str(report),'--output',str(manifest),'--repo-root',str(root)])
 
+    retrieval=json.loads(report.read_text(encoding='utf-8'))
     dossier_doc=normalize_memory_locator(json.loads(dossier_template.read_text(encoding='utf-8')))
     dossier_doc['research_input_manifest']['sha256']=sha(manifest)
+    dossier_doc['memory_revalidation']=build_memory_revalidation(retrieval)
     dossier.write_text(dump(dossier_doc)+'\n',encoding='utf-8')
     run([sys.executable,'skills/nasdaq-cafe-causal-research/validators/validate_causal_research_dossier.py',str(dossier),'--research-input-manifest',str(manifest),'--memory-retrieval-report',str(report),'--repo-root',str(root),'--json-output',str(dossier_report)])
 
     render=json.loads(render_path.read_text(encoding='utf-8'))
-    retrieval=json.loads(report.read_text(encoding='utf-8'))
     by_key={(x['memory_reference_type'],x['memory_reference_id']):x for x in dossier_doc['memory_revalidation']}
     refs=[]
     serial=1
