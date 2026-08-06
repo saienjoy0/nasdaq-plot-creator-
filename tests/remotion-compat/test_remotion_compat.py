@@ -126,11 +126,12 @@ class RemotionCompatibilityTests(unittest.TestCase):
         beat2 = scene2["visualBeats"][1]
         number_map = {number["numberId"]: number for number in scene2["numbers"]}
         self.assertEqual("number-comparison", beat2["visualMode"])
-        self.assertEqual("metric-comparison-board", beat2["visualTemplate"])
+        self.assertEqual("tailwind-headwind", beat2["visualTemplate"])
+        self.assertEqual("two-lane", beat2["templateVariant"])
         self.assertEqual("evidence", beat2["visualGrammarId"])
         self.assertEqual(2, len(beat2["objectIds"]))
         self.assertTrue(all(number_map[item]["numericValue"] is not None for item in beat2["objectIds"]))
-        self.assertEqual("continuation", render["scenes"][2]["visualBeats"][0]["transitionRole"])
+        self.assertEqual("major-shift", render["scenes"][2]["visualBeats"][0]["transitionRole"])
         scene4 = render["scenes"][3]
         self.assertEqual({"expected", "actual", "gap"}, {card["role"] for card in scene4["cards"]})
         self.assertEqual("text-focus", scene4["visualBeats"][1]["visualMode"])
