@@ -66,8 +66,42 @@ def _normalize_referenced_numbers(scene: dict[str, Any], beat: dict[str, Any]) -
         number["unit"] = unit
 
 
+def _single_approved_card_id(scene: dict[str, Any], beat: dict[str, Any]) -> str:
+    cards = [
+        item
+        for item in scene.get("cards", [])
+        if isinstance(item, dict)
+        and isinstance(item.get("cardId"), str)
+        and 2 <= len(item.get("lines", [])) <= 6
+    ]
+    if len(cards) != 1:
+        raise TemplateDataError(
+            f"{scene.get('sceneId')}/{beat.get('beatId')}: numeric template has no unique approved source card"
+        )
+    return cards[0]["cardId"]
+
+
 def _materialize_numeric_template(scene: dict[str, Any], beat: dict[str, Any]) -> None:
-    remotion_240_projection._materialize_numbers_from_card_lines(scene, beat)
+    number_ids = {
+        item.get("numberId")
+        for item in scene.get("numbers", [])
+        if isinstance(item, dict)
+    }
+    referenced_number_count = len(
+        [item for item in beat.get("objectIds", []) if item in number_ids]
+    )
+    if referenced_number_count < 2:
+        card_ids = {
+            item.get("cardId")
+            for item in scene.get("cards", [])
+            if isinstance(item, dict)
+        }
+        referenced_card_count = len(
+            [item for item in beat.get("objectIds", []) if item in card_ids]
+        )
+        if referenced_card_count == 0:
+            beat["objectIds"] = [_single_approved_card_id(scene, beat)]
+        remotion_240_projection._materialize_numbers_from_card_lines(scene, beat)
     _normalize_referenced_numbers(scene, beat)
     beat["visualMode"] = "number-comparison"
 
