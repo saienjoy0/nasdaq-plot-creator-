@@ -199,23 +199,66 @@ def _materialize_causal_template(scene: dict[str, Any], beat: dict[str, Any]) ->
     config["outcomeNodeId"] = node_ids[-1]
 
 
-def _normalize_terminal_scene(render_spec: dict[str, Any]) -> None:
+def _earlier_display_texts(render_spec: dict[str, Any]) -> set[str]:
+    values: set[str] = set()
+    for scene in render_spec.get("scenes", [])[:8]:
+        headline = scene.get("headline")
+        if isinstance(headline, str) and headline:
+            values.add(headline)
+        values.update(
+            item for item in scene.get("supportingTexts", [])
+            if isinstance(item, str) and item
+        )
+        for beat in scene.get("visualBeats", []):
+            values.update(
+                item for item in beat.get("viewerTexts", [])
+                if isinstance(item, str) and item
+            )
+        for card in scene.get("cards", []):
+            for line in card.get("lines", []):
+                value = line.get("value")
+                if isinstance(value, str) and value:
+                    values.add(value)
+    return values
+
+
+def _normalize_terminal_scene(
+    render_spec: dict[str, Any], terminal_binding: dict[str, Any]
+) -> None:
     scenes = render_spec.get("scenes", [])
     if len(scenes) != 9:
         raise TemplateDataError("terminal normalization requires exactly nine scenes")
+    if terminal_binding.get("contractVersion") != "1.0.0":
+        raise TemplateDataError("terminal assembly binding contractVersion must be 1.0.0")
     scene = scenes[-1]
+    if terminal_binding.get("finalSceneId") != scene.get("sceneId"):
+        raise TemplateDataError("terminal assembly binding finalSceneId mismatch")
+    lines = terminal_binding.get("lines")
+    if (
+        not isinstance(lines, list)
+        or len(lines) != 3
+        or not all(isinstance(item, str) and item for item in lines)
+    ):
+        raise TemplateDataError("terminal assembly binding requires exactly three lines")
+    earlier = _earlier_display_texts(render_spec)
+    missing = [item for item in lines if item not in earlier]
+    if missing:
+        raise TemplateDataError(
+            f"terminal assembly binding contains text not introduced earlier: {missing}"
+        )
     beats = scene.get("visualBeats", [])
     if len(beats) != 1:
         raise TemplateDataError("Scene 9 requires exactly one final assembly Beat")
     beat = beats[0]
-    card_ids = {
-        item.get("cardId")
-        for item in scene.get("cards", [])
-        if isinstance(item, dict)
-    }
-    selected_cards = [item for item in beat.get("objectIds", []) if item in card_ids]
-    if len(selected_cards) != 1:
+    cards = [item for item in scene.get("cards", []) if isinstance(item, dict)]
+    if len(cards) != 1 or cards[0].get("cardId") not in beat.get("objectIds", []):
         raise TemplateDataError("Scene 9 final assembly requires one approved recap card")
+    cards[0]["lines"] = [
+        {"label": str(index), "tone": "neutral", "value": value}
+        for index, value in enumerate(lines, start=1)
+    ]
+    beat["viewerTexts"] = list(lines)
+    beat["changeCue"] = lines[0]
     beat["visualTemplate"] = "final-assembly"
     beat["contentType"] = "final-assembly"
     beat["visualGrammarId"] = "assembly"
@@ -242,7 +285,9 @@ def _normalize_impossible_major_shifts(render_spec: dict[str, Any]) -> None:
             previous = beat
 
 
-def materialize_template_data(render_spec: dict[str, Any]) -> None:
+def materialize_template_data(
+    render_spec: dict[str, Any], *, terminal_binding: dict[str, Any]
+) -> None:
     scenes = render_spec.get("scenes")
     if not isinstance(scenes, list):
         raise TemplateDataError("render spec scenes must be an array")
@@ -256,5 +301,5 @@ def materialize_template_data(render_spec: dict[str, Any]) -> None:
         beats = scene.get("visualBeats", [])
         if beats:
             scene["visualMode"] = beats[0]["visualMode"]
-    _normalize_terminal_scene(render_spec)
+    _normalize_terminal_scene(render_spec, terminal_binding)
     _normalize_impossible_major_shifts(render_spec)
