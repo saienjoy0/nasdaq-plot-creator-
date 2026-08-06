@@ -13,7 +13,10 @@ on:
       - "contracts/financial_visual_compatibility_2_4.json"
       - "scripts/materialize_daily_episode.py"
       - "scripts/materialize_renderer_sources.py"
+      - "scripts/materialize_financial_contract_1_0.py"
+      - "scripts/financial_final_episode_contract_1_0.py"
       - "scripts/finalize_renderer_package.py"
+      - "scripts/finalize_renderer_package_compat.py"
       - "scripts/build_final_production_package_hardened.py"
       - "scripts/build_renderer_handoff_240.py"
       - "scripts/build_renderer_handoff_hardened.py"
@@ -87,7 +90,9 @@ jobs:
               root / "contracts/financial_visual_compatibility_2_4.json",
               root / "scripts/materialize_daily_episode.py",
               root / "scripts/materialize_renderer_sources.py",
-              root / "scripts/finalize_renderer_package.py",
+              root / "scripts/materialize_financial_contract_1_0.py",
+              root / "scripts/financial_final_episode_contract_1_0.py",
+              root / "scripts/finalize_renderer_package_compat.py",
           ]
           for path in required:
               resolved = path.resolve()
@@ -134,7 +139,10 @@ jobs:
           python -m py_compile \
             scripts/materialize_renderer_sources.py \
             scripts/materialize_daily_episode.py \
+            scripts/materialize_financial_contract_1_0.py \
+            scripts/financial_final_episode_contract_1_0.py \
             scripts/finalize_renderer_package.py \
+            scripts/finalize_renderer_package_compat.py \
             scripts/build_final_production_package_hardened.py \
             scripts/build_renderer_handoff_240.py \
             scripts/run_daily_production_hardened.py
@@ -144,8 +152,10 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p "verification/$EPISODE_DATE"
-          python scripts/materialize_daily_episode.py --date "$EPISODE_DATE" --repo-root . \
-            2>&1 | tee "verification/$EPISODE_DATE/materializer.log"
+          {
+            python scripts/materialize_daily_episode.py --date "$EPISODE_DATE" --repo-root .
+            python scripts/materialize_financial_contract_1_0.py --date "$EPISODE_DATE" --repo-root .
+          } 2>&1 | tee "verification/$EPISODE_DATE/materializer.log"
 
       - name: Initialize deterministic daily state
         run: |
