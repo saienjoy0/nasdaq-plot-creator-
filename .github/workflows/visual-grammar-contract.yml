@@ -1,0 +1,73 @@
+name: Visual Grammar Contract
+
+on:
+  pull_request:
+    paths:
+      - "contracts/visual_grammar.schema.json"
+      - "contracts/visual_grammar_registry.schema.json"
+      - "contracts/visual_grammar_registry.json"
+      - "scripts/visual_grammar_contract.py"
+      - "tests/test_visual_grammar_contract.py"
+      - "tests/visual-grammar-contract/**"
+      - "designs/NASDAQ_CAFE_VISUAL_GRAMMAR_VG0.md"
+      - ".github/workflows/visual-grammar-contract.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "contracts/visual_grammar.schema.json"
+      - "contracts/visual_grammar_registry.schema.json"
+      - "contracts/visual_grammar_registry.json"
+      - "scripts/visual_grammar_contract.py"
+      - "tests/test_visual_grammar_contract.py"
+      - "tests/visual-grammar-contract/**"
+      - "designs/NASDAQ_CAFE_VISUAL_GRAMMAR_VG0.md"
+      - ".github/workflows/visual-grammar-contract.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install validator dependency
+        run: python -m pip install --disable-pip-version-check jsonschema==4.25.0
+
+      - name: Compile validator
+        run: python -m py_compile scripts/visual_grammar_contract.py
+
+      - name: Validate JSON syntax
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          for name in (
+              "contracts/visual_grammar.schema.json",
+              "contracts/visual_grammar_registry.schema.json",
+              "contracts/visual_grammar_registry.json",
+          ):
+              path = Path(name)
+              json.loads(path.read_text(encoding="utf-8"))
+              print("PASS", path)
+          PY
+
+      - name: Run contract tests
+        run: python -m unittest -v tests/test_visual_grammar_contract.py
+
+      - name: Validate representative declarations
+        run: |
+          python scripts/visual_grammar_contract.py registry
+          python scripts/visual_grammar_contract.py declaration tests/visual-grammar-contract/fixtures/declaration.valid.json
+          python scripts/visual_grammar_contract.py declaration tests/visual-grammar-contract/fixtures/declaration.return.valid.json
+          python scripts/visual_grammar_contract.py compatibility gap gap-stage
