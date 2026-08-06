@@ -11,6 +11,7 @@ import financial_visual_cross_artifact
 import finalize_renderer_package as base
 import remotion_240_projection
 import remotion_sequence_policy
+import remotion_template_data
 
 
 class CompatibilityFinalizationError(ValueError):
@@ -223,6 +224,7 @@ def finalize(
         episode_date=date,
         reaction_bindings_path=reaction_bindings_path,
     )
+    remotion_template_data.materialize_template_data(strict)
     remotion_sequence_policy.resolve_sequence_policies(strict)
     base.write_atomic(render_spec_path, strict)
 
