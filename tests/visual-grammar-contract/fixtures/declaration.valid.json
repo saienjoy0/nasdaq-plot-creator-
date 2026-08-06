@@ -1,0 +1,6 @@
+{
+  "grammarVersion": "1.0.0",
+  "grammarId": "gap",
+  "grammarPhase": "resolve",
+  "transitionRole": "major-shift"
+}
