@@ -1,0 +1,83 @@
+{
+  "amplifiers": [
+    "SpaceXのNVIDIA専属採用報道",
+    "AMDの粗利率横ばいと供給制約への懸念"
+  ],
+  "causality_scope": "nasdaq_support",
+  "central_hypothesis": "昨夜のAI半導体市場は需要の有無ではなく、次の巨大需要を誰が確実に取るかを評価し、通常予想を超えたAMDよりSpaceXの採用証拠を得たNVIDIAを高く評価した。",
+  "confidence": "medium",
+  "counterevidence_ids": [
+    "E-001",
+    "E-004",
+    "E-008",
+    "E-009"
+  ],
+  "episode_date": "2026-08-06",
+  "evidence_digest": {
+    "E-001": "終値: Nasdaq -0.83%, SOXX -2.12%, NVIDIA +3.43%, AMD -7.04%, Alphabet -4.03%, Microsoft -1.09%",
+    "E-002": "AMD前四半期Q2会社見通し中心112億ドル、粗利率56%",
+    "E-003": "AMD決算後・17:00 ET説明会",
+    "E-004": "Q2売上115.4億ドル、DC67.2億ドル、Q3約130億ドル、予想約125.2億ドル、引け後約9%安",
+    "E-005": "通常予想超過でも大型顧客・AI回収・利益率の追加証拠を求めたとのReuters解釈",
+    "E-006": "SpaceX説明会16:30 ET",
+    "E-007": "SpaceXがNVIDIA GPUだけを使用との報道、NVIDIA支援材料との解釈",
+    "E-008": "Alphabet・Microsoft安もNASDAQへ重なりDowは上昇した混合相場",
+    "E-009": "分足、金利、VIX、QQQ、SMH不足"
+  },
+  "evidence_ids": [
+    "E-001",
+    "E-002",
+    "E-003",
+    "E-004",
+    "E-005",
+    "E-006",
+    "E-007",
+    "E-008",
+    "E-009"
+  ],
+  "expected_actual_gap": {
+    "actual": {
+      "evidence_ids": [
+        "E-004",
+        "E-001",
+        "E-007"
+      ],
+      "statement": "AMDはQ3売上見通し約130億ドル、Q2売上115.4億ドル、データセンター67.2億ドルを示した一方、翌日AMDは7.04%下落し、SpaceXの専属採用証拠はNVIDIA側へ加わった。"
+    },
+    "expected": {
+      "basis_class": "major_reporting",
+      "evidence_ids": [
+        "E-004",
+        "E-005"
+      ],
+      "statement": "Q3売上は約125.2億ドルが通常のアナリスト予想であり、主要報道では大型顧客、AI投資回収、利益率の追加証拠への高まった期待も示されていた。",
+      "status": "confirmed"
+    },
+    "gap": {
+      "confidence": "medium",
+      "market_meaning": "市場の採点軸がAI需要の存在から、次の巨大需要をどの企業が確実に取るかへ移っていた可能性がある。",
+      "statement": "売上見通しは通常予想を約4.8億ドル上回ったが、AI競争で要求された大型顧客と利益率の追加証拠には届かなかったとの評価が残った。"
+    }
+  },
+  "lead": "AMDの好決算後下落",
+  "lead_type": "news",
+  "offsets": [
+    "AMDの通常予想超過",
+    "NVIDIA 3.43%上昇",
+    "Dow上昇の混合相場"
+  ],
+  "primary_driver": "AMDは通常予想を超えたが、高まったAI競争期待に必要な追加証拠が不足したとの評価",
+  "source": "research/2026-08-06/causal_research_dossier.template.json at main 7d34a1bb69720be3916b97b6868ce99da2174bfb",
+  "story_spine": "AMDは売上と見通しで通常予想を超えたのに、高まったAI期待とSpaceXのNVIDIA専属採用によって競争上の追加証拠が不足したと評価され下落し、その半導体安にAlphabetとMicrosoftの下落も重なってNASDAQは0.83%下落した。",
+  "timeline": [
+    "2026-08-04 16:30 ET: SpaceX説明会",
+    "2026-08-04 after close / 17:00 ET: AMD決算・説明会",
+    "2026-08-04 after hours: AMD約9%下落とReuters報道",
+    "2026-08-05 close: AMD -7.04%, NVIDIA +3.43%, SOXX -2.12%, Nasdaq Composite -0.83%"
+  ],
+  "unresolved_factors": [
+    "金利・VIX・QQQ・SMHの寄与",
+    "個別発言直後の分足寄与",
+    "各銘柄の指数寄与度"
+  ]
+}

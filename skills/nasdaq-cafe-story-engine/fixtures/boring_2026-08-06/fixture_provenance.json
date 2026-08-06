@@ -1,0 +1,15 @@
+{
+  "episode_date": "2026-08-06",
+  "extraction": "The causal snapshot and old-package digest preserve the fields used by this shadow critique. No external facts were added.",
+  "mode": "shadow",
+  "repository": "saienjoy0/nasdaq-plot-creator-",
+  "source_commit": "7d34a1bb69720be3916b97b6868ce99da2174bfb",
+  "source_files": [
+    "research/2026-08-06/causal_research_dossier.template.json",
+    "episodes/2026-08-06/episode_package_public_2026-08-06.md",
+    "source-of-truth/01_fox_character_bible.md",
+    "source-of-truth/02_editorial_bible.md",
+    "source-of-truth/03_episode_production_spec.md",
+    "source-of-truth/04_entertainment_inquisitor.md"
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "causality_constraints": "No Claim, Evidence, confidence, counterevidence or chronology changes.",
+  "episode_date": "2026-08-06",
+  "patches": [
+    {
+      "finding_ids": [
+        "CR-001"
+      ],
+      "patch_id": "P-001",
+      "patch_type": "move_reveal_later",
+      "status": "applied",
+      "target_paths": [
+        "scene-01",
+        "scene-04",
+        "scene-05"
+      ]
+    },
+    {
+      "finding_ids": [
+        "CR-002",
+        "CR-003"
+      ],
+      "patch_id": "P-002",
+      "patch_type": "merge_redundant_content",
+      "status": "applied",
+      "target_paths": [
+        "scene-02",
+        "scene-03",
+        "scene-04",
+        "scene-09"
+      ]
+    },
+    {
+      "finding_ids": [
+        "CR-004"
+      ],
+      "patch_id": "P-003",
+      "patch_type": "replace_procedural_bridge",
+      "status": "applied",
+      "target_paths": [
+        "scene-03",
+        "scene-06",
+        "scene-07",
+        "scene-08"
+      ]
+    },
+    {
+      "finding_ids": [
+        "CR-005"
+      ],
+      "patch_id": "P-004",
+      "patch_type": "add_callback",
+      "status": "applied",
+      "target_paths": [
+        "scene-06",
+        "scene-07",
+        "scene-08",
+        "scene-09"
+      ]
+    },
+    {
+      "finding_ids": [
+        "CR-006"
+      ],
+      "patch_id": "P-005",
+      "patch_type": "rewrite_scene",
+      "status": "applied",
+      "target_paths": [
+        "scene-01",
+        "scene-03",
+        "scene-04",
+        "scene-06",
+        "scene-08"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,209 @@
+{
+  "critic_invocation_id": "shadow-critic-2026-08-06-v1",
+  "decision": "revise",
+  "episode_date": "2026-08-06",
+  "findings": [
+    {
+      "anchor_text": "結論から言うと、昨夜はAI需要があるかではなく、その次の巨大需要を誰が確実に取れるかが採点されました。",
+      "code": "HOOK_EXHAUSTS_THE_STORY",
+      "field_paths": [
+        "B1.完成ナレーション",
+        "scene-01-beat-002"
+      ],
+      "finding_id": "CR-001",
+      "must_preserve": {
+        "causal_scope": "nasdaq_support",
+        "claim_ids": [
+          "CL-001",
+          "CL-002",
+          "CL-003",
+          "CL-004"
+        ],
+        "confidence": "medium",
+        "evidence_ids": [
+          "E-001",
+          "E-004",
+          "E-005",
+          "E-007"
+        ]
+      },
+      "required_fix": "冒頭を指数方向、AMD/NVIDIAの矛盾、中心質問までに戻し、評価基準とSpaceX証拠をScene 4〜5へ移す。",
+      "scene_ids": [
+        "scene-01"
+      ],
+      "severity": "critical",
+      "status": "fixed",
+      "viewer_effect": "方向だけでなく中心解釈とSpaceX証拠まで冒頭で消費し、Scene 3〜5を見る理由を弱める。"
+    },
+    {
+      "anchor_text": "通常の予想には勝ったのに、高くなった採点基準には届かなかった。",
+      "code": "REPEATED_CONCLUSION",
+      "field_paths": [
+        "B2-B5.完成ナレーション",
+        "B9.完成ナレーション"
+      ],
+      "finding_id": "CR-002",
+      "must_preserve": {
+        "causal_scope": "company",
+        "claim_ids": [
+          "CL-001",
+          "CL-002",
+          "CL-003"
+        ],
+        "confidence": "medium",
+        "evidence_ids": [
+          "E-004",
+          "E-005",
+          "E-007"
+        ]
+      },
+      "required_fix": "Scene 2=悪決算否定、3=数値と価格の矛盾、4=評価基準Turn、5=SpaceX Reveal、9=Bookendへ役割を分離する。",
+      "scene_ids": [
+        "scene-02",
+        "scene-03",
+        "scene-04",
+        "scene-05",
+        "scene-09"
+      ],
+      "severity": "critical",
+      "status": "fixed",
+      "viewer_effect": "同じ結論を数字、Gap、SpaceX、締めで反復し、各Sceneの役割が交換可能に見える。"
+    },
+    {
+      "anchor_text": "確認できた数字を置きます。",
+      "code": "NO_BELIEF_CHANGE",
+      "field_paths": [
+        "B3-B4.目的",
+        "B3-B4.完成ナレーション"
+      ],
+      "finding_id": "CR-003",
+      "must_preserve": {
+        "causal_scope": "company",
+        "claim_ids": [
+          "CL-001",
+          "CL-002"
+        ],
+        "confidence": "medium",
+        "evidence_ids": [
+          "E-002",
+          "E-004",
+          "E-005"
+        ]
+      },
+      "required_fix": "Scene 3を『数値Gapはプラスなのに価格は逆』というcomplicationへ変え、Scene 4で別テストの存在をRevealする。",
+      "scene_ids": [
+        "scene-03",
+        "scene-04"
+      ],
+      "severity": "critical",
+      "status": "fixed",
+      "viewer_effect": "Scene 2ですでに示したAMDの好業績を再度列挙し、Scene 3終了時に理解が更新されない。"
+    },
+    {
+      "anchor_text": "確認できた数字を置きます。／順番も確認します。／三つだけ並べます。／僕たちが次に見るのは三点です。",
+      "code": "PROCEDURAL_NARRATION",
+      "field_paths": [
+        "接続文",
+        "完成ナレーション"
+      ],
+      "finding_id": "CR-004",
+      "must_preserve": {
+        "causal_scope": "nasdaq_support",
+        "claim_ids": [
+          "CL-001",
+          "CL-004",
+          "CL-005",
+          "CL-006"
+        ],
+        "confidence": "medium",
+        "evidence_ids": [
+          "E-001",
+          "E-003",
+          "E-004",
+          "E-006",
+          "E-008",
+          "E-009"
+        ]
+      },
+      "required_fix": "手続き宣言を削除し、前Sceneの疑問から直接事実・反対材料・検証条件へ入る。",
+      "scene_ids": [
+        "scene-03",
+        "scene-06",
+        "scene-07",
+        "scene-08"
+      ],
+      "severity": "critical",
+      "status": "fixed",
+      "viewer_effect": "狐が市場案内役ではなく、制作手順を読む監査担当者に聞こえる。"
+    },
+    {
+      "anchor_text": "冒頭で中心仮説とSpaceX証拠を提示済み。",
+      "code": "NO_LATE_PAYOFF",
+      "field_paths": [
+        "B6-B8.完成ナレーション"
+      ],
+      "finding_id": "CR-005",
+      "must_preserve": {
+        "causal_scope": "nasdaq_support",
+        "claim_ids": [
+          "CL-004",
+          "CL-005",
+          "CL-006"
+        ],
+        "confidence": "medium",
+        "evidence_ids": [
+          "E-001",
+          "E-003",
+          "E-006",
+          "E-008",
+          "E-009"
+        ]
+      },
+      "required_fix": "Scene 6を時系列の限界、Scene 7をNASDAQ範囲の反証、Scene 8を仮説が強まる・弱まる条件として段階的に深める。",
+      "scene_ids": [
+        "scene-06",
+        "scene-07",
+        "scene-08"
+      ],
+      "severity": "critical",
+      "status": "fixed",
+      "viewer_effect": "後半は既知の結論へ留保を足すだけになり、Scene 6〜8まで視聴する発見が残らない。"
+    },
+    {
+      "anchor_text": "説明は正確だが、狐の自然な違和感・短い反応が少なく、監査報告の温度が続く。",
+      "code": "FOX_VOICE_ABSENT",
+      "field_paths": [
+        "完成ナレーション"
+      ],
+      "finding_id": "CR-006",
+      "must_preserve": {
+        "causal_scope": "nasdaq_support",
+        "claim_ids": [
+          "CL-001",
+          "CL-002",
+          "CL-005",
+          "CL-006"
+        ],
+        "confidence": "medium",
+        "evidence_ids": [
+          "E-001",
+          "E-004",
+          "E-005",
+          "E-008",
+          "E-009"
+        ]
+      },
+      "required_fix": "過剰な小ネタを避けつつ、矛盾への反応、短いIT比喩、断定範囲を自分で絞る案内語を必要箇所だけ加える。",
+      "scene_ids": [
+        "scene-01",
+        "scene-03",
+        "scene-04",
+        "scene-06",
+        "scene-08"
+      ],
+      "severity": "critical",
+      "status": "fixed",
+      "viewer_effect": "一人称が僕でも人物としての案内感が弱く、情報の読み上げに近い。"
+    }
+  ]
+}
