@@ -1,0 +1,94 @@
+{
+  "contractVersion": "1.0.0",
+  "grammars": [
+    {
+      "grammarId": "contradiction",
+      "meaning": "方向、矛盾、問いを提示する",
+      "counted": true,
+      "candidateScenes": [1],
+      "allowedCapabilities": ["direction", "contrast", "question"],
+      "prohibitions": ["原因を自動推論しない"]
+    },
+    {
+      "grammarId": "entity",
+      "meaning": "主役企業・人物・製品の実体を固定する",
+      "counted": true,
+      "candidateScenes": [2, 7],
+      "allowedCapabilities": ["identity", "role", "single-subject"],
+      "prohibitions": ["分析Chartを同一画面へ重ねない"]
+    },
+    {
+      "grammarId": "evidence",
+      "meaning": "確認済み事実、出典、数字、境界を示す",
+      "counted": true,
+      "candidateScenes": [3, 6],
+      "allowedCapabilities": ["source", "metric", "boundary"],
+      "prohibitions": ["未確認情報を事実表示しない"]
+    },
+    {
+      "grammarId": "gap",
+      "meaning": "Expected / Actual / Gapを同一基準上で示す",
+      "counted": true,
+      "candidateScenes": [4],
+      "allowedCapabilities": ["expected", "actual", "gap"],
+      "prohibitions": ["Expected未確認時に強制しない"]
+    },
+    {
+      "grammarId": "causal",
+      "meaning": "世界・企業・市場への経路を示す",
+      "counted": true,
+      "candidateScenes": [5, 6],
+      "allowedCapabilities": ["nodes", "edges", "transmission"],
+      "prohibitions": ["因果をRendererが決めない"]
+    },
+    {
+      "grammarId": "reaction",
+      "meaning": "発表と値動きの確認可能な時系列を示す",
+      "counted": true,
+      "candidateScenes": [6],
+      "allowedCapabilities": ["sequence", "session", "precision-label"],
+      "prohibitions": ["分足未確認時に折れ線を描かない"]
+    },
+    {
+      "grammarId": "comparison",
+      "meaning": "企業、銘柄、セクター、材料の差を比較する",
+      "counted": true,
+      "candidateScenes": [2, 7],
+      "allowedCapabilities": ["split", "matrix", "shared-axis"],
+      "prohibitions": ["単純ランキングにしない"]
+    },
+    {
+      "grammarId": "verification",
+      "meaning": "中心仮説が強まる／弱まる条件を示す",
+      "counted": true,
+      "candidateScenes": [8],
+      "allowedCapabilities": ["strengthen", "weaken", "unknown"],
+      "prohibitions": ["予定表へ置き換えない"]
+    },
+    {
+      "grammarId": "analogy",
+      "meaning": "身近なたとえから市場へ戻る",
+      "counted": true,
+      "candidateScenes": [4, 5],
+      "allowedCapabilities": ["analogy", "return"],
+      "prohibitions": ["たとえで事実や因果を歪めない"]
+    },
+    {
+      "grammarId": "assembly",
+      "meaning": "既出要素だけで結論を再構成する",
+      "counted": false,
+      "candidateScenes": [9],
+      "allowedCapabilities": ["recap", "conclusion", "return-to-question"],
+      "prohibitions": ["新しい数値・証拠を追加しない"]
+    },
+    {
+      "grammarId": "bridge-text",
+      "meaning": "短い論点の橋渡しをする",
+      "counted": false,
+      "candidateScenes": [1, 2, 3, 4, 5, 6, 7, 8, 9],
+      "allowedCapabilities": ["short-label", "short-sentence"],
+      "prohibitions": ["多様性を水増ししない", "連続使用しない"]
+    }
+  ],
+  "transitionRoles": ["continuation", "major-shift", "return", "closing"]
+}
