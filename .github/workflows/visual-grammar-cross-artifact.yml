@@ -1,0 +1,52 @@
+name: Visual Grammar Cross Artifact
+# VG-5 verifies byte mirrors, independent report recomputation, and immutable handoff.
+
+on:
+  pull_request:
+    paths:
+      - "contracts/visual_grammar_*.json"
+      - "scripts/visual_grammar_cross_artifact.py"
+      - "scripts/visual_grammar_report_recompute.py"
+      - "tests/visual-grammar-cross-artifact/**"
+      - ".github/workflows/visual-grammar-cross-artifact.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cross-artifact:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install validator dependencies
+        run: python -m pip install --disable-pip-version-check jsonschema==4.25.0
+      - name: Verify renderer contract mirrors are byte-identical
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from urllib.request import urlopen
+
+          commit = "750f993bd00cf2f67fdb4ab18907e82ed0dc68df"
+          root = (
+              "https://raw.githubusercontent.com/saienjoy0/"
+              f"saienjoy0-nasdaq-cafe-remotion/{commit}"
+          )
+          files = (
+              "contracts/visual_grammar_timing_report.schema.json",
+              "contracts/visual_grammar_renderer_compatibility.json",
+          )
+          for relative in files:
+              expected = urlopen(f"{root}/{relative}", timeout=30).read()
+              actual = Path(relative).read_bytes()
+              if actual != expected:
+                  raise SystemExit(f"renderer mirror mismatch: {relative}")
+              print(f"PASS: byte-identical renderer mirror {relative}")
+          PY
+      - name: Run Visual Grammar semantic contract regression
+        run: python -m unittest tests/test_visual_grammar_contract.py -v
+      - name: Run Visual Grammar cross-artifact tests
+        run: python -m unittest discover -s tests/visual-grammar-cross-artifact -p "test_*.py" -v
