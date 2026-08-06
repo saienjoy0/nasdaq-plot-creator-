@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +14,7 @@ ALLOWED_EXPECTED_BASIS = {
     "official-consensus", "company-prior-guidance", "major-reporting",
     "analyst-view", "price-inference", "unconfirmed",
 }
+TRANSIENT_SCREEN_STATES = {"EntityFocus", "MainWithEntity", "PictureBook", "News"}
 
 class CompatibilityFinalizationError(ValueError):
     pass
@@ -34,6 +34,14 @@ def _canonical_scene_contract(render_spec: dict[str, Any]) -> None:
         scene["sceneRole"] = expected_role
         if scene.get("expectedBasisType") not in ALLOWED_EXPECTED_BASIS:
             scene["expectedBasisType"] = None
+        beats = scene.get("visualBeats", [])
+        for beat_index, beat in enumerate(beats):
+            next_beat = beats[beat_index + 1] if beat_index + 1 < len(beats) else None
+            if next_beat is None:
+                beat["returnScreenState"] = None
+                continue
+            if beat.get("returnScreenState") is not None or beat.get("screenState") in TRANSIENT_SCREEN_STATES:
+                beat["returnScreenState"] = next_beat.get("screenState")
 
 def _validator_adapter(contract_path, repo_root, final_schema_path, candidate_schema_path, *args):
     return financial_contract_v1.validate_contract(
