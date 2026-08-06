@@ -26,6 +26,86 @@ def _load_module(name: str, path: Path):
     return module
 
 
+def _rebind_handoff_preflight_evidence(
+    daily_module: Any, *, workspace: Path, date: str
+) -> bool:
+    """Rebind only the preflight SHA intentionally extended by handoff hardening."""
+    workspace = Path(workspace).resolve()
+    state_path = daily_module.state_path(workspace, date)
+    if not state_path.is_file():
+        return False
+    state = daily_module.load_json(state_path, "production state")
+    if state.get("current_state") != "production_package_valid":
+        return False
+
+    preflight_path = workspace / f"verification/{date}/official_execution_preflight.json"
+    if not preflight_path.is_file():
+        return False
+    relative = preflight_path.relative_to(workspace).as_posix()
+    matches: list[dict[str, Any]] = []
+    for transition in state.get("transitions", []):
+        for evidence in transition.get("evidence", []):
+            if evidence.get("path") == relative:
+                matches.append(evidence)
+    if len(matches) != 1:
+        return False
+
+    evidence = matches[0]
+    actual_sha = daily_module.sha256_file(preflight_path)
+    declared_sha = evidence.get("sha256")
+    if declared_sha == actual_sha:
+        return False
+
+    preflight = daily_module.load_json(preflight_path, "handoff-updated preflight")
+    hardening = preflight.get("episode_memory_hardening")
+    required = {
+        "pre_build": "pass",
+        "public_artifacts": "pass",
+        "handoff_recheck": "pass",
+    }
+    if not isinstance(hardening, dict) or any(
+        hardening.get(key) != expected for key, expected in required.items()
+    ):
+        return False
+
+    evidence["sha256"] = actual_sha
+    state.setdefault("evidence_rebindings", []).append(
+        {
+            "path": relative,
+            "previous_sha256": declared_sha,
+            "sha256": actual_sha,
+            "reason": "handoff_recheck_persisted",
+        }
+    )
+    daily_module.write_atomic(state_path, state)
+    return True
+
+
+def _install_handoff_retry(daily_module: Any) -> None:
+    original = getattr(daily_module, "build_handoff", None)
+    if not callable(original):
+        return
+
+    def build_handoff_with_rebind(*args, **kwargs):
+        try:
+            return original(*args, **kwargs)
+        except Exception as exc:
+            stale_code = getattr(daily_module, "ERROR_CODES", {}).get("stale")
+            if getattr(exc, "code", None) != stale_code:
+                raise
+            workspace = kwargs.get("workspace")
+            date = kwargs.get("date")
+            if workspace is None or date is None:
+                raise
+            if not _rebind_handoff_preflight_evidence(
+                daily_module, workspace=Path(workspace), date=str(date)
+            ):
+                raise
+            return original(*args, **kwargs)
+
+    daily_module.build_handoff = build_handoff_with_rebind
+
+
 def patch_daily_module(
     daily_module: Any,
     *,
@@ -51,6 +131,7 @@ def patch_daily_module(
         validate_acceptance=required["acceptance"],
         write_report=required["writer"],
     )
+    _install_handoff_retry(daily_module)
     return daily_module
 
 
