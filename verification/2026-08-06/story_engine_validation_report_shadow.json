@@ -1,0 +1,14 @@
+{
+  "checked_package_sha256": "66e935a57a1a71d1155952f2fec6ff642a4e967c9a88586bd9dcc09eb474f99c",
+  "contract_version": "1.0.0",
+  "episode_date": "2026-08-06",
+  "errors": [],
+  "status": "pass",
+  "warnings": [
+    {
+      "code": "W_LOGICAL_SHADOW_CRITIC",
+      "message": "Critic input was isolated at artifact level, but separate model-process execution is not proven",
+      "path": "source_binding.critic_isolation_mode"
+    }
+  ]
+}
