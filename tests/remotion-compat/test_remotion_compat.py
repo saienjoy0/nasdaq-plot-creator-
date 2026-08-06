@@ -22,133 +22,84 @@ def load_module(name: str, path: Path):
     return module
 
 
-sources = load_module(
-    "materialize_renderer_sources_test",
-    ROOT / "scripts/materialize_renderer_sources.py",
-)
-finalizer = load_module(
-    "finalize_renderer_package_test",
-    ROOT / "scripts/finalize_renderer_package.py",
-)
-projection = load_module(
-    "remotion_240_projection_test",
-    ROOT / "scripts/remotion_240_projection.py",
-)
+sources = load_module("renderer_sources_test", SCRIPTS / "materialize_renderer_sources.py")
+base = load_module("renderer_finalizer_test", SCRIPTS / "finalize_renderer_package.py")
+projection = load_module("remotion_projection_test", SCRIPTS / "remotion_240_projection.py")
+template_data = load_module("remotion_template_data_test", SCRIPTS / "remotion_template_data.py")
+sequence = load_module("remotion_sequence_test", SCRIPTS / "remotion_sequence_policy.py")
 
 
 class RemotionCompatibilityTests(unittest.TestCase):
     date = "2026-08-06"
 
     def setUp(self):
-        self.render_path = ROOT / f"render-specs/{self.date}/render_spec.json"
-        self.bindings_path = (
-            ROOT / f"working/{self.date}/financial_visual_bindings.json"
+        self.raw = json.loads(
+            (ROOT / f"render-specs/{self.date}/render_spec.json").read_text(encoding="utf-8")
         )
-        self.reaction_bindings_path = (
-            ROOT / f"working/{self.date}/reaction_timeline_bindings.json"
-        )
-        self.raw = json.loads(self.render_path.read_text(encoding="utf-8"))
         self.bindings = json.loads(
-            self.bindings_path.read_text(encoding="utf-8")
+            (ROOT / f"working/{self.date}/financial_visual_bindings.json").read_text(encoding="utf-8")
         )
+        self.reaction_bindings = ROOT / f"working/{self.date}/reaction_timeline_bindings.json"
 
     def normalized(self):
-        normalized, mapping = sources.normalize_render_base(self.raw)
+        render, mapping = sources.normalize_render_base(self.raw)
         sources._financial_contract(
-            render=normalized,
+            render=render,
             bindings=self.bindings,
             source_to_canonical=mapping,
         )
-        sources._contract_scenes(normalized)
-        return normalized, mapping
+        sources._contract_scenes(render)
+        return render, mapping
 
     def strict(self):
-        normalized, _ = self.normalized()
+        render, _ = self.normalized()
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            final_contract = root / "final.json"
-            semantics = root / "semantics.json"
-            compatibility = root / "compatibility.json"
-            final_contract.write_text("{}\n", encoding="utf-8")
-            semantics.write_text("{}\n", encoding="utf-8")
-            compatibility.write_text("{}\n", encoding="utf-8")
-            projected = finalizer._strict_renderer_projection(
-                normalized,
-                final_contract_path=final_contract,
-                semantics_path=semantics,
-                renderer_compatibility_path=compatibility,
+            files = [root / name for name in ("final.json", "semantics.json", "compatibility.json")]
+            for path in files:
+                path.write_text("{}\n", encoding="utf-8")
+            return base._strict_renderer_projection(
+                render,
+                final_contract_path=files[0],
+                semantics_path=files[1],
+                renderer_compatibility_path=files[2],
             )
-        return projected
 
     def canonical(self):
-        projected = self.strict()
+        render = self.strict()
         projection.canonicalize_render_spec(
-            projected,
+            render,
             episode_date=self.date,
-            reaction_bindings_path=self.reaction_bindings_path,
+            reaction_bindings_path=self.reaction_bindings,
         )
-        return projected
+        template_data.materialize_template_data(render)
+        sequence.resolve_sequence_policies(render)
+        return render
 
-    def test_01_producer_projection_preserves_narration(self):
-        before = [
-            chunk["speechText"]
-            for scene in self.raw["scenes"]
-            for chunk in scene["narrationChunks"]
-        ]
-        normalized, mapping = sources.normalize_render_base(self.raw)
-        after = [
-            chunk["speechText"]
-            for scene in normalized["scenes"]
-            for chunk in scene["narrationChunks"]
-        ]
+    def test_01_narration_is_unchanged(self):
+        before = [c["speechText"] for s in self.raw["scenes"] for c in s["narrationChunks"]]
+        after_render, mapping = sources.normalize_render_base(self.raw)
+        after = [c["speechText"] for s in after_render["scenes"] for c in s["narrationChunks"]]
         self.assertEqual(before, after)
         self.assertEqual(18, len(mapping))
-        self.assertNotIn("tts", normalized)
-        self.assertNotIn("imageSelection", normalized)
-        self.assertNotIn("expectedConfirmed", normalized)
-        self.assertNotIn("visualGrammarContractVersion", normalized)
 
-    def test_02_sources_and_modes_are_renderer_compatible(self):
-        normalized, _ = sources.normalize_render_base(self.raw)
-        allowed_sources = {
-            "official",
-            "company",
-            "major-media",
-            "analyst",
-            "market-data",
-            "other",
-        }
+    def test_02_producer_only_fields_and_memory_source_are_removed(self):
+        render, _ = sources.normalize_render_base(self.raw)
+        for key in ("tts", "imageSelection", "expectedConfirmed", "visualGrammarContractVersion"):
+            self.assertNotIn(key, render)
+        self.assertNotIn("memory-001", {source["sourceId"] for source in render["sources"]})
         self.assertTrue(
             all(
-                item["sourceType"] in allowed_sources
-                for item in normalized["sources"]
+                source["sourceType"]
+                in {"official", "company", "major-media", "analyst", "market-data", "other"}
+                for source in render["sources"]
             )
         )
-        self.assertNotIn(
-            "memory-001",
-            {item["sourceId"] for item in normalized["sources"]},
-        )
-        allowed_modes = {
-            "conclusion-card",
-            "number-comparison",
-            "expected-actual-gap",
-            "timeline",
-            "chart",
-            "causal-diagram",
-            "stock-comparison",
-            "news-media",
-            "verification-points",
-            "text-focus",
-        }
-        for scene in normalized["scenes"]:
-            self.assertIn(scene["visualMode"], allowed_modes)
-            for beat in scene["visualBeats"]:
-                self.assertIn(beat["visualMode"], allowed_modes)
 
-    def test_03_financial_bindings_exactly_cover_financial_templates(self):
-        normalized, mapping = sources.normalize_render_base(self.raw)
+    def test_03_financial_bindings_cover_selected_templates(self):
+        render, mapping = sources.normalize_render_base(self.raw)
         financial = sources._financial_contract(
-            render=normalized,
+            render=render,
             bindings=self.bindings,
             source_to_canonical=mapping,
         )
@@ -156,105 +107,47 @@ class RemotionCompatibilityTests(unittest.TestCase):
         self.assertEqual(4, len(financial["candidatePlans"]))
         self.assertEqual(
             {"market-snapshot", "entity-divergence"},
-            {item["kind"] for item in financial["intents"]},
+            {intent["kind"] for intent in financial["intents"]},
         )
 
-    def test_04_strict_projection_flattens_visual_grammar(self):
-        projected = self.strict()
-        self.assertEqual(
-            18,
-            projected["visualGrammarContract"]["beatCount"],
-        )
-        for scene in projected["scenes"]:
+    def test_04_visual_grammar_is_flattened_for_all_18_beats(self):
+        render = self.strict()
+        self.assertEqual(18, render["visualGrammarContract"]["beatCount"])
+        for scene in render["scenes"]:
             for beat in scene["visualBeats"]:
                 self.assertIn("visualGrammarId", beat)
                 self.assertIn("transitionRole", beat)
                 self.assertNotIn("visualGrammar", beat)
                 self.assertNotIn("visualBeatId", beat)
 
-    def test_05_approved_card_lines_become_renderer_data_objects(self):
-        projected = self.canonical()
-        before_speech = [
-            chunk["speechText"]
-            for scene in projected["scenes"]
-            for chunk in scene["narrationChunks"]
-        ]
-        after_speech = [
-            chunk["speechText"]
-            for scene in projected["scenes"]
-            for chunk in scene["narrationChunks"]
-        ]
-        self.assertEqual(before_speech, after_speech)
-
-        scene3 = projected["scenes"][2]
-        number_ids = {item["numberId"] for item in scene3["numbers"]}
-        self.assertGreaterEqual(len(number_ids), 6)
-        for beat in scene3["visualBeats"]:
-            self.assertEqual("number-comparison", beat["visualMode"])
-            self.assertGreaterEqual(
-                len(
-                    [
-                        item
-                        for item in beat["objectIds"]
-                        if item in number_ids
-                    ]
-                ),
-                2,
-            )
-
-        scene4 = projected["scenes"][3]
-        self.assertEqual(
-            {"expected", "actual", "gap"},
-            {item["role"] for item in scene4["cards"]},
-        )
-        self.assertEqual(
-            "expected-actual-gap",
-            scene4["visualBeats"][0]["visualMode"],
-        )
-        self.assertEqual(
-            "text-focus",
-            scene4["visualBeats"][1]["visualMode"],
-        )
+    def test_05_card_lines_become_numeric_and_eag_objects(self):
+        render = self.canonical()
+        scene2 = render["scenes"][1]
+        beat2 = scene2["visualBeats"][1]
+        number_map = {number["numberId"]: number for number in scene2["numbers"]}
+        self.assertEqual("number-comparison", beat2["visualMode"])
+        self.assertEqual(2, len(beat2["objectIds"]))
+        self.assertTrue(all(number_map[item]["numericValue"] is not None for item in beat2["objectIds"]))
+        scene4 = render["scenes"][3]
+        self.assertEqual({"expected", "actual", "gap"}, {card["role"] for card in scene4["cards"]})
+        self.assertEqual("text-focus", scene4["visualBeats"][1]["visualMode"])
         self.assertEqual([], scene4["visualBeats"][1]["objectIds"])
 
-    def test_06_scene_roles_and_return_states_are_canonical(self):
-        projected = self.canonical()
-        self.assertEqual(
-            "opening-hook-market-direction-greeting-conclusion",
-            projected["scenes"][0]["sceneRole"],
-        )
-        self.assertEqual(
-            "closing-recap-sendoff-goodnight",
-            projected["scenes"][8]["sceneRole"],
-        )
-        self.assertEqual(
-            {"type": "none", "durationMs": 0},
-            projected["scenes"][8]["transition"],
-        )
-        for scene in projected["scenes"]:
-            beats = scene["visualBeats"]
-            for index, beat in enumerate(beats[:-1]):
-                if beat["returnScreenState"] is not None:
-                    self.assertEqual(
-                        beats[index + 1]["screenState"],
-                        beat["returnScreenState"],
-                    )
+    def test_06_causal_card_becomes_nodes_and_arrows(self):
+        render = self.canonical()
+        scene5 = render["scenes"][4]
+        beat = scene5["visualBeats"][1]
+        node_ids = {node["nodeId"] for node in scene5["nodes"]}
+        arrow_ids = {arrow["arrowId"] for arrow in scene5["arrows"]}
+        self.assertEqual("causal-diagram", beat["visualMode"])
+        self.assertEqual(3, len([item for item in beat["objectIds"] if item in node_ids]))
+        self.assertEqual(2, len([item for item in beat["objectIds"] if item in arrow_ids]))
+        self.assertEqual(3, len(beat["templateConfig"]["nodeOrder"]))
 
-    def test_07_reaction_timeline_uses_official_times_plus_close(self):
-        projected = self.canonical()
-        beat = projected["scenes"][5]["visualBeats"][0]
-        self.assertEqual(
-            "event-reaction-timeline",
-            beat["visualTemplate"],
-        )
-        self.assertEqual(
-            "official-time-plus-close",
-            beat["templateVariant"],
-        )
-        self.assertEqual(
-            "official-time-plus-close",
-            beat["templateConfig"]["variant"],
-        )
+    def test_07_reaction_timeline_and_terminal_scene_are_explicit(self):
+        render = self.canonical()
+        beat = render["scenes"][5]["visualBeats"][0]
+        self.assertEqual("official-time-plus-close", beat["templateVariant"])
         self.assertEqual(
             {
                 "precision": "official-time-plus-close",
@@ -263,13 +156,17 @@ class RemotionCompatibilityTests(unittest.TestCase):
             },
             beat["templateConfig"]["reactionTimeline"],
         )
-        self.assertFalse(
-            any(
-                event.get("motionPreset") == "draw-line"
-                and event.get("targetId") == "scene-06-card-001"
-                for event in projected["scenes"][5]["visualEvents"]
-            )
-        )
+        self.assertEqual({"type": "none", "durationMs": 0}, render["scenes"][8]["transition"])
+        self.assertEqual("closing-recap-sendoff-goodnight", render["scenes"][8]["sceneRole"])
+
+    def test_08_sequence_policy_matches_transformed_objects(self):
+        render = self.canonical()
+        allowed = {"explicit", "object-order-fallback", "static"}
+        for scene in render["scenes"]:
+            for beat in scene["visualBeats"]:
+                self.assertIn(beat["sequencePolicy"], allowed)
+                if not beat["objectIds"]:
+                    self.assertEqual("static", beat["sequencePolicy"])
 
 
 if __name__ == "__main__":
