@@ -15,6 +15,7 @@ on:
       - "tests/final-episode-contract/**"
       - "tests/visual-grammar-contract-closure/**"
       - "reports/visual_grammar_contract_audit.json"
+      - "designs/FINAL_EPISODE_FINANCIAL_VISUAL_CONTRACT.md"
       - ".github/workflows/final-episode-contract.yml"
   push:
     branches: [main]
@@ -31,6 +32,7 @@ on:
       - "tests/final-episode-contract/**"
       - "tests/visual-grammar-contract-closure/**"
       - "reports/visual_grammar_contract_audit.json"
+      - "designs/FINAL_EPISODE_FINANCIAL_VISUAL_CONTRACT.md"
       - ".github/workflows/final-episode-contract.yml"
   workflow_dispatch:
 
