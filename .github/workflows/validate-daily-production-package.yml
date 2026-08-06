@@ -117,11 +117,15 @@ jobs:
           } 2>&1 | tee "verification/$EPISODE_DATE/build-production.log"
 
       - name: Build immutable preview handoff
+        shell: bash
         run: |
+          set -o pipefail
+          mkdir -p "verification/$EPISODE_DATE"
           python scripts/run_daily_production_hardened.py --workspace . build-handoff \
             --episode-date "$EPISODE_DATE" \
             --bundle-root production-bundles \
-            --plot-commit "${{ github.event.pull_request.head.sha || github.sha }}"
+            --plot-commit "${{ github.event.pull_request.head.sha || github.sha }}" \
+            2>&1 | tee "verification/$EPISODE_DATE/build-handoff.log"
 
       - name: Upload validation outputs
         if: always()
