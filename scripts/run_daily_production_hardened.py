@@ -11,10 +11,8 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 
-
 class DailyHardeningError(RuntimeError):
     pass
-
 
 def _load_module(name: str, path: Path):
     spec = importlib.util.spec_from_file_location(name, path)
@@ -25,11 +23,10 @@ def _load_module(name: str, path: Path):
     spec.loader.exec_module(module)
     return module
 
-
 def _rebind_handoff_preflight_evidence(
     daily_module: Any, *, workspace: Path, date: str
 ) -> bool:
-    """Rebind only the preflight SHA intentionally extended by handoff hardening."""
+    """Backward-compatible recovery for older handoff implementations."""
     workspace = Path(workspace).resolve()
     state_path = daily_module.state_path(workspace, date)
     if not state_path.is_file():
@@ -37,7 +34,6 @@ def _rebind_handoff_preflight_evidence(
     state = daily_module.load_json(state_path, "production state")
     if state.get("current_state") != "production_package_valid":
         return False
-
     preflight_path = workspace / f"verification/{date}/official_execution_preflight.json"
     if not preflight_path.is_file():
         return False
@@ -49,43 +45,34 @@ def _rebind_handoff_preflight_evidence(
                 matches.append(evidence)
     if len(matches) != 1:
         return False
-
     evidence = matches[0]
     actual_sha = daily_module.sha256_file(preflight_path)
     declared_sha = evidence.get("sha256")
     if declared_sha == actual_sha:
         return False
-
     preflight = daily_module.load_json(preflight_path, "handoff-updated preflight")
     hardening = preflight.get("episode_memory_hardening")
     required = {
-        "pre_build": "pass",
-        "public_artifacts": "pass",
-        "handoff_recheck": "pass",
+        "pre_build": "pass", "public_artifacts": "pass", "handoff_recheck": "pass",
     }
     if not isinstance(hardening, dict) or any(
         hardening.get(key) != expected for key, expected in required.items()
     ):
         return False
-
     evidence["sha256"] = actual_sha
-    state.setdefault("evidence_rebindings", []).append(
-        {
-            "path": relative,
-            "previous_sha256": declared_sha,
-            "sha256": actual_sha,
-            "reason": "handoff_recheck_persisted",
-        }
-    )
+    state.setdefault("evidence_rebindings", []).append({
+        "path": relative,
+        "previous_sha256": declared_sha,
+        "sha256": actual_sha,
+        "reason": "handoff_recheck_persisted",
+    })
     daily_module.write_atomic(state_path, state)
     return True
-
 
 def _install_handoff_retry(daily_module: Any) -> None:
     original = getattr(daily_module, "build_handoff", None)
     if not callable(original):
         return
-
     def build_handoff_with_rebind(*args, **kwargs):
         try:
             return original(*args, **kwargs)
@@ -102,9 +89,7 @@ def _install_handoff_retry(daily_module: Any) -> None:
             ):
                 raise
             return original(*args, **kwargs)
-
     daily_module.build_handoff = build_handoff_with_rebind
-
 
 def patch_daily_module(
     daily_module: Any,
@@ -134,7 +119,6 @@ def patch_daily_module(
     _install_handoff_retry(daily_module)
     return daily_module
 
-
 def load_hardened_daily_module():
     daily = _load_module("daily_production_base", ROOT / "scripts/run_daily_production.py")
     final = _load_module(
@@ -142,8 +126,8 @@ def load_hardened_daily_module():
         ROOT / "scripts/build_final_production_package_hardened.py",
     )
     handoff = _load_module(
-        "renderer_handoff_hardened",
-        ROOT / "scripts/build_renderer_handoff_hardened.py",
+        "renderer_handoff_240",
+        ROOT / "scripts/build_renderer_handoff_240.py",
     )
     acceptance = _load_module(
         "real_day_acceptance_hardened",
@@ -160,11 +144,9 @@ def load_hardened_daily_module():
         acceptance_writer=acceptance_writer,
     )
 
-
 def main(argv: list[str] | None = None) -> int:
     module = load_hardened_daily_module()
     return module.main(argv)
-
 
 if __name__ == "__main__":
     raise SystemExit(main())

@@ -1,0 +1,15 @@
+{
+  "contractVersion": "1.0.0",
+  "episodeDate": "2026-08-06",
+  "finalSceneId": "scene-09",
+  "sourceTextPaths": [
+    "$.scenes[3].supportingTexts[2]",
+    "$.scenes[0].supportingTexts[2]",
+    "$.scenes[6].visualBeats[1].viewerTexts[0]"
+  ],
+  "lines": [
+    "普通の合格点では足りなかった",
+    "NVIDIA +3.43% / AMD -7.04%",
+    "NASDAQ：大型テック安も重なる"
+  ]
+}

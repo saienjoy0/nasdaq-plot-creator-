@@ -1,0 +1,185 @@
+{
+  "contractVersion": "1.0.0",
+  "episodeDate": "2026-08-06",
+  "bindings": [
+    {
+      "bindingId": "market-snapshot-s06b02",
+      "intentId": "fvi-market-snapshot-s06b02",
+      "sceneId": "scene-06",
+      "sourceBeatId": "scene-06-beat-002",
+      "selectedVisualTemplateId": "market-pulse-grid",
+      "kind": "market-snapshot",
+      "dataPrecision": "market-close",
+      "chartPolicy": "no-series",
+      "sourceIds": ["source-001", "source-008"],
+      "metrics": [
+        {
+          "metricId": "metric.soxx.close-return",
+          "label": "SOXX",
+          "role": "market",
+          "valueText": "-2.12%",
+          "numericValue": -2.12,
+          "unit": "%",
+          "currency": null,
+          "period": "2026-08-05 close",
+          "entityId": "SOXX",
+          "sessionDate": "2026-08-05",
+          "sourceIds": ["source-001"],
+          "precision": 2,
+          "tone": "negative"
+        },
+        {
+          "metricId": "metric.alphabet.close-return",
+          "label": "Alphabet",
+          "role": "market",
+          "valueText": "-4.03%",
+          "numericValue": -4.03,
+          "unit": "%",
+          "currency": null,
+          "period": "2026-08-05 close",
+          "entityId": "Alphabet",
+          "sessionDate": "2026-08-05",
+          "sourceIds": ["source-001", "source-008"],
+          "precision": 2,
+          "tone": "negative"
+        },
+        {
+          "metricId": "metric.microsoft.close-return",
+          "label": "Microsoft",
+          "role": "market",
+          "valueText": "-1.09%",
+          "numericValue": -1.09,
+          "unit": "%",
+          "currency": null,
+          "period": "2026-08-05 close",
+          "entityId": "Microsoft",
+          "sessionDate": "2026-08-05",
+          "sourceIds": ["source-001", "source-008"],
+          "precision": 2,
+          "tone": "negative"
+        }
+      ],
+      "causalSteps": [],
+      "returnTargetSourceBeatId": "scene-07-beat-001",
+      "editorialNote": "Scene 6でAMD個別反応とNASDAQ全体の別要因を分離して示す。",
+      "preferred": {
+        "recipeId": "market-pulse-grid",
+        "visualTemplateId": "market-pulse-grid",
+        "templateVariant": "default",
+        "screenState": "Data",
+        "metricIds": [
+          "metric.soxx.close-return",
+          "metric.alphabet.close-return",
+          "metric.microsoft.close-return"
+        ],
+        "causalStepIds": [],
+        "displayOrder": [
+          "metric.soxx.close-return",
+          "metric.alphabet.close-return",
+          "metric.microsoft.close-return"
+        ],
+        "comparisonBasis": "2026-08-05米国通常取引終値",
+        "highlightObjectIds": []
+      },
+      "fallback": {
+        "recipeId": "opening-contradiction",
+        "visualTemplateId": "opening-contradiction",
+        "templateVariant": "default",
+        "screenState": "Data",
+        "metricIds": [
+          "metric.soxx.close-return",
+          "metric.alphabet.close-return",
+          "metric.microsoft.close-return"
+        ],
+        "causalStepIds": [],
+        "displayOrder": [
+          "metric.soxx.close-return",
+          "metric.alphabet.close-return",
+          "metric.microsoft.close-return"
+        ],
+        "comparisonBasis": "2026-08-05米国通常取引終値",
+        "highlightObjectIds": []
+      }
+    },
+    {
+      "bindingId": "entity-divergence-s07b02",
+      "intentId": "fvi-entity-divergence-s07b02",
+      "sceneId": "scene-07",
+      "sourceBeatId": "scene-07-beat-002",
+      "selectedVisualTemplateId": "dual-asset-split",
+      "kind": "entity-divergence",
+      "dataPrecision": "market-close",
+      "chartPolicy": "no-series",
+      "sourceIds": ["source-001", "source-008"],
+      "metrics": [
+        {
+          "metricId": "metric.nvidia.close-return",
+          "label": "NVIDIA",
+          "role": "left-entity",
+          "valueText": "+3.43%",
+          "numericValue": 3.43,
+          "unit": "%",
+          "currency": null,
+          "period": "2026-08-05 close",
+          "entityId": "NVIDIA",
+          "sessionDate": "2026-08-05",
+          "sourceIds": ["source-001"],
+          "precision": 2,
+          "tone": "positive"
+        },
+        {
+          "metricId": "metric.amd.close-return",
+          "label": "AMD",
+          "role": "right-entity",
+          "valueText": "-7.04%",
+          "numericValue": -7.04,
+          "unit": "%",
+          "currency": null,
+          "period": "2026-08-05 close",
+          "entityId": "AMD",
+          "sessionDate": "2026-08-05",
+          "sourceIds": ["source-001"],
+          "precision": 2,
+          "tone": "negative"
+        }
+      ],
+      "causalSteps": [],
+      "returnTargetSourceBeatId": "scene-08-beat-001",
+      "editorialNote": "同じAI半導体でも採用証拠の差でNVIDIAとAMDが逆方向へ動いた相対評価を表示する。",
+      "preferred": {
+        "recipeId": "dual-asset-split",
+        "visualTemplateId": "dual-asset-split",
+        "templateVariant": "center-zero",
+        "screenState": "Chart",
+        "metricIds": [
+          "metric.nvidia.close-return",
+          "metric.amd.close-return"
+        ],
+        "causalStepIds": [],
+        "displayOrder": [
+          "metric.nvidia.close-return",
+          "metric.amd.close-return"
+        ],
+        "comparisonBasis": "2026-08-05米国通常取引終値",
+        "highlightObjectIds": []
+      },
+      "fallback": {
+        "recipeId": "split-opposition",
+        "visualTemplateId": "split-comparison",
+        "templateVariant": "two-lane",
+        "screenState": "Chart",
+        "metricIds": [
+          "metric.nvidia.close-return",
+          "metric.amd.close-return"
+        ],
+        "causalStepIds": [],
+        "displayOrder": [
+          "metric.nvidia.close-return",
+          "metric.amd.close-return"
+        ],
+        "comparisonBasis": "2026-08-05米国通常取引終値",
+        "highlightObjectIds": []
+      }
+    }
+  ]
+}
