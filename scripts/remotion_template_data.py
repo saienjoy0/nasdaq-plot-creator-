@@ -87,6 +87,8 @@ def _single_approved_card_id(scene: dict[str, Any], beat: dict[str, Any]) -> str
 
 def _use_mixed_metric_template(beat: dict[str, Any]) -> None:
     beat["visualTemplate"] = "metric-comparison-board"
+    beat["contentType"] = "metric-comparison-board"
+    beat["visualGrammarId"] = "evidence"
     beat["templateVariant"] = "default"
     config = beat.get("templateConfig")
     if not isinstance(config, dict):
