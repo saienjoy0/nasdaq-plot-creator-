@@ -1,0 +1,7 @@
+{
+  "grammarVersion": "1.0.0",
+  "grammarId": "assembly",
+  "grammarPhase": "resolve",
+  "transitionRole": "return",
+  "returnTargetBeatId": "vb-01-01"
+}
