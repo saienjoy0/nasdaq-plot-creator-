@@ -9,10 +9,18 @@ on:
       - "skills/nasdaq-cafe-renderer-handoff/**"
       - "skills/nasdaq-cafe-real-day-acceptance/**"
       - "skills/nasdaq-cafe-daily-production-hardening/**"
+      - "contracts/final_episode_contract.schema.json"
+      - "contracts/financial_visual_candidate_plan.schema.json"
+      - "contracts/visual_grammar_semantics.json"
+      - "contracts/visual_grammar_semantics.schema.json"
+      - "scripts/final_episode_contract.py"
+      - "scripts/visual_grammar_contract.py"
       - "scripts/build_final_production_package_hardened.py"
       - "scripts/build_renderer_handoff_hardened.py"
       - "scripts/run_real_day_acceptance_hardened.py"
       - "scripts/run_daily_production_hardened.py"
+      - "tests/test_final_episode_contract.py"
+      - "tests/final-episode-contract/**"
       - "tests/episode-package-memory-hardening/**"
       - "tests/final-production-hardening/**"
       - "tests/renderer-handoff-hardening/**"
@@ -29,10 +37,18 @@ on:
       - "skills/nasdaq-cafe-renderer-handoff/**"
       - "skills/nasdaq-cafe-real-day-acceptance/**"
       - "skills/nasdaq-cafe-daily-production-hardening/**"
+      - "contracts/final_episode_contract.schema.json"
+      - "contracts/financial_visual_candidate_plan.schema.json"
+      - "contracts/visual_grammar_semantics.json"
+      - "contracts/visual_grammar_semantics.schema.json"
+      - "scripts/final_episode_contract.py"
+      - "scripts/visual_grammar_contract.py"
       - "scripts/build_final_production_package_hardened.py"
       - "scripts/build_renderer_handoff_hardened.py"
       - "scripts/run_real_day_acceptance_hardened.py"
       - "scripts/run_daily_production_hardened.py"
+      - "tests/test_final_episode_contract.py"
+      - "tests/final-episode-contract/**"
       - "tests/episode-package-memory-hardening/**"
       - "tests/final-production-hardening/**"
       - "tests/renderer-handoff-hardening/**"
@@ -74,6 +90,7 @@ jobs:
             scripts/run_daily_production.py \
             scripts/run_daily_production_hardened.py \
             scripts/final_episode_contract.py \
+            scripts/visual_grammar_contract.py \
             tests/final-episode-contract/generate_fixtures.py
       - name: Parse contract schemas
         run: |
@@ -87,6 +104,8 @@ jobs:
           python -m json.tool skills/nasdaq-cafe-daily-production/contracts/production_state.schema.json >/dev/null
           python -m json.tool contracts/final_episode_contract.schema.json >/dev/null
           python -m json.tool contracts/financial_visual_candidate_plan.schema.json >/dev/null
+          python -m json.tool contracts/visual_grammar_semantics.json >/dev/null
+          python -m json.tool contracts/visual_grammar_semantics.schema.json >/dev/null
       - name: Run episode-memory base tests
         run: python -m unittest discover -s tests/episode-package-memory -p 'test_*.py' -v
       - name: Run episode-memory hardening tests

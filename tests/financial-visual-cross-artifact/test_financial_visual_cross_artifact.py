@@ -100,6 +100,8 @@ class FinancialVisualCrossArtifactTests(unittest.TestCase):
             "financial_visual_diversity_report.schema.json",
             "financial_visual_consistency_report.schema.json",
             "financial_visual_compatibility.json",
+            "visual_grammar_semantics.json",
+            "visual_grammar_semantics.schema.json",
         ):
             (self.repo / "contracts").mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / "contracts" / name, self.repo / "contracts" / name)
@@ -107,6 +109,7 @@ class FinancialVisualCrossArtifactTests(unittest.TestCase):
         fixture_dir = self.repo / "tests" / "final-episode-contract" / "fixtures"
         fixture_dir.mkdir(parents=True)
         shutil.copy2(FIX / "episode_package_2026-07-31.md", fixture_dir)
+        shutil.copy2(FIX / "visual_grammar_sidecar.valid.json", fixture_dir)
         contract = json.loads((FIX / "final_episode_contract.valid.json").read_text(encoding="utf-8"))
         self.date = contract["episodeDate"]
         self.final_contract_path = self.repo / "production" / self.date / "final_episode_contract.json"
@@ -122,10 +125,10 @@ class FinancialVisualCrossArtifactTests(unittest.TestCase):
         value = compiler.compile_recipe_plan(
             self.final_contract_path,
             self.repo,
-            self.repo / "contracts/financial_recipe_registry.json",
-            self.repo / "contracts/financial_recipe_plan.schema.json",
-            self.repo / "contracts/final_episode_contract.schema.json",
-            self.repo / "contracts/financial_visual_candidate_plan.schema.json",
+            self.repo / "contracts" / "financial_recipe_registry.json",
+            self.repo / "contracts" / "financial_recipe_plan.schema.json",
+            self.repo / "contracts" / "final_episode_contract.schema.json",
+            self.repo / "contracts" / "financial_visual_candidate_plan.schema.json",
         )
         write_json(self.recipe_plan_path, value)
         return value
@@ -176,12 +179,12 @@ class FinancialVisualCrossArtifactTests(unittest.TestCase):
             repo_root=self.repo,
             production_root=self.production,
             renderer_schema_version="2.3.0",
-            final_schema_path=self.repo / "contracts/final_episode_contract.schema.json",
-            candidate_schema_path=self.repo / "contracts/financial_visual_candidate_plan.schema.json",
-            registry_path=self.repo / "contracts/financial_recipe_registry.json",
-            recipe_plan_schema_path=self.repo / "contracts/financial_recipe_plan.schema.json",
-            diversity_schema_path=self.repo / "contracts/financial_visual_diversity_report.schema.json",
-            consistency_schema_path=self.repo / "contracts/financial_visual_consistency_report.schema.json",
+            final_schema_path=self.repo / "contracts" / "final_episode_contract.schema.json",
+            candidate_schema_path=self.repo / "contracts" / "financial_visual_candidate_plan.schema.json",
+            registry_path=self.repo / "contracts" / "financial_recipe_registry.json",
+            recipe_plan_schema_path=self.repo / "contracts" / "financial_recipe_plan.schema.json",
+            diversity_schema_path=self.repo / "contracts" / "financial_visual_diversity_report.schema.json",
+            consistency_schema_path=self.repo / "contracts" / "financial_visual_consistency_report.schema.json",
             diversity_report_path=diversity,
         )
 
