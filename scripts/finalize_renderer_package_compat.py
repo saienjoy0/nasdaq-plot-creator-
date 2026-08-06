@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import copy
 from pathlib import Path
 from typing import Any
 
@@ -33,6 +34,14 @@ def _number_ids(scene: dict[str, Any]) -> set[str]:
         for item in scene.get("numbers", [])
         if isinstance(item, dict) and isinstance(item.get("numberId"), str)
     }
+
+def _next_event_id(used_event_ids: set[str]) -> str:
+    for number in range(1, 1000):
+        candidate = f"event-{number:03d}"
+        if candidate not in used_event_ids:
+            used_event_ids.add(candidate)
+            return candidate
+    raise CompatibilityFinalizationError("no Visual Event IDs remain")
 
 def _materialize_numbers_from_card_lines(scene: dict[str, Any], beat: dict[str, Any]) -> None:
     existing_numbers = _number_ids(scene)
@@ -68,9 +77,36 @@ def _materialize_numbers_from_card_lines(scene: dict[str, Any], beat: dict[str, 
         )
     beat["objectIds"] = generated
 
-def _materialize_expected_actual_gap(scene: dict[str, Any], beat: dict[str, Any]) -> None:
+def _rewrite_expected_gap_events(
+    scene: dict[str, Any],
+    *,
+    primary_old_card_id: str,
+    removed_card_ids: set[str],
+    generated_ids: list[str],
+    used_event_ids: set[str],
+) -> None:
+    rewritten: list[dict[str, Any]] = []
+    for event in scene.get("visualEvents", []):
+        target = event.get("targetId")
+        if target == primary_old_card_id:
+            for index, target_id in enumerate(generated_ids):
+                item = copy.deepcopy(event)
+                if index > 0:
+                    item["eventId"] = _next_event_id(used_event_ids)
+                item["targetId"] = target_id
+                rewritten.append(item)
+        elif target in removed_card_ids:
+            continue
+        else:
+            rewritten.append(event)
+    scene["visualEvents"] = rewritten
+
+def _materialize_expected_actual_gap(
+    scene: dict[str, Any], beat: dict[str, Any], used_event_ids: set[str]
+) -> None:
     cards = _card_by_id(scene)
-    referenced = [cards[item] for item in beat.get("objectIds", []) if item in cards]
+    referenced_ids = [item for item in beat.get("objectIds", []) if item in cards]
+    referenced = [cards[item] for item in referenced_ids]
     if not referenced or len(referenced[0].get("lines", [])) < 3:
         raise CompatibilityFinalizationError(
             f"{scene.get('sceneId')}/{beat.get('beatId')}: Expected/Actual/Gap source card is incomplete"
@@ -92,10 +128,19 @@ def _materialize_expected_actual_gap(scene: dict[str, Any], beat: dict[str, Any]
                 "tone": line.get("tone", "neutral"),
             }],
         })
+    old_card_ids = set(cards)
+    primary_old_card_id = referenced_ids[0]
     scene["cards"] = generated_cards
     beat["objectIds"] = generated_ids
+    _rewrite_expected_gap_events(
+        scene,
+        primary_old_card_id=primary_old_card_id,
+        removed_card_ids=old_card_ids,
+        generated_ids=generated_ids,
+        used_event_ids=used_event_ids,
+    )
 
-def _canonical_visual_data(scene: dict[str, Any]) -> None:
+def _canonical_visual_data(scene: dict[str, Any], used_event_ids: set[str]) -> None:
     beats = scene.get("visualBeats", [])
     for beat_index, beat in enumerate(beats):
         mode = beat.get("visualMode")
@@ -103,7 +148,7 @@ def _canonical_visual_data(scene: dict[str, Any]) -> None:
             _materialize_numbers_from_card_lines(scene, beat)
         elif mode == "expected-actual-gap":
             if beat_index == 0:
-                _materialize_expected_actual_gap(scene, beat)
+                _materialize_expected_actual_gap(scene, beat, used_event_ids)
             else:
                 beat["visualMode"] = "text-focus"
                 beat["objectIds"] = []
@@ -114,6 +159,12 @@ def _canonical_scene_contract(render_spec: dict[str, Any]) -> None:
     scenes = render_spec.get("scenes", [])
     if not isinstance(scenes, list) or len(scenes) != 9:
         raise CompatibilityFinalizationError("renderer projection requires exactly nine scenes")
+    used_event_ids = {
+        event["eventId"]
+        for scene in scenes
+        for event in scene.get("visualEvents", [])
+        if isinstance(event, dict) and isinstance(event.get("eventId"), str)
+    }
     for index, scene in enumerate(scenes):
         expected_role = (
             "opening-hook-market-direction-greeting-conclusion"
@@ -125,7 +176,7 @@ def _canonical_scene_contract(render_spec: dict[str, Any]) -> None:
         scene["sceneRole"] = expected_role
         if scene.get("expectedBasisType") not in ALLOWED_EXPECTED_BASIS:
             scene["expectedBasisType"] = None
-        _canonical_visual_data(scene)
+        _canonical_visual_data(scene, used_event_ids)
         beats = scene.get("visualBeats", [])
         for beat_index, beat in enumerate(beats):
             next_beat = beats[beat_index + 1] if beat_index + 1 < len(beats) else None
