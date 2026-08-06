@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Materialize hash-bound daily episode artifacts without changing editorial content."""
 from __future__ import annotations
-import argparse, base64, hashlib, json, subprocess, sys, zlib
+import argparse, base64, hashlib, json, re, subprocess, sys, zlib
 from pathlib import Path
 
 MEM_BEGIN='<!--BEGIN_EPISODE_MEMORY_ANNEX-->'
@@ -19,6 +19,16 @@ def dump(value) -> str:
 def run(cmd: list[str]) -> None:
     print('+', ' '.join(cmd), flush=True)
     subprocess.run(cmd, check=True)
+
+def normalize_scene_headings(text: str) -> str:
+    """Normalize template-only B1..B9 prefixes to the canonical Scene headings."""
+    for scene_number in range(1, 10):
+        text = re.sub(
+            rf'(?m)^##\s+B{scene_number}\.\s+Scene\s+{scene_number}(?=｜|\|)',
+            f'## Scene {scene_number}',
+            text,
+        )
+    return text
 
 def ensure_dossier_template(research: Path) -> Path:
     target=research/'causal_research_dossier.template.json'
@@ -123,7 +133,7 @@ def main() -> int:
       'renderer_contract':{'repository':'saienjoy0/saienjoy0-nasdaq-cafe-remotion','schema_version':render['schemaVersion']},
       'asset_catalog':asset_catalog,'render_spec':render
     }
-    public=public_package.read_text(encoding='utf-8').rstrip()
+    public=normalize_scene_headings(public_package.read_text(encoding='utf-8').rstrip())
     final=(public+'\n\n'+MEM_BEGIN+'\n```json\n'+dump(memory_annex)+'\n```\n'+MEM_END+'\n\n'+PROD_BEGIN+'\n```json\n'+dump(production_annex)+'\n```\n'+PROD_END+'\n')
     final_package.write_text(final,encoding='utf-8')
 
