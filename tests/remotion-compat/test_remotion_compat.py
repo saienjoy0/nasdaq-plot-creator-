@@ -40,6 +40,9 @@ class RemotionCompatibilityTests(unittest.TestCase):
             (ROOT / f"working/{self.date}/financial_visual_bindings.json").read_text(encoding="utf-8")
         )
         self.reaction_bindings = ROOT / f"working/{self.date}/reaction_timeline_bindings.json"
+        self.terminal_binding = json.loads(
+            (ROOT / f"working/{self.date}/terminal_assembly_bindings.json").read_text(encoding="utf-8")
+        )
 
     def normalized(self):
         render, mapping = sources.normalize_render_base(self.raw)
@@ -72,7 +75,10 @@ class RemotionCompatibilityTests(unittest.TestCase):
             episode_date=self.date,
             reaction_bindings_path=self.reaction_bindings,
         )
-        template_data.materialize_template_data(render)
+        template_data.materialize_template_data(
+            render,
+            terminal_binding=self.terminal_binding,
+        )
         sequence.resolve_sequence_policies(render)
         return render
 
@@ -172,6 +178,10 @@ class RemotionCompatibilityTests(unittest.TestCase):
         self.assertEqual("final-assembly", terminal["visualBeats"][0]["visualTemplate"])
         self.assertEqual("assembly", terminal["visualBeats"][0]["visualGrammarId"])
         self.assertEqual("closing", terminal["visualBeats"][0]["transitionRole"])
+        self.assertEqual(
+            self.terminal_binding["lines"],
+            [line["value"] for line in terminal["cards"][0]["lines"]],
+        )
 
     def test_08_sequence_policy_matches_transformed_objects(self):
         render = self.canonical()
