@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.nasdaq-cafe.local/visual_grammar_structural_report.schema.json",
+  "title": "NASDAQ Cafe Visual Grammar Structural Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "reportVersion", "visualGrammarContractVersion", "status", "episodeDate",
+    "beatCount", "scene1To8BeatCount", "semanticGrammarCount",
+    "frontHalfGrammarCount", "backHalfGrammarCount", "majorShiftCount",
+    "frontHalfMajorShiftCount", "backHalfMajorShiftCount",
+    "bridgeTextBeatCount", "violations"
+  ],
+  "properties": {
+    "reportVersion": {"const": "1.0.0"},
+    "visualGrammarContractVersion": {"const": "1.0.0"},
+    "status": {"enum": ["PASS", "FAIL"]},
+    "episodeDate": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+    "beatCount": {"type": "integer", "minimum": 9},
+    "scene1To8BeatCount": {"type": "integer", "minimum": 8},
+    "semanticGrammarCount": {"type": "integer", "minimum": 0},
+    "frontHalfGrammarCount": {"type": "integer", "minimum": 0},
+    "backHalfGrammarCount": {"type": "integer", "minimum": 0},
+    "majorShiftCount": {"type": "integer", "minimum": 0},
+    "frontHalfMajorShiftCount": {"type": "integer", "minimum": 0},
+    "backHalfMajorShiftCount": {"type": "integer", "minimum": 0},
+    "bridgeTextBeatCount": {"type": "integer", "minimum": 0},
+    "violations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "path", "message"],
+        "properties": {
+          "code": {"type": "string", "pattern": "^VG_[A-Z0-9_]+$"},
+          "path": {"type": "string", "minLength": 1},
+          "message": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }
+}
