@@ -199,6 +199,34 @@ def _materialize_causal_template(scene: dict[str, Any], beat: dict[str, Any]) ->
     config["outcomeNodeId"] = node_ids[-1]
 
 
+def _normalize_terminal_scene(render_spec: dict[str, Any]) -> None:
+    scenes = render_spec.get("scenes", [])
+    if len(scenes) != 9:
+        raise TemplateDataError("terminal normalization requires exactly nine scenes")
+    scene = scenes[-1]
+    beats = scene.get("visualBeats", [])
+    if len(beats) != 1:
+        raise TemplateDataError("Scene 9 requires exactly one final assembly Beat")
+    beat = beats[0]
+    card_ids = {
+        item.get("cardId")
+        for item in scene.get("cards", [])
+        if isinstance(item, dict)
+    }
+    selected_cards = [item for item in beat.get("objectIds", []) if item in card_ids]
+    if len(selected_cards) != 1:
+        raise TemplateDataError("Scene 9 final assembly requires one approved recap card")
+    beat["visualTemplate"] = "final-assembly"
+    beat["contentType"] = "final-assembly"
+    beat["visualGrammarId"] = "assembly"
+    beat["transitionRole"] = "closing"
+    beat["templateVariant"] = "default"
+    config = beat.get("templateConfig")
+    if not isinstance(config, dict):
+        raise TemplateDataError("Scene 9 final assembly templateConfig missing")
+    config["variant"] = "default"
+
+
 def _normalize_impossible_major_shifts(render_spec: dict[str, Any]) -> None:
     previous: dict[str, Any] | None = None
     for scene in render_spec.get("scenes", []):
@@ -228,4 +256,5 @@ def materialize_template_data(render_spec: dict[str, Any]) -> None:
         beats = scene.get("visualBeats", [])
         if beats:
             scene["visualMode"] = beats[0]["visualMode"]
+    _normalize_terminal_scene(render_spec)
     _normalize_impossible_major_shifts(render_spec)
