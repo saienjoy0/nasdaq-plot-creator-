@@ -1,0 +1,92 @@
+{
+  "comparison_questions": [
+    "過去のAI投資回収懸念は当日のAMD評価にどこまで再確認できるか",
+    "一社材料とNASDAQ全体の下落要因を分離できるか"
+  ],
+  "contract_version": "1.0.0",
+  "entities": [
+    {
+      "canonical": "Advanced Micro Devices",
+      "entity_id": null,
+      "raw": "AMD",
+      "resolution": "unresolved"
+    },
+    {
+      "canonical": "NVIDIA",
+      "entity_id": null,
+      "raw": "NVIDIA",
+      "resolution": "unresolved"
+    },
+    {
+      "canonical": "SpaceX",
+      "entity_id": null,
+      "raw": "SpaceX",
+      "resolution": "unresolved"
+    },
+    {
+      "canonical": "Alphabet",
+      "entity_id": null,
+      "raw": "Alphabet",
+      "resolution": "unresolved"
+    },
+    {
+      "canonical": "Microsoft",
+      "entity_id": null,
+      "raw": "Microsoft",
+      "resolution": "unresolved"
+    }
+  ],
+  "episode_date": "2026-08-06",
+  "indicators": [
+    "Nasdaq Composite",
+    "SOXX",
+    "AMD",
+    "NVDA",
+    "GOOGL",
+    "MSFT"
+  ],
+  "lead_candidates": [
+    "AMDは通常の売上予想を上回ったのに7.04%下落",
+    "NVIDIAはSpaceXの採用材料で3.43%上昇"
+  ],
+  "limits": {
+    "max_characters": 18000,
+    "max_claims": 8,
+    "max_episodes": 2,
+    "max_lessons": 2,
+    "max_threads": 5
+  },
+  "policies": [],
+  "relations": [
+    {
+      "relation": "市場期待との差",
+      "source": "AMD決算",
+      "target": "AMD株価"
+    },
+    {
+      "relation": "競争力評価",
+      "source": "SpaceXのGPU選択",
+      "target": "NVIDIAとAMD"
+    },
+    {
+      "relation": "指数寄与",
+      "source": "大型テック下落",
+      "target": "NASDAQ"
+    }
+  ],
+  "technologies": [
+    "AI accelerator",
+    "GPU",
+    "data center"
+  ],
+  "time_window": {
+    "from": "2026-07-01",
+    "to": "2026-08-06"
+  },
+  "topics": [
+    "AI投資回収",
+    "AI半導体競争",
+    "好決算後の株価下落",
+    "NASDAQへの波及"
+  ]
+}

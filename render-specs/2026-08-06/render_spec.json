@@ -1,0 +1,2578 @@
+{
+  "schemaVersion": "2.4.0",
+  "visualGrammarContractVersion": "1.0.0",
+  "expectedConfirmed": true,
+  "episode": {
+    "id": "2026-08-06",
+    "targetDate": "2026-08-06",
+    "marketSession": "2026-08-05 US market",
+    "informationCutoff": "2026-08-06T04:31:00Z",
+    "episodeType": "single-news",
+    "durationMode": "shortened",
+    "shortenedReason": "主役因果、反対材料、検証条件を9シーンで完結できる一方、金利・VIX・分足が欠損しており、480秒へ合わせる背景ニュース追加は水増しになるため。",
+    "fps": 30,
+    "width": 1920,
+    "height": 1080
+  },
+  "editorial": {
+    "leadNews": "AMDの好決算後下落",
+    "leadTheme": null,
+    "targetIndices": [
+      "Nasdaq Composite",
+      "SOXX"
+    ],
+    "storySpine": "AMDは売上と見通しで通常予想を超えたのに、高まったAI期待とSpaceXのNVIDIA専属採用によって競争上の追加証拠が不足したと評価され下落し、その半導体安にAlphabetとMicrosoftの下落も重なってNASDAQは0.83%下落した。",
+    "centralHypothesis": "昨夜のAI半導体市場は需要の有無ではなく、次の巨大需要を誰が確実に取るかを評価し、通常予想を超えたAMDよりSpaceXの採用証拠を得たNVIDIAを高く評価した。",
+    "confidence": "medium",
+    "directMaterial": [
+      "Q2売上115.4億ドル",
+      "データセンター売上67.2億ドル",
+      "Q3売上見通し130億ドル、AMD -7.04%"
+    ],
+    "nasdaqDrivers": [
+      "AMDと半導体の下落",
+      "Alphabet -4.03%",
+      "Microsoft -1.09%"
+    ],
+    "amplifiers": [
+      "SpaceXのNVIDIA専属採用",
+      "AMDへの高まったAI期待",
+      "供給制約と粗利率横ばい"
+    ],
+    "offsettingFactors": [
+      "NVIDIA +3.43%",
+      "Dow +0.5%の混合相場",
+      "AMDの通常予想超過"
+    ],
+    "expected": "Q3売上125.2億ドル前後というアナリスト予想と、主要報道が示す大型顧客・利益率の追加証拠への高まった期待",
+    "actual": "Q3売上見通し130億ドル、Q2売上115.4億ドル、データセンター67.2億ドル。一方、粗利率見通し56%横ばい、SpaceXの専属採用はNVIDIA",
+    "gap": "数値コンセンサスには+4.8億ドル上振れたが、高まったAI競争期待には届かず、株価は下落",
+    "expectedBasisType": "major-reporting",
+    "expectedBasisDetails": "Reutersのアナリスト予想125.2億ドルと、高まったAI payoff要求の報道解釈",
+    "expectedSourceIds": [
+      "source-004",
+      "source-005"
+    ],
+    "timelineBasis": "8月4日16:30 ET SpaceX、17:00 ET AMD、引け後反応と8月5日通常取引終値。分足なし。",
+    "counterEvidence": [
+      "NVIDIAは上昇しており、AI半導体全面安ではない。",
+      "Dowは上昇しており、米国株全面安ではない。",
+      "AMDは売上・ガイダンスとも通常予想を上回った。",
+      "分足データがなく、発言ごとの瞬間的寄与は不明。",
+      "金利・VIX・QQQ・SMHが欠損し、マクロ主因は確定しない。"
+    ],
+    "verificationPoints": [
+      "AMDがSpaceX級の大型顧客を獲得するか",
+      "粗利率とN3・CoWoS供給制約が改善するか",
+      "SOXXの上昇がNVIDIA以外へ広がるか"
+    ]
+  },
+  "publishing": {
+    "recommendedTitle": "AMD好決算でも7%安　NVIDIAだけ上がったAI半導体の採点表",
+    "titleCandidates": [
+      "AMD好決算でも7%安　NVIDIAだけ上がったAI半導体の採点表",
+      "予想超えでも売られたAMD　SpaceXが変えた半導体の評価",
+      "NASDAQ -0.83%　AI需要より重かった『次の大型受注』"
+    ],
+    "recommendedThumbnailText": "好決算でも7%安",
+    "thumbnailTextCandidates": [
+      "好決算でも7%安",
+      "NVIDIAだけ上昇",
+      "採点基準が変わった"
+    ],
+    "description": "昨夜のNasdaq Compositeは0.83%下落し、SOXXは2.12%安でした。AMDは売上と次四半期見通しで通常予想を上回ったのに7.04%下落し、NVIDIAはSpaceXの専属採用方針を材料に3.43%上昇しました。動画では、AMDの決算数値、Expected / Actual / Gap、SpaceXから半導体競争への経路、Alphabet・Microsoft安を含むNASDAQ全体の別要因を分けて確認します。今後はAMDの大型顧客、粗利率と供給制約、SOXXへの広がりを検証します。本動画はニュース解説であり、個別銘柄の売買を勧めるものではありません。"
+  },
+  "sources": [
+    {
+      "sourceId": "source-001",
+      "title": "NASDAQ Cafe Source Pack 2026-08-06",
+      "publisher": "朝のNASDAQカフェ source collector",
+      "sourceType": "market-data",
+      "reference": "source_pack.json",
+      "publishedAt": "2026-08-06T04:27:46Z",
+      "accessedAt": "2026-08-06T04:31:00Z",
+      "usedFor": [
+        "Nasdaq Composite、SOXX、ウォッチ銘柄の終値と騰落率",
+        "取得制約と欠損項目"
+      ],
+      "narrationAttribution": "当日の市場データ"
+    },
+    {
+      "sourceId": "source-002",
+      "title": "AMD Reports First Quarter 2026 Financial Results",
+      "publisher": "AMD Investor Relations",
+      "sourceType": "company-ir",
+      "reference": "https://ir.amd.com/news-events/press-releases/detail/1284/amd-reports-first-quarter-2026-financial-results",
+      "publishedAt": "2026-05-05T20:15:00Z",
+      "accessedAt": "2026-08-06T04:31:00Z",
+      "usedFor": [
+        "Q2会社ガイダンス110〜115億ドル、中心112億ドル",
+        "Q2非GAAP粗利率見通し56%"
+      ],
+      "narrationAttribution": "AMDの前四半期会社見通し"
+    },
+    {
+      "sourceId": "source-003",
+      "title": "AMD to Report Fiscal Second Quarter 2026 Financial Results",
+      "publisher": "AMD Investor Relations",
+      "sourceType": "company-ir",
+      "reference": "https://ir.amd.com/news-events/press-releases/detail/1289/amd-to-report-fiscal-second-quarter-2026-financial-results",
+      "publishedAt": "2026-07-08T20:15:00Z",
+      "accessedAt": "2026-08-06T04:31:00Z",
+      "usedFor": [
+        "AMD決算発表が8月4日引け後、説明会が17時ET"
+      ],
+      "narrationAttribution": "AMD Investor Relations"
+    },
+    {
+      "sourceId": "source-004",
+      "title": "AMD's AI-powered revenue forecast fails to wow investors",
+      "publisher": "Reuters",
+      "sourceType": "major-media",
+      "reference": "https://www.reuters.com/business/amd-forecasts-upbeat-revenue-ai-data-center-demand-beats-quarterly-estimates-2026-08-04/",
+      "publishedAt": "2026-08-04T20:00:00Z",
+      "accessedAt": "2026-08-06T04:31:00Z",
+      "usedFor": [
+        "Q2売上115.4億ドル、データセンター67.2億ドル",
+        "Q3売上見通し約130億ドルと市場予想125.2億ドル",
+        "引け後約9%下落"
+      ],
+      "narrationAttribution": "Reuters"
+    },
+    {
+      "sourceId": "source-005",
+      "title": "AMD falls as investors demand bigger AI payoff",
+      "publisher": "Reuters",
+      "sourceType": "major-media",
+      "reference": "https://www.reuters.com/business/amd-falls-investors-seek-bigger-ai-payoff-2026-08-05/",
+      "publishedAt": "2026-08-05T16:00:00Z",
+      "accessedAt": "2026-08-06T04:31:00Z",
+      "usedFor": [
+        "通常予想を超えても高まったAI期待に届かなかったとの市場解釈",
+        "供給制約とSpaceXのNVIDIA専属採用がAMDの相対評価を弱めたこと"
+      ],
+      "narrationAttribution": "Reuters"
+    },
+    {
+      "sourceId": "source-006",
+      "title": "SpaceX to Post Second Quarter 2026 Results and Host Webcast on August 4, 2026",
+      "publisher": "SpaceX Investor Relations",
+      "sourceType": "company-ir",
+      "reference": "https://ir.spacex.com/updates/releases-details/2026/SpaceX-to-Post-Second-Quarter-2026-Results-and-Host-Webcast-on-August-4-2026-2026-g8layJlbFm/default.aspx",
+      "publishedAt": "2026-07-20T00:00:00Z",
+      "accessedAt": "2026-08-06T04:31:00Z",
+      "usedFor": [
+        "SpaceX説明会が8月4日16時30分ET"
+      ],
+      "narrationAttribution": "SpaceX Investor Relations"
+    },
+    {
+      "sourceId": "source-007",
+      "title": "Nvidia's stock is basking in the glow of a high-profile endorsement",
+      "publisher": "MarketWatch",
+      "sourceType": "major-media",
+      "reference": "https://www.marketwatch.com/story/nvidias-stock-is-basking-in-the-glow-of-a-high-profile-endorsement-b7c48e7b",
+      "publishedAt": "2026-08-05T21:22:00Z",
+      "accessedAt": "2026-08-06T04:31:00Z",
+      "usedFor": [
+        "SpaceXがNVIDIA GPUだけを使うとの発言",
+        "Vera Rubin評価、計算能力2GWから2027年約10GW計画",
+        "NVIDIA上昇の報道解釈"
+      ],
+      "narrationAttribution": "MarketWatch"
+    },
+    {
+      "sourceId": "source-008",
+      "title": "US stocks hold near records on hopes of an agreement with Iran",
+      "publisher": "Associated Press",
+      "sourceType": "major-media",
+      "reference": "https://apnews.com/article/53179dc1c0148c5afeb47379b8f5b5c5",
+      "publishedAt": "2026-08-05T21:00:00Z",
+      "accessedAt": "2026-08-06T04:31:00Z",
+      "usedFor": [
+        "NASDAQ下落にはAlphabetとMicrosoft安も重なったこと",
+        "Dow上昇を含む混合相場"
+      ],
+      "narrationAttribution": "AP"
+    },
+    {
+      "sourceId": "memory-001",
+      "title": "Claim ledger: AI設備投資の評価軸",
+      "publisher": "nasdaq-plot-creator editorial memory",
+      "sourceType": "historical-memory",
+      "reference": "editorial-memory/claim_ledger.json#ai-capex-evaluation-axis",
+      "publishedAt": "2026-07-31T00:00:00Z",
+      "accessedAt": "2026-08-06T04:31:00Z",
+      "usedFor": [
+        "過去回との差分確認のみ。現在証拠として不使用"
+      ],
+      "narrationAttribution": null
+    }
+  ],
+  "review": {
+    "verdict": "approved",
+    "scores": {
+      "openingHook": 5,
+      "storyProgression": 5,
+      "discovery": 5,
+      "clarity": 5,
+      "foxCharacter": 4,
+      "reasonToFinish": 5
+    },
+    "totalScore": 29,
+    "largestDropoffRisk": "Scene 4で通常コンセンサスと高まった期待の二層を混同する可能性",
+    "requiredChanges": [
+      "Scene 4で数値のGapと期待のGapを明示的に分離する",
+      "Scene 6でAMD一社とNASDAQ全体の下落要因を分離する"
+    ],
+    "changesApplied": [
+      "『数字のGapはプラス、期待のGapはマイナス』へ整理",
+      "AlphabetとMicrosoft安を独立したNASDAQ要因として残した",
+      "分足欠損をScene 6で明示した"
+    ],
+    "titleThumbnailConsistency": "consistent",
+    "approvedForCodex": true
+  },
+  "pronunciations": [
+    {
+      "surface": "AMD",
+      "reading": "エーエムディー"
+    },
+    {
+      "surface": "NVIDIA",
+      "reading": "エヌビディア"
+    },
+    {
+      "surface": "SOXX",
+      "reading": "ソックス"
+    },
+    {
+      "surface": "Nasdaq Composite",
+      "reading": "ナスダック・コンポジット"
+    },
+    {
+      "surface": "Vera Rubin",
+      "reading": "ヴェラ・ルービン"
+    },
+    {
+      "surface": "CoWoS",
+      "reading": "コウォス"
+    }
+  ],
+  "corrections": [
+    {
+      "correctionId": "correction-001",
+      "original": "source_pack.market_data.SOX",
+      "corrected": "SOXX ETF",
+      "reason": "source_symbolがSOXX.USであり、PHLX Semiconductor Indexではないため。"
+    }
+  ],
+  "voiceProfileId": "gemini-charon",
+  "scenes": [
+    {
+      "sceneId": "scene-01",
+      "sceneNumber": 1,
+      "sceneRole": "opening-hook-market-direction-greeting-conclusion",
+      "formalName": "寝ている間に何が起きた？",
+      "purpose": "方向、矛盾、中心仮説を30秒以内に提示する",
+      "causalScope": "multiple",
+      "performanceIntent": "驚きを短く置き、結論へ進む",
+      "evidenceSourceIds": [
+        "source-001",
+        "source-005",
+        "source-007"
+      ],
+      "uncertainty": "終値中心で、分足の反応時刻は確認できない",
+      "timelineBasis": "Longbridgeの米国通常取引終値",
+      "expectedBasisType": "major-reporting",
+      "visualMode": "conclusion-card",
+      "initialExpression": "軽い驚き",
+      "headline": "NASDAQ -0.83%",
+      "supportingTexts": [
+        "SOXX -2.12%",
+        "NVIDIA +3.43% / AMD -7.04%"
+      ],
+      "sourceLabel": "当日の市場データ",
+      "narrationChunks": [
+        {
+          "chunkId": "scene-01-chunk-001",
+          "speechText": "おはようございます。僕が時差で少し早く見ておいたので、一緒に整理しましょう。昨夜のNasdaq Compositeは〇・八三パーセント下落し、半導体ETFのSOXXは二・一二パーセント安でした。ところがNVIDIAは三・四三パーセント上昇し、AMDは七・〇四パーセント下落。同じAI半導体でも、値動きは真逆です。",
+          "captionText": "おはようございます。僕が時差で少し早く見ておいたので、一緒に整理しましょう。昨夜のNasdaq Compositeは〇・八三パーセント下落し、半導体ETFのSOXXは二・一二パーセント安でした。ところがNVIDIAは三・四三パーセント上昇し、AMDは七・〇四パーセント下落。同じAI半導体でも、値動きは真逆です。",
+          "expression": "軽い驚き",
+          "pauseAfterMs": 120
+        },
+        {
+          "chunkId": "scene-01-chunk-002",
+          "speechText": "結論から言うと、昨夜はAI需要があるかではなく、その次の巨大需要を誰が確実に取れるかが採点されました。AMDの数字は予想を超えましたが、NVIDIAにはSpaceXという新しい採用証拠が加わりました。",
+          "captionText": "結論から言うと、昨夜はAI需要があるかではなく、その次の巨大需要を誰が確実に取れるかが採点されました。AMDの数字は予想を超えましたが、NVIDIAにはSpaceXという新しい採用証拠が加わりました。",
+          "expression": "分析",
+          "pauseAfterMs": 200
+        }
+      ],
+      "visualBeats": [
+        {
+          "beatId": "scene-01-beat-001",
+          "visualBeatId": "scene-01-beat-001",
+          "startChunkId": "scene-01-chunk-001",
+          "endChunkId": "scene-01-chunk-001",
+          "narrationStartCue": "おはようございます。僕が時差で少し早く見ておいたので、一緒に整理しましょう。昨夜のNasdaq ",
+          "narrationEndCue": "三・四三パーセント上昇し、AMDは七・〇四パーセント下落。同じAI半導体でも、値動きは真逆です。",
+          "primaryFunction": "Anchor",
+          "screenState": "Data",
+          "visualMode": "conclusion-card",
+          "visualTemplate": "opening-contradiction",
+          "templateConfig": {
+            "variant": "default",
+            "comparisonBasis": null,
+            "dataBasis": "Longbridgeの米国通常取引終値",
+            "nodeOrder": [],
+            "laneLabels": [],
+            "outcomeNodeId": null
+          },
+          "sequencePolicy": "explicit",
+          "finalHoldMs": 500,
+          "contentType": "opening-contradiction",
+          "screenQuestion": "昨夜の矛盾は何か",
+          "primaryElement": "NASDAQ下落と半導体二極化",
+          "viewerTexts": [
+            "NASDAQ -0.83%",
+            "SOXX -2.12%",
+            "NVIDIA +3.43% / AMD -7.04%"
+          ],
+          "changeCue": "NASDAQ -0.83%",
+          "objectIds": [
+            "scene-01-card-001"
+          ],
+          "assetPlacementIds": [],
+          "assetState": "not-required",
+          "returnScreenState": null,
+          "evidenceSourceIds": [
+            "source-001"
+          ],
+          "expressionChange": null,
+          "fallback": null,
+          "entity": null,
+          "pictureBook": null,
+          "visualGrammar": {
+            "contractVersion": "1.0.0",
+            "grammarId": "contradiction",
+            "transitionRole": "major-shift",
+            "returnTargetBeatId": null
+          }
+        },
+        {
+          "beatId": "scene-01-beat-002",
+          "visualBeatId": "scene-01-beat-002",
+          "startChunkId": "scene-01-chunk-002",
+          "endChunkId": "scene-01-chunk-002",
+          "narrationStartCue": "結論から言うと、昨夜はAI需要があるかではなく、その次の巨大需要を誰が確実に取れるかが採点されま",
+          "narrationEndCue": "MDの数字は予想を超えましたが、NVIDIAにはSpaceXという新しい採用証拠が加わりました。",
+          "primaryFunction": "Evidence",
+          "screenState": "Data",
+          "visualMode": "conclusion-card",
+          "visualTemplate": "hero-number",
+          "templateConfig": {
+            "variant": "default",
+            "comparisonBasis": null,
+            "dataBasis": "Longbridgeの米国通常取引終値",
+            "nodeOrder": [],
+            "laneLabels": [],
+            "outcomeNodeId": null
+          },
+          "sequencePolicy": "explicit",
+          "finalHoldMs": 500,
+          "contentType": "hero-number",
+          "screenQuestion": "市場が見た論点は何か",
+          "primaryElement": "需要の有無から受注証拠へ",
+          "viewerTexts": [
+            "AI需要の有無ではない",
+            "次の巨大需要を誰が取るか"
+          ],
+          "changeCue": "AI需要の有無ではない",
+          "objectIds": [
+            "scene-01-card-002"
+          ],
+          "assetPlacementIds": [],
+          "assetState": "not-required",
+          "returnScreenState": null,
+          "evidenceSourceIds": [
+            "source-001",
+            "source-005",
+            "source-007"
+          ],
+          "expressionChange": null,
+          "fallback": null,
+          "entity": null,
+          "pictureBook": null,
+          "visualGrammar": {
+            "contractVersion": "1.0.0",
+            "grammarId": "evidence",
+            "transitionRole": "continuation",
+            "returnTargetBeatId": null
+          }
+        }
+      ],
+      "cards": [
+        {
+          "cardId": "scene-01-card-001",
+          "role": null,
+          "title": "NASDAQ下落と半導体二極化",
+          "lines": [
+            {
+              "label": "1",
+              "value": "NASDAQ -0.83%",
+              "tone": "neutral"
+            },
+            {
+              "label": "2",
+              "value": "SOXX -2.12%",
+              "tone": "neutral"
+            },
+            {
+              "label": "3",
+              "value": "NVIDIA +3.43% / AMD -7.04%",
+              "tone": "neutral"
+            }
+          ]
+        },
+        {
+          "cardId": "scene-01-card-002",
+          "role": null,
+          "title": "需要の有無から受注証拠へ",
+          "lines": [
+            {
+              "label": "1",
+              "value": "AI需要の有無ではない",
+              "tone": "neutral"
+            },
+            {
+              "label": "2",
+              "value": "次の巨大需要を誰が取るか",
+              "tone": "neutral"
+            }
+          ]
+        }
+      ],
+      "numbers": [],
+      "nodes": [],
+      "arrows": [],
+      "visualEvents": [
+        {
+          "eventId": "event-001",
+          "atChunkId": "scene-01-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-01-card-001",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        },
+        {
+          "eventId": "event-002",
+          "atChunkId": "scene-01-chunk-002",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-01-card-002",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        }
+      ],
+      "assetPlacements": [
+        {
+          "placementId": "scene-01-placement-background",
+          "assetId": "mainBackground",
+          "role": "background",
+          "region": "full-canvas",
+          "fit": "cover",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-01-placement-foxAnalysis",
+          "assetId": "foxAnalysis",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-01-placement-foxSlightSurprise",
+          "assetId": "foxSlightSurprise",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        }
+      ],
+      "transition": {
+        "type": "fade",
+        "durationMs": 300
+      }
+    },
+    {
+      "sceneId": "scene-02",
+      "sceneNumber": 2,
+      "sceneRole": "editorial-body",
+      "formalName": "今朝の矛盾",
+      "purpose": "AMDの好決算と株価下落を分けて示す",
+      "causalScope": "lead-stock",
+      "performanceIntent": "企業カードで対象を固定し、悪決算という誤読を防ぐ",
+      "evidenceSourceIds": [
+        "source-001",
+        "source-004"
+      ],
+      "uncertainty": "株価下落を一つの決算項目だけへ帰属しない",
+      "timelineBasis": "8月4日引け後決算、8月5日通常取引終値",
+      "expectedBasisType": "major-reporting",
+      "visualMode": "text-focus",
+      "initialExpression": "分析",
+      "headline": "AMD -7.04%",
+      "supportingTexts": [
+        "売上は過去最高",
+        "データセンターは2倍超"
+      ],
+      "sourceLabel": "AMD IR / Reuters / 当日の市場データ",
+      "narrationChunks": [
+        {
+          "chunkId": "scene-02-chunk-001",
+          "speechText": "まずAMDです。CPUとGPUを設計する半導体会社で、今回の四半期売上は百十五・四億ドル。データセンター売上は六十七・二億ドルで、前年の二倍を超えました。数字だけを見れば、AI需要が弱かった決算ではありません。",
+          "captionText": "まずAMDです。CPUとGPUを設計する半導体会社で、今回の四半期売上は百十五・四億ドル。データセンター売上は六十七・二億ドルで、前年の二倍を超えました。数字だけを見れば、AI需要が弱かった決算ではありません。",
+          "expression": "分析",
+          "pauseAfterMs": 120
+        },
+        {
+          "chunkId": "scene-02-chunk-002",
+          "speechText": "それでも株価は七パーセント下落しました。売上は増え、見通しも市場予想を超え、それでも売られる。市場、要求が多いです。ここで決算が悪かったと読み替えると、昨夜の本当の矛盾を見失います。",
+          "captionText": "それでも株価は七パーセント下落しました。売上は増え、見通しも市場予想を超え、それでも売られる。市場、要求が多いです。ここで決算が悪かったと読み替えると、昨夜の本当の矛盾を見失います。",
+          "expression": "困惑",
+          "pauseAfterMs": 200
+        }
+      ],
+      "visualBeats": [
+        {
+          "beatId": "scene-02-beat-001",
+          "visualBeatId": "scene-02-beat-001",
+          "startChunkId": "scene-02-chunk-001",
+          "endChunkId": "scene-02-chunk-001",
+          "narrationStartCue": "まずAMDです。CPUとGPUを設計する半導体会社で、今回の四半期売上は百十五・四億ドル。データ",
+          "narrationEndCue": "七・二億ドルで、前年の二倍を超えました。数字だけを見れば、AI需要が弱かった決算ではありません。",
+          "primaryFunction": "Anchor",
+          "screenState": "EntityFocus",
+          "visualMode": "text-focus",
+          "visualTemplate": "entity-card-full",
+          "templateConfig": {
+            "variant": "prebuilt-card",
+            "comparisonBasis": null,
+            "dataBasis": "8月4日引け後決算、8月5日通常取引終値",
+            "nodeOrder": [],
+            "laneLabels": [],
+            "outcomeNodeId": null
+          },
+          "sequencePolicy": "static",
+          "finalHoldMs": 500,
+          "contentType": "entity-card-full",
+          "screenQuestion": "主役企業は誰か",
+          "primaryElement": "AMD企業カード",
+          "viewerTexts": [
+            "AMD",
+            "CPUとGPUを設計する半導体会社"
+          ],
+          "changeCue": "AMD",
+          "objectIds": [
+            "scene-02-card-001"
+          ],
+          "assetPlacementIds": [
+            "scene-02-placement-entity-001"
+          ],
+          "assetState": "ready",
+          "returnScreenState": "Data",
+          "evidenceSourceIds": [
+            "source-004"
+          ],
+          "expressionChange": null,
+          "fallback": null,
+          "entity": {
+            "subjectType": "company",
+            "displayName": "AMD",
+            "role": "CPUとGPUを設計する半導体会社",
+            "firstMentionCue": "それでも株価は七パーセント下落しました。売上は増え、見通しも市場予想を超え、それ",
+            "variant": "company",
+            "assetId": "company_amd",
+            "rightsStatus": "not-required",
+            "targetDurationMs": 7000
+          },
+          "pictureBook": null,
+          "visualGrammar": {
+            "contractVersion": "1.0.0",
+            "grammarId": "entity",
+            "transitionRole": "major-shift",
+            "returnTargetBeatId": null
+          }
+        },
+        {
+          "beatId": "scene-02-beat-002",
+          "visualBeatId": "scene-02-beat-002",
+          "startChunkId": "scene-02-chunk-002",
+          "endChunkId": "scene-02-chunk-002",
+          "narrationStartCue": "それでも株価は七パーセント下落しました。売上は増え、見通しも市場予想を超え、それでも売られる。市",
+          "narrationEndCue": "られる。市場、要求が多いです。ここで決算が悪かったと読み替えると、昨夜の本当の矛盾を見失います。",
+          "primaryFunction": "Compare",
+          "screenState": "Chart",
+          "visualMode": "text-focus",
+          "visualTemplate": "diverging-stock-bars",
+          "templateConfig": {
+            "variant": "default",
+            "comparisonBasis": "業績と株価は同じ方向だったか",
+            "dataBasis": "8月4日引け後決算、8月5日通常取引終値",
+            "nodeOrder": [],
+            "laneLabels": [],
+            "outcomeNodeId": null
+          },
+          "sequencePolicy": "explicit",
+          "finalHoldMs": 500,
+          "contentType": "diverging-stock-bars",
+          "screenQuestion": "業績と株価は同じ方向だったか",
+          "primaryElement": "好決算と株価下落",
+          "viewerTexts": [
+            "Q2売上 115.4億ドル",
+            "AMD -7.04%"
+          ],
+          "changeCue": "Q2売上 115.4億ドル",
+          "objectIds": [
+            "scene-02-card-002"
+          ],
+          "assetPlacementIds": [],
+          "assetState": "not-required",
+          "returnScreenState": null,
+          "evidenceSourceIds": [
+            "source-001",
+            "source-004"
+          ],
+          "expressionChange": null,
+          "fallback": null,
+          "entity": null,
+          "pictureBook": null,
+          "visualGrammar": {
+            "contractVersion": "1.0.0",
+            "grammarId": "comparison",
+            "transitionRole": "continuation",
+            "returnTargetBeatId": null
+          }
+        }
+      ],
+      "cards": [
+        {
+          "cardId": "scene-02-card-001",
+          "role": null,
+          "title": "AMD企業カード",
+          "lines": [
+            {
+              "label": "1",
+              "value": "AMD",
+              "tone": "neutral"
+            },
+            {
+              "label": "2",
+              "value": "CPUとGPUを設計する半導体会社",
+              "tone": "neutral"
+            }
+          ]
+        },
+        {
+          "cardId": "scene-02-card-002",
+          "role": null,
+          "title": "好決算と株価下落",
+          "lines": [
+            {
+              "label": "1",
+              "value": "Q2売上 115.4億ドル",
+              "tone": "neutral"
+            },
+            {
+              "label": "2",
+              "value": "AMD -7.04%",
+              "tone": "neutral"
+            }
+          ]
+        }
+      ],
+      "numbers": [],
+      "nodes": [],
+      "arrows": [],
+      "visualEvents": [
+        {
+          "eventId": "event-003",
+          "atChunkId": "scene-02-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-02-card-001",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        },
+        {
+          "eventId": "event-004",
+          "atChunkId": "scene-02-chunk-002",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-02-card-002",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        }
+      ],
+      "assetPlacements": [
+        {
+          "placementId": "scene-02-placement-background",
+          "assetId": "mainBackground",
+          "role": "background",
+          "region": "full-canvas",
+          "fit": "cover",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-02-placement-foxAnalysis",
+          "assetId": "foxAnalysis",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-02-placement-foxConfused",
+          "assetId": "foxConfused",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-02-placement-entity-001",
+          "assetId": "company_amd",
+          "role": "entity-card",
+          "region": "main-stage",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": "scene-02-chunk-001",
+          "endChunkId": "scene-02-chunk-001"
+        }
+      ],
+      "transition": {
+        "type": "fade",
+        "durationMs": 300
+      }
+    },
+    {
+      "sceneId": "scene-03",
+      "sceneNumber": 3,
+      "sceneRole": "editorial-body",
+      "formalName": "何が起きた？",
+      "purpose": "AMD決算の確認済み数値を解釈前に置く",
+      "causalScope": "lead-stock",
+      "performanceIntent": "数字を落ち着いて並べ、評価を急がない",
+      "evidenceSourceIds": [
+        "source-002",
+        "source-004"
+      ],
+      "uncertainty": "非GAAP粗利率とGAAP数値を混同しない",
+      "timelineBasis": "会社発表と主要報道の決算数値",
+      "expectedBasisType": "major-reporting",
+      "visualMode": "number-comparison",
+      "initialExpression": "分析",
+      "headline": "Q3見通し 130億ドル",
+      "supportingTexts": [
+        "市場予想 125.2億ドル",
+        "Q2売上 115.4億ドル"
+      ],
+      "sourceLabel": "AMD IR / Reuters",
+      "narrationChunks": [
+        {
+          "chunkId": "scene-03-chunk-001",
+          "speechText": "確認できた数字を置きます。前の四半期にAMDが示していた第二四半期売上の中心値は百十二億ドルでした。実績は百十五・四億ドルで、中心値を三・四億ドル上回りました。データセンター売上の六十七・二億ドルも、前年から二倍超です。",
+          "captionText": "確認できた数字を置きます。前の四半期にAMDが示していた第二四半期売上の中心値は百十二億ドルでした。実績は百十五・四億ドルで、中心値を三・四億ドル上回りました。データセンター売上の六十七・二億ドルも、前年から二倍超です。",
+          "expression": "分析",
+          "pauseAfterMs": 120
+        },
+        {
+          "chunkId": "scene-03-chunk-002",
+          "speechText": "さらに第三四半期の売上見通しは約百三十億ドル。Reutersが示した市場予想百二十五・二億ドルを四・八億ドル上回りました。一方、調整後粗利率の見通しは五十六パーセントで、第二四半期から横ばいです。",
+          "captionText": "さらに第三四半期の売上見通しは約百三十億ドル。Reutersが示した市場予想百二十五・二億ドルを四・八億ドル上回りました。一方、調整後粗利率の見通しは五十六パーセントで、第二四半期から横ばいです。",
+          "expression": "分析",
+          "pauseAfterMs": 200
+        }
+      ],
+      "visualBeats": [
+        {
+          "beatId": "scene-03-beat-001",
+          "visualBeatId": "scene-03-beat-001",
+          "startChunkId": "scene-03-chunk-001",
+          "endChunkId": "scene-03-chunk-001",
+          "narrationStartCue": "確認できた数字を置きます。前の四半期にAMDが示していた第二四半期売上の中心値は百十二億ドルでし",
+          "narrationEndCue": "、中心値を三・四億ドル上回りました。データセンター売上の六十七・二億ドルも、前年から二倍超です。",
+          "primaryFunction": "Evidence",
+          "screenState": "Data",
+          "visualMode": "number-comparison",
+          "visualTemplate": "metric-comparison-board",
+          "templateConfig": {
+            "variant": "default",
+            "comparisonBasis": null,
+            "dataBasis": "会社発表と主要報道の決算数値",
+            "nodeOrder": [],
+            "laneLabels": [],
+            "outcomeNodeId": null
+          },
+          "sequencePolicy": "explicit",
+          "finalHoldMs": 500,
+          "contentType": "metric-comparison-board",
+          "screenQuestion": "Q2実績は会社見通しを超えたか",
+          "primaryElement": "Q2会社見通しと実績",
+          "viewerTexts": [
+            "会社見通し中心 112億ドル",
+            "実績 115.4億ドル",
+            "差 +3.4億ドル"
+          ],
+          "changeCue": "会社見通し中心 112億ドル",
+          "objectIds": [
+            "scene-03-card-001"
+          ],
+          "assetPlacementIds": [],
+          "assetState": "not-required",
+          "returnScreenState": null,
+          "evidenceSourceIds": [
+            "source-002",
+            "source-004"
+          ],
+          "expressionChange": null,
+          "fallback": null,
+          "entity": null,
+          "pictureBook": null,
+          "visualGrammar": {
+            "contractVersion": "1.0.0",
+            "grammarId": "evidence",
+            "transitionRole": "major-shift",
+            "returnTargetBeatId": null
+          }
+        },
+        {
+          "beatId": "scene-03-beat-002",
+          "visualBeatId": "scene-03-beat-002",
+          "startChunkId": "scene-03-chunk-002",
+          "endChunkId": "scene-03-chunk-002",
+          "narrationStartCue": "さらに第三四半期の売上見通しは約百三十億ドル。Reutersが示した市場予想百二十五・二億ドルを",
+          "narrationEndCue": "八億ドル上回りました。一方、調整後粗利率の見通しは五十六パーセントで、第二四半期から横ばいです。",
+          "primaryFunction": "Evidence",
+          "screenState": "Chart",
+          "visualMode": "number-comparison",
+          "visualTemplate": "metric-comparison-board",
+          "templateConfig": {
+            "variant": "default",
+            "comparisonBasis": null,
+            "dataBasis": "会社発表と主要報道の決算数値",
+            "nodeOrder": [],
+            "laneLabels": [],
+            "outcomeNodeId": null
+          },
+          "sequencePolicy": "explicit",
+          "finalHoldMs": 500,
+          "contentType": "metric-comparison-board",
+          "screenQuestion": "Q3見通しは市場予想を超えたか",
+          "primaryElement": "Q3売上見通しと粗利率",
+          "viewerTexts": [
+            "会社見通し 130億ドル",
+            "市場予想 125.2億ドル",
+            "粗利率 56%"
+          ],
+          "changeCue": "会社見通し 130億ドル",
+          "objectIds": [
+            "scene-03-card-002"
+          ],
+          "assetPlacementIds": [],
+          "assetState": "not-required",
+          "returnScreenState": null,
+          "evidenceSourceIds": [
+            "source-004"
+          ],
+          "expressionChange": null,
+          "fallback": null,
+          "entity": null,
+          "pictureBook": null,
+          "visualGrammar": {
+            "contractVersion": "1.0.0",
+            "grammarId": "evidence",
+            "transitionRole": "continuation",
+            "returnTargetBeatId": null
+          }
+        }
+      ],
+      "cards": [
+        {
+          "cardId": "scene-03-card-001",
+          "role": null,
+          "title": "Q2会社見通しと実績",
+          "lines": [
+            {
+              "label": "1",
+              "value": "会社見通し中心 112億ドル",
+              "tone": "neutral"
+            },
+            {
+              "label": "2",
+              "value": "実績 115.4億ドル",
+              "tone": "neutral"
+            },
+            {
+              "label": "3",
+              "value": "差 +3.4億ドル",
+              "tone": "neutral"
+            }
+          ]
+        },
+        {
+          "cardId": "scene-03-card-002",
+          "role": null,
+          "title": "Q3売上見通しと粗利率",
+          "lines": [
+            {
+              "label": "1",
+              "value": "会社見通し 130億ドル",
+              "tone": "neutral"
+            },
+            {
+              "label": "2",
+              "value": "市場予想 125.2億ドル",
+              "tone": "neutral"
+            },
+            {
+              "label": "3",
+              "value": "粗利率 56%",
+              "tone": "neutral"
+            }
+          ]
+        }
+      ],
+      "numbers": [],
+      "nodes": [],
+      "arrows": [],
+      "visualEvents": [
+        {
+          "eventId": "event-005",
+          "atChunkId": "scene-03-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-03-card-001",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        },
+        {
+          "eventId": "event-006",
+          "atChunkId": "scene-03-chunk-002",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-03-card-002",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        }
+      ],
+      "assetPlacements": [
+        {
+          "placementId": "scene-03-placement-background",
+          "assetId": "mainBackground",
+          "role": "background",
+          "region": "full-canvas",
+          "fit": "cover",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-03-placement-foxAnalysis",
+          "assetId": "foxAnalysis",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        }
+      ],
+      "transition": {
+        "type": "fade",
+        "durationMs": 300
+      }
+    },
+    {
+      "sceneId": "scene-04",
+      "sceneNumber": 4,
+      "sceneRole": "editorial-body",
+      "formalName": "Expected / Actual / Gap",
+      "purpose": "通常の予想超過と高まったAI期待の未達を分ける",
+      "causalScope": "lead-stock",
+      "performanceIntent": "矛盾を一段深い評価軸へ変える",
+      "evidenceSourceIds": [
+        "source-004",
+        "source-005"
+      ],
+      "uncertainty": "『高まった期待』は主要報道による市場解釈で、公式コンセンサス値ではない",
+      "timelineBasis": "決算発表後の引け後反応と翌日終値",
+      "expectedBasisType": "major-reporting",
+      "visualMode": "expected-actual-gap",
+      "initialExpression": "分析",
+      "headline": "数字のGapはプラス",
+      "supportingTexts": [
+        "期待のGapはマイナス",
+        "普通の合格点では足りなかった"
+      ],
+      "sourceLabel": "Reuters / AMD IR",
+      "narrationChunks": [
+        {
+          "chunkId": "scene-04-chunk-001",
+          "speechText": "普通のExpectedは、第三四半期売上が百二十五・二億ドル前後になることでした。Actualの会社見通しは百三十億ドル。数字のGapはプラスです。第二四半期実績も会社の事前見通しを上回りました。ここまでは合格です。",
+          "captionText": "普通のExpectedは、第三四半期売上が百二十五・二億ドル前後になることでした。Actualの会社見通しは百三十億ドル。数字のGapはプラスです。第二四半期実績も会社の事前見通しを上回りました。ここまでは合格です。",
+          "expression": "分析",
+          "pauseAfterMs": 120
+        },
+        {
+          "chunkId": "scene-04-chunk-002",
+          "speechText": "ところがReutersは、最近の大型AI提携と株価上昇で、投資家がさらに大きなAIの回収を求めていたと伝えています。実際には粗利率見通しが横ばいで、供給制約も残りました。つまり通常の予想には勝ったのに、高くなった採点基準には届かなかった。これが株価とのGapです。",
+          "captionText": "ところがReutersは、最近の大型AI提携と株価上昇で、投資家がさらに大きなAIの回収を求めていたと伝えています。実際には粗利率見通しが横ばいで、供給制約も残りました。つまり通常の予想には勝ったのに、高くなった採点基準には届かなかった。これが株価とのGapです。",
+          "expression": "警戒",
+          "pauseAfterMs": 200
+        }
+      ],
+      "visualBeats": [
+        {
+          "beatId": "scene-04-beat-001",
+          "visualBeatId": "scene-04-beat-001",
+          "startChunkId": "scene-04-chunk-001",
+          "endChunkId": "scene-04-chunk-001",
+          "narrationStartCue": "普通のExpectedは、第三四半期売上が百二十五・二億ドル前後になることでした。Actualの",
+          "narrationEndCue": "。数字のGapはプラスです。第二四半期実績も会社の事前見通しを上回りました。ここまでは合格です。",
+          "primaryFunction": "Evidence",
+          "screenState": "Chart",
+          "visualMode": "expected-actual-gap",
+          "visualTemplate": "expected-actual-gap-flow",
+          "templateConfig": {
+            "variant": "default",
+            "comparisonBasis": "通常予想とのGapは何か",
+            "dataBasis": "決算発表後の引け後反応と翌日終値",
+            "nodeOrder": [],
+            "laneLabels": [],
+            "outcomeNodeId": null
+          },
+          "sequencePolicy": "explicit",
+          "finalHoldMs": 500,
+          "contentType": "expected-actual-gap-flow",
+          "screenQuestion": "通常予想とのGapは何か",
+          "primaryElement": "Expected / Actual / Gap",
+          "viewerTexts": [
+            "Expected 125.2億ドル",
+            "Actual 130億ドル",
+            "Gap +4.8億ドル"
+          ],
+          "changeCue": "Expected 125.2億ドル",
+          "objectIds": [
+            "scene-04-card-001"
+          ],
+          "assetPlacementIds": [],
+          "assetState": "not-required",
+          "returnScreenState": null,
+          "evidenceSourceIds": [
+            "source-004"
+          ],
+          "expressionChange": null,
+          "fallback": null,
+          "entity": null,
+          "pictureBook": null,
+          "visualGrammar": {
+            "contractVersion": "1.0.0",
+            "grammarId": "gap",
+            "transitionRole": "major-shift",
+            "returnTargetBeatId": null
+          }
+        },
+        {
+          "beatId": "scene-04-beat-002",
+          "visualBeatId": "scene-04-beat-002",
+          "startChunkId": "scene-04-chunk-002",
+          "endChunkId": "scene-04-chunk-002",
+          "narrationStartCue": "ところがReutersは、最近の大型AI提携と株価上昇で、投資家がさらに大きなAIの回収を求めて",
+          "narrationEndCue": "。つまり通常の予想には勝ったのに、高くなった採点基準には届かなかった。これが株価とのGapです。",
+          "primaryFunction": "Evidence",
+          "screenState": "Data",
+          "visualMode": "expected-actual-gap",
+          "visualTemplate": "evidence-boundary",
+          "templateConfig": {
+            "variant": "default",
+            "comparisonBasis": null,
+            "dataBasis": "決算発表後の引け後反応と翌日終値",
+            "nodeOrder": [],
+            "laneLabels": [],
+            "outcomeNodeId": null
+          },
+          "sequencePolicy": "explicit",
+          "finalHoldMs": 500,
+          "contentType": "evidence-boundary",
+          "screenQuestion": "確認済みと市場解釈をどう分けるか",
+          "primaryElement": "数値超過と期待未達の境界",
+          "viewerTexts": [
+            "確認済み：売上・見通しは上振れ",
+            "報道解釈：AIの追加証拠が不足"
+          ],
+          "changeCue": "確認済み：売上・見通しは上振れ",
+          "objectIds": [
+            "scene-04-card-002"
+          ],
+          "assetPlacementIds": [],
+          "assetState": "not-required",
+          "returnScreenState": null,
+          "evidenceSourceIds": [
+            "source-004",
+            "source-005"
+          ],
+          "expressionChange": null,
+          "fallback": null,
+          "entity": null,
+          "pictureBook": null,
+          "visualGrammar": {
+            "contractVersion": "1.0.0",
+            "grammarId": "evidence",
+            "transitionRole": "continuation",
+            "returnTargetBeatId": null
+          }
+        }
+      ],
+      "cards": [
+        {
+          "cardId": "scene-04-card-001",
+          "role": null,
+          "title": "Expected / Actual / Gap",
+          "lines": [
+            {
+              "label": "1",
+              "value": "Expected 125.2億ドル",
+              "tone": "neutral"
+            },
+            {
+              "label": "2",
+              "value": "Actual 130億ドル",
+              "tone": "neutral"
+            },
+            {
+              "label": "3",
+              "value": "Gap +4.8億ドル",
+              "tone": "neutral"
+            }
+          ]
+        },
+        {
+          "cardId": "scene-04-card-002",
+          "role": null,
+          "title": "数値超過と期待未達の境界",
+          "lines": [
+            {
+              "label": "1",
+              "value": "確認済み：売上・見通しは上振れ",
+              "tone": "neutral"
+            },
+            {
+              "label": "2",
+              "value": "報道解釈：AIの追加証拠が不足",
+              "tone": "neutral"
+            }
+          ]
+        }
+      ],
+      "numbers": [],
+      "nodes": [],
+      "arrows": [],
+      "visualEvents": [
+        {
+          "eventId": "event-007",
+          "atChunkId": "scene-04-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-04-card-001",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        },
+        {
+          "eventId": "event-008",
+          "atChunkId": "scene-04-chunk-002",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-04-card-002",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        }
+      ],
+      "assetPlacements": [
+        {
+          "placementId": "scene-04-placement-background",
+          "assetId": "mainBackground",
+          "role": "background",
+          "region": "full-canvas",
+          "fit": "cover",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-04-placement-foxAnalysis",
+          "assetId": "foxAnalysis",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-04-placement-foxAlert",
+          "assetId": "foxAlert",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        }
+      ],
+      "transition": {
+        "type": "fade",
+        "durationMs": 300
+      }
+    },
+    {
+      "sceneId": "scene-05",
+      "sceneNumber": 5,
+      "sceneRole": "editorial-body",
+      "formalName": "世界からNASDAQへの経路",
+      "purpose": "SpaceXの採用判断が半導体競争へ届く経路を示す",
+      "causalScope": "sector",
+      "performanceIntent": "NVIDIAカードで世界ニュースを実体化する",
+      "evidenceSourceIds": [
+        "source-004",
+        "source-005",
+        "source-006",
+        "source-007"
+      ],
+      "uncertainty": "将来のGPU購入額は確定値として扱わない",
+      "timelineBasis": "SpaceX説明会は8月4日16:30 ET、AMD説明会は17:00 ET",
+      "expectedBasisType": "major-reporting",
+      "visualMode": "text-focus",
+      "initialExpression": "軽い驚き",
+      "headline": "SpaceXはNVIDIA専属",
+      "supportingTexts": [
+        "Vera Rubinを評価",
+        "計算能力 2GW → 約10GW計画"
+      ],
+      "sourceLabel": "SpaceX IR / MarketWatch / Reuters",
+      "narrationChunks": [
+        {
+          "chunkId": "scene-05-chunk-001",
+          "speechText": "では、なぜNVIDIAだけ上がったのか。SpaceXは八月四日の初めての公開決算説明会で、今後はNVIDIAのGPUだけを使う方針を示しました。イーロン・マスク氏は次世代のVera Rubinを高く評価しています。",
+          "captionText": "では、なぜNVIDIAだけ上がったのか。SpaceXは八月四日の初めての公開決算説明会で、今後はNVIDIAのGPUだけを使う方針を示しました。イーロン・マスク氏は次世代のVera Rubinを高く評価しています。",
+          "expression": "軽い驚き",
+          "pauseAfterMs": 120
+        },
+        {
+          "chunkId": "scene-05-chunk-002",
+          "speechText": "重要なのは、有名人の一言だけではありません。SpaceXは計算能力を年末の二ギガワットから、二〇二七年に約十ギガワットへ広げる計画を示しました。大規模な利用者が、次の増設先をNVIDIAへ固定したという採用証拠です。",
+          "captionText": "重要なのは、有名人の一言だけではありません。SpaceXは計算能力を年末の二ギガワットから、二〇二七年に約十ギガワットへ広げる計画を示しました。大規模な利用者が、次の増設先をNVIDIAへ固定したという採用証拠です。",
+          "expression": "分析",
+          "pauseAfterMs": 120
+        },
+        {
+          "chunkId": "scene-05-chunk-003",
+          "speechText": "このニュースはAMDの売上成長を消しません。ただ、同じ夜にNVIDIAへ具体的な顧客証拠が加わったため、AMDには『成長している』より一段強い証明が要求されました。",
+          "captionText": "このニュースはAMDの売上成長を消しません。ただ、同じ夜にNVIDIAへ具体的な顧客証拠が加わったため、AMDには『成長している』より一段強い証明が要求されました。",
+          "expression": "分析",
+          "pauseAfterMs": 200
+        }
+      ],
+      "visualBeats": [
+        {
+          "beatId": "scene-05-beat-001",
+          "visualBeatId": "scene-05-beat-001",
+          "startChunkId": "scene-05-chunk-001",
+          "endChunkId": "scene-05-chunk-001",
+          "narrationStartCue": "では、なぜNVIDIAだけ上がったのか。SpaceXは八月四日の初めての公開決算説明会で、今後は",
+          "narrationEndCue": "けを使う方針を示しました。イーロン・マスク氏は次世代のVera Rubinを高く評価しています。",
+          "primaryFunction": "Anchor",
+          "screenState": "EntityFocus",
+          "visualMode": "text-focus",
+          "visualTemplate": "entity-card-full",
+          "templateConfig": {
+            "variant": "prebuilt-card",
+            "comparisonBasis": null,
+            "dataBasis": "SpaceX説明会は8月4日16:30 ET、AMD説明会は17:00 ET",
+            "nodeOrder": [],
+            "laneLabels": [],
+            "outcomeNodeId": null
+          },
+          "sequencePolicy": "static",
+          "finalHoldMs": 500,
+          "contentType": "entity-card-full",
+          "screenQuestion": "比較対象の勝者候補は誰か",
+          "primaryElement": "NVIDIA企業カード",
+          "viewerTexts": [
+            "NVIDIA",
+            "SpaceXがGPUを専属採用"
+          ],
+          "changeCue": "NVIDIA",
+          "objectIds": [
+            "scene-05-card-001"
+          ],
+          "assetPlacementIds": [
+            "scene-05-placement-entity-001"
+          ],
+          "assetState": "ready",
+          "returnScreenState": "Data",
+          "evidenceSourceIds": [
+            "source-007"
+          ],
+          "expressionChange": null,
+          "fallback": null,
+          "entity": {
+            "subjectType": "company",
+            "displayName": "NVIDIA",
+            "role": "AIの計算能力を支える中心企業",
+            "firstMentionCue": "このニュースはAMDの売上成長を消しません。ただ、同じ夜にNVIDIAへ具体的な",
+            "variant": "company",
+            "assetId": "company_nvda",
+            "rightsStatus": "not-required",
+            "targetDurationMs": 7000
+          },
+          "pictureBook": null,
+          "visualGrammar": {
+            "contractVersion": "1.0.0",
+            "grammarId": "entity",
+            "transitionRole": "major-shift",
+            "returnTargetBeatId": null
+          }
+        },
+        {
+          "beatId": "scene-05-beat-002",
+          "visualBeatId": "scene-05-beat-002",
+          "startChunkId": "scene-05-chunk-002",
+          "endChunkId": "scene-05-chunk-002",
+          "narrationStartCue": "重要なのは、有名人の一言だけではありません。SpaceXは計算能力を年末の二ギガワットから、二〇",
+          "narrationEndCue": "広げる計画を示しました。大規模な利用者が、次の増設先をNVIDIAへ固定したという採用証拠です。",
+          "primaryFunction": "Explain",
+          "screenState": "Chart",
+          "visualMode": "text-focus",
+          "visualTemplate": "causal-lane",
+          "templateConfig": {
+            "variant": "default",
+            "comparisonBasis": null,
+            "dataBasis": "SpaceX説明会は8月4日16:30 ET、AMD説明会は17:00 ET",
+            "nodeOrder": [],
+            "laneLabels": [],
+            "outcomeNodeId": null
+          },
+          "sequencePolicy": "explicit",
+          "finalHoldMs": 500,
+          "contentType": "causal-lane",
+          "screenQuestion": "SpaceXの発言はどう半導体評価へ届くか",
+          "primaryElement": "顧客採用から受注期待への経路",
+          "viewerTexts": [
+            "SpaceX計算増設",
+            "NVIDIA専属採用",
+            "将来需要の具体化"
+          ],
+          "changeCue": "SpaceX計算増設",
+          "objectIds": [
+            "scene-05-card-002"
+          ],
+          "assetPlacementIds": [],
+          "assetState": "not-required",
+          "returnScreenState": null,
+          "evidenceSourceIds": [
+            "source-006",
+            "source-007"
+          ],
+          "expressionChange": null,
+          "fallback": null,
+          "entity": null,
+          "pictureBook": null,
+          "visualGrammar": {
+            "contractVersion": "1.0.0",
+            "grammarId": "causal",
+            "transitionRole": "continuation",
+            "returnTargetBeatId": null
+          }
+        },
+        {
+          "beatId": "scene-05-beat-003",
+          "visualBeatId": "scene-05-beat-003",
+          "startChunkId": "scene-05-chunk-003",
+          "endChunkId": "scene-05-chunk-003",
+          "narrationStartCue": "このニュースはAMDの売上成長を消しません。ただ、同じ夜にNVIDIAへ具体的な顧客証拠が加わっ",
+          "narrationEndCue": "Aへ具体的な顧客証拠が加わったため、AMDには『成長している』より一段強い証明が要求されました。",
+          "primaryFunction": "Explain",
+          "screenState": "Data",
+          "visualMode": "text-focus",
+          "visualTemplate": "text-focus",
+          "templateConfig": {
+            "variant": "default",
+            "comparisonBasis": null,
+            "dataBasis": "SpaceX説明会は8月4日16:30 ET、AMD説明会は17:00 ET",
+            "nodeOrder": [],
+            "laneLabels": [],
+            "outcomeNodeId": null
+          },
+          "sequencePolicy": "explicit",
+          "finalHoldMs": 500,
+          "contentType": "text-focus",
+          "screenQuestion": "AMDの成長とどう両立するか",
+          "primaryElement": "成長は確認、競争証拠はNVIDIA",
+          "viewerTexts": [
+            "AMDの成長は事実",
+            "相対評価ではNVIDIAが優位"
+          ],
+          "changeCue": "AMDの成長は事実",
+          "objectIds": [
+            "scene-05-card-003"
+          ],
+          "assetPlacementIds": [],
+          "assetState": "not-required",
+          "returnScreenState": null,
+          "evidenceSourceIds": [
+            "source-004",
+            "source-005",
+            "source-007"
+          ],
+          "expressionChange": null,
+          "fallback": null,
+          "entity": null,
+          "pictureBook": null,
+          "visualGrammar": {
+            "contractVersion": "1.0.0",
+            "grammarId": "bridge-text",
+            "transitionRole": "continuation",
+            "returnTargetBeatId": null
+          }
+        }
+      ],
+      "cards": [
+        {
+          "cardId": "scene-05-card-001",
+          "role": null,
+          "title": "NVIDIA企業カード",
+          "lines": [
+            {
+              "label": "1",
+              "value": "NVIDIA",
+              "tone": "neutral"
+            },
+            {
+              "label": "2",
+              "value": "SpaceXがGPUを専属採用",
+              "tone": "neutral"
+            }
+          ]
+        },
+        {
+          "cardId": "scene-05-card-002",
+          "role": null,
+          "title": "顧客採用から受注期待への経路",
+          "lines": [
+            {
+              "label": "1",
+              "value": "SpaceX計算増設",
+              "tone": "neutral"
+            },
+            {
+              "label": "2",
+              "value": "NVIDIA専属採用",
+              "tone": "neutral"
+            },
+            {
+              "label": "3",
+              "value": "将来需要の具体化",
+              "tone": "neutral"
+            }
+          ]
+        },
+        {
+          "cardId": "scene-05-card-003",
+          "role": null,
+          "title": "成長は確認、競争証拠はNVIDIA",
+          "lines": [
+            {
+              "label": "1",
+              "value": "AMDの成長は事実",
+              "tone": "neutral"
+            },
+            {
+              "label": "2",
+              "value": "相対評価ではNVIDIAが優位",
+              "tone": "neutral"
+            }
+          ]
+        }
+      ],
+      "numbers": [],
+      "nodes": [],
+      "arrows": [],
+      "visualEvents": [
+        {
+          "eventId": "event-009",
+          "atChunkId": "scene-05-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-05-card-001",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        },
+        {
+          "eventId": "event-010",
+          "atChunkId": "scene-05-chunk-002",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-05-card-002",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        },
+        {
+          "eventId": "event-011",
+          "atChunkId": "scene-05-chunk-003",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-05-card-003",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        }
+      ],
+      "assetPlacements": [
+        {
+          "placementId": "scene-05-placement-background",
+          "assetId": "mainBackground",
+          "role": "background",
+          "region": "full-canvas",
+          "fit": "cover",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-05-placement-foxAnalysis",
+          "assetId": "foxAnalysis",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-05-placement-foxSlightSurprise",
+          "assetId": "foxSlightSurprise",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-05-placement-entity-001",
+          "assetId": "company_nvda",
+          "role": "entity-card",
+          "region": "main-stage",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": "scene-05-chunk-001",
+          "endChunkId": "scene-05-chunk-001"
+        }
+      ],
+      "transition": {
+        "type": "fade",
+        "durationMs": 300
+      }
+    },
+    {
+      "sceneId": "scene-06",
+      "sceneNumber": 6,
+      "sceneRole": "editorial-body",
+      "formalName": "値動きが示したこと",
+      "purpose": "発表順と終値を使い、主役反応とNASDAQ全体を分ける",
+      "causalScope": "multiple",
+      "performanceIntent": "時系列の限界を明示しながら結論を絞る",
+      "evidenceSourceIds": [
+        "source-001",
+        "source-003",
+        "source-004",
+        "source-006",
+        "source-008"
+      ],
+      "uncertainty": "分足がないため発言ごとの瞬間的寄与は断定しない",
+      "timelineBasis": "8月4日16:30 ET SpaceX、17:00 ET AMD、8月5日通常取引終値",
+      "expectedBasisType": "major-reporting",
+      "visualMode": "timeline",
+      "initialExpression": "警戒",
+      "headline": "発表順と終値",
+      "supportingTexts": [
+        "AMD 引け後 約-9%",
+        "翌日 AMD -7.04% / NVDA +3.43%"
+      ],
+      "sourceLabel": "AMD IR / SpaceX IR / Reuters / 当日の市場データ",
+      "narrationChunks": [
+        {
+          "chunkId": "scene-06-chunk-001",
+          "speechText": "順番も確認します。SpaceXの説明会は八月四日午後四時半、AMDの説明会は五時でした。AMD株は決算後の時間外で約九パーセント下落し、翌日の通常取引を七・〇四パーセント安で終えました。NVIDIAは三・四三パーセント高、SOXXは二・一二パーセント安です。",
+          "captionText": "順番も確認します。SpaceXの説明会は八月四日午後四時半、AMDの説明会は五時でした。AMD株は決算後の時間外で約九パーセント下落し、翌日の通常取引を七・〇四パーセント安で終えました。NVIDIAは三・四三パーセント高、SOXXは二・一二パーセント安です。",
+          "expression": "警戒",
+          "pauseAfterMs": 120
+        },
+        {
+          "chunkId": "scene-06-chunk-002",
+          "speechText": "ただし、分足データがないので、どの発言が何分に何パーセント動かしたとは言えません。またNASDAQ全体の下落をAMD一社では説明できません。Alphabetは四・〇三パーセント安、Microsoftも一・〇九パーセント安で、大型テックの別の弱さが重なりました。",
+          "captionText": "ただし、分足データがないので、どの発言が何分に何パーセント動かしたとは言えません。またNASDAQ全体の下落をAMD一社では説明できません。Alphabetは四・〇三パーセント安、Microsoftも一・〇九パーセント安で、大型テックの別の弱さが重なりました。",
+          "expression": "通常",
+          "pauseAfterMs": 200
+        }
+      ],
+      "visualBeats": [
+        {
+          "beatId": "scene-06-beat-001",
+          "visualBeatId": "scene-06-beat-001",
+          "startChunkId": "scene-06-chunk-001",
+          "endChunkId": "scene-06-chunk-001",
+          "narrationStartCue": "順番も確認します。SpaceXの説明会は八月四日午後四時半、AMDの説明会は五時でした。AMD株",
+          "narrationEndCue": "ーセント安で終えました。NVIDIAは三・四三パーセント高、SOXXは二・一二パーセント安です。",
+          "primaryFunction": "Explain",
+          "screenState": "Chart",
+          "visualMode": "timeline",
+          "visualTemplate": "event-reaction-timeline",
+          "templateConfig": {
+            "variant": "default",
+            "comparisonBasis": null,
+            "dataBasis": "8月4日16:30 ET SpaceX、17:00 ET AMD、8月5日通常取引終値",
+            "nodeOrder": [],
+            "laneLabels": [],
+            "outcomeNodeId": null
+          },
+          "sequencePolicy": "explicit",
+          "finalHoldMs": 500,
+          "contentType": "event-reaction-timeline",
+          "screenQuestion": "発表と価格反応の順番は何か",
+          "primaryElement": "SpaceX→AMD→翌日終値",
+          "viewerTexts": [
+            "16:30 ET SpaceX説明会",
+            "17:00 ET AMD説明会",
+            "翌日 AMD -7.04% / NVDA +3.43%"
+          ],
+          "changeCue": "16:30 ET SpaceX説明会",
+          "objectIds": [
+            "scene-06-card-001"
+          ],
+          "assetPlacementIds": [],
+          "assetState": "not-required",
+          "returnScreenState": null,
+          "evidenceSourceIds": [
+            "source-001",
+            "source-003",
+            "source-004",
+            "source-006"
+          ],
+          "expressionChange": null,
+          "fallback": null,
+          "entity": null,
+          "pictureBook": null,
+          "visualGrammar": {
+            "contractVersion": "1.0.0",
+            "grammarId": "reaction",
+            "transitionRole": "major-shift",
+            "returnTargetBeatId": null
+          }
+        },
+        {
+          "beatId": "scene-06-beat-002",
+          "visualBeatId": "scene-06-beat-002",
+          "startChunkId": "scene-06-chunk-002",
+          "endChunkId": "scene-06-chunk-002",
+          "narrationStartCue": "ただし、分足データがないので、どの発言が何分に何パーセント動かしたとは言えません。またNASDA",
+          "narrationEndCue": "三パーセント安、Microsoftも一・〇九パーセント安で、大型テックの別の弱さが重なりました。",
+          "primaryFunction": "Explain",
+          "screenState": "Data",
+          "visualMode": "timeline",
+          "visualTemplate": "market-pulse-grid",
+          "templateConfig": {
+            "variant": "default",
+            "comparisonBasis": null,
+            "dataBasis": "8月4日16:30 ET SpaceX、17:00 ET AMD、8月5日通常取引終値",
+            "nodeOrder": [],
+            "laneLabels": [],
+            "outcomeNodeId": null
+          },
+          "sequencePolicy": "explicit",
+          "finalHoldMs": 500,
+          "contentType": "market-pulse-grid",
+          "screenQuestion": "AMDとNASDAQ全体をどう分けるか",
+          "primaryElement": "主役反応と大型テック別要因",
+          "viewerTexts": [
+            "SOXX -2.12%",
+            "Alphabet -4.03%",
+            "Microsoft -1.09%"
+          ],
+          "changeCue": "SOXX -2.12%",
+          "objectIds": [
+            "scene-06-card-002"
+          ],
+          "assetPlacementIds": [],
+          "assetState": "not-required",
+          "returnScreenState": null,
+          "evidenceSourceIds": [
+            "source-001",
+            "source-008"
+          ],
+          "expressionChange": null,
+          "fallback": null,
+          "entity": null,
+          "pictureBook": null,
+          "visualGrammar": {
+            "contractVersion": "1.0.0",
+            "grammarId": "reaction",
+            "transitionRole": "continuation",
+            "returnTargetBeatId": null
+          }
+        }
+      ],
+      "cards": [
+        {
+          "cardId": "scene-06-card-001",
+          "role": null,
+          "title": "SpaceX→AMD→翌日終値",
+          "lines": [
+            {
+              "label": "1",
+              "value": "16:30 ET SpaceX説明会",
+              "tone": "neutral"
+            },
+            {
+              "label": "2",
+              "value": "17:00 ET AMD説明会",
+              "tone": "neutral"
+            },
+            {
+              "label": "3",
+              "value": "翌日 AMD -7.04% / NVDA +3.43%",
+              "tone": "neutral"
+            }
+          ]
+        },
+        {
+          "cardId": "scene-06-card-002",
+          "role": null,
+          "title": "主役反応と大型テック別要因",
+          "lines": [
+            {
+              "label": "1",
+              "value": "SOXX -2.12%",
+              "tone": "neutral"
+            },
+            {
+              "label": "2",
+              "value": "Alphabet -4.03%",
+              "tone": "neutral"
+            },
+            {
+              "label": "3",
+              "value": "Microsoft -1.09%",
+              "tone": "neutral"
+            }
+          ]
+        }
+      ],
+      "numbers": [],
+      "nodes": [],
+      "arrows": [],
+      "visualEvents": [
+        {
+          "eventId": "event-012",
+          "atChunkId": "scene-06-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-06-card-001",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        },
+        {
+          "eventId": "event-013",
+          "atChunkId": "scene-06-chunk-002",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-06-card-002",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        }
+      ],
+      "assetPlacements": [
+        {
+          "placementId": "scene-06-placement-background",
+          "assetId": "mainBackground",
+          "role": "background",
+          "region": "full-canvas",
+          "fit": "cover",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-06-placement-foxAlert",
+          "assetId": "foxAlert",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-06-placement-foxNormal",
+          "assetId": "foxNormal",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        }
+      ],
+      "transition": {
+        "type": "fade",
+        "durationMs": 300
+      }
+    },
+    {
+      "sceneId": "scene-07",
+      "sceneNumber": 7,
+      "sceneRole": "editorial-body",
+      "formalName": "反対材料と銘柄差",
+      "purpose": "仮説の限界を三銘柄比較で示す",
+      "causalScope": "multiple",
+      "performanceIntent": "選別という言葉を断定せず、確認範囲を示す",
+      "evidenceSourceIds": [
+        "source-001",
+        "source-008"
+      ],
+      "uncertainty": "Alphabet安の全要因をAI人事だけへ帰属しない",
+      "timelineBasis": "8月5日通常取引終値",
+      "expectedBasisType": "not-applicable",
+      "visualMode": "number-comparison",
+      "initialExpression": "困惑",
+      "headline": "AI株は一方向ではない",
+      "supportingTexts": [
+        "NVIDIA +3.43%",
+        "AMD -7.04%",
+        "Alphabet -4.03%"
+      ],
+      "sourceLabel": "当日の市場データ / AP",
+      "narrationChunks": [
+        {
+          "chunkId": "scene-07-chunk-001",
+          "speechText": "三つだけ並べます。NVIDIAは三・四三パーセント高。AMDは七・〇四パーセント安。Alphabetは四・〇三パーセント安でした。AIという共通語だけでは、この三方向を説明できません。",
+          "captionText": "三つだけ並べます。NVIDIAは三・四三パーセント高。AMDは七・〇四パーセント安。Alphabetは四・〇三パーセント安でした。AIという共通語だけでは、この三方向を説明できません。",
+          "expression": "困惑",
+          "pauseAfterMs": 120
+        },
+        {
+          "chunkId": "scene-07-chunk-002",
+          "speechText": "だから昨夜を『AI全面安』とも『NVIDIAがNASDAQを全部動かした』とも言えません。確認できるのは、半導体では顧客採用の証拠がNVIDIAへ寄り、NASDAQ全体ではAlphabetやMicrosoftの下落も重なったことです。Dowが上昇した混合相場だった点も、単一原因への断定を弱めます。",
+          "captionText": "だから昨夜を『AI全面安』とも『NVIDIAがNASDAQを全部動かした』とも言えません。確認できるのは、半導体では顧客採用の証拠がNVIDIAへ寄り、NASDAQ全体ではAlphabetやMicrosoftの下落も重なったことです。Dowが上昇した混合相場だった点も、単一原因への断定を弱めます。",
+          "expression": "分析",
+          "pauseAfterMs": 200
+        }
+      ],
+      "visualBeats": [
+        {
+          "beatId": "scene-07-beat-001",
+          "visualBeatId": "scene-07-beat-001",
+          "startChunkId": "scene-07-chunk-001",
+          "endChunkId": "scene-07-chunk-001",
+          "narrationStartCue": "三つだけ並べます。NVIDIAは三・四三パーセント高。AMDは七・〇四パーセント安。Alphab",
+          "narrationEndCue": "phabetは四・〇三パーセント安でした。AIという共通語だけでは、この三方向を説明できません。",
+          "primaryFunction": "Compare",
+          "screenState": "Chart",
+          "visualMode": "number-comparison",
+          "visualTemplate": "diverging-stock-bars",
+          "templateConfig": {
+            "variant": "default",
+            "comparisonBasis": "三銘柄の反応差は何を示すか",
+            "dataBasis": "8月5日通常取引終値",
+            "nodeOrder": [],
+            "laneLabels": [],
+            "outcomeNodeId": null
+          },
+          "sequencePolicy": "explicit",
+          "finalHoldMs": 500,
+          "contentType": "diverging-stock-bars",
+          "screenQuestion": "三銘柄の反応差は何を示すか",
+          "primaryElement": "NVIDIA・AMD・Alphabet比較",
+          "viewerTexts": [
+            "NVIDIA +3.43%",
+            "AMD -7.04%",
+            "Alphabet -4.03%"
+          ],
+          "changeCue": "NVIDIA +3.43%",
+          "objectIds": [
+            "scene-07-card-001"
+          ],
+          "assetPlacementIds": [],
+          "assetState": "not-required",
+          "returnScreenState": null,
+          "evidenceSourceIds": [
+            "source-001"
+          ],
+          "expressionChange": null,
+          "fallback": null,
+          "entity": null,
+          "pictureBook": null,
+          "visualGrammar": {
+            "contractVersion": "1.0.0",
+            "grammarId": "comparison",
+            "transitionRole": "major-shift",
+            "returnTargetBeatId": null
+          }
+        },
+        {
+          "beatId": "scene-07-beat-002",
+          "visualBeatId": "scene-07-beat-002",
+          "startChunkId": "scene-07-chunk-002",
+          "endChunkId": "scene-07-chunk-002",
+          "narrationStartCue": "だから昨夜を『AI全面安』とも『NVIDIAがNASDAQを全部動かした』とも言えません。確認で",
+          "narrationEndCue": "oftの下落も重なったことです。Dowが上昇した混合相場だった点も、単一原因への断定を弱めます。",
+          "primaryFunction": "Compare",
+          "screenState": "Data",
+          "visualMode": "number-comparison",
+          "visualTemplate": "dual-asset-split",
+          "templateConfig": {
+            "variant": "default",
+            "comparisonBasis": "どこまで因果を言えるか",
+            "dataBasis": "8月5日通常取引終値",
+            "nodeOrder": [],
+            "laneLabels": [],
+            "outcomeNodeId": null
+          },
+          "sequencePolicy": "explicit",
+          "finalHoldMs": 500,
+          "contentType": "dual-asset-split",
+          "screenQuestion": "どこまで因果を言えるか",
+          "primaryElement": "半導体の相対評価とNASDAQ別要因",
+          "viewerTexts": [
+            "半導体：採用証拠の差",
+            "NASDAQ：大型テック安も重なる",
+            "Dow +0.5%の混合相場"
+          ],
+          "changeCue": "半導体：採用証拠の差",
+          "objectIds": [
+            "scene-07-card-002"
+          ],
+          "assetPlacementIds": [],
+          "assetState": "not-required",
+          "returnScreenState": null,
+          "evidenceSourceIds": [
+            "source-001",
+            "source-008"
+          ],
+          "expressionChange": null,
+          "fallback": null,
+          "entity": null,
+          "pictureBook": null,
+          "visualGrammar": {
+            "contractVersion": "1.0.0",
+            "grammarId": "comparison",
+            "transitionRole": "continuation",
+            "returnTargetBeatId": null
+          }
+        }
+      ],
+      "cards": [
+        {
+          "cardId": "scene-07-card-001",
+          "role": null,
+          "title": "NVIDIA・AMD・Alphabet比較",
+          "lines": [
+            {
+              "label": "1",
+              "value": "NVIDIA +3.43%",
+              "tone": "neutral"
+            },
+            {
+              "label": "2",
+              "value": "AMD -7.04%",
+              "tone": "neutral"
+            },
+            {
+              "label": "3",
+              "value": "Alphabet -4.03%",
+              "tone": "neutral"
+            }
+          ]
+        },
+        {
+          "cardId": "scene-07-card-002",
+          "role": null,
+          "title": "半導体の相対評価とNASDAQ別要因",
+          "lines": [
+            {
+              "label": "1",
+              "value": "半導体：採用証拠の差",
+              "tone": "neutral"
+            },
+            {
+              "label": "2",
+              "value": "NASDAQ：大型テック安も重なる",
+              "tone": "neutral"
+            },
+            {
+              "label": "3",
+              "value": "Dow +0.5%の混合相場",
+              "tone": "neutral"
+            }
+          ]
+        }
+      ],
+      "numbers": [],
+      "nodes": [],
+      "arrows": [],
+      "visualEvents": [
+        {
+          "eventId": "event-014",
+          "atChunkId": "scene-07-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-07-card-001",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        },
+        {
+          "eventId": "event-015",
+          "atChunkId": "scene-07-chunk-002",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-07-card-002",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        }
+      ],
+      "assetPlacements": [
+        {
+          "placementId": "scene-07-placement-background",
+          "assetId": "mainBackground",
+          "role": "background",
+          "region": "full-canvas",
+          "fit": "cover",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-07-placement-foxAnalysis",
+          "assetId": "foxAnalysis",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-07-placement-foxConfused",
+          "assetId": "foxConfused",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        }
+      ],
+      "transition": {
+        "type": "fade",
+        "durationMs": 300
+      }
+    },
+    {
+      "sceneId": "scene-08",
+      "sceneNumber": 8,
+      "sceneRole": "editorial-body",
+      "formalName": "今夜の検証ポイント",
+      "purpose": "仮説が強まる条件と弱まる条件を対で示す",
+      "causalScope": "multiple",
+      "performanceIntent": "予言せず、次に確認する場所を案内する",
+      "evidenceSourceIds": [
+        "source-001",
+        "source-004",
+        "source-005",
+        "source-007"
+      ],
+      "uncertainty": "検証条件であり株価予測ではない",
+      "timelineBasis": "今後の会社発表、決算、セクター終値で検証",
+      "expectedBasisType": "not-applicable",
+      "visualMode": "verification",
+      "initialExpression": "通常",
+      "headline": "次に見る3点",
+      "supportingTexts": [
+        "AMDの大型顧客",
+        "粗利率と供給制約",
+        "NVIDIA以外への広がり"
+      ],
+      "sourceLabel": "AMD / Reuters / 当日の市場データ",
+      "narrationChunks": [
+        {
+          "chunkId": "scene-08-chunk-001",
+          "speechText": "僕たちが次に見るのは三点です。第一に、AMDがSpaceX級の大型導入を新たに取れるか。第二に、粗利率が五十六パーセントから上向き、N3やCoWoSの供給制約が緩むか。第三に、半導体の上昇がNVIDIA一社からSOXX全体へ広がるかです。",
+          "captionText": "僕たちが次に見るのは三点です。第一に、AMDがSpaceX級の大型導入を新たに取れるか。第二に、粗利率が五十六パーセントから上向き、N3やCoWoSの供給制約が緩むか。第三に、半導体の上昇がNVIDIA一社からSOXX全体へ広がるかです。",
+          "expression": "通常",
+          "pauseAfterMs": 120
+        },
+        {
+          "chunkId": "scene-08-chunk-002",
+          "speechText": "AMDの顧客獲得と利益率が改善し、半導体全体が反応すれば、昨夜の相対評価は弱まります。反対に、大型AI設備の採用がNVIDIAへ集中し、AMDの利益率が横ばいなら、需要の量より受注の確実性を重く見る仮説が強まります。",
+          "captionText": "AMDの顧客獲得と利益率が改善し、半導体全体が反応すれば、昨夜の相対評価は弱まります。反対に、大型AI設備の採用がNVIDIAへ集中し、AMDの利益率が横ばいなら、需要の量より受注の確実性を重く見る仮説が強まります。",
+          "expression": "通常",
+          "pauseAfterMs": 200
+        }
+      ],
+      "visualBeats": [
+        {
+          "beatId": "scene-08-beat-001",
+          "visualBeatId": "scene-08-beat-001",
+          "startChunkId": "scene-08-chunk-001",
+          "endChunkId": "scene-08-chunk-001",
+          "narrationStartCue": "僕たちが次に見るのは三点です。第一に、AMDがSpaceX級の大型導入を新たに取れるか。第二に、",
+          "narrationEndCue": "WoSの供給制約が緩むか。第三に、半導体の上昇がNVIDIA一社からSOXX全体へ広がるかです。",
+          "primaryFunction": "Evidence",
+          "screenState": "Data",
+          "visualMode": "verification",
+          "visualTemplate": "verification-matrix",
+          "templateConfig": {
+            "variant": "default",
+            "comparisonBasis": null,
+            "dataBasis": "今後の会社発表、決算、セクター終値で検証",
+            "nodeOrder": [],
+            "laneLabels": [],
+            "outcomeNodeId": null
+          },
+          "sequencePolicy": "explicit",
+          "finalHoldMs": 500,
+          "contentType": "verification-matrix",
+          "screenQuestion": "仮説を何で検証するか",
+          "primaryElement": "三つの検証軸",
+          "viewerTexts": [
+            "大型顧客の獲得",
+            "粗利率・供給制約",
+            "SOXXへの広がり"
+          ],
+          "changeCue": "大型顧客の獲得",
+          "objectIds": [
+            "scene-08-card-001"
+          ],
+          "assetPlacementIds": [],
+          "assetState": "not-required",
+          "returnScreenState": null,
+          "evidenceSourceIds": [
+            "source-004",
+            "source-005",
+            "source-007"
+          ],
+          "expressionChange": null,
+          "fallback": null,
+          "entity": null,
+          "pictureBook": null,
+          "visualGrammar": {
+            "contractVersion": "1.0.0",
+            "grammarId": "verification",
+            "transitionRole": "major-shift",
+            "returnTargetBeatId": null
+          }
+        },
+        {
+          "beatId": "scene-08-beat-002",
+          "visualBeatId": "scene-08-beat-002",
+          "startChunkId": "scene-08-chunk-002",
+          "endChunkId": "scene-08-chunk-002",
+          "narrationStartCue": "AMDの顧客獲得と利益率が改善し、半導体全体が反応すれば、昨夜の相対評価は弱まります。反対に、大",
+          "narrationEndCue": "DIAへ集中し、AMDの利益率が横ばいなら、需要の量より受注の確実性を重く見る仮説が強まります。",
+          "primaryFunction": "Evidence",
+          "screenState": "Data",
+          "visualMode": "verification",
+          "visualTemplate": "verification-checklist",
+          "templateConfig": {
+            "variant": "default",
+            "comparisonBasis": null,
+            "dataBasis": "今後の会社発表、決算、セクター終値で検証",
+            "nodeOrder": [],
+            "laneLabels": [],
+            "outcomeNodeId": null
+          },
+          "sequencePolicy": "explicit",
+          "finalHoldMs": 500,
+          "contentType": "verification-checklist",
+          "screenQuestion": "仮説が弱まる条件は何か",
+          "primaryElement": "強まる条件と弱まる条件",
+          "viewerTexts": [
+            "弱まる：AMDの受注・利益率・セクター反応が改善",
+            "強まる：大型採用がNVIDIAへ集中"
+          ],
+          "changeCue": "弱まる：AMDの受注・利益率・セクター反応が改善",
+          "objectIds": [
+            "scene-08-card-002"
+          ],
+          "assetPlacementIds": [],
+          "assetState": "not-required",
+          "returnScreenState": null,
+          "evidenceSourceIds": [
+            "source-001",
+            "source-005"
+          ],
+          "expressionChange": null,
+          "fallback": null,
+          "entity": null,
+          "pictureBook": null,
+          "visualGrammar": {
+            "contractVersion": "1.0.0",
+            "grammarId": "verification",
+            "transitionRole": "continuation",
+            "returnTargetBeatId": null
+          }
+        }
+      ],
+      "cards": [
+        {
+          "cardId": "scene-08-card-001",
+          "role": null,
+          "title": "三つの検証軸",
+          "lines": [
+            {
+              "label": "1",
+              "value": "大型顧客の獲得",
+              "tone": "neutral"
+            },
+            {
+              "label": "2",
+              "value": "粗利率・供給制約",
+              "tone": "neutral"
+            },
+            {
+              "label": "3",
+              "value": "SOXXへの広がり",
+              "tone": "neutral"
+            }
+          ]
+        },
+        {
+          "cardId": "scene-08-card-002",
+          "role": null,
+          "title": "強まる条件と弱まる条件",
+          "lines": [
+            {
+              "label": "1",
+              "value": "弱まる：AMDの受注・利益率・セクター反応が改善",
+              "tone": "neutral"
+            },
+            {
+              "label": "2",
+              "value": "強まる：大型採用がNVIDIAへ集中",
+              "tone": "neutral"
+            }
+          ]
+        }
+      ],
+      "numbers": [],
+      "nodes": [],
+      "arrows": [],
+      "visualEvents": [
+        {
+          "eventId": "event-016",
+          "atChunkId": "scene-08-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-08-card-001",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        },
+        {
+          "eventId": "event-017",
+          "atChunkId": "scene-08-chunk-002",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-08-card-002",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        }
+      ],
+      "assetPlacements": [
+        {
+          "placementId": "scene-08-placement-background",
+          "assetId": "mainBackground",
+          "role": "background",
+          "region": "full-canvas",
+          "fit": "cover",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-08-placement-foxNormal",
+          "assetId": "foxNormal",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        }
+      ],
+      "transition": {
+        "type": "fade",
+        "durationMs": 300
+      }
+    },
+    {
+      "sceneId": "scene-09",
+      "sceneNumber": 9,
+      "sceneRole": "fixed-ending",
+      "formalName": "いってらっしゃい、おやすみ",
+      "purpose": "中心結論を回収し固定エンディングへつなぐ",
+      "causalScope": "multiple",
+      "performanceIntent": "安心できる温度で短く締める",
+      "evidenceSourceIds": [
+        "source-001",
+        "source-004",
+        "source-005",
+        "source-007",
+        "source-008"
+      ],
+      "uncertainty": "新情報は追加しない",
+      "timelineBasis": "not-applicable",
+      "expectedBasisType": "not-applicable",
+      "visualMode": "closing-recap",
+      "initialExpression": "眠そう",
+      "headline": "数字より、次の受注証拠",
+      "supportingTexts": [
+        "AMDは予想超過でも下落",
+        "NVIDIAはSpaceX採用で上昇",
+        "NASDAQ安は大型テック別要因も"
+      ],
+      "sourceLabel": "本編の回収",
+      "narrationChunks": [
+        {
+          "chunkId": "scene-09-chunk-001",
+          "speechText": "昨夜は、AMDの数字が悪かったのではなく、AI競争で要求される証拠が一段上がった夜でした。NVIDIAにはSpaceXの採用が加わり、AMDには次の大型受注と利益率の改善が求められています。以上、朝のNASDAQカフェでした。今日も気をつけて、いってらっしゃい。こちらはそろそろ、おやすみなさい。",
+          "captionText": "昨夜は、AMDの数字が悪かったのではなく、AI競争で要求される証拠が一段上がった夜でした。NVIDIAにはSpaceXの採用が加わり、AMDには次の大型受注と利益率の改善が求められています。以上、朝のNASDAQカフェでした。今日も気をつけて、いってらっしゃい。こちらはそろそろ、おやすみなさい。",
+          "expression": "眠そう",
+          "pauseAfterMs": 200
+        }
+      ],
+      "visualBeats": [
+        {
+          "beatId": "scene-09-beat-001",
+          "visualBeatId": "scene-09-beat-001",
+          "startChunkId": "scene-09-chunk-001",
+          "endChunkId": "scene-09-chunk-001",
+          "narrationStartCue": "昨夜は、AMDの数字が悪かったのではなく、AI競争で要求される証拠が一段上がった夜でした。NVI",
+          "narrationEndCue": "NASDAQカフェでした。今日も気をつけて、いってらっしゃい。こちらはそろそろ、おやすみなさい。",
+          "primaryFunction": "Anchor",
+          "screenState": "Data",
+          "visualMode": "closing-recap",
+          "visualTemplate": "closing-recap",
+          "templateConfig": {
+            "variant": "default",
+            "comparisonBasis": null,
+            "dataBasis": "not-applicable",
+            "nodeOrder": [],
+            "laneLabels": [],
+            "outcomeNodeId": null
+          },
+          "sequencePolicy": "explicit",
+          "finalHoldMs": 500,
+          "contentType": "closing-recap",
+          "screenQuestion": "今朝の結論は何か",
+          "primaryElement": "本編の三点回収",
+          "viewerTexts": [
+            "AMD：予想超過でも下落",
+            "NVIDIA：SpaceX採用で上昇",
+            "NASDAQ：大型テック安も重なる"
+          ],
+          "changeCue": "AMD：予想超過でも下落",
+          "objectIds": [
+            "scene-09-card-001"
+          ],
+          "assetPlacementIds": [],
+          "assetState": "not-required",
+          "returnScreenState": null,
+          "evidenceSourceIds": [
+            "source-001",
+            "source-004",
+            "source-005",
+            "source-007",
+            "source-008"
+          ],
+          "expressionChange": null,
+          "fallback": null,
+          "entity": null,
+          "pictureBook": null,
+          "visualGrammar": {
+            "contractVersion": "1.0.0",
+            "grammarId": "assembly",
+            "transitionRole": "closing",
+            "returnTargetBeatId": null
+          }
+        }
+      ],
+      "cards": [
+        {
+          "cardId": "scene-09-card-001",
+          "role": null,
+          "title": "本編の三点回収",
+          "lines": [
+            {
+              "label": "1",
+              "value": "AMD：予想超過でも下落",
+              "tone": "neutral"
+            },
+            {
+              "label": "2",
+              "value": "NVIDIA：SpaceX採用で上昇",
+              "tone": "neutral"
+            },
+            {
+              "label": "3",
+              "value": "NASDAQ：大型テック安も重なる",
+              "tone": "neutral"
+            }
+          ]
+        }
+      ],
+      "numbers": [],
+      "nodes": [],
+      "arrows": [],
+      "visualEvents": [
+        {
+          "eventId": "event-018",
+          "atChunkId": "scene-09-chunk-001",
+          "timing": "chunk-start",
+          "action": "show",
+          "targetId": "scene-09-card-001",
+          "offsetMs": 0,
+          "expression": null,
+          "motionPreset": "rise-soft",
+          "durationMs": 560,
+          "easingPreset": "smooth-out"
+        }
+      ],
+      "assetPlacements": [
+        {
+          "placementId": "scene-09-placement-background",
+          "assetId": "mainBackground",
+          "role": "background",
+          "region": "full-canvas",
+          "fit": "cover",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        },
+        {
+          "placementId": "scene-09-placement-foxSleepy",
+          "assetId": "foxSleepy",
+          "role": "fox-expression",
+          "region": "fox-left",
+          "fit": "contain",
+          "opacity": 1,
+          "startChunkId": null,
+          "endChunkId": null
+        }
+      ],
+      "transition": {
+        "type": "fade",
+        "durationMs": 300
+      }
+    }
+  ],
+  "tts": {
+    "blockA": {
+      "sceneIds": [
+        "scene-01",
+        "scene-02",
+        "scene-03",
+        "scene-04"
+      ]
+    },
+    "blockB": {
+      "sceneIds": [
+        "scene-05",
+        "scene-06",
+        "scene-07",
+        "scene-08",
+        "scene-09"
+      ]
+    },
+    "retryPolicy": "failed-block-only"
+  },
+  "imageSelection": {
+    "selectedPath": "not-required",
+    "reason": "登録済み企業カードと固定Visual Templatesだけで因果と比較を表現でき、当日固有画像を加えると意味上の追加がないため。"
+  }
+}
