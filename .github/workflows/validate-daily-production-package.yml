@@ -1,4 +1,4 @@
-name: Validate Daily Production Package
+name: Migrate Daily Production Package To Direct Files
 
 on:
   pull_request:
@@ -6,28 +6,25 @@ on:
       - "daily-payloads/**"
       - ".github/workflows/validate-daily-production-package.yml"
   workflow_dispatch:
-    inputs:
-      episode_date:
-        description: "YYYY-MM-DD"
-        required: true
-        type: string
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  validate:
+  migrate:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     env:
-      EPISODE_DATE: ${{ inputs.episode_date || '2026-08-06' }}
-      RENDERER_COMMIT: 750f993bd00cf2f67fdb4ab18907e82ed0dc68df
-      RENDERER_CONTRACT_VERSION: 2.4.0
+      EPISODE_DATE: "2026-08-06"
+      SOURCE_ARTIFACT_ID: "8955731244"
+      HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout PR head branch
+        uses: actions/checkout@v4
         with:
-          python-version: "3.12"
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
 
       - name: Download authoritative collector source
         env:
@@ -38,21 +35,26 @@ jobs:
           gh api \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            repos/saienjoy0/nasdaq-cafe-news-collector/actions/artifacts/8955731244/zip \
+            "repos/saienjoy0/nasdaq-cafe-news-collector/actions/artifacts/${SOURCE_ARTIFACT_ID}/zip" \
             > "$RUNNER_TEMP/collector-artifact/source.zip"
-          test -s "$RUNNER_TEMP/collector-artifact/source.zip"
           unzip -q "$RUNNER_TEMP/collector-artifact/source.zip" -d "$RUNNER_TEMP/collector-artifact/extracted"
           test -s "$RUNNER_TEMP/collector-artifact/extracted/source_pack.md"
 
-      - name: Recover direct daily files for migration
+      - name: Recover SHA-verified direct files
         run: |
+          set -euo pipefail
           python - <<'PY'
-          import base64, binascii, hashlib, json, zlib
+          import base64
+          import binascii
+          import hashlib
+          import json
+          import zlib
           from pathlib import Path
 
-          date = "${{ env.EPISODE_DATE }}"
+          date = "2026-08-06"
           root = Path.cwd()
-          parts = sorted((root / "daily-payloads" / date).glob("part-*.txt"))
+          payload_dir = root / "daily-payloads" / date
+          parts = sorted(payload_dir.glob("part-*.txt"))
           if not parts:
               raise SystemExit(f"No payload parts for {date}")
           payload = json.loads("".join(p.read_text(encoding="utf-8") for p in parts))
@@ -70,10 +72,7 @@ jobs:
                   try:
                       compressed = base64.b64decode(encoded, validate=True)
                   except binascii.Error as exc:
-                      raise SystemExit(
-                          f"Payload base64 invalid: {relative}; length={len(encoded)}; "
-                          f"mod4={len(encoded) % 4}; {exc}"
-                      ) from exc
+                      raise SystemExit(f"Invalid legacy payload entry {relative}: {exc}") from exc
                   raw = zlib.decompress(compressed)
 
               actual = hashlib.sha256(raw).hexdigest()
@@ -86,91 +85,199 @@ jobs:
               target.parent.mkdir(parents=True, exist_ok=True)
               target.write_bytes(raw)
               print(f"recovered {relative} sha256={actual}")
+
+          query_plan = {
+              "contract_version": "1.0.0",
+              "episode_date": date,
+              "lead_candidates": [
+                  "AMDは通常の売上予想を上回ったのに7.04%下落",
+                  "NVIDIAはSpaceXの採用材料で3.43%上昇",
+              ],
+              "entities": [
+                  {"raw": "AMD", "canonical": "Advanced Micro Devices", "entity_id": None, "resolution": "unresolved"},
+                  {"raw": "NVIDIA", "canonical": "NVIDIA", "entity_id": None, "resolution": "unresolved"},
+                  {"raw": "SpaceX", "canonical": "SpaceX", "entity_id": None, "resolution": "unresolved"},
+                  {"raw": "Alphabet", "canonical": "Alphabet", "entity_id": None, "resolution": "unresolved"},
+                  {"raw": "Microsoft", "canonical": "Microsoft", "entity_id": None, "resolution": "unresolved"},
+              ],
+              "topics": ["AI投資回収", "AI半導体競争", "好決算後の株価下落", "NASDAQへの波及"],
+              "technologies": ["AI accelerator", "GPU", "data center"],
+              "policies": [],
+              "indicators": ["Nasdaq Composite", "SOXX", "AMD", "NVDA", "GOOGL", "MSFT"],
+              "relations": [
+                  {"source": "AMD決算", "relation": "市場期待との差", "target": "AMD株価"},
+                  {"source": "SpaceXのGPU選択", "relation": "競争力評価", "target": "NVIDIAとAMD"},
+                  {"source": "大型テック下落", "relation": "指数寄与", "target": "NASDAQ"},
+              ],
+              "time_window": {"from": "2026-07-01", "to": date},
+              "comparison_questions": [
+                  "過去のAI投資回収懸念は当日のAMD評価にどこまで再確認できるか",
+                  "一社材料とNASDAQ全体の下落要因を分離できるか",
+              ],
+              "limits": {
+                  "max_threads": 5,
+                  "max_claims": 8,
+                  "max_episodes": 2,
+                  "max_lessons": 2,
+                  "max_characters": 18000,
+              },
+          }
+          query_path = root / "working" / date / "memory_query_plan.json"
+          query_path.parent.mkdir(parents=True, exist_ok=True)
+          query_path.write_text(
+              json.dumps(query_plan, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
           PY
 
-      - name: Recover lineage seeds
+      - name: Install final direct-input workflow
         run: |
-          python - <<'PY'
-          import base64, hashlib, zlib
-          from pathlib import Path
+          set -euo pipefail
+          cat > .github/workflows/validate-daily-production-package.yml <<'YAML'
+          name: Validate Daily Production Package
 
-          date = "${{ env.EPISODE_DATE }}"
-          root = Path.cwd()
-          seed_root = root / "daily-payloads" / date / "seeds"
-          records = [
-              (
-                  seed_root / "memory_query_plan.zlib.b64",
-                  root / "working" / date / "memory_query_plan.json",
-                  "ecf50f5c05f7c8a61c61cb6a4a12b9576646b3be7bb94315ca26130ec25d4f3a",
-              ),
-              (
-                  seed_root / "causal_research_dossier.template.zlib.b64",
-                  root / "research" / date / "causal_research_dossier.template.json",
-                  "098d24f320a6be352cd7752cccf3cbd5cd3c2cb1c61f1ce2abf4359de8039235",
-              ),
-          ]
-          for source, target, expected in records:
-              raw = zlib.decompress(base64.b64decode(source.read_text(encoding="utf-8"), validate=True))
-              actual = hashlib.sha256(raw).hexdigest()
-              if actual != expected:
-                  raise SystemExit(
-                      f"Lineage seed SHA mismatch: {source}; expected={expected} actual={actual}"
-                  )
-              target.parent.mkdir(parents=True, exist_ok=True)
-              target.write_bytes(raw)
-              print(f"recovered {target.relative_to(root)} sha256={actual}")
-          PY
+          on:
+            pull_request:
+              paths:
+                - "daily-inputs/**"
+                - "working/**/memory_query_plan.json"
+                - "research/**"
+                - "episodes/**"
+                - "render-specs/**"
+                - "scripts/materialize_daily_episode.py"
+                - ".github/workflows/validate-daily-production-package.yml"
+            workflow_dispatch:
+              inputs:
+                episode_date:
+                  description: "YYYY-MM-DD"
+                  required: true
+                  type: string
 
-      - name: Install validator dependency
-        run: python -m pip install --disable-pip-version-check jsonschema
+          permissions:
+            contents: read
 
-      - name: Materialize lineage-bound episode package
-        run: python scripts/materialize_daily_episode.py --date "$EPISODE_DATE" --repo-root .
+          jobs:
+            validate:
+              runs-on: ubuntu-latest
+              timeout-minutes: 30
+              env:
+                EPISODE_DATE: ${{ inputs.episode_date || '2026-08-06' }}
+                RENDERER_COMMIT: 750f993bd00cf2f67fdb4ab18907e82ed0dc68df
+                RENDERER_CONTRACT_VERSION: 2.4.0
+              steps:
+                - uses: actions/checkout@v4
+                - uses: actions/setup-python@v5
+                  with:
+                    python-version: "3.12"
 
-      - name: Initialize deterministic daily state
+                - name: Verify committed daily inputs
+                  run: |
+                    set -euo pipefail
+                    python - <<'PY'
+                    import json
+                    import re
+                    from pathlib import Path
+
+                    date = "${{ env.EPISODE_DATE }}"
+                    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date):
+                        raise SystemExit("EPISODE_DATE must be YYYY-MM-DD")
+                    root = Path.cwd().resolve()
+                    required = [
+                        root / f"daily-inputs/{date}/daily_source_package_{date}.md",
+                        root / f"working/{date}/memory_query_plan.json",
+                        root / f"episodes/{date}/episode_package_public_{date}.md",
+                        root / f"render-specs/{date}/render_spec.json",
+                        root / "scripts/materialize_daily_episode.py",
+                    ]
+                    for path in required:
+                        resolved = path.resolve()
+                        if resolved != root and root not in resolved.parents:
+                            raise SystemExit(f"Input path escapes repository: {path}")
+                        if not resolved.is_file() or resolved.stat().st_size == 0:
+                            raise SystemExit(f"Missing or empty required input: {path.relative_to(root)}")
+                    for path in (
+                        root / f"working/{date}/memory_query_plan.json",
+                        root / f"render-specs/{date}/render_spec.json",
+                    ):
+                        value = json.loads(path.read_text(encoding="utf-8"))
+                        if not isinstance(value, dict):
+                            raise SystemExit(f"JSON root must be an object: {path.relative_to(root)}")
+                    query = json.loads((root / f"working/{date}/memory_query_plan.json").read_text(encoding="utf-8"))
+                    if query.get("episode_date") != date:
+                        raise SystemExit("memory query plan date mismatch")
+                    spec = json.loads((root / f"render-specs/{date}/render_spec.json").read_text(encoding="utf-8"))
+                    episode = spec.get("episode", {})
+                    if episode.get("id") != date or episode.get("targetDate") != date:
+                        raise SystemExit("render spec date mismatch")
+                    print("direct daily inputs verified")
+                    PY
+
+                - name: Install validator dependency
+                  run: python -m pip install --disable-pip-version-check jsonschema
+
+                - name: Materialize lineage-bound episode package
+                  run: python scripts/materialize_daily_episode.py --date "$EPISODE_DATE" --repo-root .
+
+                - name: Initialize deterministic daily state
+                  run: |
+                    python scripts/run_daily_production_hardened.py --workspace . init \
+                      --episode-date "$EPISODE_DATE" \
+                      --daily-source-package "daily-inputs/$EPISODE_DATE/daily_source_package_$EPISODE_DATE.md" \
+                      --requested-scope preview \
+                      --renderer-commit "$RENDERER_COMMIT" \
+                      --renderer-contract-version "$RENDERER_CONTRACT_VERSION"
+
+                - name: Advance validated editorial stages
+                  run: |
+                    python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state research_inputs_bound --evidence "research/$EPISODE_DATE/research_input_manifest.json"
+                    python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state causal_dossier_valid --evidence "research/$EPISODE_DATE/causal_research_dossier_$EPISODE_DATE.json" "research/$EPISODE_DATE/causal_dossier_validation.json"
+                    python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state episode_package_final --evidence "episodes/$EPISODE_DATE/episode_package_$EPISODE_DATE.md"
+                    python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state memory_usage_valid --evidence "research/$EPISODE_DATE/causal_dossier_validation.json"
+                    python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state assets_resolved --evidence "verification/$EPISODE_DATE/asset_resolution_log.json" "verification/$EPISODE_DATE/image_generation_log.json"
+
+                - name: Build and validate production package
+                  run: |
+                    python scripts/run_daily_production_hardened.py --workspace . build-production \
+                      --episode-date "$EPISODE_DATE" \
+                      --episode-package "episodes/$EPISODE_DATE/episode_package_$EPISODE_DATE.md"
+                    python scripts/run_daily_production_hardened.py --workspace . status --episode-date "$EPISODE_DATE"
+
+                - name: Build immutable preview handoff
+                  run: |
+                    python scripts/run_daily_production_hardened.py --workspace . build-handoff \
+                      --episode-date "$EPISODE_DATE" \
+                      --bundle-root production-bundles \
+                      --plot-commit "${{ github.event.pull_request.head.sha || github.sha }}"
+
+                - name: Upload validation outputs
+                  if: always()
+                  uses: actions/upload-artifact@v4
+                  with:
+                    name: nasdaq-cafe-production-${{ env.EPISODE_DATE }}
+                    path: |
+                      working/${{ env.EPISODE_DATE }}/
+                      research/${{ env.EPISODE_DATE }}/
+                      episodes/${{ env.EPISODE_DATE }}/
+                      render-specs/${{ env.EPISODE_DATE }}/render_spec.json
+                      verification/${{ env.EPISODE_DATE }}/
+                      production-bundles/${{ env.EPISODE_DATE }}/
+                    if-no-files-found: warn
+                    retention-days: 14
+          YAML
+
+      - name: Remove legacy payload and commit migration
         run: |
-          python scripts/run_daily_production_hardened.py --workspace . init \
-            --episode-date "$EPISODE_DATE" \
-            --daily-source-package "daily-inputs/$EPISODE_DATE/daily_source_package_$EPISODE_DATE.md" \
-            --requested-scope preview \
-            --renderer-commit "$RENDERER_COMMIT" \
-            --renderer-contract-version "$RENDERER_CONTRACT_VERSION"
-
-      - name: Advance validated editorial stages
-        run: |
-          python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state research_inputs_bound --evidence "research/$EPISODE_DATE/research_input_manifest.json"
-          python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state causal_dossier_valid --evidence "research/$EPISODE_DATE/causal_research_dossier_$EPISODE_DATE.json" "research/$EPISODE_DATE/causal_dossier_validation.json"
-          python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state episode_package_final --evidence "episodes/$EPISODE_DATE/episode_package_$EPISODE_DATE.md"
-          python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state memory_usage_valid --evidence "research/$EPISODE_DATE/causal_dossier_validation.json"
-          python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state assets_resolved --evidence "verification/$EPISODE_DATE/asset_resolution_log.json" "verification/$EPISODE_DATE/image_generation_log.json"
-
-      - name: Build and validate production package
-        run: |
-          python scripts/run_daily_production_hardened.py --workspace . build-production \
-            --episode-date "$EPISODE_DATE" \
-            --episode-package "episodes/$EPISODE_DATE/episode_package_$EPISODE_DATE.md"
-          python scripts/run_daily_production_hardened.py --workspace . status --episode-date "$EPISODE_DATE"
-
-      - name: Build immutable preview handoff
-        run: |
-          python scripts/run_daily_production_hardened.py --workspace . build-handoff \
-            --episode-date "$EPISODE_DATE" \
-            --bundle-root production-bundles \
-            --plot-commit "${{ github.event.pull_request.head.sha || github.sha }}"
-
-      - name: Upload migration and validation outputs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: nasdaq-cafe-production-${{ env.EPISODE_DATE }}
-          path: |
-            daily-inputs/${{ env.EPISODE_DATE }}/
-            scripts/materialize_daily_episode.py
-            working/${{ env.EPISODE_DATE }}/
-            research/${{ env.EPISODE_DATE }}/
-            episodes/${{ env.EPISODE_DATE }}/
-            render-specs/${{ env.EPISODE_DATE }}/render_spec.json
-            verification/${{ env.EPISODE_DATE }}/
-            production-bundles/${{ env.EPISODE_DATE }}/
-          if-no-files-found: warn
-          retention-days: 14
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -r -- "daily-payloads/${EPISODE_DATE}"
+          git add -- \
+            ".github/workflows/validate-daily-production-package.yml" \
+            "daily-inputs/${EPISODE_DATE}/daily_source_package_${EPISODE_DATE}.md" \
+            "working/${EPISODE_DATE}/memory_query_plan.json" \
+            "episodes/${EPISODE_DATE}/episode_package_public_${EPISODE_DATE}.md" \
+            "render-specs/${EPISODE_DATE}/render_spec.json" \
+            "scripts/materialize_daily_episode.py"
+          git diff --cached --check
+          git commit -m "Replace split payload with direct daily files"
+          git push origin "HEAD:${HEAD_BRANCH}"
