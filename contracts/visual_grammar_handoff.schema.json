@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.nasdaq-cafe.local/visual_grammar_handoff.schema.json",
+  "title": "NASDAQ Cafe Visual Grammar Handoff",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contractVersion",
+    "status",
+    "episodeDate",
+    "handoffAuthorized",
+    "renderSpecVersion",
+    "visualGrammarContractVersion",
+    "timingBasis",
+    "fallbackDiversityRecheck",
+    "selectedFallbackBeatIds",
+    "unresolvedStateCount",
+    "renderSpecSha256",
+    "finalEpisodeContractSha256",
+    "semanticsSha256",
+    "rendererCompatibilitySha256",
+    "structuralReportSha256",
+    "timingReportSha256",
+    "artifacts"
+  ],
+  "properties": {
+    "contractVersion": {"const": "1.0.0"},
+    "status": {"const": "PASS"},
+    "episodeDate": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+    "handoffAuthorized": {"const": true},
+    "renderSpecVersion": {"const": "2.4.0"},
+    "visualGrammarContractVersion": {"const": "1.0.0"},
+    "timingBasis": {"const": "post-tts-production-data"},
+    "fallbackDiversityRecheck": {"const": "completed"},
+    "selectedFallbackBeatIds": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^(?:scene-0[1-9]-beat-[0-9]{3}|vb-0[1-9]-[0-9]{2})$"}
+    },
+    "unresolvedStateCount": {"const": 0},
+    "renderSpecSha256": {"$ref": "#/$defs/sha256"},
+    "finalEpisodeContractSha256": {"$ref": "#/$defs/sha256"},
+    "semanticsSha256": {"$ref": "#/$defs/sha256"},
+    "rendererCompatibilitySha256": {"$ref": "#/$defs/sha256"},
+    "structuralReportSha256": {"$ref": "#/$defs/sha256"},
+    "timingReportSha256": {"$ref": "#/$defs/sha256"},
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "renderSpec",
+        "finalEpisodeContract",
+        "semanticsRegistry",
+        "rendererCompatibilityRegistry",
+        "structuralReport",
+        "timingReport"
+      ],
+      "properties": {
+        "renderSpec": {"type": "string", "minLength": 1},
+        "finalEpisodeContract": {"type": "string", "minLength": 1},
+        "semanticsRegistry": {"type": "string", "minLength": 1},
+        "rendererCompatibilityRegistry": {"type": "string", "minLength": 1},
+        "structuralReport": {"type": "string", "minLength": 1},
+        "timingReport": {"type": "string", "minLength": 1}
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+  }
+}
