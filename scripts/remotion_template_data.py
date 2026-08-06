@@ -1,0 +1,161 @@
+#!/usr/bin/env python3
+"""Materialize approved card content into Remotion template data objects."""
+
+from __future__ import annotations
+
+import re
+from typing import Any
+
+import remotion_240_projection
+
+
+class TemplateDataError(ValueError):
+    pass
+
+
+NUMERIC_TEMPLATE_IDS = {"diverging-stock-bars", "index-return-bars"}
+CAUSAL_TEMPLATE_IDS = {"causal-lane", "macro-pressure"}
+NUMBER_RE = re.compile(r"[+-]?\d+(?:\.\d+)?")
+
+
+def _parse_numeric_text(text: str) -> tuple[str, str, float, int, str]:
+    matches = list(NUMBER_RE.finditer(text))
+    if not matches:
+        raise TemplateDataError(f"approved numeric display has no number: {text!r}")
+    match = matches[-1]
+    token = match.group(0)
+    numeric = float(token)
+    precision = len(token.split(".", 1)[1]) if "." in token else 0
+    if "%" in text[match.end() :]:
+        unit = "%"
+    elif "億ドル" in text[match.end() :]:
+        unit = "億ドル"
+    elif "ドル" in text[match.end() :]:
+        unit = "ドル"
+    else:
+        unit = ""
+    value = f"{token}{unit}"
+    label = (text[: match.start()] + text[match.end() :]).replace(unit, "").strip()
+    label = label.rstrip("：:：/／-–— ") or text
+    return label, value, numeric, precision, unit
+
+
+def _normalize_referenced_numbers(scene: dict[str, Any], beat: dict[str, Any]) -> None:
+    number_map = {
+        item.get("numberId"): item
+        for item in scene.get("numbers", [])
+        if isinstance(item, dict)
+    }
+    referenced = [number_map.get(item) for item in beat.get("objectIds", [])]
+    numbers = [item for item in referenced if isinstance(item, dict)]
+    if len(numbers) < 2:
+        raise TemplateDataError(
+            f"{scene.get('sceneId')}/{beat.get('beatId')}: numeric template has fewer than two numbers"
+        )
+    for number in numbers:
+        text = number.get("value")
+        if not isinstance(text, str) or not text.strip():
+            raise TemplateDataError(
+                f"{scene.get('sceneId')}/{beat.get('beatId')}: numeric display text missing"
+            )
+        label, value, numeric, precision, unit = _parse_numeric_text(text)
+        number["label"] = label
+        number["value"] = value
+        number["numericValue"] = numeric
+        number["precision"] = precision
+        number["unit"] = unit
+
+
+def _materialize_numeric_template(scene: dict[str, Any], beat: dict[str, Any]) -> None:
+    remotion_240_projection._materialize_numbers_from_card_lines(scene, beat)
+    _normalize_referenced_numbers(scene, beat)
+    beat["visualMode"] = "number-comparison"
+
+
+def _materialize_causal_template(scene: dict[str, Any], beat: dict[str, Any]) -> None:
+    card_map = {
+        item.get("cardId"): item
+        for item in scene.get("cards", [])
+        if isinstance(item, dict)
+    }
+    referenced = [
+        card_map[item]
+        for item in beat.get("objectIds", [])
+        if item in card_map
+    ]
+    if len(referenced) != 1:
+        raise TemplateDataError(
+            f"{scene.get('sceneId')}/{beat.get('beatId')}: causal template requires one approved source card"
+        )
+    lines = [
+        line.get("value")
+        for line in referenced[0].get("lines", [])
+        if isinstance(line, dict) and isinstance(line.get("value"), str)
+    ]
+    if not 2 <= len(lines) <= 4:
+        raise TemplateDataError(
+            f"{scene.get('sceneId')}/{beat.get('beatId')}: causal source must contain 2-4 ordered lines"
+        )
+    existing_node_ids = {
+        item.get("nodeId")
+        for item in scene.get("nodes", [])
+        if isinstance(item, dict)
+    }
+    existing_arrow_ids = {
+        item.get("arrowId")
+        for item in scene.get("arrows", [])
+        if isinstance(item, dict)
+    }
+    node_ids: list[str] = []
+    nodes = scene.setdefault("nodes", [])
+    arrows = scene.setdefault("arrows", [])
+    arrow_ids: list[str] = []
+    for index, label in enumerate(lines, start=1):
+        node_id = f"{beat['beatId']}.node-{index:02d}"
+        node_ids.append(node_id)
+        if node_id not in existing_node_ids:
+            nodes.append({"nodeId": node_id, "label": label})
+            existing_node_ids.add(node_id)
+        if index > 1:
+            arrow_id = f"{beat['beatId']}.arrow-{index-1:02d}"
+            arrow_ids.append(arrow_id)
+            if arrow_id not in existing_arrow_ids:
+                arrows.append(
+                    {
+                        "arrowId": arrow_id,
+                        "fromNodeId": node_ids[index - 2],
+                        "toNodeId": node_id,
+                        "label": "",
+                    }
+                )
+                existing_arrow_ids.add(arrow_id)
+    ordered_objects: list[str] = []
+    for index, node_id in enumerate(node_ids):
+        ordered_objects.append(node_id)
+        if index < len(arrow_ids):
+            ordered_objects.append(arrow_ids[index])
+    beat["objectIds"] = ordered_objects
+    beat["visualMode"] = "causal-diagram"
+    config = beat.get("templateConfig")
+    if not isinstance(config, dict):
+        raise TemplateDataError(
+            f"{scene.get('sceneId')}/{beat.get('beatId')}: templateConfig missing"
+        )
+    config["nodeOrder"] = node_ids
+    config["outcomeNodeId"] = node_ids[-1]
+
+
+def materialize_template_data(render_spec: dict[str, Any]) -> None:
+    scenes = render_spec.get("scenes")
+    if not isinstance(scenes, list):
+        raise TemplateDataError("render spec scenes must be an array")
+    for scene in scenes:
+        for beat in scene.get("visualBeats", []):
+            template = beat.get("visualTemplate")
+            if template in NUMERIC_TEMPLATE_IDS:
+                _materialize_numeric_template(scene, beat)
+            elif template in CAUSAL_TEMPLATE_IDS:
+                _materialize_causal_template(scene, beat)
+        beats = scene.get("visualBeats", [])
+        if beats:
+            scene["visualMode"] = beats[0]["visualMode"]
