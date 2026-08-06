@@ -44,7 +44,8 @@ def _real_builder(package: Path, output_root: Path, schema: Path):
 
 def _real_renderer_finalizer(*, output_root: Path, date: str, renderer_root: Path):
     module = _load_module(
-        "renderer_package_finalizer", ROOT / "scripts/finalize_renderer_package.py"
+        "renderer_package_finalizer_compat",
+        ROOT / "scripts/finalize_renderer_package_compat.py",
     )
     return module.finalize(
         output_root=output_root, date=date, renderer_root=renderer_root
