@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.nasdaq-cafe.local/visual_grammar.schema.json",
+  "title": "NASDAQ Cafe Visual Grammar Declaration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "grammarVersion",
+    "grammarId",
+    "grammarPhase",
+    "transitionRole"
+  ],
+  "properties": {
+    "grammarVersion": {"const": "1.0.0"},
+    "grammarId": {
+      "enum": [
+        "contradiction",
+        "evidence",
+        "gap",
+        "causal",
+        "reaction",
+        "comparison",
+        "verification",
+        "assembly"
+      ]
+    },
+    "grammarPhase": {
+      "enum": ["establish", "develop", "resolve"]
+    },
+    "transitionRole": {
+      "enum": ["continue", "major-shift", "return", "close"]
+    },
+    "returnTargetBeatId": {
+      "type": "string",
+      "pattern": "^vb-[0-9]{2}-[0-9]{2}$"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"transitionRole": {"const": "return"}},
+        "required": ["transitionRole"]
+      },
+      "then": {"required": ["returnTargetBeatId"]},
+      "else": {"not": {"required": ["returnTargetBeatId"]}}
+    }
+  ]
+}
