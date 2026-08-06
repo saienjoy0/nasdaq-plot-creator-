@@ -146,6 +146,12 @@ class RemotionCompatibilityTests(unittest.TestCase):
         self.assertEqual(3, len([item for item in beat["objectIds"] if item in node_ids]))
         self.assertEqual(2, len([item for item in beat["objectIds"] if item in arrow_ids]))
         self.assertEqual(3, len(beat["templateConfig"]["nodeOrder"]))
+        object_order = {item: index for index, item in enumerate(beat["objectIds"])}
+        for arrow in scene5["arrows"]:
+            if arrow["arrowId"] not in object_order:
+                continue
+            self.assertGreater(object_order[arrow["arrowId"]], object_order[arrow["fromNodeId"]])
+            self.assertGreater(object_order[arrow["arrowId"]], object_order[arrow["toNodeId"]])
 
     def test_07_reaction_timeline_and_terminal_scene_are_explicit(self):
         render = self.canonical()
