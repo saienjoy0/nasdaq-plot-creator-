@@ -1,0 +1,27 @@
+name: Visual Grammar Contract
+
+on:
+  pull_request:
+    paths:
+      - "contracts/visual_grammar_*.json"
+      - "scripts/visual_grammar_contract.py"
+      - "tests/test_visual_grammar_contract.py"
+      - ".github/workflows/visual-grammar-contract.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install validator dependencies
+        run: python -m pip install --disable-pip-version-check jsonschema==4.25.0
+      - name: Run Visual Grammar contract tests
+        run: python -m unittest tests/test_visual_grammar_contract.py -v
