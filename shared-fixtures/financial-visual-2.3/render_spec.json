@@ -3,7 +3,7 @@
   "episode": {
     "id": "2099-02-02",
     "targetDate": "2099-02-02",
-    "marketSession": "TECHNICAL ACCEPTANCE",
+    "marketSession": "技術検証",
     "informationCutoff": "2026-08-01T15:19:46Z",
     "episodeType": "single-news",
     "durationMode": "shortened",
@@ -1626,7 +1626,7 @@
           "visualTemplate": "earnings-surprise",
           "templateConfig": {
             "variant": "zero-baseline",
-            "comparisonBasis": "AWS revenue, same entity, period, currency, and unit",
+            "comparisonBasis": "AWS売上高・同一企業・同一期間・同一通貨・同一単位",
             "dataBasis": "financial-recipe-plan",
             "nodeOrder": [],
             "laneLabels": [],
@@ -1650,11 +1650,11 @@
           "finalHoldMs": 900,
           "contentType": "financial-data",
           "screenQuestion": "予想を上回っても、市場が見た差は何か",
-          "primaryElement": "AWS revenue gap",
+          "primaryElement": "AWS売上高の上振れ幅",
           "viewerTexts": [
-            "Expected $42.3B",
-            "Actual $43.0B",
-            "Gap +$0.7B"
+            "市場予想 423億ドル",
+            "実績 430億ドル",
+            "差 +7億ドル"
           ],
           "changeCue": "市場が事前に見ていた論点は、AI設備",
           "objectIds": [
@@ -1696,7 +1696,7 @@
               "transitionOut": "carry-forward",
               "continuityKey": "scene-04-beat-001-flow",
               "typographyTreatment": "underline-draw",
-              "typographyText": "Expected｜42.3B",
+              "typographyText": "市場予想｜423億ドル",
               "soundCue": null,
               "foxExpression": "分析"
             },
@@ -1722,7 +1722,7 @@
               "transitionOut": "carry-forward",
               "continuityKey": "scene-04-beat-001-flow",
               "typographyTreatment": "gap-highlight",
-              "typographyText": "Actual｜43.0B",
+              "typographyText": "実績｜430億ドル",
               "soundCue": "soft-impact",
               "foxExpression": "軽い驚き"
             },
@@ -1748,7 +1748,7 @@
               "transitionOut": "collapse-to-node",
               "continuityKey": "scene-04-beat-001-flow",
               "typographyTreatment": "gap-highlight",
-              "typographyText": "Gap｜+0.7B",
+              "typographyText": "差｜+7億ドル",
               "soundCue": null,
               "foxExpression": "分析"
             }
@@ -1779,7 +1779,7 @@
               "fvu-aws-actual",
               "fvu-aws-gap"
             ],
-            "comparisonBasis": "AWS revenue, same entity, period, currency, and unit",
+            "comparisonBasis": "AWS売上高・同一企業・同一期間・同一通貨・同一単位",
             "reasonCodes": []
           }
         },
@@ -2049,32 +2049,32 @@
       "numbers": [
         {
           "numberId": "fvu-aws-expected",
-          "label": "EXPECTED",
-          "value": "$42.3B",
-          "numericValue": 42.3,
-          "precision": 1,
-          "unit": "billion USD",
-          "comparison": "AWS revenue, technical fixture",
+          "label": "市場予想",
+          "value": "423",
+          "numericValue": 423,
+          "precision": 0,
+          "unit": "億ドル",
+          "comparison": "AWS売上高・市場予想",
           "tone": "neutral"
         },
         {
           "numberId": "fvu-aws-actual",
-          "label": "ACTUAL",
-          "value": "$43.0B",
-          "numericValue": 43.0,
-          "precision": 1,
-          "unit": "billion USD",
-          "comparison": "AWS revenue, technical fixture",
+          "label": "実績",
+          "value": "430",
+          "numericValue": 430,
+          "precision": 0,
+          "unit": "億ドル",
+          "comparison": "AWS売上高・実績",
           "tone": "positive"
         },
         {
           "numberId": "fvu-aws-gap",
-          "label": "GAP",
-          "value": "+$0.7B",
-          "numericValue": 0.7,
-          "precision": 1,
-          "unit": "billion USD",
-          "comparison": "AWS revenue, technical fixture",
+          "label": "上振れ幅",
+          "value": "+7",
+          "numericValue": 7,
+          "precision": 0,
+          "unit": "億ドル",
+          "comparison": "市場予想との差",
           "tone": "emphasis"
         }
       ],
