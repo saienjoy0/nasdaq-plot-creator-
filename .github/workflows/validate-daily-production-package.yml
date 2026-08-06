@@ -88,6 +88,39 @@ jobs:
               print(f"recovered {relative} sha256={actual}")
           PY
 
+      - name: Recover lineage seeds
+        run: |
+          python - <<'PY'
+          import base64, hashlib, zlib
+          from pathlib import Path
+
+          date = "${{ env.EPISODE_DATE }}"
+          root = Path.cwd()
+          seed_root = root / "daily-payloads" / date / "seeds"
+          records = [
+              (
+                  seed_root / "memory_query_plan.zlib.b64",
+                  root / "working" / date / "memory_query_plan.json",
+                  "ecf50f5c05f7c8a61c61cb6a4a12b9576646b3be7bb94315ca26130ec25d4f3a",
+              ),
+              (
+                  seed_root / "causal_research_dossier.template.zlib.b64",
+                  root / "research" / date / "causal_research_dossier.template.json",
+                  "098d24f320a6be352cd7752cccf3cbd5cd3c2cb1c61f1ce2abf4359de8039235",
+              ),
+          ]
+          for source, target, expected in records:
+              raw = zlib.decompress(base64.b64decode(source.read_text(encoding="utf-8"), validate=True))
+              actual = hashlib.sha256(raw).hexdigest()
+              if actual != expected:
+                  raise SystemExit(
+                      f"Lineage seed SHA mismatch: {source}; expected={expected} actual={actual}"
+                  )
+              target.parent.mkdir(parents=True, exist_ok=True)
+              target.write_bytes(raw)
+              print(f"recovered {target.relative_to(root)} sha256={actual}")
+          PY
+
       - name: Install validator dependency
         run: python -m pip install --disable-pip-version-check jsonschema
 
