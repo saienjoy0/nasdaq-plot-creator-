@@ -31,7 +31,7 @@ jobs:
       - name: Reconstruct immutable daily payload
         run: |
           python - <<'PY'
-          import base64, hashlib, json, zlib
+          import base64, binascii, hashlib, json, zlib
           from pathlib import Path
           date = "${{ env.EPISODE_DATE }}"
           root = Path.cwd()
@@ -42,7 +42,14 @@ jobs:
           if payload["episode_date"] != date:
               raise SystemExit("Payload date mismatch")
           for relative, record in payload["files"].items():
-              raw = zlib.decompress(base64.b64decode(record["data"]))
+              encoded = record["data"]
+              try:
+                  compressed = base64.b64decode(encoded, validate=True)
+              except binascii.Error as exc:
+                  raise SystemExit(
+                      f"Payload base64 invalid: {relative}; length={len(encoded)}; mod4={len(encoded) % 4}; {exc}"
+                  ) from exc
+              raw = zlib.decompress(compressed)
               if hashlib.sha256(raw).hexdigest() != record["sha256"]:
                   raise SystemExit(f"Payload SHA mismatch: {relative}")
               target = root / relative
