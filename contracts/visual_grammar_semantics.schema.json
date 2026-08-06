@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.nasdaq-cafe.local/visual_grammar_semantics.schema.json",
+  "title": "NASDAQ Cafe Visual Grammar Semantics",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contractVersion", "grammars", "transitionRoles"],
+  "properties": {
+    "contractVersion": {"const": "1.0.0"},
+    "grammars": {
+      "type": "array",
+      "minItems": 11,
+      "maxItems": 11,
+      "items": {"$ref": "#/$defs/grammar"}
+    },
+    "transitionRoles": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "uniqueItems": true,
+      "items": {"enum": ["continuation", "major-shift", "return", "closing"]}
+    }
+  },
+  "$defs": {
+    "grammar": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["grammarId", "meaning", "counted", "candidateScenes", "allowedCapabilities", "prohibitions"],
+      "properties": {
+        "grammarId": {
+          "enum": ["contradiction", "entity", "evidence", "gap", "causal", "reaction", "comparison", "verification", "analogy", "assembly", "bridge-text"]
+        },
+        "meaning": {"type": "string", "minLength": 1, "maxLength": 200},
+        "counted": {"type": "boolean"},
+        "candidateScenes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "integer", "minimum": 1, "maximum": 9}
+        },
+        "allowedCapabilities": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"}
+        },
+        "prohibitions": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 200}
+        }
+      }
+    }
+  }
+}
