@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Materialize hash-bound daily episode artifacts without changing editorial content."""
 from __future__ import annotations
-import argparse, hashlib, json, subprocess, sys
+import argparse, base64, hashlib, json, subprocess, sys, zlib
 from pathlib import Path
 
 MEM_BEGIN='<!--BEGIN_EPISODE_MEMORY_ANNEX-->'
 MEM_END='<!--END_EPISODE_MEMORY_ANNEX-->'
 PROD_BEGIN='<!--BEGIN_FINAL_PRODUCTION_SOURCE-->'
 PROD_END='<!--END_FINAL_PRODUCTION_SOURCE-->'
+DOSSIER_TEMPLATE_SHA='098d24f320a6be352cd7752cccf3cbd5cd3c2cb1c61f1ce2abf4359de8039235'
 
 def sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -18,6 +19,39 @@ def dump(value) -> str:
 def run(cmd: list[str]) -> None:
     print('+', ' '.join(cmd), flush=True)
     subprocess.run(cmd, check=True)
+
+def ensure_dossier_template(research: Path) -> Path:
+    target=research/'causal_research_dossier.template.json'
+    if target.exists():
+        if sha(target)!=DOSSIER_TEMPLATE_SHA:
+            raise SystemExit(f'dossier template SHA mismatch: {sha(target)}')
+        return target
+    parts=sorted(research.glob('causal_research_dossier.template.zlib.b64.part-*'))
+    if not parts:
+        raise SystemExit(f'missing dossier template and compressed parts: {target}')
+    encoded=''.join(p.read_text(encoding='utf-8').strip() for p in parts)
+    try:
+        raw=zlib.decompress(base64.b64decode(encoded,validate=True))
+    except Exception as exc:
+        raise SystemExit(f'failed to decode dossier template: {exc}') from exc
+    actual=hashlib.sha256(raw).hexdigest()
+    if actual!=DOSSIER_TEMPLATE_SHA:
+        raise SystemExit(f'decoded dossier template SHA mismatch: {actual}')
+    target.write_bytes(raw)
+    print(f'RECOVERED {target} sha256={actual}',flush=True)
+    return target
+
+def normalize_memory_locator(value):
+    if isinstance(value,str):
+        return value.replace(
+            'memory_context.json#threads.ai-capex-payback',
+            'memory_context.json#memory_selection.threads[0]'
+        )
+    if isinstance(value,list):
+        return [normalize_memory_locator(v) for v in value]
+    if isinstance(value,dict):
+        return {k:normalize_memory_locator(v) for k,v in value.items()}
+    return value
 
 def main() -> int:
     ap=argparse.ArgumentParser()
@@ -34,7 +68,7 @@ def main() -> int:
     context=work/f'memory_context_{date}.md'
     report=work/f'memory_retrieval_report_{date}.json'
     manifest=research/'research_input_manifest.json'
-    dossier_template=research/'causal_research_dossier.template.json'
+    dossier_template=ensure_dossier_template(research)
     dossier=research/f'causal_research_dossier_{date}.json'
     dossier_report=research/'causal_dossier_validation.json'
     public_package=episodes/f'episode_package_public_{date}.md'
@@ -44,7 +78,7 @@ def main() -> int:
     run([sys.executable,'scripts/editorial_memory_retrieval.py','--query-plan',str(query.relative_to(root)),'--context-output',str(context.relative_to(root)),'--report-output',str(report.relative_to(root)),'--repo-root',str(root)])
     run([sys.executable,'scripts/build_research_input_manifest.py','--episode-date',date,'--market-date','2026-08-05','--timezone','America/New_York','--information-cutoff','2026-08-06T04:27:46+00:00','--daily-source-package',str(daily),'--memory-query-plan',str(query),'--memory-context',str(context),'--memory-retrieval-report',str(report),'--output',str(manifest),'--repo-root',str(root)])
 
-    dossier_doc=json.loads(dossier_template.read_text(encoding='utf-8'))
+    dossier_doc=normalize_memory_locator(json.loads(dossier_template.read_text(encoding='utf-8')))
     dossier_doc['research_input_manifest']['sha256']=sha(manifest)
     dossier.write_text(dump(dossier_doc)+'\n',encoding='utf-8')
     run([sys.executable,'skills/nasdaq-cafe-causal-research/validators/validate_causal_research_dossier.py',str(dossier),'--research-input-manifest',str(manifest),'--memory-retrieval-report',str(report),'--repo-root',str(root),'--json-output',str(dossier_report)])
