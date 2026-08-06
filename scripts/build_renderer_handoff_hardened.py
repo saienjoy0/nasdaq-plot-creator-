@@ -138,6 +138,21 @@ def _persist_handoff_recheck(path: Path, value: dict[str, Any]) -> None:
     tmp.replace(path)
 
 
+def _restore_preflight(path: Path, original_bytes: bytes) -> None:
+    tmp = path.with_name(path.name + ".handoff-restore.tmp")
+    try:
+        tmp.write_bytes(original_bytes)
+        tmp.replace(path)
+    except OSError as exc:
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise HardenedHandoffError(
+            f"failed to restore immutable production preflight: {exc}"
+        ) from exc
+
+
 def _verify_bundled_preflight(result: dict[str, Any]) -> None:
     bundle = Path(str(result.get("bundle_path", "")))
     path = bundle / "production/official_execution_preflight.json"
@@ -173,28 +188,37 @@ def build_handoff_hardened(
         raise HardenedHandoffError(
             "handoff-time episode-memory recheck failed:\n" + "\n".join(errors)
         )
-    _persist_handoff_recheck(preflight_path, preflight)
 
-    result = builder(
-        source_root=source_root,
-        bundle_root=bundle_root,
-        date=date,
-        mode=mode,
-        plot_commit=plot_commit,
-        renderer_commit=renderer_commit,
-        renderer_contract_version=renderer_contract_version,
-        approval_path=approval_path,
-    )
-    if not isinstance(result, dict) or result.get("status") not in {"created", "noop"}:
-        raise HardenedHandoffError(
-            "base handoff builder did not return created/noop"
-        )
+    # production_package_valid has already hash-bound the source preflight.
+    # Temporarily augment only the copy consumed by the handoff builder, then
+    # restore the exact original bytes before returning or raising.
+    original_preflight = preflight_path.read_bytes()
+    _persist_handoff_recheck(preflight_path, preflight)
+    result: dict[str, Any] | None = None
     try:
-        _verify_bundled_preflight(result)
-    except Exception:
-        if result.get("status") == "created":
-            shutil.rmtree(Path(str(result.get("bundle_path", ""))), ignore_errors=True)
-        raise
+        result = builder(
+            source_root=source_root,
+            bundle_root=bundle_root,
+            date=date,
+            mode=mode,
+            plot_commit=plot_commit,
+            renderer_commit=renderer_commit,
+            renderer_contract_version=renderer_contract_version,
+            approval_path=approval_path,
+        )
+        if not isinstance(result, dict) or result.get("status") not in {"created", "noop"}:
+            raise HardenedHandoffError(
+                "base handoff builder did not return created/noop"
+            )
+        try:
+            _verify_bundled_preflight(result)
+        except Exception:
+            if result.get("status") == "created":
+                shutil.rmtree(Path(str(result.get("bundle_path", ""))), ignore_errors=True)
+            raise
+    finally:
+        _restore_preflight(preflight_path, original_preflight)
+
     result["episode_memory_hardening"] = "pass"
     return result
 
