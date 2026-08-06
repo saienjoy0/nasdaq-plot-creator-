@@ -1,0 +1,42 @@
+{
+  "contract_version": "1.0.0",
+  "fixtures": [
+    {
+      "id": "boring_2026-08-06",
+      "kind": "blocked_regression",
+      "source_path": "episodes/2026-08-06/episode_package_public_2026-08-06.md",
+      "required_critical_codes": [
+        "REPEATED_CONCLUSION",
+        "NO_BELIEF_CHANGE",
+        "HOOK_EXHAUSTS_THE_STORY",
+        "PROCEDURAL_NARRATION",
+        "FOX_VOICE_ABSENT",
+        "NO_LATE_PAYOFF"
+      ]
+    },
+    {
+      "id": "valid_single_driver",
+      "kind": "valid",
+      "requirements": [
+        "one eligible angle is allowed when alternatives are unsupported",
+        "company scope preserved"
+      ]
+    },
+    {
+      "id": "valid_multi_factor",
+      "kind": "valid",
+      "requirements": [
+        "primary, amplifier and offset remain distinct",
+        "Nasdaq scope is not overclaimed"
+      ]
+    },
+    {
+      "id": "valid_reason_unknown",
+      "kind": "valid",
+      "requirements": [
+        "reason_unknown remains unknown",
+        "validation conditions replace invented cause"
+      ]
+    }
+  ]
+}
