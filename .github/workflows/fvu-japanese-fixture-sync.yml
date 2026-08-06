@@ -1,0 +1,59 @@
+name: FVU Japanese Fixture Sync
+
+on:
+  push:
+    branches:
+      - fix/fvu-japanese-fixture-mirror
+    paths:
+      - .github/workflows/fvu-japanese-fixture-sync.yml
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/fvu-japanese-fixture-mirror
+          fetch-depth: 0
+
+      - name: Download renderer-owned Japanese fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://raw.githubusercontent.com/saienjoy0/saienjoy0-nasdaq-cafe-remotion/main/shared-fixtures/financial-visual-2.3"
+          curl --fail --location --retry 3 "$base/render_spec.json" -o shared-fixtures/financial-visual-2.3/render_spec.json
+          curl --fail --location --retry 3 "$base/fixture_manifest.json" -o shared-fixtures/financial-visual-2.3/fixture_manifest.json
+          python3 <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          root = Path("shared-fixtures/financial-visual-2.3")
+          spec_path = root / "render_spec.json"
+          manifest = json.loads((root / "fixture_manifest.json").read_text(encoding="utf-8"))
+          digest = hashlib.sha256(spec_path.read_bytes()).hexdigest()
+          if digest != manifest["renderSpecSha256"]:
+              raise SystemExit(f"render spec SHA mismatch: {digest} != {manifest['renderSpecSha256']}")
+          text = spec_path.read_text(encoding="utf-8")
+          for required in ["市場予想", "実績", "上振れ幅", "億ドル", "AWS売上高の上振れ幅"]:
+              if required not in text:
+                  raise SystemExit(f"missing Japanese fixture text: {required}")
+          for forbidden in ["EXPECTED", "ACTUAL", "billion USD", "AWS revenue gap"]:
+              if forbidden in text:
+                  raise SystemExit(f"legacy English fixture text remains: {forbidden}")
+          print(digest)
+          PY
+
+      - name: Commit mirror and remove bootstrap
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/fvu-japanese-fixture-sync.yml
+          git add -- shared-fixtures/financial-visual-2.3/render_spec.json
+          git add -- shared-fixtures/financial-visual-2.3/fixture_manifest.json
+          git commit -m "Sync Japanese financial fixture from renderer"
+          git push origin HEAD:fix/fvu-japanese-fixture-mirror
