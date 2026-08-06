@@ -86,16 +86,16 @@ def _single_approved_card_id(scene: dict[str, Any], beat: dict[str, Any]) -> str
 
 
 def _use_mixed_metric_template(beat: dict[str, Any]) -> None:
-    beat["visualTemplate"] = "metric-comparison-board"
-    beat["contentType"] = "metric-comparison-board"
+    beat["visualTemplate"] = "tailwind-headwind"
+    beat["contentType"] = "tailwind-headwind"
     beat["visualGrammarId"] = "evidence"
-    beat["templateVariant"] = "default"
+    beat["templateVariant"] = "two-lane"
     config = beat.get("templateConfig")
     if not isinstance(config, dict):
         raise TemplateDataError(
             f"{beat.get('beatId')}: numeric templateConfig missing"
         )
-    config["variant"] = "default"
+    config["variant"] = "two-lane"
 
 
 def _materialize_numeric_template(scene: dict[str, Any], beat: dict[str, Any]) -> None:
