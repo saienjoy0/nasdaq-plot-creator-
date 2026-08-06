@@ -7,11 +7,13 @@ import argparse
 import importlib.util
 import json
 import os
+import re
 import sys
 from pathlib import Path
 from typing import Any, Callable
 
 ROOT = Path(__file__).resolve().parents[1]
+DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 class HardenedBuildError(ValueError):
     pass
@@ -102,7 +104,7 @@ def _production_date(paths: dict[str, Any]) -> str:
     if not isinstance(value, str):
         raise HardenedBuildError("base builder omitted render_spec path")
     date = Path(value).parent.name
-    if len(date) != 10:
+    if not DATE_RE.fullmatch(date):
         raise HardenedBuildError(f"cannot derive episode date from {value}")
     return date
 
@@ -142,25 +144,7 @@ def build_hardened(
     result = builder(package, output_root, schema)
     if not isinstance(result, dict) or result.get("status") != "pass":
         raise HardenedBuildError("base final production builder did not return PASS")
-    paths = result.get("paths", {})
-    date = _production_date(paths if isinstance(paths, dict) else {})
-    renderer_root_value = os.environ.get("NASDAQ_CAFE_RENDERER_ROOT")
-    request_exists = (output_root / "working" / date / "production_request.json").is_file()
-    if renderer_root_value:
-        try:
-            finalized = renderer_finalizer(
-                output_root=output_root, date=date,
-                renderer_root=Path(renderer_root_value),
-            )
-            _merge_finalizer_result(result, finalized)
-        except Exception:
-            _cleanup_generated(result)
-            raise
-    elif request_exists:
-        _cleanup_generated(result)
-        raise HardenedBuildError(
-            "NASDAQ_CAFE_RENDERER_ROOT is required for production renderer validation"
-        )
+
     paths = result.get("paths", {})
     required = ("spoken_script", "asset_manifest", "render_spec")
     artifacts: list[Path] = []
@@ -170,6 +154,35 @@ def build_hardened(
             _cleanup_generated(result)
             raise HardenedBuildError(f"base builder omitted required artifact path: {key}")
         artifacts.append(Path(value))
+
+    renderer_root_value = os.environ.get("NASDAQ_CAFE_RENDERER_ROOT")
+    date: str | None = None
+    if renderer_root_value:
+        date = _production_date(paths if isinstance(paths, dict) else {})
+        try:
+            finalized = renderer_finalizer(
+                output_root=output_root, date=date,
+                renderer_root=Path(renderer_root_value),
+            )
+            _merge_finalizer_result(result, finalized)
+        except Exception:
+            _cleanup_generated(result)
+            raise
+    else:
+        render_value = paths.get("render_spec") if isinstance(paths, dict) else None
+        if isinstance(render_value, str) and DATE_RE.fullmatch(Path(render_value).parent.name):
+            date = Path(render_value).parent.name
+            request_exists = (
+                output_root / "working" / date / "production_request.json"
+            ).is_file()
+            if request_exists:
+                _cleanup_generated(result)
+                raise HardenedBuildError(
+                    "NASDAQ_CAFE_RENDERER_ROOT is required for production renderer validation"
+                )
+
+    paths = result.get("paths", {})
+    artifacts = [Path(paths[key]) for key in required]
     post = gate(repo_root, package, artifacts)
     post_errors = _errors(post)
     if post_errors:
