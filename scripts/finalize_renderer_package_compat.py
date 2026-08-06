@@ -118,6 +118,7 @@ def _persist_renderer_evidence(
     report_path: Path,
     visual_contract_path: Path,
     financial_contract_path: Path,
+    terminal_binding_path: Path,
     structural_report_path: Path,
 ) -> None:
     verification = output_root / "verification" / date
@@ -138,6 +139,9 @@ def _persist_renderer_evidence(
         ),
         "financial_final_episode_contract_sha256": base.sha256_file(
             financial_contract_path
+        ),
+        "terminal_assembly_binding_sha256": base.sha256_file(
+            terminal_binding_path
         ),
         "unresolved_states": 0,
     }
@@ -160,6 +164,9 @@ def _persist_renderer_evidence(
     )
     artifacts["financial_final_episode_contract"] = base.sha256_file(
         financial_contract_path
+    )
+    artifacts["terminal_assembly_binding"] = base.sha256_file(
+        terminal_binding_path
     )
     preflight["renderer_validation"] = {
         **renderer_contract,
@@ -184,6 +191,7 @@ def finalize(
     financial_contract_path = work / "financial_final_episode_contract.json"
     recipe_plan_path = work / "financial_recipe_plan.json"
     reaction_bindings_path = work / "reaction_timeline_bindings.json"
+    terminal_binding_path = work / "terminal_assembly_bindings.json"
     structural_report_path = (
         verification / "visual_grammar_structural_report.json"
     )
@@ -192,6 +200,7 @@ def finalize(
         (financial_contract_path, "Financial Final Episode Contract"),
         (recipe_plan_path, "Financial Recipe Plan"),
         (reaction_bindings_path, "reaction timeline bindings"),
+        (terminal_binding_path, "terminal assembly bindings"),
         (structural_report_path, "Visual Grammar structural report"),
     ):
         if not path.is_file():
@@ -224,7 +233,18 @@ def finalize(
         episode_date=date,
         reaction_bindings_path=reaction_bindings_path,
     )
-    remotion_template_data.materialize_template_data(strict)
+    terminal_binding = base.load_json(
+        terminal_binding_path,
+        "terminal assembly bindings",
+    )
+    if terminal_binding.get("episodeDate") != date:
+        raise CompatibilityFinalizationError(
+            "terminal assembly bindings episodeDate mismatch"
+        )
+    remotion_template_data.materialize_template_data(
+        strict,
+        terminal_binding=terminal_binding,
+    )
     remotion_sequence_policy.resolve_sequence_policies(strict)
     base.write_atomic(render_spec_path, strict)
 
@@ -245,6 +265,7 @@ def finalize(
         report_path=report_path,
         visual_contract_path=visual_contract_path,
         financial_contract_path=financial_contract_path,
+        terminal_binding_path=terminal_binding_path,
         structural_report_path=structural_report_path,
     )
     preflight_path = verification / "official_execution_preflight.json"
@@ -254,6 +275,7 @@ def finalize(
             "final_episode_contract": str(visual_contract_path),
             "financial_final_episode_contract": str(financial_contract_path),
             "financial_recipe_plan": str(recipe_plan_path),
+            "terminal_assembly_binding": str(terminal_binding_path),
             "financial_visual_consistency_report": (
                 cross_result["paths"]["cross_report"]
             ),
@@ -270,6 +292,9 @@ def finalize(
             ),
             "financial_final_episode_contract": base.sha256_file(
                 financial_contract_path
+            ),
+            "terminal_assembly_binding": base.sha256_file(
+                terminal_binding_path
             ),
             "preflight": base.sha256_file(preflight_path),
         },
