@@ -148,14 +148,10 @@ def main() -> int:
         "--json-output", str(dossier_report),
     ])
 
-    # Story Engine semantic artifacts were authored by ChatGPT before Actions.
-    # This step only binds SHA lineage and runs deterministic validation.
     run([
         sys.executable, "scripts/story-engine/materialize_story_engine.py",
         "--date", date, "--repo-root", str(root),
     ])
-    # Project the approved narration into the existing production structures.
-    # No narration is generated here; only sentence-boundary chunking and explicit overrides are allowed.
     run([
         sys.executable, "scripts/story-engine/project_story_script_to_production.py",
         "--story-script", str(story_script),
@@ -177,7 +173,6 @@ def main() -> int:
     contract_package = renderer_materialization["contract_package_path"]
 
     story_acceptance_doc = json.loads(story_acceptance.read_text(encoding="utf-8"))
-    creative_review_doc = json.loads(creative_review.read_text(encoding="utf-8"))
     story_annex = {
         "contract_version": "1.0.0",
         "episode_date": date,
@@ -242,8 +237,6 @@ def main() -> int:
             "status": "pass",
             "required_changes_applied": True,
             "unresolved_required_changes": 0,
-            "story_engine_score": creative_review_doc["total_score"],
-            "story_engine_round": creative_review_doc["round"],
         },
         "image_resolution": {"status": "resolved", "selected_path": "not-required", "unresolved_count": 0, "routes": []},
         "renderer_contract": {"repository": "saienjoy0/saienjoy0-nasdaq-cafe-remotion", "schema_version": render["schemaVersion"]},
