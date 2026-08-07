@@ -1,0 +1,73 @@
+{
+  "fixture_version": "1.1.0",
+  "episode_date": "2026-08-06",
+  "purpose": "Regression fixture for the pre-Story-Engine episode. The old episode is factually usable but should fail the new narrative progression audit before production integration.",
+  "inputs": {
+    "causal_dossier_path": "research/2026-08-06/causal_research_dossier.template.json",
+    "causal_dossier_git_blob_sha": "c299d3ce6e15e3b4fe0f15ab3b46974facd3a1c4",
+    "old_episode_package_path": "episodes/2026-08-06/episode_package_public_2026-08-06.md"
+  },
+  "locked_market_story": {
+    "central_contradiction_id": "CON-01",
+    "central_contradiction": "AMDはQ3売上見通しで通常のアナリスト予想を上回ったのに、8月5日の通常取引で7.04%下落した。",
+    "headline_beyond_discovery": "好決算かどうかではなく、次の巨大需要を取った証拠があるかがAI半導体の評価を分けた。",
+    "confidence": "medium",
+    "must_preserve_counterevidence_ids": ["E-004", "E-001", "E-009"]
+  },
+  "expected_story_findings": [
+    {
+      "code": "ANSWER_REVEALED_TOO_EARLY",
+      "severity": "critical",
+      "scene_ids": ["scene-01"],
+      "anchor": "結論から言うと、昨夜はAI需要があるかではなく、その次の巨大需要を誰が確実に取れるかが採点されました。",
+      "reason": "Scene 1 states the central explanatory answer before the later Expected/Actual/Gap and market-reaction evidence can change the viewer's understanding."
+    },
+    {
+      "code": "REPEATED_CONCLUSION",
+      "severity": "critical",
+      "scene_ids": ["scene-01", "scene-04", "scene-05", "scene-07"],
+      "anchor": "AI需要があるかではなく、その次の巨大需要を誰が確実に取れるか",
+      "reason": "The central evaluation-axis conclusion is already declared in Scene 1, leaving later scenes at risk of restating rather than discovering it."
+    },
+    {
+      "code": "NO_BELIEF_CHANGE",
+      "severity": "critical",
+      "scene_ids": ["scene-03", "scene-04", "scene-05"],
+      "anchor": "中心仮説を30秒以内に提示する",
+      "reason": "Because the package explicitly front-loads the center hypothesis, subsequent factual and context scenes do not have a guaranteed belief transition contract."
+    },
+    {
+      "code": "PROCEDURAL_NARRATION",
+      "severity": "major",
+      "scene_ids": ["scene-01", "scene-02"],
+      "anchor": "一緒に整理しましょう。 / まずAMDです。",
+      "reason": "The narration frequently announces the explanation procedure instead of letting the causal progression itself move the viewer forward."
+    },
+    {
+      "code": "FOX_VOICE_ABSENT",
+      "severity": "major",
+      "scene_ids": ["scene-03", "scene-04", "scene-06"],
+      "anchor": "facts-first production language",
+      "reason": "The old package is accurate but often reads like an audit checklist; the new authoring stage must make the fox a guide without adding jokes or invented personal history."
+    },
+    {
+      "code": "NO_LATE_PAYOFF",
+      "severity": "critical",
+      "scene_ids": ["scene-06", "scene-07", "scene-08"],
+      "anchor": "Scene 1 already contains the final evaluation-axis answer",
+      "reason": "Scenes 6-8 retain useful facts and validation points, but the old architecture does not reserve a new explanatory payoff after Scene 4 because the answer is already disclosed at the start."
+    }
+  ],
+  "positive_acceptance_properties": [
+    "Scene 1 establishes direction without consuming the complete proof.",
+    "Scene 2 opens the good-results/bad-stock contradiction as a real question.",
+    "Scenes 1-8 each add new evidence or new meaning.",
+    "A midpoint explanatory turn occurs in Scene 4-6, preferably Scene 6 when market reaction tests the hypothesis.",
+    "Scenes 6-8 still provide verification value after Scene 4.",
+    "The opening question is reframed in Scene 8, not Scene 9.",
+    "Scene 9 remains the fixed closing and adds no new evidence or issue.",
+    "All material counterevidence remains represented.",
+    "No confidence or NASDAQ causal scope is strengthened during storytelling."
+  ],
+  "notes": "These expected findings are narrative-regression expectations for the future Independent Critic. PR-A only establishes Story Plan structure and deterministic causal/scene guards; it does not pretend Python can score interestingness."
+}
