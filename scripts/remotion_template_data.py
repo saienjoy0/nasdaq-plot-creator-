@@ -13,7 +13,7 @@ class TemplateDataError(ValueError):
     pass
 
 
-NUMERIC_TEMPLATE_IDS = {"diverging-stock-bars", "index-return-bars", "split-comparison"}
+NUMERIC_TEMPLATE_IDS = {"diverging-stock-bars", "index-return-bars"}
 SHARED_UNIT_TEMPLATE_IDS = {"diverging-stock-bars", "index-return-bars"}
 CAUSAL_TEMPLATE_IDS = {"causal-lane", "macro-pressure"}
 NUMBER_RE = re.compile(r"[+-]?\d+(?:\.\d+)?")
@@ -96,6 +96,21 @@ def _use_mixed_metric_template(beat: dict[str, Any]) -> None:
             f"{beat.get('beatId')}: numeric templateConfig missing"
         )
     config["variant"] = "two-lane"
+
+    viewer_texts = beat.get("viewerTexts")
+    if isinstance(viewer_texts, list) and len(viewer_texts) == 2:
+        labels: list[str] = []
+        for text in viewer_texts:
+            if not isinstance(text, str) or "｜" not in text:
+                labels = []
+                break
+            label = text.split("｜", 1)[0].strip()
+            if not label:
+                labels = []
+                break
+            labels.append(label)
+        if len(labels) == 2:
+            config["laneLabels"] = labels
 
 
 def _materialize_numeric_template(scene: dict[str, Any], beat: dict[str, Any]) -> None:
