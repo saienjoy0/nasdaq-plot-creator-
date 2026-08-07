@@ -15,13 +15,9 @@
       "changeCue":"数字は良かった"
     },
     "scene-02-beat-002":{
-      "visualTemplate":"split-comparison",
-      "templateVariant":"two-lane",
-      "contentType":"split-comparison",
-      "visualMode":"number-comparison",
-      "visualGrammarId":"comparison",
       "screenQuestion":"業績と株価は同じ方向だったか",
-      "primaryElement":"好決算と株価下落"
+      "primaryElement":"好決算と株価下落",
+      "viewerTexts":["追い風｜Q2売上 115.4億ドル","向かい風｜AMD -7.04%"]
     },
     "scene-07-beat-001":{
       "visualTemplate":"event-reaction-timeline",
