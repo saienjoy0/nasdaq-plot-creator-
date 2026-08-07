@@ -148,7 +148,7 @@ jobs:
           PY
 
       - name: Install validator dependency
-        run: python -m pip install --disable-pip-version-check jsonschema
+        run: python -m pip install --disable-pip-version-check jsonschema pytest
 
       - name: Run compatibility and hardening regression tests
         run: |
