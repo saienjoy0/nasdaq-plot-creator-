@@ -9,6 +9,9 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+STORY_ENGINE_DIR = ROOT / "scripts/story-engine"
+if str(STORY_ENGINE_DIR) not in sys.path:
+    sys.path.insert(0, str(STORY_ENGINE_DIR))
 
 
 def load_module(name: str, path: Path):
@@ -92,16 +95,83 @@ class ProjectionTests(unittest.TestCase):
         self.assertEqual(text, "".join(parts))
         self.assertEqual(2, len(parts))
 
-    def test_explicit_visual_override_updates_render_only_with_declared_values(self):
+    def test_explicit_visual_override_updates_only_declared_fields(self):
         projection = load_module("story_projection_override", ROOT / "scripts/story-engine/project_story_script_to_production.py")
-        render = {"scenes": [{"sceneId": "scene-01", "headline": "old", "supportingTexts": [], "visualBeats": [{"beatId": "scene-01-beat-001", "screenQuestion": "old", "primaryElement": "old", "viewerTexts": ["old"], "changeCue": "old", "contentType": "x"}]}]}
-        binding = {"scene_overrides": {"scene-01": {"headline": "new"}}, "beat_overrides": {"scene-01-beat-001": {"screenQuestion": "question", "viewerTexts": ["A", "B"]}}}
+        render = {"scenes": [{
+            "sceneId": "scene-01",
+            "headline": "old",
+            "supportingTexts": [],
+            "visualBeats": [{
+                "beatId": "scene-01-beat-001",
+                "screenQuestion": "old",
+                "primaryElement": "old",
+                "viewerTexts": ["old"],
+                "changeCue": "old",
+                "contentType": "verification-checklist",
+                "visualTemplate": "verification-checklist",
+                "visualMode": "verification",
+                "screenState": "Data",
+                "templateConfig": {"variant": "default"},
+                "visualGrammar": {
+                    "contractVersion": "1.0.0",
+                    "grammarId": "verification",
+                    "transitionRole": "continuation",
+                    "returnTargetBeatId": None,
+                },
+            }],
+        }]}
+        binding = {
+            "scene_overrides": {"scene-01": {"headline": "new"}},
+            "beat_overrides": {"scene-01-beat-001": {
+                "screenQuestion": "question",
+                "viewerTexts": ["A", "B"],
+                "visualTemplate": "evidence-boundary",
+                "templateVariant": "confirmed-vs-unconfirmed",
+                "contentType": "evidence-boundary",
+                "visualGrammarId": "evidence",
+            }},
+        }
         projection.apply_visual_overrides(render, binding)
         self.assertEqual("new", render["scenes"][0]["headline"])
         beat = render["scenes"][0]["visualBeats"][0]
         self.assertEqual("question", beat["screenQuestion"])
         self.assertEqual(["A", "B"], beat["viewerTexts"])
         self.assertEqual("old", beat["primaryElement"])
+        self.assertEqual("evidence-boundary", beat["visualTemplate"])
+        self.assertEqual("evidence-boundary", beat["contentType"])
+        self.assertEqual("confirmed-vs-unconfirmed", beat["templateConfig"]["variant"])
+        self.assertEqual("evidence", beat["visualGrammar"]["grammarId"])
+        self.assertEqual("continuation", beat["visualGrammar"]["transitionRole"])
+        self.assertEqual("verification", beat["visualMode"])
+
+    def test_scene_07_close_only_reaction_binding_is_injected_at_story_projection(self):
+        auxiliary = load_module(
+            "story_auxiliary_bindings_test",
+            ROOT / "scripts/story-engine/apply_story_auxiliary_bindings.py",
+        )
+        story_path = ROOT / "working/2026-08-06/story-engine/story_production_bindings.json"
+        base_path = ROOT / "working/2026-08-06/reaction_timeline_bindings.json"
+        base = json.loads(base_path.read_text(encoding="utf-8"))
+        self.assertEqual(["vb-06-01"], [row["visualBeatId"] for row in base["bindings"]])
+
+        with tempfile.TemporaryDirectory() as temp:
+            reaction_path = Path(temp) / "reaction_timeline_bindings.json"
+            reaction_path.write_text(
+                json.dumps(base, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            result = auxiliary.apply_story_reaction_bindings(story_path, reaction_path)
+            self.assertEqual("pass", result["status"])
+            self.assertEqual(["vb-07-01"], result["inserted_reaction_bindings"])
+            document = json.loads(reaction_path.read_text(encoding="utf-8"))
+            rows = {row["visualBeatId"]: row for row in document["bindings"]}
+            row = rows["vb-07-01"]
+            self.assertEqual("event-reaction-timeline", row["visualTemplate"])
+            self.assertEqual("close-only", row["templateVariant"])
+            self.assertEqual("close-only", row["precision"])
+            self.assertEqual(["scene-07-card-001"], row["eventOrderIds"])
+            self.assertEqual([], row["seriesObjectIds"])
+            self.assertIn("分足", row["evidenceBasis"])
 
 
 if __name__ == "__main__":

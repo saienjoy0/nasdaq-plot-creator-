@@ -13,6 +13,32 @@
       "primaryElement":"好決算と株価下落の矛盾",
       "viewerTexts":["数字は良かった","それでもAMD -7.04%"],
       "changeCue":"数字は良かった"
+    },
+    "scene-07-beat-001":{
+      "visualTemplate":"event-reaction-timeline",
+      "templateVariant":"close-only",
+      "contentType":"event-reaction-timeline",
+      "visualMode":"timeline",
+      "visualGrammarId":"reaction",
+      "reactionTimelineBinding":{
+        "visualBeatId":"vb-07-01",
+        "visualTemplate":"event-reaction-timeline",
+        "templateVariant":"close-only",
+        "precision":"close-only",
+        "eventOrderIds":["scene-07-card-001"],
+        "seriesObjectIds":[],
+        "evidenceBasis":"8月5日の通常取引終値だけを使ったNVIDIA・AMD・Alphabetの反応比較。分足時系列は使用しない。"
+      }
+    },
+    "scene-08-beat-002":{
+      "visualTemplate":"evidence-boundary",
+      "templateVariant":"confirmed-vs-unconfirmed",
+      "contentType":"evidence-boundary",
+      "visualGrammarId":"evidence",
+      "screenQuestion":"どこまでを安全な結論にするか",
+      "primaryElement":"仮説の範囲線",
+      "viewerTexts":["言える：採用証拠の差が評価を分けた可能性","言わない：NASDAQ全体を一因で説明"],
+      "changeCue":"言える：採用証拠の差が評価を分けた可能性"
     }
   }
 }
