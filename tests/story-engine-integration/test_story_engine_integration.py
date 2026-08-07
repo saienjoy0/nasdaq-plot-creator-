@@ -141,6 +141,19 @@ class ProjectionTests(unittest.TestCase):
         self.assertEqual("continuation", beat["visualGrammar"]["transitionRole"])
         self.assertEqual("verification", beat["visualMode"])
 
+    def test_scene_07_close_only_reaction_binding_is_explicit(self):
+        bindings_path = ROOT / "working/2026-08-06/reaction_timeline_bindings.json"
+        document = json.loads(bindings_path.read_text(encoding="utf-8"))
+        rows = {row["visualBeatId"]: row for row in document["bindings"]}
+        self.assertIn("vb-07-01", rows)
+        row = rows["vb-07-01"]
+        self.assertEqual("event-reaction-timeline", row["visualTemplate"])
+        self.assertEqual("close-only", row["templateVariant"])
+        self.assertEqual("close-only", row["precision"])
+        self.assertEqual(["scene-07-card-001"], row["eventOrderIds"])
+        self.assertEqual([], row["seriesObjectIds"])
+        self.assertIn("分足", row["evidenceBasis"])
+
 
 if __name__ == "__main__":
     unittest.main()
