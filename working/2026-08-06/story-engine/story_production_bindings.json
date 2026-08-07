@@ -15,9 +15,9 @@
       "changeCue":"数字は良かった"
     },
     "scene-07-beat-001":{
-      "visualTemplate":"tailwind-headwind",
+      "visualTemplate":"explainer-diagram",
       "templateVariant":"default",
-      "contentType":"tailwind-headwind",
+      "contentType":"explainer-diagram",
       "visualGrammarId":"evidence"
     },
     "scene-08-beat-002":{
