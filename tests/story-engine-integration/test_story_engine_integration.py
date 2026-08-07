@@ -92,16 +92,54 @@ class ProjectionTests(unittest.TestCase):
         self.assertEqual(text, "".join(parts))
         self.assertEqual(2, len(parts))
 
-    def test_explicit_visual_override_updates_render_only_with_declared_values(self):
+    def test_explicit_visual_override_updates_only_declared_fields(self):
         projection = load_module("story_projection_override", ROOT / "scripts/story-engine/project_story_script_to_production.py")
-        render = {"scenes": [{"sceneId": "scene-01", "headline": "old", "supportingTexts": [], "visualBeats": [{"beatId": "scene-01-beat-001", "screenQuestion": "old", "primaryElement": "old", "viewerTexts": ["old"], "changeCue": "old", "contentType": "x"}]}]}
-        binding = {"scene_overrides": {"scene-01": {"headline": "new"}}, "beat_overrides": {"scene-01-beat-001": {"screenQuestion": "question", "viewerTexts": ["A", "B"]}}}
+        render = {"scenes": [{
+            "sceneId": "scene-01",
+            "headline": "old",
+            "supportingTexts": [],
+            "visualBeats": [{
+                "beatId": "scene-01-beat-001",
+                "screenQuestion": "old",
+                "primaryElement": "old",
+                "viewerTexts": ["old"],
+                "changeCue": "old",
+                "contentType": "verification-checklist",
+                "visualTemplate": "verification-checklist",
+                "visualMode": "verification",
+                "screenState": "Data",
+                "templateConfig": {"variant": "default"},
+                "visualGrammar": {
+                    "contractVersion": "1.0.0",
+                    "grammarId": "verification",
+                    "transitionRole": "continuation",
+                    "returnTargetBeatId": None,
+                },
+            }],
+        }]}
+        binding = {
+            "scene_overrides": {"scene-01": {"headline": "new"}},
+            "beat_overrides": {"scene-01-beat-001": {
+                "screenQuestion": "question",
+                "viewerTexts": ["A", "B"],
+                "visualTemplate": "evidence-boundary",
+                "templateVariant": "confirmed-vs-unconfirmed",
+                "contentType": "evidence-boundary",
+                "visualGrammarId": "evidence",
+            }},
+        }
         projection.apply_visual_overrides(render, binding)
         self.assertEqual("new", render["scenes"][0]["headline"])
         beat = render["scenes"][0]["visualBeats"][0]
         self.assertEqual("question", beat["screenQuestion"])
         self.assertEqual(["A", "B"], beat["viewerTexts"])
         self.assertEqual("old", beat["primaryElement"])
+        self.assertEqual("evidence-boundary", beat["visualTemplate"])
+        self.assertEqual("evidence-boundary", beat["contentType"])
+        self.assertEqual("confirmed-vs-unconfirmed", beat["templateConfig"]["variant"])
+        self.assertEqual("evidence", beat["visualGrammar"]["grammarId"])
+        self.assertEqual("continuation", beat["visualGrammar"]["transitionRole"])
+        self.assertEqual("verification", beat["visualMode"])
 
 
 if __name__ == "__main__":
