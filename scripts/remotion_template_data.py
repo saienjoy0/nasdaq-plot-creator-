@@ -13,7 +13,7 @@ class TemplateDataError(ValueError):
     pass
 
 
-NUMERIC_TEMPLATE_IDS = {"diverging-stock-bars", "index-return-bars"}
+NUMERIC_TEMPLATE_IDS = {"diverging-stock-bars", "index-return-bars", "split-comparison"}
 SHARED_UNIT_TEMPLATE_IDS = {"diverging-stock-bars", "index-return-bars"}
 CAUSAL_TEMPLATE_IDS = {"causal-lane", "macro-pressure"}
 NUMBER_RE = re.compile(r"[+-]?\d+(?:\.\d+)?")
