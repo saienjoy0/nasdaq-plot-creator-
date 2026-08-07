@@ -15,9 +15,10 @@
       "changeCue":"数字は良かった"
     },
     "scene-07-beat-001":{
-      "visualTemplate":"comparison-table",
+      "visualTemplate":"metric-comparison-board",
       "templateVariant":"default",
-      "contentType":"comparison-table"
+      "contentType":"metric-comparison-board",
+      "visualGrammarId":"evidence"
     },
     "scene-08-beat-002":{
       "visualTemplate":"evidence-boundary",
