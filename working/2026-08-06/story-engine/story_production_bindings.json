@@ -19,7 +19,9 @@
       "templateVariant":"two-lane",
       "contentType":"split-comparison",
       "visualMode":"number-comparison",
-      "visualGrammarId":"comparison"
+      "visualGrammarId":"comparison",
+      "screenQuestion":"業績と株価は同じ方向だったか",
+      "primaryElement":"好決算と株価下落"
     },
     "scene-07-beat-001":{
       "visualTemplate":"event-reaction-timeline",
