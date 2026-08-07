@@ -1,207 +1,340 @@
-# 朝のNASDAQカフェ｜Story Engine直接取り込み判断表
+# 朝のNASDAQカフェ｜Story Engine直接取り込み判断表 v1.1
 
-- 作成日: 2026-08-06
+- 更新日: 2026-08-07
 - 対象リポジトリ: `saienjoy0/nasdaq-plot-creator-`
-- 対象ブランチ: `design/story-engine-overhaul`
-- 目的: 外部Story Creationプロジェクトから、直接取り込める資産、クリーンルーム再実装する資産、採用しない資産を固定する
+- 実装設計: `designs/STORY_ENGINE_IMPORT_IMPLEMENTATION_PLAN_v1.1.md`
+- 目的: 外部Story Creationプロジェクトから、実際にvendorする資産、adaptする構造、clean-roomで再実装する思想、採用しないものを固定する
 
-## 1. 結論
+## 1. 原則
 
-外部プロジェクト本体は依存関係として導入しない。
+外部project本体をruntime dependencyとして導入しない。
 
-採用方法は次の三分類とする。
+採用方式は4分類とする。
 
 1. `direct-vendor`
-   - MIT / Apache-2.0など互換性を確認できた小さな独立資産だけ
-   - 元ファイル、元commit、LICENSE、NOTICE、変更点を保存する
-2. `clean-room-adaptation`
-   - 設計思想、一般的な工程、評価軸だけを参考にし、NASDAQカフェ用に独自実装する
-3. `reference-only`
-   - ライセンス不明、強いcopyleft、目的不一致、または導入コストが高いもの
+   - MIT / Apache-2.0等でlicenseとpinned commitを確認できる独立資産
+   - SOURCE、commit、LICENSE、NOTICE、変更内容を保存する
+2. `adapt`
+   - license上利用可能な構造・小さなhelperをNASDAQ契約へ薄く変換する
+3. `clean-room`
+   - 一般的設計思想のみ参照し、コード・schema・prompt本文はコピーしない
+4. `reject`
+   - 強いcopyleft、目的不一致、過剰なruntime依存、外部provider等
 
-初期Story Engineでは、実コードの大量vendoringを行わない。
-
-最も安全で保守しやすい方法は、外部実装から得た一般原則を、01〜04と既存Evidence契約へ合わせて独自のSkill、schema、validatorとして実装することだからである。
+優先順位は常にプロジェクト指示 → 02 → 01 → 03 → 04 → 外部assetである。
 
 ---
 
-## 2. 採用マトリクス
+## 2. 最新採用マトリクス
 
-| Project | Pinned commit | License確認 | 方式 | 初期採用 | 判断 |
+| Project | Pinned commit | License確認 | 方式 | 今回採用 | 直接コピー |
 |---|---|---|---|---|---|
-| Doza Assist | `cac564e616f92436af2909e9021925d085ef3f5f` | MIT | clean-room-adaptation中心、必要なら小規模direct-vendor | Story role、Turn、重複排除、情報だけのScene拒否 | Storytelling文書は後に公開repoから削除されたため、文書丸ごとのvendoringは行わない |
-| OpenMontage | `4eab34c5cfcccaa4f1970554928feccce73ee930` | AGPL-3.0 | clean-room-adaptationのみ | Angle competition、BUT/THEREFORE、Progressive Revelation、具体的Reviewer | code、schema、prompt本文をコピーしない |
-| video_explainer | `c033e28d6eccae43c1762f4653f9c320b16b050e` | pinned commitでLICENSE未確認 | reference-onlyからclean-room-adaptation | Issue→Patch→Verification、gap analysis | ライセンス確認前にcode、enum、schema、文書をコピーしない |
-| Toonflow | `bc61ec7a1b5df31293b286981a5f4ad4635464ee` | Apache-2.0 | clean-room-adaptation中心、独立資産はdirect-vendor可 | Decision / Execution / Supervision、Event Graph、Skill外出し | UI、provider、novel adaptationは導入しない |
-| ViMax | `05a48943878312d88fe5a016c12a9654940ecc43` | MIT | clean-room-adaptation中心、独立資産はdirect-vendor可 | checkpoint、resume、artifact preview、creative-intent preservation | 画像・動画生成基盤は導入しない |
-| FireRed-OpenStoryline | `c9e945215586f45c12a61c1951ee9a8e9c43a027` | Apache-2.0 | 後段候補 | 承認済み編集workflowのSkill化 | 初期Story Engineには入れない |
+| Doza Assist | `b93e6b912ca17a85c8ceaca93983c23695063679` | MIT LICENSE本文確認 | `direct-vendor` + adapter | Storytelling Foundation、Turn、adjacent redundancy、information-only rejection、story roles | `docs/storytelling-foundation-oss.md`とLICENSEを帰属付きvendor |
+| Toonflow | `bc61ec7a1b5df31293b286981a5f4ad4635464ee` | Apache-2.0 LICENSE本文確認 | `adapt` | Decision / Execution / Supervision、execution→review gate、具体的finding | domain promptは直接実行しない |
+| ViMax | `05a48943878312d88fe5a016c12a9654940ecc43` | MIT LICENSE本文確認 | `adapt` | targeted revision、dependent artifact stale化、partial failure preservation、wrong-output guards | tightly coupled runtimeはコピーしない |
+| FireRed-OpenStoryline | `c9e945215586f45c12a61c1951ee9a8e9c43a027` | Apache-2.0 LICENSE本文確認 | `adapt` | 問題Stageだけへ戻るlocalized rerun、workflow skill化 | 編集runtime全体はコピーしない |
+| video_explainer | `c033e28d6eccae43c1762f4653f9c320b16b050e` | `pyproject.toml` / READMEでMIT宣言、root LICENSE取得不可 | `clean-room` | approved plan→script、information gap、BUT/THEREFORE、mechanism explanation | 初期はcode/prompt本文をコピーしない |
+| OpenMontage | `4eab34c5cfcccaa4f1970554928feccce73ee930` | AGPL-3.0 LICENSE本文確認 | `clean-room` | Angle Competition、Guided Discovery、Progressive Revelation、artifact-specific review/checkpoint | code/schema/promptをコピーしない |
 
 ---
 
-## 3. 初期実装で直接取り込むもの
+## 3. Doza Assistは今回から実際にvendorする
 
-### 3.1 取り込むのは「コード」より「契約の形」
+旧判断ではStorytelling文書を「削除済み」としてvendoring対象外にしていた。
 
-初期PRで直接採用するのは次である。
+2026-08-07の再確認では、`b93e6b912ca17a85c8ceaca93983c23695063679`に次が存在することを確認した。
 
-- `Issue → Proposed Fix → Applied Patch → Verification`という修正記録の形
-- `Decision / Execution / Supervision`という責任分離
-- `checkpoint / resume`というartifactの状態管理
-- `review_focus / success_criteria`をStageごとに固定する方式
-- Story role vocabulary
-- Angle候補を複数比較し、採用・不採用理由を記録する方式
+- `docs/storytelling-foundation-oss.md`
+- `editorial_dna/storytelling.py`
+- `LICENSE`
 
-これらはNASDAQカフェ用に独自の名称、schema、validatorで実装する。
+Repository LICENSEはMITである。
 
-### 3.2 直接vendoring可能だが初期には不要なもの
+したがって、`docs/storytelling-foundation-oss.md`を元commit固定・帰属付きで`references/external/doza-assist/`へ保存する。
 
-MIT / Apache-2.0の次のような独立helperは、必要性が出た場合だけ取り込める。
+ただしruntimeへ全文を無条件注入しない。
 
-- idempotentなSkill / rule loader
-- artifact checkpoint utility
-- generic issue / patch serializer
-- generic resume metadata helper
+NASDAQ用Adapterが01〜04と整合するruleだけを選ぶ。
 
-取り込む場合は必ず次を置く。
+採用:
+
+- Turnのない並びはlist
+- adjacent redundancyはmomentumを壊す
+- information onlyではstory roleにならない
+- Hook / Reveal / Turn / Button等のrole思考
+- TopicとTheme / Claimの分離
+- midpoint turn
+- final self-check
+
+除外:
+
+- filler density
+- breath gap
+- tense shift
+- documentary emotional valence
+- clip in/out point
+- FCP/Premiere等の編集固有処理
+
+`editorial_dna/storytelling.py`はtask別rule routingの参考として有用だが、Doza固有prompt検出とpath構造へ結合しているため初期にはvendorしない。
+NASDAQ側で小さなrule selectorを独自実装する。
+
+---
+
+## 4. ToonflowはAgent責任分離だけadaptする
+
+参照:
+
+- `data/skills/script_agent_decision.md`
+- `data/skills/script_agent_supervision.md`
+- `src/agents/scriptAgent/index.ts`
+
+採用:
 
 ```text
-references/external/<project>/
+Decision
+→ Execution
+→ Supervision
+```
+
+NASDAQ変換:
+
+```text
+02 Editorial Lock / Story Plan decision
+→ Fox Script Author
+→ Independent Critic + 04 + deterministic guard
+```
+
+採用する実行規則:
+
+- execution失敗時にreviewへ進まない
+- reviewerは作者の自己評価に依存しない
+- reviewerは成果物を実際に読み、場所、問題、視聴者影響、修正案を返す
+- reviewとrewriteの責任を分ける
+
+不採用:
+
+- short-drama課金点
+- 情緒爆点
+- 大三角
+- 小説章 / 人物 / 伏線管理
+- UI / DB / model provider
+
+---
+
+## 5. ViMaxはTargeted RevisionとStale Graphをadaptする
+
+参照:
+
+- `agent_runtime/vimax_adapters.py`
+- `tests/test_wrong_output_guards.py`
+
+採用:
+
+- `revision_target`相当の対象artifactだけを修正する
+- upstream artifact変更時にdependent artifactをstaleへする
+- partial failureで成功済みartifactを破壊しない
+- missing dependencyのまま後段を開始しない
+- silent wrong outputをfixtureで検査する
+
+NASDAQ依存関係:
+
+```text
+causal dossier
+→ story_plan
+→ script_draft
+→ creative_review
+→ story_acceptance
+```
+
+前段変更時は後段をすべてstaleにする。
+
+不採用:
+
+- ViMax provider
+- LangChain runtime
+- image/video generation
+- character consistency
+- camera/shot pipeline
+
+---
+
+## 6. FireRed-OpenStorylineはAffected-stage rerunをadaptする
+
+参照:
+
+- `.storyline/skills/default_editing_workflow_skill/SKILL.md`
+- `docs/source/en/guide.md`
+
+採用:
+
+問題が出ても全工程を最初からやり直さず、責任Stageだけへ戻る。
+
+```text
+市場因果・数字・Expected・timeline
+→ 02 / Causal Research
+
+central contradiction / angle / no turn
+→ Story Plan
+
+狐口調 / clarity / repeated wording
+→ Fox Script
+
+Critic finding
+→ Targeted Patch
+
+9Scene基本役割 / production package
+→ 03
+
+画像route
+→ image selection
+
+render contract
+→ render_spec / validator
+```
+
+このreturn stageをfindingへ必須記録する。
+
+---
+
+## 7. video_explainerはclean-room採用
+
+`pyproject.toml`には`license = {text = "MIT"}`がありREADMEでもMITとされるが、pinned commitでroot LICENSE本文を取得できなかった。
+
+License gateを厳格に保つため、初期はcode・enum・prompt本文をvendorしない。
+
+参照する一般原則:
+
+- approved planからscriptを書く
+- central questionを一本にする
+- information gapを開いてから説明する
+- sourceの具体的数字を使う
+- mechanismを説明する
+- `BUT / THEREFORE`でScene間の因果をつなぐ
+- narrationとvisual descriptionを対応させる
+
+02が要求する「主役一本＋NASDAQへの因果」を優先し、source全項目の網羅は目的にしない。
+
+---
+
+## 8. OpenMontageはAGPLのためclean-room only
+
+採用する一般原則:
+
+- Stage分離
+- Angle Competition
+- Guided Discovery
+- Progressive Revelation
+- Information Gap
+- BUT / THEREFORE
+- artifact location付きfinding
+- Critical修正後のre-review
+- checkpoint / success criteria
+
+禁止:
+
+- code
+- schema
+- prompt本文
+- runtime dependency
+- 部分vendor
+
+---
+
+## 9. 03 / 04との衝突防止
+
+外部Storytelling projectの一般的な「scene削除・再配置」は、そのままNASDAQへ入れない。
+
+03は9Sceneの順番と役割を原則維持する。
+04は9Sceneの基本役割を変更禁止としている。
+
+そのため本番Patchから次を除外する。
+
+```text
+remove_scene
+merge_scene
+reorder_scene
+```
+
+許可:
+
+```text
+rewrite_scene
+compress_scene
+replace_connector
+move_reveal_within_scene
+move_content_to_compatible_scene
+add_clarity_bridge
+add_callback
+restore_counterevidence
+restore_causality_wording
+adjust_visual_beat
+```
+
+また、Scene 9は固定エンディングで新しい論点を追加しない。
+Bookend / Closing ReframeはScene 8で完了する。
+
+---
+
+## 10. 今回のdirect-vendor配置
+
+```text
+references/external/doza-assist/
 ├── SOURCE.md
 ├── PINNED_COMMIT
 ├── LICENSE
-├── NOTICE.md
-└── MODIFICATIONS.md
+├── MODIFICATIONS.md
+└── storytelling-foundation-oss.md
 ```
 
-直接コピーしたソースファイルにも、元project、元path、元commit、license、変更内容をheaderで残す。
+Toonflow / ViMax / FireRed / video_explainer / OpenMontageは、初期PRではsource registryのみでよい。
+実行コードを増やす必要が出た場合に個別License gateを通す。
 
 ---
 
-## 4. 直接取り込まないもの
+## 11. 外部runtime dependencyは禁止
 
-### 4.1 OpenMontageのcode / schema / prompt
+- submodule禁止
+- 日次clone禁止
+- latest自動取得禁止
+- 外部APIへ市場因果判断を委譲禁止
+- 外部story engineへ主役変更を許可しない
+- 外部画像/動画providerを台本repoへ追加しない
 
-AGPL-3.0のため、既存リポジトリへ部分コピーしない。
-
-採用するのは一般的な編集原則だけとし、次は独自に書く。
-
-- `story_discovery.schema.json`
-- `narrative_arc.schema.json`
-- `creative_review.schema.json`
-- Story Discovery Skill
-- Script Authoring Skill
-- Critic Skill
-- validators
-
-### 4.2 video_explainerのcode / enum / docs本文
-
-pinned commitでライセンスを確認できていないため、直接コピーしない。
-
-次の一般的な発想だけを独自実装する。
-
-```text
-analyze
-→ findings
-→ patch plan
-→ apply
-→ verify
-```
-
-### 4.3 Doza Assistの削除済みStorytelling文書
-
-過去commitでMITだったとしても、後に公開repoから削除されているため、文書丸ごとを本repoへコピーしない。
-
-次だけをNASDAQ用に独自記述する。
-
-- Turnのない並びはリスト
-- 隣接重複は削除または統合
-- 情報だけではScene採用理由にならない
-- Hook / Reveal / Turn / ButtonなどのStory role
-- Scene deletion test
-
-### 4.4 外部runtime dependency
-
-次を禁止する。
-
-- submodule
-- 外部repoを日次にcloneして読む
-- 外部APIへ台本判断を委任する
-- 外部Skillのlatestを自動取得する
-- 外部projectの更新で日次出力が変わる構成
+pinned referenceとNASDAQ固有Adapterだけで日次出力を再現できる状態にする。
 
 ---
 
-## 5. NASDAQ側で新規作成する正式資産
+## 12. License gate
 
-外部からコピーせず、次をこのリポジトリの正式資産として作る。
+直接assetを追加する前に必ず確認する。
 
-```text
-skills/nasdaq-cafe-story-discovery/
-skills/nasdaq-cafe-script-authoring/
-skills/nasdaq-cafe-entertainment-critic/
-
-contracts/story-engine/
-├── story_discovery.schema.json
-├── selected_story_angle.schema.json
-├── narrative_arc.schema.json
-├── creative_review.schema.json
-├── rewrite_patch.schema.json
-└── story_engine_lineage.schema.json
-
-scripts/story-engine/
-├── validate_story_discovery.py
-├── validate_selected_story_angle.py
-├── validate_narrative_arc.py
-├── validate_creative_review.py
-├── validate_causality_diff.py
-└── build_story_engine_acceptance.py
-```
-
----
-
-## 6. Attribution policy
-
-概念だけを参考にした場合も、採用文書へ次を残す。
-
-- project名
-- repository
 - pinned commit
-- 参照したfile
-- license
-- 採用した考え方
-- NASDAQ向け変更
-- 採用しなかった部分
+- license本文
+- file固有license header
+- NOTICE義務
+- copyright notice
+- dependency追加
+- 配布方式との互換性
+- 直接vendorする必要性
 
-コードまたは文書を直接コピーした場合は、license本文とcopyright noticeを同梱する。
-
----
-
-## 7. License gate
-
-新しい外部assetを直接取り込む前に、次をすべて満たす。
-
-- pinned commitを固定した
-- license fileを取得した
-- コピー対象fileが同じlicense範囲にある
-- repository全体のlicenseとfile固有headerが衝突しない
-- NOTICE義務を確認した
-- dependency追加が不要または許容可能
-- 既存repoの公開・配布方式と互換性がある
-- コピーではなく独自実装で十分でない理由がある
-
-一つでも不明なら`reference-only`へ倒す。
+一つでも不明なら`clean-room`へ倒す。
 
 ---
 
-## 8. 最終判断
+## 13. 最終判断
 
-初期Story Engineの品質は、外部コード量ではなく、次で決める。
+外部コード量を成功指標にしない。
 
-- 2026-08-06の退屈な旧台本を正しくFAILできる
-- 原因となるSceneと文を特定できる
-- 修正Patchが具体的である
-- 修正後もEvidence、時系列、確信度、反対材料を保持できる
+成功は次で判断する。
+
+- 2026-08-06旧台本を正しくFAILできる
+- 問題Scene / 文を特定できる
+- minimal patchを返せる
 - 9Sceneが九段階の理解変化になる
-- Story Engineなしでは`episode_package_final`へ進めない
+- Scene 4〜6にTurnがある
+- Scene 6〜8を見る理由がある
+- Scene 8で回収しScene 9へ新論点を残さない
+- rewriteでEvidence、timeline、confidence、counterevidenceが変わらない
+- Story Engine acceptanceなしではepisode finalへ進めない
 
-したがって初期実装は、外部projectの大規模vendoringではなく、ライセンス上安全なクリーンルーム実装を正式方針とする。
+この条件を満たすため、Dozaの安全なFoundation assetは直接vendorし、それ以外は薄いadapt / clean-roomを優先する。
