@@ -138,22 +138,22 @@ def compare_before_after(before:dict, after:dict, errors:list[str]):
         for key in ('claim_type','evidence_ids','confidence','scope'):
             if a[cid][key]!=b[cid][key]: errors.append(f'{cid}: rewrite changed guarded causal metadata field {key}')
 
-def validate_bundle(script_path:Path, plan_path:Path, dossier_path:Path, *, contracts_dir:Path, repo_root:Path, review_path:Path|None=None, patch_path:Path|None=None, before_script_path:Path|None=None)->Result:
+def validate_bundle(script_path:Path, plan_path:Path, dossier_path:Path, *, story_contracts_dir:Path, critic_contracts_dir:Path, repo_root:Path, review_path:Path|None=None, patch_path:Path|None=None, before_script_path:Path|None=None)->Result:
     errors=[]; warnings=[]
     script=load(script_path); plan=load(plan_path); dossier=load(dossier_path)
-    errors += schema_errors(script, contracts_dir/'story_script.schema.json','script')
+    errors += schema_errors(script, story_contracts_dir/'story_script.schema.json','script')
     if errors: return Result(errors,warnings)
     for label,ref,supplied in [('story_plan',script['story_plan'],plan_path),('causal_dossier',script['causal_dossier'],dossier_path)]:
         resolved=resolve_ref(ref,repo_root,label,errors)
         if resolved and resolved.resolve()!=supplied.resolve(): errors.append(f'{label}: ref does not resolve to supplied file')
     validate_script(script,plan,dossier,errors,warnings)
     if review_path:
-        review=load(review_path); errors += schema_errors(review,contracts_dir/'creative_review.schema.json','review')
+        review=load(review_path); errors += schema_errors(review,critic_contracts_dir/'creative_review.schema.json','review')
         if not errors:
             validate_review(review,errors)
             if review['episode_date']!=script['episode_date']: errors.append('review episode_date mismatch')
         if patch_path:
-            patch=load(patch_path); errors += schema_errors(patch,contracts_dir/'rewrite_patch.schema.json','patch')
+            patch=load(patch_path); errors += schema_errors(patch,critic_contracts_dir/'rewrite_patch.schema.json','patch')
             if not errors:
                 validate_patch(patch,review,plan,errors)
                 if patch['episode_date']!=script['episode_date']: errors.append('patch episode_date mismatch')
@@ -163,7 +163,7 @@ def validate_bundle(script_path:Path, plan_path:Path, dossier_path:Path, *, cont
     return Result(sorted(set(errors)),warnings)
 
 def main():
-    ap=argparse.ArgumentParser(); ap.add_argument('--script',type=Path,required=True); ap.add_argument('--story-plan',type=Path,required=True); ap.add_argument('--dossier',type=Path,required=True); ap.add_argument('--contracts-dir',type=Path,required=True); ap.add_argument('--repo-root',type=Path,default=Path('.')); ap.add_argument('--review',type=Path); ap.add_argument('--patch',type=Path); ap.add_argument('--before-script',type=Path)
-    a=ap.parse_args(); r=validate_bundle(a.script,a.story_plan,a.dossier,contracts_dir=a.contracts_dir,repo_root=a.repo_root,review_path=a.review,patch_path=a.patch,before_script_path=a.before_script)
+    ap=argparse.ArgumentParser(); ap.add_argument('--script',type=Path,required=True); ap.add_argument('--story-plan',type=Path,required=True); ap.add_argument('--dossier',type=Path,required=True); ap.add_argument('--story-contracts-dir',type=Path,required=True); ap.add_argument('--critic-contracts-dir',type=Path,required=True); ap.add_argument('--repo-root',type=Path,default=Path('.')); ap.add_argument('--review',type=Path); ap.add_argument('--patch',type=Path); ap.add_argument('--before-script',type=Path)
+    a=ap.parse_args(); r=validate_bundle(a.script,a.story_plan,a.dossier,story_contracts_dir=a.story_contracts_dir,critic_contracts_dir=a.critic_contracts_dir,repo_root=a.repo_root,review_path=a.review,patch_path=a.patch,before_script_path=a.before_script)
     print(json.dumps(r.as_dict(),ensure_ascii=False,indent=2)); sys.exit(0 if r.ok else 1)
 if __name__=='__main__': main()
