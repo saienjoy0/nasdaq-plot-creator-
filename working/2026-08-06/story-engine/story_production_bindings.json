@@ -18,6 +18,7 @@
       "visualTemplate":"split-comparison",
       "templateVariant":"two-lane",
       "contentType":"split-comparison",
+      "visualMode":"number-comparison",
       "visualGrammarId":"comparison"
     },
     "scene-07-beat-001":{
