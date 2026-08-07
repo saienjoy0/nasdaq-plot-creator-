@@ -18,6 +18,7 @@
       "visualTemplate":"event-reaction-timeline",
       "templateVariant":"close-only",
       "contentType":"event-reaction-timeline",
+      "visualMode":"timeline",
       "visualGrammarId":"reaction",
       "reactionTimelineBinding":{
         "visualBeatId":"vb-07-01",
