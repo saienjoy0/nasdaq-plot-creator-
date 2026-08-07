@@ -10,9 +10,12 @@ from types import SimpleNamespace
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
+STORY_STATES = ["story_plan_valid", "script_draft_ready", "creative_review_passed"]
+
 
 class DailyHardeningError(RuntimeError):
     pass
+
 
 def _load_module(name: str, path: Path):
     spec = importlib.util.spec_from_file_location(name, path)
@@ -22,6 +25,104 @@ def _load_module(name: str, path: Path):
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def _install_story_states(daily_module: Any) -> None:
+    states = list(getattr(daily_module, "STATES", []))
+    if all(state in states for state in STORY_STATES):
+        return
+    try:
+        insert_at = states.index("causal_dossier_valid") + 1
+    except ValueError as exc:
+        raise DailyHardeningError("base daily state machine lacks causal_dossier_valid") from exc
+    states[insert_at:insert_at] = STORY_STATES
+    daily_module.STATES = states
+
+
+def _validate_acceptance(daily_module: Any, *, workspace: Path, date: str, evidence_paths: list[Path], artifact_key: str) -> None:
+    workspace = Path(workspace).resolve()
+    resolved = [daily_module.safe_path(workspace, path, f"{artifact_key} evidence") for path in evidence_paths]
+    acceptance_paths = [path for path in resolved if path.name == "story_engine_acceptance.json"]
+    if len(acceptance_paths) != 1:
+        raise daily_module.DailyProductionError(
+            daily_module.ERROR_CODES["stale"],
+            f"{artifact_key} transition requires exactly one story_engine_acceptance.json",
+        )
+    acceptance = daily_module.load_json(acceptance_paths[0], "Story Engine acceptance")
+    if acceptance.get("episode_date") != date or acceptance.get("status") != "pass":
+        raise daily_module.DailyProductionError(
+            daily_module.ERROR_CODES["stale"],
+            "Story Engine acceptance must be PASS for the same episode date",
+        )
+    artifacts = acceptance.get("artifacts", {})
+    item = artifacts.get(artifact_key)
+    if not isinstance(item, dict):
+        raise daily_module.DailyProductionError(
+            daily_module.ERROR_CODES["stale"],
+            f"Story Engine acceptance omits artifact {artifact_key}",
+        )
+    artifact_path = daily_module.safe_path(workspace, item.get("path", ""), f"Story Engine {artifact_key}")
+    if daily_module.sha256_file(artifact_path) != item.get("sha256"):
+        raise daily_module.DailyProductionError(
+            daily_module.ERROR_CODES["stale"],
+            f"Story Engine acceptance SHA mismatch for {artifact_key}",
+        )
+    if artifact_path not in resolved:
+        raise daily_module.DailyProductionError(
+            daily_module.ERROR_CODES["stale"],
+            f"{artifact_key} transition evidence must include {item.get('path')}",
+        )
+    critic = acceptance.get("critic", {})
+    if artifact_key == "creative_review":
+        if critic.get("verdict") != "pass" or int(critic.get("score", 0)) < 25:
+            raise daily_module.DailyProductionError(
+                daily_module.ERROR_CODES["stale"],
+                "creative_review_passed requires final critic PASS with score >=25",
+            )
+
+
+def _install_story_transition_guard(daily_module: Any) -> None:
+    original = getattr(daily_module, "add_transition", None)
+    if not callable(original):
+        raise DailyHardeningError("base daily module lacks add_transition")
+
+    def guarded_add_transition(*, workspace: Path, date: str, new_state: str, evidence_paths: list[Path], allow_multi_step: bool = False):
+        artifact_by_state = {
+            "story_plan_valid": "story_plan",
+            "script_draft_ready": "story_script",
+            "creative_review_passed": "creative_review",
+        }
+        artifact_key = artifact_by_state.get(new_state)
+        if artifact_key:
+            _validate_acceptance(
+                daily_module,
+                workspace=Path(workspace),
+                date=str(date),
+                evidence_paths=list(evidence_paths),
+                artifact_key=artifact_key,
+            )
+        elif new_state == "episode_package_final":
+            resolved = [daily_module.safe_path(Path(workspace), path, "episode final evidence") for path in evidence_paths]
+            if not any(path.name == "story_engine_acceptance.json" for path in resolved):
+                raise daily_module.DailyProductionError(
+                    daily_module.ERROR_CODES["stale"],
+                    "episode_package_final requires Story Engine acceptance evidence",
+                )
+            if not any(path.name.startswith("episode_package_") and path.suffix == ".md" for path in resolved):
+                raise daily_module.DailyProductionError(
+                    daily_module.ERROR_CODES["episode"],
+                    "episode_package_final requires the final episode package",
+                )
+        return original(
+            workspace=workspace,
+            date=date,
+            new_state=new_state,
+            evidence_paths=evidence_paths,
+            allow_multi_step=allow_multi_step,
+        )
+
+    daily_module.add_transition = guarded_add_transition
+
 
 def _rebind_handoff_preflight_evidence(
     daily_module: Any, *, workspace: Path, date: str
@@ -69,10 +170,12 @@ def _rebind_handoff_preflight_evidence(
     daily_module.write_atomic(state_path, state)
     return True
 
+
 def _install_handoff_retry(daily_module: Any) -> None:
     original = getattr(daily_module, "build_handoff", None)
     if not callable(original):
         return
+
     def build_handoff_with_rebind(*args, **kwargs):
         try:
             return original(*args, **kwargs)
@@ -89,7 +192,9 @@ def _install_handoff_retry(daily_module: Any) -> None:
             ):
                 raise
             return original(*args, **kwargs)
+
     daily_module.build_handoff = build_handoff_with_rebind
+
 
 def patch_daily_module(
     daily_module: Any,
@@ -116,8 +221,11 @@ def patch_daily_module(
         validate_acceptance=required["acceptance"],
         write_report=required["writer"],
     )
+    _install_story_states(daily_module)
+    _install_story_transition_guard(daily_module)
     _install_handoff_retry(daily_module)
     return daily_module
+
 
 def load_hardened_daily_module():
     daily = _load_module("daily_production_base", ROOT / "scripts/run_daily_production.py")
@@ -144,9 +252,11 @@ def load_hardened_daily_module():
         acceptance_writer=acceptance_writer,
     )
 
+
 def main(argv: list[str] | None = None) -> int:
     module = load_hardened_daily_module()
     return module.main(argv)
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
