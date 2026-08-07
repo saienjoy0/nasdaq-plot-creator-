@@ -1,0 +1,16 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://nasdaq-cafe.local/contracts/creative_review_v1.0.schema.json",
+  "title":"NASDAQ Cafe Independent Creative Review",
+  "type":"object","additionalProperties":false,
+  "required":["contract_version","episode_date","reviewer","round","scores","total_score","immediate_failures","findings","verdict"],
+  "properties":{
+    "contract_version":{"const":"1.0.0"},"episode_date":{"type":"string","format":"date"},"reviewer":{"const":"independent_critic"},"round":{"type":"integer","minimum":1,"maximum":2},
+    "scores":{"type":"object","additionalProperties":false,"required":["opening","progression","discovery","clarity","fox_voice","late_payoff"],"properties":{"opening":{"type":"integer","minimum":0,"maximum":5},"progression":{"type":"integer","minimum":0,"maximum":5},"discovery":{"type":"integer","minimum":0,"maximum":5},"clarity":{"type":"integer","minimum":0,"maximum":5},"fox_voice":{"type":"integer","minimum":0,"maximum":5},"late_payoff":{"type":"integer","minimum":0,"maximum":5}}},
+    "total_score":{"type":"integer","minimum":0,"maximum":30},
+    "immediate_failures":{"type":"array","items":{"type":"string","minLength":1}},
+    "findings":{"type":"array","items":{"$ref":"#/$defs/finding"}},
+    "verdict":{"type":"string","enum":["pass","conditional","restructure","fail"]}
+  },
+  "$defs":{"finding":{"type":"object","additionalProperties":false,"required":["finding_id","severity","issue_type","scene_ids","problem","viewer_impact","minimal_fix"],"properties":{"finding_id":{"type":"string","pattern":"^finding-[0-9]{2,}$"},"severity":{"type":"string","enum":["critical","major","minor"]},"issue_type":{"type":"string","enum":["REPEATED_CONCLUSION","NO_BELIEF_CHANGE","NO_NEW_EVIDENCE","ANSWER_REVEALED_TOO_EARLY","PROCEDURAL_NARRATION","SCENE_ORDER_INTERCHANGEABLE","FOX_VOICE_ABSENT","NO_LATE_PAYOFF","ABSTRACT_EDITORIAL_LANGUAGE","NO_BEFORE_CONTEXT","NO_AFTER_IMPLICATION","NO_MIDPOINT_TURN","OPEN_LOOP_UNRESOLVED","CAUSALITY_DRIFT","COUNTEREVIDENCE_REMOVED","TIMELINE_DRIFT","NASDAQ_SCOPE_OVERREACH","CLARITY_OVERLOAD"]},"scene_ids":{"type":"array","items":{"type":"string","pattern":"^scene-0[1-9]$"},"uniqueItems":true},"problem":{"type":"string","minLength":1},"viewer_impact":{"type":"string","minLength":1},"minimal_fix":{"type":"string","minLength":1}}}}
+}

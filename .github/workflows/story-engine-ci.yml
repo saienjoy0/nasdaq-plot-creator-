@@ -1,0 +1,35 @@
+name: Story Engine CI
+
+on:
+  pull_request:
+    paths:
+      - 'skills/nasdaq-cafe-story-plan/**'
+      - 'skills/nasdaq-cafe-story-authoring/**'
+      - 'skills/nasdaq-cafe-entertainment-critic/**'
+      - 'scripts/story-engine/**'
+      - 'tests/story-plan/**'
+      - 'tests/story-engine/**'
+      - 'references/STORY_ENGINE_DIRECT_IMPORT_MATRIX.md'
+      - 'references/external/**'
+      - '.github/workflows/story-engine-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  story-engine-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install validation dependencies
+        run: python -m pip install --disable-pip-version-check pytest jsonschema
+      - name: Compile Story Engine validators
+        run: |
+          python -m py_compile skills/nasdaq-cafe-story-plan/validators/validate_story_plan.py
+          python -m py_compile scripts/story-engine/validate_story_engine_bundle.py
+      - name: Run Story Plan and Story Engine regression tests
+        run: python -m pytest -q tests/story-plan tests/story-engine

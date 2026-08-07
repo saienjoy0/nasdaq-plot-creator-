@@ -1,0 +1,279 @@
+{
+  "contract_version": "1.1.0",
+  "episode_date": "2026-08-06",
+  "created_at": "2026-08-07T12:30:00Z",
+  "producer": "chatgpt",
+  "causal_dossier": {
+    "path": "causal_dossier_fixture.json",
+    "sha256": "44879ce0826d91c4b63e765fc5d9c9722df131cfc195b851a8b719911b8bc41e"
+  },
+  "central_contradiction_id": "CON-01",
+  "central_contradiction": "AMDはQ3売上見通しで通常予想を上回ったのに7.04%下落し、NVIDIAは3.43%上昇した。",
+  "central_question": "市場の採点軸はAI需要の有無から何へ移ったのか。",
+  "headline_beyond_discovery": "好決算かどうかではなく、次の巨大需要を取った証拠があるかがAI半導体の評価を分けた。",
+  "naive_explanations": [
+    {
+      "id": "naive-01",
+      "explanation": "AMDの決算が市場予想を下回った。",
+      "status": "rejected",
+      "evidence_ids": [
+        "E-004"
+      ],
+      "why": "Q3見通しは通常予想を上回った。"
+    },
+    {
+      "id": "naive-02",
+      "explanation": "AI半導体が全面安だった。",
+      "status": "rejected",
+      "evidence_ids": [
+        "E-001"
+      ],
+      "why": "NVIDIAは3.43%上昇した。"
+    },
+    {
+      "id": "naive-03",
+      "explanation": "AMD一社がNASDAQ下落を説明した。",
+      "status": "weakened",
+      "evidence_ids": [
+        "E-001",
+        "E-008"
+      ],
+      "why": "AlphabetとMicrosoftの下落も重なった。"
+    }
+  ],
+  "angle_candidates": [
+    {
+      "id": "angle-01",
+      "angle_type": "contradiction",
+      "central_question": "好決算なのになぜAMDは下がったのか。",
+      "story_spine": "予想超過→株価下落の矛盾を追う。",
+      "opening_promise": "好決算と下落の矛盾を解く。",
+      "midpoint_turn_claim": "通常予想だけでは採点表が足りなかった。",
+      "closing_reframe": "好決算の意味が変わった。",
+      "causality_scope": "company",
+      "confidence": "medium",
+      "evidence_ids": [
+        "E-004",
+        "E-005",
+        "E-001"
+      ],
+      "counterevidence_ids": [
+        "E-004"
+      ],
+      "risk": "AMD固有の話で終わる。",
+      "why_distinct": "個社矛盾中心。"
+    },
+    {
+      "id": "angle-02",
+      "angle_type": "evaluation_axis_shift",
+      "central_question": "市場の採点軸はAI需要の有無から何へ移ったのか。",
+      "story_spine": "AMDの予想超過→追加証拠不足→SpaceX採用証拠でNVIDIAとの差→市場反応で検証→NASDAQへの波及範囲を限定する。",
+      "opening_promise": "数字が良いだけでは足りなかった理由を追う。",
+      "midpoint_turn_claim": "NVIDIA上昇とAMD下落の分岐が採用証拠の差と整合した。",
+      "closing_reframe": "昨夜はAI需要の存在より次の巨大需要を取った証拠が採点された。",
+      "causality_scope": "nasdaq_support",
+      "confidence": "medium",
+      "evidence_ids": [
+        "E-004",
+        "E-005",
+        "E-007",
+        "E-001",
+        "E-008"
+      ],
+      "counterevidence_ids": [
+        "E-004",
+        "E-001",
+        "E-009"
+      ],
+      "risk": "SpaceX材料を過大評価しない。",
+      "why_distinct": "評価軸の変化を中心にする。"
+    },
+    {
+      "id": "angle-03",
+      "angle_type": "comparison",
+      "central_question": "同じAI半導体でAMDとNVIDIAの評価がなぜ分かれたのか。",
+      "story_spine": "二社の証拠差を比較し、NASDAQ全体とは分離する。",
+      "opening_promise": "同じテーマ内の二極化を見る。",
+      "midpoint_turn_claim": "採用証拠の有無が相対評価を分けた可能性。",
+      "closing_reframe": "AI半導体を一括りにできない夜だった。",
+      "causality_scope": "sector",
+      "confidence": "medium",
+      "evidence_ids": [
+        "E-001",
+        "E-004",
+        "E-007"
+      ],
+      "counterevidence_ids": [
+        "E-009"
+      ],
+      "risk": "比較が主役ニュースを薄める。",
+      "why_distinct": "相対比較中心。"
+    }
+  ],
+  "selected_angle_id": "angle-02",
+  "story_spine": "AMDの予想超過→追加証拠不足→SpaceX採用証拠でNVIDIAとの差→市場反応で検証→NASDAQへの波及範囲を限定する。",
+  "opening_promise": "数字が良いだけでは足りなかった理由を追う。",
+  "midpoint_turn": {
+    "scene_id": "scene-06",
+    "claim": "NVIDIA上昇とAMD下落の分岐が採用証拠の差と整合した。",
+    "evidence_ids": [
+      "E-001",
+      "E-007"
+    ],
+    "what_changes": "仮説が説明から実際の価格反応によるテストへ進む。"
+  },
+  "closing_reframe": {
+    "scene_id": "scene-08",
+    "text": "昨夜はAI需要の存在より次の巨大需要を取った証拠が採点された。"
+  },
+  "open_loops": [
+    {
+      "id": "loop-01",
+      "open_scene": "scene-01",
+      "question": "数字を上回ったAMDがなぜ売られたのか。",
+      "promised_evidence_ids": [
+        "E-004",
+        "E-005"
+      ],
+      "close_scene": "scene-04",
+      "resolution": "通常予想超過と高まったAI期待のGapを分ける。"
+    },
+    {
+      "id": "loop-02",
+      "open_scene": "scene-05",
+      "question": "この差はAMD/NVIDIAだけの話か、NASDAQまで届いたのか。",
+      "promised_evidence_ids": [
+        "E-001",
+        "E-008"
+      ],
+      "close_scene": "scene-08",
+      "resolution": "大型テック安も重なり、AMD一社をNASDAQ主因にはしない。"
+    }
+  ],
+  "scenes": [
+    {
+      "scene_id": "scene-01",
+      "formal_role": "direction_and_conclusion",
+      "story_role": "hook",
+      "viewer_belief_before": "昨夜はAI半導体が一緒に動いた夜だろう。",
+      "new_evidence_ids": [
+        "E-001"
+      ],
+      "new_meaning": "同じAI半導体でNVIDIAとAMDが逆方向だった。",
+      "viewer_belief_after": "単純な全面安では説明できない。",
+      "remaining_question": "ではAMDの数字は本当に悪かったのか。",
+      "connector": "opening"
+    },
+    {
+      "scene_id": "scene-02",
+      "formal_role": "contradiction",
+      "story_role": "question",
+      "viewer_belief_before": "AMDの数字が悪かったのかもしれない。",
+      "new_evidence_ids": [
+        "E-004",
+        "E-001"
+      ],
+      "new_meaning": "売上・見通しは強いのに株価は下落した。",
+      "viewer_belief_after": "悪決算説では矛盾が残る。",
+      "remaining_question": "確認済みの事実だけを並べるとどうなるか。",
+      "connector": "but"
+    },
+    {
+      "scene_id": "scene-03",
+      "formal_role": "confirmed_facts",
+      "story_role": "setup",
+      "viewer_belief_before": "解釈より先に事実を固定する必要がある。",
+      "new_evidence_ids": [
+        "E-003",
+        "E-004",
+        "E-006"
+      ],
+      "new_meaning": "発表時刻と実績・見通しを切り分ける。",
+      "viewer_belief_after": "時系列と数値の土台ができる。",
+      "remaining_question": "通常予想を超えたのに何が足りなかったのか。",
+      "connector": "therefore"
+    },
+    {
+      "scene_id": "scene-04",
+      "formal_role": "expected_actual_gap",
+      "story_role": "explanation",
+      "viewer_belief_before": "通常予想を超えたなら十分なはずだ。",
+      "new_evidence_ids": [
+        "E-004",
+        "E-005"
+      ],
+      "new_meaning": "Expected/Actualは上振れでも、追加のAI顧客・利益率証拠への期待Gapが残った。",
+      "viewer_belief_after": "採点表が通常コンセンサスだけではなかった可能性が見える。",
+      "remaining_question": "その採点表を具体化する比較材料はあるか。",
+      "connector": "but"
+    },
+    {
+      "scene_id": "scene-05",
+      "formal_role": "global_context",
+      "story_role": "context",
+      "viewer_belief_before": "高まった期待は抽象的に見える。",
+      "new_evidence_ids": [
+        "E-006",
+        "E-007"
+      ],
+      "new_meaning": "SpaceXのNVIDIA採用報道が一方に具体的な需要証拠を加えた。",
+      "viewer_belief_after": "競争上の証拠差という比較軸が見える。",
+      "remaining_question": "実際の株価はその仮説と整合したか。",
+      "connector": "therefore"
+    },
+    {
+      "scene_id": "scene-06",
+      "formal_role": "market_reaction",
+      "story_role": "test",
+      "viewer_belief_before": "説明はできても価格が同じ方向なら弱い。",
+      "new_evidence_ids": [
+        "E-001",
+        "E-007"
+      ],
+      "new_meaning": "NVIDIA上昇・AMD下落・SOXX下落が同時に並んだ。",
+      "viewer_belief_after": "仮説が市場反応によってテストされた。",
+      "remaining_question": "ただしNASDAQ全体をAMDだけで説明してよいか。",
+      "connector": "but"
+    },
+    {
+      "scene_id": "scene-07",
+      "formal_role": "entity_divergence",
+      "story_role": "comparison",
+      "viewer_belief_before": "AMD材料だけでNASDAQを説明したくなる。",
+      "new_evidence_ids": [
+        "E-001",
+        "E-008"
+      ],
+      "new_meaning": "AlphabetとMicrosoftも下落し、Dowは上昇した。",
+      "viewer_belief_after": "AMDは主役だがNASDAQ全体には複数材料がある。",
+      "remaining_question": "この仮説を今後どう検証し、どこで弱めるべきか。",
+      "connector": "contrast"
+    },
+    {
+      "scene_id": "scene-08",
+      "formal_role": "validation_points",
+      "story_role": "verification",
+      "viewer_belief_before": "結論を断定して終えたくなる。",
+      "new_evidence_ids": [
+        "E-009",
+        "E-001",
+        "E-004"
+      ],
+      "new_meaning": "不足データと反対材料を残し、次の大型顧客・利益率・SOXXの広がりを検証点にする。",
+      "viewer_belief_after": "評価軸シフト仮説を条件付きで回収できる。",
+      "remaining_question": "",
+      "connector": "callback"
+    },
+    {
+      "scene_id": "scene-09",
+      "formal_role": "fixed_closing",
+      "story_role": "closing",
+      "viewer_belief_before": "本編はScene 8で完結した。",
+      "new_evidence_ids": [],
+      "new_meaning": "",
+      "viewer_belief_after": "安心して終了する。",
+      "remaining_question": "",
+      "connector": "closing"
+    }
+  ]
+}
