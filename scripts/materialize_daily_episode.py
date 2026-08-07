@@ -15,24 +15,29 @@ from pathlib import Path
 
 import materialize_renderer_sources as renderer_sources
 
+STORY_BEGIN = "<!--BEGIN_STORY_ENGINE_ANNEX-->"
+STORY_END = "<!--END_STORY_ENGINE_ANNEX-->"
 MEM_BEGIN = "<!--BEGIN_EPISODE_MEMORY_ANNEX-->"
 MEM_END = "<!--END_EPISODE_MEMORY_ANNEX-->"
 PROD_BEGIN = "<!--BEGIN_FINAL_PRODUCTION_SOURCE-->"
 PROD_END = "<!--END_FINAL_PRODUCTION_SOURCE-->"
 DOSSIER_TEMPLATE_SHA = "3bc1edaf7b3ca35f30e02f50d9a97605b38bc6a5d6242485eba825f7aabec384"
 
+
 def sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
+
 def dump(value) -> str:
     return json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True)
+
 
 def run(cmd: list[str]) -> None:
     print("+", " ".join(cmd), flush=True)
     subprocess.run(cmd, check=True)
 
+
 def normalize_scene_headings(text: str) -> str:
-    """Normalize template-only B1..B9 prefixes to the canonical Scene headings."""
     for scene_number in range(1, 10):
         text = re.sub(
             rf"(?m)^##\s+B{scene_number}\.\s+Scene\s+{scene_number}(?=｜|\|)",
@@ -40,6 +45,7 @@ def normalize_scene_headings(text: str) -> str:
             text,
         )
     return text
+
 
 def ensure_dossier_template(research: Path) -> Path:
     target = research / "causal_research_dossier.template.json"
@@ -62,6 +68,7 @@ def ensure_dossier_template(research: Path) -> Path:
     print(f"RECOVERED {target} sha256={actual}", flush=True)
     return target
 
+
 def normalize_memory_locator(value):
     if isinstance(value, str):
         return value.replace(
@@ -74,6 +81,7 @@ def normalize_memory_locator(value):
         return {k: normalize_memory_locator(v) for k, v in value.items()}
     return value
 
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--date", required=True)
@@ -82,6 +90,7 @@ def main() -> int:
     root = args.repo_root.resolve()
     date = args.date
     work = root / "working" / date
+    story_work = work / "story-engine"
     research = root / "research" / date
     episodes = root / "episodes" / date
     render_path = root / "render-specs" / date / "render_spec.json"
@@ -96,63 +105,65 @@ def main() -> int:
     public_package = episodes / f"episode_package_public_{date}.md"
     final_package = episodes / f"episode_package_{date}.md"
     bindings = work / "financial_visual_bindings.json"
-    for path in (work, research, episodes, root / "verification" / date):
+    story_bindings = story_work / "story_production_bindings.json"
+    story_plan = story_work / "story_plan.json"
+    story_script = story_work / "story_script.json"
+    creative_review = story_work / "creative_review.json"
+    story_acceptance = story_work / "story_engine_acceptance.json"
+    story_projection = story_work / "story_projection_report.json"
+    for path in (work, story_work, research, episodes, root / "verification" / date):
         path.mkdir(parents=True, exist_ok=True)
 
     run([
-        sys.executable,
-        "scripts/editorial_memory_retrieval.py",
-        "--query-plan",
-        str(query.relative_to(root)),
-        "--context-output",
-        str(context.relative_to(root)),
-        "--report-output",
-        str(report.relative_to(root)),
-        "--repo-root",
-        str(root),
+        sys.executable, "scripts/editorial_memory_retrieval.py",
+        "--query-plan", str(query.relative_to(root)),
+        "--context-output", str(context.relative_to(root)),
+        "--report-output", str(report.relative_to(root)),
+        "--repo-root", str(root),
     ])
     run([
-        sys.executable,
-        "scripts/build_research_input_manifest.py",
-        "--episode-date",
-        date,
-        "--market-date",
-        "2026-08-05",
-        "--timezone",
-        "America/New_York",
-        "--information-cutoff",
-        "2026-08-06T04:27:46+00:00",
-        "--daily-source-package",
-        str(daily),
-        "--memory-query-plan",
-        str(query),
-        "--memory-context",
-        str(context),
-        "--memory-retrieval-report",
-        str(report),
-        "--output",
-        str(manifest),
-        "--repo-root",
-        str(root),
+        sys.executable, "scripts/build_research_input_manifest.py",
+        "--episode-date", date,
+        "--market-date", "2026-08-05",
+        "--timezone", "America/New_York",
+        "--information-cutoff", "2026-08-06T04:27:46+00:00",
+        "--daily-source-package", str(daily),
+        "--memory-query-plan", str(query),
+        "--memory-context", str(context),
+        "--memory-retrieval-report", str(report),
+        "--output", str(manifest),
+        "--repo-root", str(root),
     ])
 
-    dossier_doc = normalize_memory_locator(
-        json.loads(dossier_template.read_text(encoding="utf-8"))
-    )
+    dossier_doc = normalize_memory_locator(json.loads(dossier_template.read_text(encoding="utf-8")))
     dossier_doc["research_input_manifest"]["sha256"] = sha(manifest)
     dossier.write_text(dump(dossier_doc) + "\n", encoding="utf-8")
     run([
         sys.executable,
         "skills/nasdaq-cafe-causal-research/validators/validate_causal_research_dossier.py",
         str(dossier),
-        "--research-input-manifest",
-        str(manifest),
-        "--memory-retrieval-report",
-        str(report),
-        "--repo-root",
-        str(root),
-        "--json-output",
-        str(dossier_report),
+        "--research-input-manifest", str(manifest),
+        "--memory-retrieval-report", str(report),
+        "--repo-root", str(root),
+        "--json-output", str(dossier_report),
+    ])
+
+    # Story Engine semantic artifacts were authored by ChatGPT before Actions.
+    # This step only binds SHA lineage and runs deterministic validation.
+    run([
+        sys.executable, "scripts/story-engine/materialize_story_engine.py",
+        "--date", date, "--repo-root", str(root),
+    ])
+    # Project the approved narration into the existing production structures.
+    # No narration is generated here; only sentence-boundary chunking and explicit overrides are allowed.
+    run([
+        sys.executable, "scripts/story-engine/project_story_script_to_production.py",
+        "--story-script", str(story_script),
+        "--creative-review", str(creative_review),
+        "--render-spec", str(render_path),
+        "--episode-package-public", str(public_package),
+        "--bindings", str(story_bindings),
+        "--report", str(story_projection),
     ])
 
     renderer_materialization = renderer_sources.materialize(
@@ -164,6 +175,20 @@ def main() -> int:
     )
     render = renderer_materialization["render"]
     contract_package = renderer_materialization["contract_package_path"]
+
+    story_acceptance_doc = json.loads(story_acceptance.read_text(encoding="utf-8"))
+    creative_review_doc = json.loads(creative_review.read_text(encoding="utf-8"))
+    story_annex = {
+        "contract_version": "1.0.0",
+        "episode_date": date,
+        "status": "pass",
+        "story_plan": {"path": story_plan.relative_to(root).as_posix(), "sha256": sha(story_plan)},
+        "story_script": {"path": story_script.relative_to(root).as_posix(), "sha256": sha(story_script)},
+        "creative_review": {"path": creative_review.relative_to(root).as_posix(), "sha256": sha(creative_review)},
+        "acceptance": {"path": story_acceptance.relative_to(root).as_posix(), "sha256": sha(story_acceptance)},
+        "projection": {"path": story_projection.relative_to(root).as_posix(), "sha256": sha(story_projection)},
+        "critic": story_acceptance_doc["critic"],
+    }
 
     retrieval = json.loads(report.read_text(encoding="utf-8"))
     by_key = {
@@ -196,32 +221,18 @@ def main() -> int:
     memory_annex = {
         "contract_version": "1.0.0",
         "episode_date": date,
-        "causal_dossier": {
-            "path": dossier.relative_to(root).as_posix(),
-            "sha256": sha(dossier),
-        },
+        "causal_dossier": {"path": dossier.relative_to(root).as_posix(), "sha256": sha(dossier)},
         "references": refs,
-        "validation_intent": {
-            "past_mentions_complete": True,
-            "title_thumbnail_checked": True,
-            "post_inquisition_final": True,
-        },
+        "validation_intent": {"past_mentions_complete": True, "title_thumbnail_checked": True, "post_inquisition_final": True},
     }
     asset_ids = sorted({
         placement["assetId"]
         for scene in render["scenes"]
         for placement in scene.get("assetPlacements", [])
-        if isinstance(placement, dict)
-        and isinstance(placement.get("assetId"), str)
+        if isinstance(placement, dict) and isinstance(placement.get("assetId"), str)
     })
     asset_catalog = [
-        {
-            "asset_id": asset_id,
-            "path": f"renderer-registry/{asset_id}",
-            "media_type": "image",
-            "status": "not-required",
-            "sha256": None,
-        }
+        {"asset_id": asset_id, "path": f"renderer-registry/{asset_id}", "media_type": "image", "status": "not-required", "sha256": None}
         for asset_id in asset_ids
     ]
     production_annex = {
@@ -231,65 +242,35 @@ def main() -> int:
             "status": "pass",
             "required_changes_applied": True,
             "unresolved_required_changes": 0,
+            "story_engine_score": creative_review_doc["total_score"],
+            "story_engine_round": creative_review_doc["round"],
         },
-        "image_resolution": {
-            "status": "resolved",
-            "selected_path": "not-required",
-            "unresolved_count": 0,
-            "routes": [],
-        },
-        "renderer_contract": {
-            "repository": "saienjoy0/saienjoy0-nasdaq-cafe-remotion",
-            "schema_version": render["schemaVersion"],
-        },
+        "image_resolution": {"status": "resolved", "selected_path": "not-required", "unresolved_count": 0, "routes": []},
+        "renderer_contract": {"repository": "saienjoy0/saienjoy0-nasdaq-cafe-remotion", "schema_version": render["schemaVersion"]},
         "asset_catalog": asset_catalog,
         "render_spec": render,
     }
-    public = normalize_scene_headings(
-        contract_package.read_text(encoding="utf-8").rstrip()
-    )
+    public = normalize_scene_headings(contract_package.read_text(encoding="utf-8").rstrip())
     final = (
         public
-        + "\n\n"
-        + MEM_BEGIN
-        + "\n```json\n"
-        + dump(memory_annex)
-        + "\n```\n"
-        + MEM_END
-        + "\n\n"
-        + PROD_BEGIN
-        + "\n```json\n"
-        + dump(production_annex)
-        + "\n```\n"
-        + PROD_END
-        + "\n"
+        + "\n\n" + STORY_BEGIN + "\n```json\n" + dump(story_annex) + "\n```\n" + STORY_END
+        + "\n\n" + MEM_BEGIN + "\n```json\n" + dump(memory_annex) + "\n```\n" + MEM_END
+        + "\n\n" + PROD_BEGIN + "\n```json\n" + dump(production_annex) + "\n```\n" + PROD_END + "\n"
     )
     final_package.write_text(final, encoding="utf-8")
 
     verification = root / "verification" / date
     (verification / "asset_resolution_log.json").write_text(
-        dump({
-            "episode_date": date,
-            "status": "resolved",
-            "selected_path": "not-required",
-            "unresolved_count": 0,
-            "registered_assets": asset_ids,
-        })
-        + "\n",
+        dump({"episode_date": date, "status": "resolved", "selected_path": "not-required", "unresolved_count": 0, "registered_assets": asset_ids}) + "\n",
         encoding="utf-8",
     )
     (verification / "image_generation_log.json").write_text(
-        dump({
-            "episode_date": date,
-            "status": "not-required",
-            "attempts": 0,
-            "selected_path": "not-required",
-        })
-        + "\n",
+        dump({"episode_date": date, "status": "not-required", "attempts": 0, "selected_path": "not-required"}) + "\n",
         encoding="utf-8",
     )
     print(f"WROTE {final_package}")
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
