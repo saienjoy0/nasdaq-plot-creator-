@@ -141,18 +141,34 @@ class ProjectionTests(unittest.TestCase):
         self.assertEqual("continuation", beat["visualGrammar"]["transitionRole"])
         self.assertEqual("verification", beat["visualMode"])
 
-    def test_scene_07_close_only_reaction_binding_is_explicit(self):
-        bindings_path = ROOT / "working/2026-08-06/reaction_timeline_bindings.json"
-        document = json.loads(bindings_path.read_text(encoding="utf-8"))
-        rows = {row["visualBeatId"]: row for row in document["bindings"]}
-        self.assertIn("vb-07-01", rows)
-        row = rows["vb-07-01"]
-        self.assertEqual("event-reaction-timeline", row["visualTemplate"])
-        self.assertEqual("close-only", row["templateVariant"])
-        self.assertEqual("close-only", row["precision"])
-        self.assertEqual(["scene-07-card-001"], row["eventOrderIds"])
-        self.assertEqual([], row["seriesObjectIds"])
-        self.assertIn("分足", row["evidenceBasis"])
+    def test_scene_07_close_only_reaction_binding_is_injected_at_story_projection(self):
+        auxiliary = load_module(
+            "story_auxiliary_bindings_test",
+            ROOT / "scripts/story-engine/apply_story_auxiliary_bindings.py",
+        )
+        story_path = ROOT / "working/2026-08-06/story-engine/story_production_bindings.json"
+        base_path = ROOT / "working/2026-08-06/reaction_timeline_bindings.json"
+        base = json.loads(base_path.read_text(encoding="utf-8"))
+        self.assertEqual(["vb-06-01"], [row["visualBeatId"] for row in base["bindings"]])
+
+        with tempfile.TemporaryDirectory() as temp:
+            reaction_path = Path(temp) / "reaction_timeline_bindings.json"
+            reaction_path.write_text(
+                json.dumps(base, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            result = auxiliary.apply_story_reaction_bindings(story_path, reaction_path)
+            self.assertEqual("pass", result["status"])
+            self.assertEqual(["vb-07-01"], result["inserted_reaction_bindings"])
+            document = json.loads(reaction_path.read_text(encoding="utf-8"))
+            rows = {row["visualBeatId"]: row for row in document["bindings"]}
+            row = rows["vb-07-01"]
+            self.assertEqual("event-reaction-timeline", row["visualTemplate"])
+            self.assertEqual("close-only", row["templateVariant"])
+            self.assertEqual("close-only", row["precision"])
+            self.assertEqual(["scene-07-card-001"], row["eventOrderIds"])
+            self.assertEqual([], row["seriesObjectIds"])
+            self.assertIn("分足", row["evidenceBasis"])
 
 
 if __name__ == "__main__":
