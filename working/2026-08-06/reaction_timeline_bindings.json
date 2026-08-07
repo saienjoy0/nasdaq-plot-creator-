@@ -12,17 +12,6 @@
       ],
       "seriesObjectIds": [],
       "evidenceBasis": "8月4日16:30 ETのSpaceX説明会、17:00 ETのAMD説明会、8月5日の通常取引終値。分足系列は使用しない。"
-    },
-    {
-      "visualBeatId": "vb-07-01",
-      "visualTemplate": "event-reaction-timeline",
-      "templateVariant": "close-only",
-      "precision": "close-only",
-      "eventOrderIds": [
-        "scene-07-card-001"
-      ],
-      "seriesObjectIds": [],
-      "evidenceBasis": "8月5日の通常取引終値だけを使ったNVIDIA・AMD・Alphabetの反応比較。分足時系列は使用しない。"
     }
   ]
 }
