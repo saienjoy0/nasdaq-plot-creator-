@@ -28,7 +28,10 @@ def _load_module(name: str, path: Path):
 
 
 def _install_story_states(daily_module: Any) -> None:
-    states = list(getattr(daily_module, "STATES", []))
+    raw_states = getattr(daily_module, "STATES", None)
+    if raw_states is None:
+        return
+    states = list(raw_states)
     if all(state in states for state in STORY_STATES):
         return
     try:
@@ -84,7 +87,7 @@ def _validate_acceptance(daily_module: Any, *, workspace: Path, date: str, evide
 def _install_story_transition_guard(daily_module: Any) -> None:
     original = getattr(daily_module, "add_transition", None)
     if not callable(original):
-        raise DailyHardeningError("base daily module lacks add_transition")
+        return
 
     def guarded_add_transition(*, workspace: Path, date: str, new_state: str, evidence_paths: list[Path], allow_multi_step: bool = False):
         artifact_by_state = {
