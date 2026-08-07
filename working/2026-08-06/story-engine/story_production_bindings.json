@@ -15,10 +15,10 @@
       "changeCue":"数字は良かった"
     },
     "scene-07-beat-001":{
-      "visualTemplate":"explainer-diagram",
-      "templateVariant":"default",
-      "contentType":"explainer-diagram",
-      "visualGrammarId":"evidence"
+      "visualTemplate":"event-reaction-timeline",
+      "templateVariant":"close-only",
+      "contentType":"event-reaction-timeline",
+      "visualGrammarId":"reaction"
     },
     "scene-08-beat-002":{
       "visualTemplate":"evidence-boundary",
