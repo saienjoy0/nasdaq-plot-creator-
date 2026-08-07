@@ -44,7 +44,6 @@ def segment(text: str, count: int) -> list[str]:
         return [text]
     parts = sentences(text)
     if len(parts) < count:
-        # Preserve text exactly while making enough deterministic segments.
         joined = "".join(parts)
         cuts = [round(len(joined) * i / count) for i in range(count + 1)]
         return [joined[cuts[i]:cuts[i + 1]] for i in range(count)]
@@ -84,6 +83,12 @@ def normalize(text: str) -> str:
     return re.sub(r"\s+", "", text)
 
 
+def scene_block_pattern(scene_number: int) -> re.Pattern[str]:
+    return re.compile(
+        rf"(?ms)(^##\s+(?:B{scene_number}\.\s+)?Scene\s+{scene_number}(?:｜|\|).*?)(?=^##\s+(?:B{scene_number + 1}\.\s+)?Scene\s+{scene_number + 1}(?:｜|\|)|\Z)"
+    )
+
+
 def replace_scene_narration(md: str, scene_number: int, narration: str) -> str:
     scene_pat = re.compile(
         rf"(?ms)(^##\s+(?:B{scene_number}\.\s+)?Scene\s+{scene_number}(?:｜|\|).*?^### 完成ナレーション\s*\n)(.*?)(?=\n- ナレーションで示す出典主体・媒体：)"
@@ -94,16 +99,64 @@ def replace_scene_narration(md: str, scene_number: int, narration: str) -> str:
     return md[:match.start(2)] + narration + "\n" + md[match.end(2):]
 
 
-def replace_beat_cues(md: str, beat_id: str, start: str, end: str) -> str:
+def beat_block(md: str, beat_id: str) -> tuple[re.Match[str], str]:
     block_re = re.compile(
         rf"(?ms)(- \*\*{re.escape(beat_id)}\*\*.*?)(?=\n- \*\*scene-0[1-9]-beat-[0-9]{{3}}\*\*|\n### 完成ナレーション)"
     )
     match = block_re.search(md)
     if not match:
         raise ValueError(f"episode package beat block not found: {beat_id}")
-    block = match.group(1)
+    return match, match.group(1)
+
+
+def replace_beat_cues(md: str, beat_id: str, start: str, end: str) -> str:
+    match, block = beat_block(md, beat_id)
     block = re.sub(r"(?m)^  - 開始合図：.*$", f"  - 開始合図：{start}", block, count=1)
     block = re.sub(r"(?m)^  - 終了合図：.*$", f"  - 終了合図：{end}", block, count=1)
+    return md[:match.start(1)] + block + md[match.end(1):]
+
+
+def replace_beat_visual_copy(md: str, beat_id: str, override: dict[str, Any]) -> str:
+    match, block = beat_block(md, beat_id)
+    mapping = {
+        "screenQuestion": "画面の問い",
+        "primaryElement": "主要要素",
+        "viewerTexts": "視聴者向けテキスト",
+        "changeCue": "変化合図",
+    }
+    for key, label in mapping.items():
+        if key not in override:
+            continue
+        value = override[key]
+        if isinstance(value, list):
+            value = " / ".join(str(item) for item in value)
+        pattern = rf"(?m)^  - {re.escape(label)}：.*$"
+        replacement = f"  - {label}：{value}"
+        if re.search(pattern, block):
+            block = re.sub(pattern, replacement, block, count=1)
+        elif key != "changeCue":
+            raise ValueError(f"{beat_id}: markdown field missing for {label}")
+    return md[:match.start(1)] + block + md[match.end(1):]
+
+
+def replace_scene_visual_copy(md: str, scene_number: int, override: dict[str, Any]) -> str:
+    pattern = scene_block_pattern(scene_number)
+    match = pattern.search(md)
+    if not match:
+        raise ValueError(f"episode package Scene {scene_number} block not found")
+    block = match.group(1)
+    mapping = {
+        "purpose": "目的",
+        "performanceIntent": "狐の演技意図",
+    }
+    for key, label in mapping.items():
+        if key in override:
+            block = re.sub(
+                rf"(?m)^- {re.escape(label)}：.*$",
+                f"- {label}：{override[key]}",
+                block,
+                count=1,
+            )
     return md[:match.start(1)] + block + md[match.end(1):]
 
 
@@ -176,6 +229,11 @@ def main() -> int:
         md = replace_scene_narration(md, scene_index, narration)
 
     apply_visual_overrides(render, bindings)
+    for scene_id, override in bindings.get("scene_overrides", {}).items():
+        md = replace_scene_visual_copy(md, int(scene_id.split("-")[1]), override)
+    for beat_id, override in bindings.get("beat_overrides", {}).items():
+        md = replace_beat_visual_copy(md, beat_id, override)
+
     score_map = {
         "openingHook": review["scores"]["opening"],
         "storyProgression": review["scores"]["progression"],
@@ -190,7 +248,6 @@ def main() -> int:
     render["review"]["requiredChanges"] = []
     render["review"]["changesApplied"] = ["Story Engine independent critic PASS after targeted patch"]
 
-    # Final semantic identity check: public narration and render narration must equal Story Script.
     for idx, scene in enumerate(script["scenes"], start=1):
         rscene = render["scenes"][idx - 1]
         if normalize("".join(c["speechText"] for c in rscene["narrationChunks"])) != normalize(scene["narration"]):
