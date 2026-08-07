@@ -1,0 +1,165 @@
+{
+  "registry_version": "1.1.0",
+  "reviewed_at": "2026-08-07",
+  "runtime_policy": "pinned-reference-only; no external repository is a daily runtime dependency",
+  "sources": [
+    {
+      "project": "Doza Assist",
+      "repository": "DozaVisuals/doza-assist",
+      "pinned_commit": "b93e6b912ca17a85c8ceaca93983c23695063679",
+      "license": "MIT",
+      "license_status": "license-file-confirmed",
+      "adoption_mode": "direct-vendor",
+      "files": [
+        "docs/storytelling-foundation-oss.md",
+        "editorial_dna/storytelling.py",
+        "LICENSE"
+      ],
+      "direct_vendor_files": [
+        "docs/storytelling-foundation-oss.md",
+        "LICENSE"
+      ],
+      "adopt": [
+        "story roles",
+        "adjacent redundancy rejection",
+        "information-only rejection",
+        "midpoint turn requirement",
+        "topic versus theme/claim separation",
+        "final storytelling self-check"
+      ],
+      "exclude": [
+        "breath-gap clip editing",
+        "filler-density interpretation",
+        "tense-shift documentary heuristics",
+        "documentary emotional-valence requirements",
+        "NLE integration"
+      ]
+    },
+    {
+      "project": "Toonflow",
+      "repository": "HBAI-Ltd/Toonflow-app",
+      "pinned_commit": "bc61ec7a1b5df31293b286981a5f4ad4635464ee",
+      "license": "Apache-2.0",
+      "license_status": "license-file-confirmed",
+      "adoption_mode": "adapt",
+      "files": [
+        "data/skills/script_agent_decision.md",
+        "data/skills/script_agent_supervision.md",
+        "src/agents/scriptAgent/index.ts",
+        "LICENSE",
+        "NOTICES.txt"
+      ],
+      "adopt": [
+        "Decision / Execution / Supervision separation",
+        "execution-before-review gate",
+        "artifact-grounded concrete findings"
+      ],
+      "exclude": [
+        "short-drama monetization rules",
+        "emotion-burst rules",
+        "novel adaptation domain logic",
+        "UI / DB / provider runtime"
+      ]
+    },
+    {
+      "project": "ViMax",
+      "repository": "HKUDS/ViMax",
+      "pinned_commit": "05a48943878312d88fe5a016c12a9654940ecc43",
+      "license": "MIT",
+      "license_status": "license-file-confirmed",
+      "adoption_mode": "adapt",
+      "files": [
+        "agent_runtime/vimax_adapters.py",
+        "tests/test_wrong_output_guards.py",
+        "LICENSE"
+      ],
+      "adopt": [
+        "targeted revision",
+        "dependent-artifact stale invalidation",
+        "partial artifact preservation",
+        "silent wrong-output regression guards"
+      ],
+      "exclude": [
+        "image generation",
+        "video generation",
+        "character consistency",
+        "camera / shot runtime",
+        "provider stack"
+      ]
+    },
+    {
+      "project": "FireRed-OpenStoryline",
+      "repository": "FireRedTeam/FireRed-OpenStoryline",
+      "pinned_commit": "c9e945215586f45c12a61c1951ee9a8e9c43a027",
+      "license": "Apache-2.0",
+      "license_status": "license-file-confirmed",
+      "adoption_mode": "adapt",
+      "files": [
+        ".storyline/skills/default_editing_workflow_skill/SKILL.md",
+        "docs/source/en/guide.md",
+        "LICENSE"
+      ],
+      "adopt": [
+        "stage-localized rerun",
+        "workflow-as-skill separation"
+      ],
+      "exclude": [
+        "full media editing runtime",
+        "media provider pipeline"
+      ]
+    },
+    {
+      "project": "video_explainer",
+      "repository": "prajwal-y/video_explainer",
+      "pinned_commit": "c033e28d6eccae43c1762f4653f9c320b16b050e",
+      "license": "MIT declared in pyproject/README",
+      "license_status": "root-license-file-not-confirmed-at-pinned-commit",
+      "adoption_mode": "clean-room",
+      "files": [
+        "src/script/generator.py",
+        "pyproject.toml"
+      ],
+      "adopt": [
+        "approved-plan-before-script",
+        "information gap",
+        "mechanism explanation",
+        "BUT / THEREFORE connections",
+        "source-specific numbers"
+      ],
+      "exclude": [
+        "direct code copy",
+        "direct prompt copy",
+        "source-completeness as an editorial goal"
+      ]
+    },
+    {
+      "project": "OpenMontage",
+      "repository": "calesthio/OpenMontage",
+      "pinned_commit": "4eab34c5cfcccaa4f1970554928feccce73ee930",
+      "license": "AGPL-3.0",
+      "license_status": "license-file-confirmed",
+      "adoption_mode": "clean-room",
+      "files": [
+        "skills/meta/reviewer.md",
+        "skills/meta/checkpoint-protocol.md",
+        "skills/pipelines/explainer/proposal-director.md",
+        "skills/pipelines/explainer/script-director.md",
+        "pipeline_defs/hybrid.yaml",
+        "LICENSE"
+      ],
+      "adopt": [
+        "Angle Competition",
+        "Guided Discovery",
+        "Progressive Revelation",
+        "artifact-specific findings",
+        "stage checkpoints and success criteria"
+      ],
+      "exclude": [
+        "code copy",
+        "schema copy",
+        "prompt copy",
+        "runtime dependency"
+      ]
+    }
+  ]
+}
