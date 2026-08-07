@@ -1,0 +1,35 @@
+{
+  "episode_date": "2026-08-06",
+  "editorial_handoff": {
+    "confidence": "medium",
+    "headline_beyond_discovery": "好決算かどうかではなく、次の巨大需要を取った証拠があるかがAI半導体の評価を分けた。"
+  },
+  "evidence": [
+    {"evidence_id": "E-001", "evidence_class": "fact", "claim": "Nasdaq -0.83%, SOXX -2.12%, NVIDIA +3.43%, AMD -7.04%, Alphabet -4.03%, Microsoft -1.09%"},
+    {"evidence_id": "E-003", "evidence_class": "fact", "claim": "AMD Q2 results Aug 4 after close, call 17:00 ET"},
+    {"evidence_id": "E-004", "evidence_class": "fact", "claim": "AMD Q2 revenue 11.54B, DC 6.72B, Q3 guide 13.0B vs 12.52B consensus"},
+    {"evidence_id": "E-005", "evidence_class": "reported_interpretation", "claim": "Investors sought larger AI payoff, customers and margin evidence"},
+    {"evidence_id": "E-006", "evidence_class": "fact", "claim": "SpaceX call 16:30 ET"},
+    {"evidence_id": "E-007", "evidence_class": "reported_interpretation", "claim": "SpaceX reportedly uses NVIDIA GPUs only; support for NVIDIA"},
+    {"evidence_id": "E-008", "evidence_class": "reported_interpretation", "claim": "Alphabet and Microsoft also weighed on Nasdaq while Dow rose"},
+    {"evidence_id": "E-009", "evidence_class": "fact", "claim": "Intraday, yields, VIX, QQQ and SMH incomplete"}
+  ],
+  "contradictions": [
+    {"id": "CON-01", "rank": 1, "selection_reason": "好決算と株価下落の矛盾がAI半導体の評価軸を最もよく説明する。", "statement": "AMDはQ3売上見通しで通常予想を上回ったのに7.04%下落し、NVIDIAは3.43%上昇した。"}
+  ],
+  "contrary_evidence": [
+    {"effect_on_confidence": "material", "evidence_ids": ["E-004"]},
+    {"effect_on_confidence": "material", "evidence_ids": ["E-001"]},
+    {"effect_on_confidence": "minor", "evidence_ids": ["E-008"]},
+    {"effect_on_confidence": "material", "evidence_ids": ["E-009"]}
+  ],
+  "factor_roles": {
+    "unresolved": ["金利・VIX・QQQ・SMHの寄与", "個別発言直後の分足寄与"]
+  },
+  "causal_edges": [
+    {"scope": "company_direct", "evidence_ids": ["E-004"]},
+    {"scope": "company_direct", "evidence_ids": ["E-004", "E-005", "E-001"]},
+    {"scope": "sector_support", "evidence_ids": ["E-006", "E-007", "E-001"]},
+    {"scope": "nasdaq_wide", "evidence_ids": ["E-001", "E-008"]}
+  ]
+}
