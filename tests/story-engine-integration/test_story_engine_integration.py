@@ -9,6 +9,9 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+STORY_ENGINE_DIR = ROOT / "scripts/story-engine"
+if str(STORY_ENGINE_DIR) not in sys.path:
+    sys.path.insert(0, str(STORY_ENGINE_DIR))
 
 
 def load_module(name: str, path: Path):
