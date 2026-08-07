@@ -3,7 +3,7 @@
 
 This script does not invent or rewrite narration. It preserves the authored Story Script
 verbatim, re-segments it only at sentence boundaries to fit existing narration chunk IDs,
-and applies only explicitly authored visual-copy overrides.
+and applies only explicitly authored visual-copy/structure overrides.
 """
 from __future__ import annotations
 
@@ -116,26 +116,45 @@ def replace_beat_cues(md: str, beat_id: str, start: str, end: str) -> str:
     return md[:match.start(1)] + block + md[match.end(1):]
 
 
-def replace_beat_visual_copy(md: str, beat_id: str, override: dict[str, Any]) -> str:
+def replace_beat_visual_copy(
+    md: str,
+    beat_id: str,
+    override: dict[str, Any],
+    beat: dict[str, Any],
+) -> str:
     match, block = beat_block(md, beat_id)
     mapping = {
         "screenQuestion": "画面の問い",
         "primaryElement": "主要要素",
         "viewerTexts": "視聴者向けテキスト",
         "changeCue": "変化合図",
+        "screenState": "画面状態",
+        "visualTemplate": "Visual Template ID",
+        "templateVariant": "Template Variant",
     }
     for key, label in mapping.items():
         if key not in override:
             continue
-        value = override[key]
+        value = beat.get(key, override[key])
         if isinstance(value, list):
             value = " / ".join(str(item) for item in value)
         pattern = rf"(?m)^  - {re.escape(label)}：.*$"
         replacement = f"  - {label}：{value}"
         if re.search(pattern, block):
             block = re.sub(pattern, replacement, block, count=1)
-        elif key != "changeCue":
+        elif key not in {"changeCue"}:
             raise ValueError(f"{beat_id}: markdown field missing for {label}")
+    if "visualGrammarId" in override or "transitionRole" in override:
+        grammar = beat.get("visualGrammar")
+        if not isinstance(grammar, dict):
+            raise ValueError(f"{beat_id}: visualGrammar is required for grammar override")
+        pattern = r"(?m)^  - Visual Grammar：.*$"
+        replacement = (
+            f"  - Visual Grammar：{grammar['grammarId']} / {grammar['transitionRole']}"
+        )
+        if not re.search(pattern, block):
+            raise ValueError(f"{beat_id}: markdown field missing for Visual Grammar")
+        block = re.sub(pattern, replacement, block, count=1)
     return md[:match.start(1)] + block + md[match.end(1):]
 
 
@@ -178,9 +197,32 @@ def apply_visual_overrides(render: dict[str, Any], bindings: dict[str, Any]) -> 
         beat = beat_map.get(beat_id)
         if beat is None:
             raise ValueError(f"unknown beat override: {beat_id}")
-        for key in ("screenQuestion", "primaryElement", "viewerTexts", "changeCue", "contentType"):
+        for key in (
+            "screenQuestion",
+            "primaryElement",
+            "viewerTexts",
+            "changeCue",
+            "contentType",
+            "visualTemplate",
+            "visualMode",
+            "screenState",
+        ):
             if key in override:
                 beat[key] = override[key]
+        if "templateVariant" in override:
+            config = beat.get("templateConfig")
+            if not isinstance(config, dict):
+                raise ValueError(f"{beat_id}: templateConfig required for templateVariant")
+            config["variant"] = override["templateVariant"]
+            beat["templateVariant"] = override["templateVariant"]
+        if "visualGrammarId" in override or "transitionRole" in override:
+            grammar = beat.get("visualGrammar")
+            if not isinstance(grammar, dict):
+                raise ValueError(f"{beat_id}: visualGrammar required for grammar override")
+            if "visualGrammarId" in override:
+                grammar["grammarId"] = override["visualGrammarId"]
+            if "transitionRole" in override:
+                grammar["transitionRole"] = override["transitionRole"]
 
 
 def main() -> int:
@@ -231,8 +273,13 @@ def main() -> int:
     apply_visual_overrides(render, bindings)
     for scene_id, override in bindings.get("scene_overrides", {}).items():
         md = replace_scene_visual_copy(md, int(scene_id.split("-")[1]), override)
+    beat_map = {
+        beat["beatId"]: beat
+        for scene in render.get("scenes", [])
+        for beat in scene.get("visualBeats", [])
+    }
     for beat_id, override in bindings.get("beat_overrides", {}).items():
-        md = replace_beat_visual_copy(md, beat_id, override)
+        md = replace_beat_visual_copy(md, beat_id, override, beat_map[beat_id])
 
     score_map = {
         "openingHook": review["scores"]["opening"],
