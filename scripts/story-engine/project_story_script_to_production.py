@@ -14,6 +14,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+from apply_story_auxiliary_bindings import apply_story_reaction_bindings
+
 SENTENCE_RE = re.compile(r".*?(?:[。！？!?](?:[」』】）)]*)|$)")
 
 
@@ -299,6 +301,10 @@ def main() -> int:
         rscene = render["scenes"][idx - 1]
         if normalize("".join(c["speechText"] for c in rscene["narrationChunks"])) != normalize(scene["narration"]):
             raise SystemExit(f"scene-{idx:02d}: render/script narration mismatch")
+
+    reaction_bindings_path = args.bindings.parent.parent / "reaction_timeline_bindings.json"
+    if reaction_bindings_path.is_file():
+        apply_story_reaction_bindings(args.bindings, reaction_bindings_path)
 
     args.render_spec.write_text(canonical(render), encoding="utf-8")
     args.episode_package_public.write_text(md, encoding="utf-8")
