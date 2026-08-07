@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
-ZERO_SHA = "0" * 64
 
 
 def load_module(name: str, path: Path):
@@ -102,11 +101,10 @@ def main() -> int:
         script_path,
         plan_path,
         dossier,
+        story_contracts_dir=root / "skills/nasdaq-cafe-story-authoring/contracts",
+        critic_contracts_dir=root / "skills/nasdaq-cafe-entertainment-critic/contracts",
         repo_root=root,
         review_path=review_path,
-        story_script_schema=root / "skills/nasdaq-cafe-story-authoring/contracts/story_script.schema.json",
-        creative_review_schema=root / "skills/nasdaq-cafe-entertainment-critic/contracts/creative_review.schema.json",
-        rewrite_patch_schema=root / "skills/nasdaq-cafe-entertainment-critic/contracts/rewrite_patch.schema.json",
     )
     if not bundle_result.ok:
         raise SystemExit("Story Engine bundle validation failed: " + "; ".join(bundle_result.errors))
