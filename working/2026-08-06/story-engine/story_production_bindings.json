@@ -1,0 +1,18 @@
+{
+  "contract_version":"1.0.0",
+  "episode_date":"2026-08-06",
+  "scene_overrides":{
+    "scene-01":{
+      "purpose":"NASDAQの方向とAI半導体の矛盾を示し、答えではなく問いを30秒以内に置く",
+      "performanceIntent":"値動きの矛盾を短く示し、採点表を追う問いへ進む"
+    }
+  },
+  "beat_overrides":{
+    "scene-01-beat-002":{
+      "screenQuestion":"数字は良かったのに、なぜAMDは売られた？",
+      "primaryElement":"好決算と株価下落の矛盾",
+      "viewerTexts":["数字は良かった","それでもAMD -7.04%"],
+      "changeCue":"数字は良かった"
+    }
+  }
+}

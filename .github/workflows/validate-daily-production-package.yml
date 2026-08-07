@@ -7,6 +7,7 @@ on:
       - "working/**/memory_query_plan.json"
       - "working/**/financial_visual_bindings.json"
       - "working/**/terminal_assembly_bindings.json"
+      - "working/**/story-engine/**"
       - "research/**"
       - "episodes/**"
       - "render-specs/**"
@@ -16,6 +17,7 @@ on:
       - "scripts/materialize_renderer_sources.py"
       - "scripts/materialize_financial_contract_1_0.py"
       - "scripts/financial_final_episode_contract_1_0.py"
+      - "scripts/story-engine/**"
       - "scripts/remotion_template_data.py"
       - "scripts/finalize_renderer_package.py"
       - "scripts/finalize_renderer_package_compat.py"
@@ -24,6 +26,7 @@ on:
       - "scripts/build_renderer_handoff_hardened.py"
       - "scripts/run_daily_production_hardened.py"
       - "tests/daily-production-hardening/**"
+      - "tests/story-engine-integration/**"
       - "tests/remotion-compat/**"
       - ".github/workflows/validate-daily-production-package.yml"
   workflow_dispatch:
@@ -87,12 +90,18 @@ jobs:
               root / f"working/{date}/memory_query_plan.json",
               root / f"working/{date}/financial_visual_bindings.json",
               root / f"working/{date}/terminal_assembly_bindings.json",
+              root / f"working/{date}/story-engine/templates/story_plan.template.json",
+              root / f"working/{date}/story-engine/templates/story_script.template.json",
+              root / f"working/{date}/story-engine/templates/creative_review.template.json",
+              root / f"working/{date}/story-engine/story_production_bindings.json",
               root / f"episodes/{date}/episode_package_public_{date}.md",
               root / f"render-specs/{date}/render_spec.json",
               root / f"research/{date}/causal_research_dossier.template.json",
               root / "contracts/financial_visual_compatibility_2_4.json",
               root / "scripts/materialize_daily_episode.py",
               root / "scripts/materialize_renderer_sources.py",
+              root / "scripts/story-engine/materialize_story_engine.py",
+              root / "scripts/story-engine/project_story_script_to_production.py",
               root / "scripts/materialize_financial_contract_1_0.py",
               root / "scripts/financial_final_episode_contract_1_0.py",
               root / "scripts/remotion_template_data.py",
@@ -108,6 +117,10 @@ jobs:
               root / f"working/{date}/memory_query_plan.json",
               root / f"working/{date}/financial_visual_bindings.json",
               root / f"working/{date}/terminal_assembly_bindings.json",
+              root / f"working/{date}/story-engine/templates/story_plan.template.json",
+              root / f"working/{date}/story-engine/templates/story_script.template.json",
+              root / f"working/{date}/story-engine/templates/creative_review.template.json",
+              root / f"working/{date}/story-engine/story_production_bindings.json",
               root / f"render-specs/{date}/render_spec.json",
               root / f"research/{date}/causal_research_dossier.template.json",
               root / "contracts/financial_visual_compatibility_2_4.json",
@@ -115,24 +128,19 @@ jobs:
               value = json.loads(path.read_text(encoding="utf-8"))
               if not isinstance(value, dict):
                   raise SystemExit(f"JSON root must be an object: {path.relative_to(root)}")
-          query = json.loads(
-              (root / f"working/{date}/memory_query_plan.json").read_text(encoding="utf-8")
-          )
+          query = json.loads((root / f"working/{date}/memory_query_plan.json").read_text(encoding="utf-8"))
           if query.get("episode_date") != date:
               raise SystemExit("memory query plan date mismatch")
-          bindings = json.loads(
-              (root / f"working/{date}/financial_visual_bindings.json").read_text(encoding="utf-8")
-          )
+          story_binding = json.loads((root / f"working/{date}/story-engine/story_production_bindings.json").read_text(encoding="utf-8"))
+          if story_binding.get("episode_date") != date:
+              raise SystemExit("Story production bindings date mismatch")
+          bindings = json.loads((root / f"working/{date}/financial_visual_bindings.json").read_text(encoding="utf-8"))
           if bindings.get("episodeDate") != date:
               raise SystemExit("financial visual bindings date mismatch")
-          terminal = json.loads(
-              (root / f"working/{date}/terminal_assembly_bindings.json").read_text(encoding="utf-8")
-          )
+          terminal = json.loads((root / f"working/{date}/terminal_assembly_bindings.json").read_text(encoding="utf-8"))
           if terminal.get("episodeDate") != date:
               raise SystemExit("terminal assembly bindings date mismatch")
-          spec = json.loads(
-              (root / f"render-specs/{date}/render_spec.json").read_text(encoding="utf-8")
-          )
+          spec = json.loads((root / f"render-specs/{date}/render_spec.json").read_text(encoding="utf-8"))
           episode = spec.get("episode", {})
           if episode.get("id") != date or episode.get("targetDate") != date:
               raise SystemExit("render spec date mismatch")
@@ -140,15 +148,19 @@ jobs:
           PY
 
       - name: Install validator dependency
-        run: python -m pip install --disable-pip-version-check jsonschema
+        run: python -m pip install --disable-pip-version-check jsonschema pytest
 
       - name: Run compatibility and hardening regression tests
         run: |
           python tests/remotion-compat/test_remotion_compat.py
           python tests/daily-production-hardening/test_daily_production_hardening.py
+          python -m pytest -q tests/story-engine-integration
           python -m py_compile \
             scripts/materialize_renderer_sources.py \
             scripts/materialize_daily_episode.py \
+            scripts/story-engine/materialize_story_engine.py \
+            scripts/story-engine/project_story_script_to_production.py \
+            scripts/story-engine/validate_story_engine_bundle.py \
             scripts/materialize_financial_contract_1_0.py \
             scripts/financial_final_episode_contract_1_0.py \
             scripts/remotion_template_data.py \
@@ -179,9 +191,14 @@ jobs:
 
       - name: Advance validated editorial stages
         run: |
+          STORY="working/$EPISODE_DATE/story-engine"
+          ACCEPT="$STORY/story_engine_acceptance.json"
           python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state research_inputs_bound --evidence "research/$EPISODE_DATE/research_input_manifest.json"
           python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state causal_dossier_valid --evidence "research/$EPISODE_DATE/causal_research_dossier_$EPISODE_DATE.json" "research/$EPISODE_DATE/causal_dossier_validation.json"
-          python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state episode_package_final --evidence "episodes/$EPISODE_DATE/episode_package_$EPISODE_DATE.md"
+          python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state story_plan_valid --evidence "$STORY/story_plan.json" "$ACCEPT"
+          python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state script_draft_ready --evidence "$STORY/story_script.json" "$ACCEPT"
+          python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state creative_review_passed --evidence "$STORY/creative_review.json" "$ACCEPT"
+          python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state episode_package_final --evidence "episodes/$EPISODE_DATE/episode_package_$EPISODE_DATE.md" "$ACCEPT" "$STORY/story_projection_report.json"
           python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state memory_usage_valid --evidence "research/$EPISODE_DATE/causal_dossier_validation.json"
           python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state assets_resolved --evidence "verification/$EPISODE_DATE/asset_resolution_log.json" "verification/$EPISODE_DATE/image_generation_log.json"
 
