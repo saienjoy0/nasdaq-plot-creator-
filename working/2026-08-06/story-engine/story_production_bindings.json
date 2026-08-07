@@ -14,6 +14,12 @@
       "viewerTexts":["数字は良かった","それでもAMD -7.04%"],
       "changeCue":"数字は良かった"
     },
+    "scene-02-beat-002":{
+      "visualTemplate":"split-comparison",
+      "templateVariant":"two-lane",
+      "contentType":"split-comparison",
+      "visualGrammarId":"comparison"
+    },
     "scene-07-beat-001":{
       "visualTemplate":"event-reaction-timeline",
       "templateVariant":"close-only",
