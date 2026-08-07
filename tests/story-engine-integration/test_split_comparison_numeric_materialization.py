@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 import sys
 from pathlib import Path
 
@@ -13,7 +12,7 @@ if str(SCRIPTS) not in sys.path:
 import remotion_template_data  # noqa: E402
 
 
-def test_split_comparison_reuses_existing_numeric_parser():
+def test_mixed_metric_conversion_reuses_numbers_and_authored_lane_labels():
     scene = {
         "sceneId": "scene-02",
         "cards": [
@@ -31,10 +30,16 @@ def test_split_comparison_reuses_existing_numeric_parser():
         "visualBeats": [
             {
                 "beatId": "vb-02-02",
-                "visualTemplate": "split-comparison",
+                "visualTemplate": "diverging-stock-bars",
                 "visualMode": "number-comparison",
+                "contentType": "diverging-stock-bars",
+                "visualGrammarId": "comparison",
+                "viewerTexts": [
+                    "追い風｜Q2売上 115.4億ドル",
+                    "向かい風｜AMD -7.04%",
+                ],
                 "objectIds": ["scene-02-card-002"],
-                "templateConfig": {"variant": "two-lane"},
+                "templateConfig": {"variant": "default", "laneLabels": []},
             }
         ],
     }
@@ -45,8 +50,10 @@ def test_split_comparison_reuses_existing_numeric_parser():
     selected = [numbers[item] for item in beat["objectIds"]]
     assert len(selected) == 2
     assert selected[0]["numericValue"] == 115.4
-    assert selected[0]["precision"] == 1
     assert selected[0]["unit"] == "億ドル"
     assert selected[1]["numericValue"] == -7.04
-    assert selected[1]["precision"] == 2
     assert selected[1]["unit"] == "%"
+    assert beat["visualTemplate"] == "tailwind-headwind"
+    assert beat["templateVariant"] == "two-lane"
+    assert beat["visualGrammarId"] == "evidence"
+    assert beat["templateConfig"]["laneLabels"] == ["追い風", "向かい風"]
