@@ -1,0 +1,11 @@
+{
+  "contract_version":"1.0.0",
+  "episode_date":"2026-08-06",
+  "reviewer":"independent_critic",
+  "round":2,
+  "scores":{"opening":4,"progression":5,"discovery":5,"clarity":4,"fox_voice":4,"late_payoff":5},
+  "total_score":27,
+  "immediate_failures":[],
+  "findings":[],
+  "verdict":"pass"
+}
