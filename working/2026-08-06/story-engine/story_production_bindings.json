@@ -15,9 +15,9 @@
       "changeCue":"数字は良かった"
     },
     "scene-07-beat-001":{
-      "visualTemplate":"focus-matrix",
-      "templateVariant":"center-zero",
-      "contentType":"focus-matrix"
+      "visualTemplate":"comparison-table",
+      "templateVariant":"default",
+      "contentType":"comparison-table"
     },
     "scene-08-beat-002":{
       "visualTemplate":"evidence-boundary",
