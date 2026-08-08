@@ -4,7 +4,7 @@
 Keeps Story Engine internal passes out of the public Daily Production state machine.
 The only public transition is causal_dossier_valid -> episode_package_final, guarded by
 one hash-bound Story Engine acceptance artifact plus the final episode package and
-projection report.
+projection report. Production is blocked unless the Critic receipt is orchestrator-signed.
 """
 from __future__ import annotations
 
@@ -66,12 +66,16 @@ def _install_v11_gate(daily: Any) -> Any:
                     daily.ERROR_CODES["package"],
                     "episode_package_final requires exactly one story_projection_report.json",
                 )
-            result = acceptance_validator.validate_acceptance(acceptance_paths[0], repo_root=root)
+            result = acceptance_validator.validate_acceptance(
+                acceptance_paths[0],
+                repo_root=root,
+                require_production=True,
+            )
             if result["status"] != "pass":
                 messages = "; ".join(item.get("message", "Story Engine acceptance failed") for item in result.get("errors", []))
                 raise daily.DailyProductionError(
                     daily.ERROR_CODES["inquisition"],
-                    f"Story Engine v1.1 acceptance failed: {messages}",
+                    f"Story Engine v1.1 production gate failed: {messages}",
                 )
             projection = daily.load_json(projection_paths[0], "Story Engine projection report")
             if projection.get("episode_date") != date or projection.get("status") != "pass":
