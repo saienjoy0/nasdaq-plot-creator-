@@ -1,6 +1,6 @@
 ---
 name: nasdaq-cafe-story-engine
-version: 1.1.1
+version: 1.1.2
 description: Turn a validated causal dossier into an independently reviewed 9-Scene episode package without changing market causality.
 ---
 
@@ -8,14 +8,16 @@ description: Turn a validated causal dossier into an independently reviewed 9-Sc
 
 Run after `causal_dossier_valid` and before `episode_package_final`.
 
-Story Discovery, Narrative Architecture, Authoring, Critic, Rewrite and Re-review are **internal Story Engine passes**. They are not Daily Production states. The public Daily Production transition stays:
+Story Discovery, Narrative Architecture, Authoring, Critic, Rewrite and Re-review are **internal Story Engine passes**. They are not Daily Production states. The intended public Daily Production transition is:
 
 ```text
 causal_dossier_valid
 → episode_package_final
 ```
 
-Use `scripts/run_daily_production_story_engine_v1_1.py` for the v1.1 production gate. Older `story_plan_valid`, `script_draft_ready`, and `creative_review_passed` states are compatibility history only and must not be used by the v1.1 operational path.
+The v1.1 gate implementation lives in `scripts/run_daily_production_story_engine_v1_1.py`. Older `story_plan_valid`, `script_draft_ready`, and `creative_review_passed` states are compatibility history only and must not be used once the v1.1 gate is activated.
+
+**Activation rule:** do not route the production workflow through the v1.1 gate until an `orchestrator_signed` Critic execution receipt exists. A `repository_provenance` receipt is sufficient to validate artifact separation and regression behavior, but it must leave `production_eligible=false`.
 
 ## Absolute boundary
 
@@ -58,9 +60,9 @@ The request freezes the exact Critic input set and records Author-only context t
 
 Run `scripts/story-engine/validate_critic_execution_receipt.py`. It verifies input Git blob SHAs, 03/04 logical source SHAs, Author/Critic ID separation, review round, PASS threshold, and absence of unresolved Critical findings.
 
-A shadow run that only isolates the Critic input artifact must declare `critic_isolation_mode=logical_shadow` and `production_eligible=false`. Production mode requires `separate_invocation` plus a valid receipt. Distinct string IDs alone do not prove independence.
+A shadow run that only isolates the Critic input artifact must declare `critic_isolation_mode=logical_shadow` and `production_eligible=false`. Production mode requires `separate_invocation`, a valid receipt, and `attestation_strength=orchestrator_signed`. Distinct string IDs alone do not prove independence.
 
-`repository_provenance` proves artifact separation and repository lineage. It is deliberately reported as non-cryptographic evidence of process separation. A future orchestrator may raise this to `orchestrator_signed`, but GitHub Actions must never invent or rewrite the Critic judgment.
+`repository_provenance` proves artifact separation and repository lineage. It is deliberately reported as non-cryptographic evidence of process separation and cannot unlock production. GitHub Actions must never invent or rewrite the Critic judgment.
 
 ## Pass E — Targeted Rewrite
 
@@ -88,7 +90,18 @@ The v1.1 gate requires one `story_engine_acceptance.json` bound to:
 
 The acceptance is validated by `scripts/story-engine/validate_story_engine_acceptance_v1_1.py`. It also checks that materialized Story Plan/Script differ from the Critic-reviewed templates only by deterministic lineage bindings and that the materialized review is semantically identical to the pre-authored review.
 
-Only after that gate passes may Daily Production advance directly from `causal_dossier_valid` to `episode_package_final`.
+Artifact validation may PASS while `production_eligible=false`. Daily Production may advance directly from `causal_dossier_valid` to `episode_package_final` only when the same acceptance also passes `--require-production`, which requires an `orchestrator_signed` receipt.
+
+## Current migration status
+
+For the committed 2026-08-06 regression fixture, the available receipt is intentionally `repository_provenance`. Therefore:
+
+```text
+artifact / lineage validation = PASS
+production eligibility = BLOCKED
+```
+
+Keep the current compatibility workflow unchanged until a real orchestration boundary can create the stronger receipt. The v1.1 wrapper and gate CI exist so that activation becomes a small, explicit switch rather than another Story Engine redesign.
 
 ## Required artifacts
 
