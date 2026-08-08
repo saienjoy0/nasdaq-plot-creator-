@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import importlib.util
 import json
+import shutil
 import sys
 import tempfile
 import unittest
@@ -18,6 +20,18 @@ def load_module(name: str, path: Path):
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def copy_relative(src_root: Path, dst_root: Path, relative: str) -> Path:
+    source = src_root / relative
+    target = dst_root / relative
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source, target)
+    return target
 
 
 class CriticReceiptTests(unittest.TestCase):
@@ -51,10 +65,7 @@ class CriticReceiptTests(unittest.TestCase):
         receipt_doc = json.loads(self.receipt.read_text(encoding="utf-8"))
         receipt_doc["critic_invocation_id"] = receipt_doc["author_invocation_id"]
         with tempfile.TemporaryDirectory() as temp:
-            temp_root = Path(temp)
-            # Keep repository-relative refs resolvable by validating against ROOT;
-            # only the receipt file itself is temporary.
-            receipt_path = temp_root / "receipt.json"
+            receipt_path = Path(temp) / "receipt.json"
             receipt_path.write_text(json.dumps(receipt_doc, ensure_ascii=False), encoding="utf-8")
             result = self.validate(self.request, receipt_path, ROOT)
         codes = {item["code"] for item in result["errors"]}
@@ -62,19 +73,106 @@ class CriticReceiptTests(unittest.TestCase):
         self.assertIn("E_NOT_INDEPENDENT", codes)
 
     def test_frozen_input_blob_drift_is_rejected(self):
-        request_doc = json.loads(self.request.read_text(encoding="utf-8"))
-        request_doc = copy.deepcopy(request_doc)
+        request_doc = copy.deepcopy(json.loads(self.request.read_text(encoding="utf-8")))
         request_doc["inputs"][0]["git_blob_sha"] = "0" * 40
         with tempfile.TemporaryDirectory() as temp:
-            temp_root = Path(temp)
-            request_path = temp_root / "request.json"
+            request_path = Path(temp) / "request.json"
             request_path.write_text(json.dumps(request_doc, ensure_ascii=False), encoding="utf-8")
-            # The receipt intentionally points to the committed request, so this
-            # also proves a substituted request cannot satisfy the receipt bind.
+            # The receipt intentionally points to the committed request, so a
+            # substituted request cannot satisfy either the receipt or input bind.
             result = self.validate(request_path, self.receipt, ROOT)
         codes = {item["code"] for item in result["errors"]}
         self.assertIn("E_REQUEST_PATH", codes)
         self.assertIn("E_BLOB_SHA", codes)
+
+
+class ProductionEligibilityTests(unittest.TestCase):
+    def test_repository_provenance_validates_artifacts_but_blocks_production(self):
+        acceptance_validator = load_module(
+            "story_acceptance_v11_test",
+            ROOT / "scripts/story-engine/validate_story_engine_acceptance_v1_1.py",
+        )
+        request_source = ROOT / "working/2026-08-06/story-engine/templates/critic_request.json"
+        receipt_source = ROOT / "working/2026-08-06/story-engine/templates/critic_execution_receipt.json"
+        request_doc = json.loads(request_source.read_text(encoding="utf-8"))
+        receipt_doc = json.loads(receipt_source.read_text(encoding="utf-8"))
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            # Copy the sealed request/receipt and every file the request is allowed to expose.
+            copy_relative(ROOT, root, "working/2026-08-06/story-engine/templates/critic_request.json")
+            copy_relative(ROOT, root, "working/2026-08-06/story-engine/templates/critic_execution_receipt.json")
+            for item in request_doc["inputs"]:
+                copy_relative(ROOT, root, item["path"])
+            copy_relative(ROOT, root, receipt_doc["review"]["path"])
+            copy_relative(ROOT, root, "scripts/story-engine/validate_critic_execution_receipt.py")
+            copy_relative(ROOT, root, "skills/nasdaq-cafe-story-engine/contracts/critic_request.schema.json")
+            copy_relative(ROOT, root, "skills/nasdaq-cafe-story-engine/contracts/critic_execution_receipt.schema.json")
+
+            dossier = root / "research/2026-08-06/causal_research_dossier_2026-08-06.json"
+            dossier.parent.mkdir(parents=True, exist_ok=True)
+            dossier.write_text("{}\n", encoding="utf-8")
+            plan = root / "working/2026-08-06/story-engine/templates/story_plan.template.json"
+            script = root / "working/2026-08-06/story-engine/templates/story_script.template.json"
+            review = root / "working/2026-08-06/story-engine/templates/creative_review.template.json"
+            request = root / "working/2026-08-06/story-engine/templates/critic_request.json"
+            receipt = root / "working/2026-08-06/story-engine/templates/critic_execution_receipt.json"
+
+            def ref(path: Path) -> dict[str, str]:
+                return {"path": path.relative_to(root).as_posix(), "sha256": sha256(path)}
+
+            acceptance = {
+                "contract_version": "1.1.0",
+                "episode_date": "2026-08-06",
+                "status": "pass",
+                "production_eligible": False,
+                "artifacts": {
+                    "causal_dossier": ref(dossier),
+                    "story_plan": ref(plan),
+                    "story_script": ref(script),
+                    "creative_review": ref(review),
+                    "critic_request": ref(request),
+                    "critic_execution_receipt": ref(receipt),
+                },
+                "validation": {
+                    "story_plan": "pass",
+                    "story_script": "pass",
+                    "independent_critic": "pass",
+                    "independent_critic_receipt": "pass",
+                    "causality_guard": "pass",
+                    "scene_order_guard": "pass",
+                    "scene_09_guard": "pass",
+                },
+                "critic": {
+                    "round": 2,
+                    "score": 27,
+                    "verdict": "pass",
+                    "author_invocation_id": receipt_doc["author_invocation_id"],
+                    "critic_invocation_id": receipt_doc["critic_invocation_id"],
+                    "isolation_mode": "separate_invocation",
+                },
+            }
+            acceptance_path = root / "working/2026-08-06/story-engine/story_engine_acceptance.json"
+            acceptance_path.write_text(json.dumps(acceptance, ensure_ascii=False), encoding="utf-8")
+
+            artifact_result = acceptance_validator.validate_acceptance(
+                acceptance_path,
+                repo_root=root,
+                require_production=False,
+            )
+            self.assertEqual("pass", artifact_result["status"], artifact_result)
+            self.assertFalse(artifact_result["production_eligible"])
+            self.assertIn("W_PRODUCTION_BLOCKED", {x["code"] for x in artifact_result["warnings"]})
+
+            production_result = acceptance_validator.validate_acceptance(
+                acceptance_path,
+                repo_root=root,
+                require_production=True,
+            )
+            self.assertEqual("fail", production_result["status"])
+            codes = {item["code"] for item in production_result["errors"]}
+            self.assertIn("E_PRODUCTION_ELIGIBILITY", codes)
+            self.assertIn("E_CRITIC_PROCESS_NOT_PROVEN", codes)
 
 
 class UnifiedDailyGateTests(unittest.TestCase):
