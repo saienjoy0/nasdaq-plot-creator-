@@ -6,6 +6,7 @@ on:
       - 'skills/nasdaq-cafe-story-engine/**'
       - 'scripts/story-engine/**'
       - 'scripts/run_daily_production_story_engine_v1_1.py'
+      - 'critic-adapters/**'
       - 'tests/story-engine-integration/**'
       - 'working/**/story-engine/templates/critic_request.json'
       - 'working/**/story-engine/templates/critic_execution_receipt.json'
@@ -24,11 +25,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install validation dependencies
-        run: python -m pip install --disable-pip-version-check pytest jsonschema cryptography
-      - name: Compile v1.1 gate and external orchestrator
+      - name: Install validation and adapter test dependencies
+        run: python -m pip install --disable-pip-version-check pytest jsonschema cryptography openai==2.47.0
+      - name: Compile v1.1 gate, external orchestrator and Critic adapter
         run: |
           python -m py_compile \
+            critic-adapters/openai/main.py \
             scripts/story-engine/run_external_critic_orchestrator.py \
             scripts/story-engine/preflight_external_critic_orchestrator.py \
             scripts/story-engine/run_external_critic_pipeline.py \
@@ -44,5 +46,7 @@ jobs:
             --repo-root . \
             --request working/2026-08-06/story-engine/templates/critic_request.json \
             --receipt working/2026-08-06/story-engine/templates/critic_execution_receipt.json
-      - name: Run v1.1 gate and external orchestrator regressions
+      - name: Run v1.1 gate, external orchestrator and adapter regressions
         run: python -m pytest -q tests/story-engine-integration
+      - name: Build Critic adapter image without invoking a model
+        run: docker build -t nasdaq-cafe-openai-critic:ci critic-adapters/openai
