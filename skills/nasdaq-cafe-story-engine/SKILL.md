@@ -1,12 +1,21 @@
 ---
 name: nasdaq-cafe-story-engine
-version: 1.1.0
+version: 1.1.1
 description: Turn a validated causal dossier into an independently reviewed 9-Scene episode package without changing market causality.
 ---
 
 # Unified Story Engine
 
-Run after `causal_dossier_valid` and before `episode_package_final`. This first implementation is shadow-only and does not modify Daily Production state.
+Run after `causal_dossier_valid` and before `episode_package_final`.
+
+Story Discovery, Narrative Architecture, Authoring, Critic, Rewrite and Re-review are **internal Story Engine passes**. They are not Daily Production states. The public Daily Production transition stays:
+
+```text
+causal_dossier_valid
+→ episode_package_final
+```
+
+Use `scripts/run_daily_production_story_engine_v1_1.py` for the v1.1 production gate. Older `story_plan_valid`, `script_draft_ready`, and `creative_review_passed` states are compatibility history only and must not be used by the v1.1 operational path.
 
 ## Absolute boundary
 
@@ -38,7 +47,20 @@ Start a separate invocation/context. Give it the baseline, Claim Ledger, selecte
 
 Review the complete production package, not narration alone. Each finding must name exact Scene IDs/field paths, viewer effect, required fix and claims/evidence to preserve. Any unresolved Critical finding blocks finalization.
 
-A shadow run that only isolates the Critic input artifact must declare `critic_isolation_mode=logical_shadow` and `production_eligible=false`. Production mode requires `critic_isolation_mode=separate_invocation`; distinct string IDs alone do not prove independence.
+### Production isolation contract
+
+Production requires both of the following pre-authored artifacts:
+
+- `working/YYYY-MM-DD/story-engine/templates/critic_request.json`
+- `working/YYYY-MM-DD/story-engine/templates/critic_execution_receipt.json`
+
+The request freezes the exact Critic input set and records Author-only context that must be excluded. The receipt binds a different Critic invocation ID, the frozen request, and the final review artifact.
+
+Run `scripts/story-engine/validate_critic_execution_receipt.py`. It verifies input Git blob SHAs, 03/04 logical source SHAs, Author/Critic ID separation, review round, PASS threshold, and absence of unresolved Critical findings.
+
+A shadow run that only isolates the Critic input artifact must declare `critic_isolation_mode=logical_shadow` and `production_eligible=false`. Production mode requires `separate_invocation` plus a valid receipt. Distinct string IDs alone do not prove independence.
+
+`repository_provenance` proves artifact separation and repository lineage. It is deliberately reported as non-cryptographic evidence of process separation. A future orchestrator may raise this to `orchestrator_signed`, but GitHub Actions must never invent or rewrite the Critic judgment.
 
 ## Pass E — Targeted Rewrite
 
@@ -52,10 +74,29 @@ Compare draft and rewrite against the Claim Ledger. Reject evidence loss, modali
 
 Normally use one Critic → patch → re-review cycle. A second round is allowed only while Critical findings remain. Never exceed two rounds. If Critical findings remain, block and return to Pass A/B/C or upstream research.
 
+## Unified production gate
+
+The v1.1 gate requires one `story_engine_acceptance.json` bound to:
+
+- validated causal dossier
+- materialized Story Plan
+- materialized Story Script
+- final creative review
+- sealed Critic request
+- Critic execution receipt
+- causality/Scene guards
+
+The acceptance is validated by `scripts/story-engine/validate_story_engine_acceptance_v1_1.py`. It also checks that materialized Story Plan/Script differ from the Critic-reviewed templates only by deterministic lineage bindings and that the materialized review is semantically identical to the pre-authored review.
+
+Only after that gate passes may Daily Production advance directly from `causal_dossier_valid` to `episode_package_final`.
+
 ## Required artifacts
 
-- `working/YYYY-MM-DD/story_engine_package_YYYY-MM-DD.json`
+- `working/YYYY-MM-DD/story_engine_package_YYYY-MM-DD.json` for the unified editorial/provenance record when produced
+- `working/YYYY-MM-DD/story-engine/story_engine_acceptance.json` for the production transition
 - `episodes/YYYY-MM-DD/episode_package_YYYY-MM-DD.md`
-- `verification/YYYY-MM-DD/story_engine_validation_report.json`
+- `verification/YYYY-MM-DD/story_engine_validation_report.json` when the unified package validator is run
+- `working/YYYY-MM-DD/story-engine/templates/critic_request.json`
+- `working/YYYY-MM-DD/story-engine/templates/critic_execution_receipt.json`
 
-Run `validators/validate_story_engine_hardening.py`. Passing the validator does not itself prove the story is interesting; that judgment belongs to the independent Critic and the user's A/B review.
+Run `validators/validate_story_engine_hardening.py` for the unified Story Engine package and the v1.1 receipt/acceptance validators for the production gate. Passing deterministic validators does not itself prove the story is interesting; that judgment belongs to the independent Critic and the user's A/B review.
