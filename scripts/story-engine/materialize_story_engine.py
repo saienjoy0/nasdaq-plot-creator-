@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Bind authored Story Engine templates to the validated daily dossier and validate them."""
+"""Bind authored Story Engine artifacts to the validated daily dossier and validate them.
+
+The Author/Critic judgment is completed before GitHub Actions. This materializer is
+mechanical: it binds lineage fields, copies the pre-authored review unchanged, verifies
+the sealed Critic request/receipt, and emits a single Story Engine acceptance gate.
+"""
 from __future__ import annotations
 
 import argparse
@@ -59,14 +64,39 @@ def main() -> int:
     plan_template = templates / "story_plan.template.json"
     script_template = templates / "story_script.template.json"
     review_template = templates / "creative_review.template.json"
+    critic_request = templates / "critic_request.json"
+    critic_receipt = templates / "critic_execution_receipt.json"
     plan_path = work / "story_plan.json"
     script_path = work / "story_script.json"
     review_path = work / "creative_review.json"
     acceptance_path = work / "story_engine_acceptance.json"
 
-    for path in (dossier, plan_template, script_template, review_template):
+    required_inputs = (
+        dossier,
+        plan_template,
+        script_template,
+        review_template,
+        critic_request,
+        critic_receipt,
+    )
+    for path in required_inputs:
         if not path.is_file() or path.stat().st_size == 0:
             raise SystemExit(f"missing Story Engine input: {path.relative_to(root)}")
+
+    receipt_validator = load_module(
+        "critic_execution_receipt_validator",
+        root / "scripts/story-engine/validate_critic_execution_receipt.py",
+    )
+    receipt_result = receipt_validator.validate(
+        critic_request,
+        critic_receipt,
+        repo_root=root,
+        request_schema=root / "skills/nasdaq-cafe-story-engine/contracts/critic_request.schema.json",
+        receipt_schema=root / "skills/nasdaq-cafe-story-engine/contracts/critic_execution_receipt.schema.json",
+    )
+    if receipt_result["status"] != "pass":
+        messages = [item.get("message", "critic receipt failed") for item in receipt_result.get("errors", [])]
+        raise SystemExit("Independent Critic execution receipt failed: " + "; ".join(messages))
 
     plan = load(plan_template)
     plan["causal_dossier"] = ref(root, dossier)
@@ -90,6 +120,7 @@ def main() -> int:
     script["causal_dossier"] = ref(root, dossier)
     dump(script_path, script)
 
+    # The Critic judgment is authored before Actions. Copy its JSON content unchanged.
     review = load(review_template)
     dump(review_path, review)
 
@@ -111,8 +142,9 @@ def main() -> int:
     if review.get("verdict") != "pass" or review.get("total_score", 0) < 25:
         raise SystemExit("final independent critic review must be PASS with score >=25")
 
+    receipt = load(critic_receipt)
     acceptance = {
-        "contract_version": "1.0.0",
+        "contract_version": "1.1.0",
         "episode_date": date,
         "status": "pass",
         "artifacts": {
@@ -120,22 +152,51 @@ def main() -> int:
             "story_plan": ref(root, plan_path),
             "story_script": ref(root, script_path),
             "creative_review": ref(root, review_path),
+            "critic_request": ref(root, critic_request),
+            "critic_execution_receipt": ref(root, critic_receipt),
         },
         "validation": {
             "story_plan": "pass",
             "story_script": "pass",
             "independent_critic": "pass",
+            "independent_critic_receipt": "pass",
             "causality_guard": "pass",
             "scene_order_guard": "pass",
             "scene_09_guard": "pass",
         },
-        "critic": {"round": review["round"], "score": review["total_score"], "verdict": review["verdict"]},
+        "critic": {
+            "round": review["round"],
+            "score": review["total_score"],
+            "verdict": review["verdict"],
+            "author_invocation_id": receipt["author_invocation_id"],
+            "critic_invocation_id": receipt["critic_invocation_id"],
+            "isolation_mode": receipt["isolation_mode"],
+            "execution_receipt": ref(root, critic_receipt),
+        },
     }
     dump(acceptance_path, acceptance)
-    print(json.dumps({"status": "pass", "paths": {
-        "story_plan": str(plan_path), "story_script": str(script_path),
-        "creative_review": str(review_path), "acceptance": str(acceptance_path)
-    }}, ensure_ascii=False, indent=2))
+
+    acceptance_validator = load_module(
+        "story_engine_acceptance_v1_1",
+        root / "scripts/story-engine/validate_story_engine_acceptance_v1_1.py",
+    )
+    acceptance_result = acceptance_validator.validate_acceptance(acceptance_path, repo_root=root)
+    if acceptance_result["status"] != "pass":
+        messages = [item.get("message", "acceptance failed") for item in acceptance_result.get("errors", [])]
+        raise SystemExit("Story Engine v1.1 acceptance failed: " + "; ".join(messages))
+
+    print(json.dumps({
+        "status": "pass",
+        "critic_isolation_mode": receipt["isolation_mode"],
+        "paths": {
+            "story_plan": str(plan_path),
+            "story_script": str(script_path),
+            "creative_review": str(review_path),
+            "critic_request": str(critic_request),
+            "critic_execution_receipt": str(critic_receipt),
+            "acceptance": str(acceptance_path),
+        },
+    }, ensure_ascii=False, indent=2))
     return 0
 
 
