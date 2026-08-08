@@ -1,6 +1,6 @@
 ---
 name: nasdaq-cafe-story-engine
-version: 1.1.4
+version: 1.1.5
 description: Turn a validated causal dossier into an independently reviewed 9-Scene episode package without changing market causality.
 ---
 
@@ -76,7 +76,7 @@ For the built-in production runner, the runtime verification record must satisfy
 
 ### External Critic operational path
 
-Use `scripts/story-engine/run_external_critic_pipeline.py` as the operational entry point. Do not call the model adapter directly from Daily Production or GitHub Actions.
+Use `scripts/story-engine/run_external_critic_pipeline.py` as the provider-neutral operational entry point. Do not call the model adapter directly from Daily Production or GitHub Actions.
 
 The pipeline is:
 
@@ -106,7 +106,7 @@ repository trust validation
 
 The zero-call preflight is `scripts/story-engine/preflight_external_critic_orchestrator.py`. It must pass before any model/API call. It verifies the request bundle, Docker availability, digest-pinned adapter image syntax, required adapter environment variables, and that the out-of-repository private key matches an active public key already registered in the trust registry.
 
-The low-level runner is `scripts/story-engine/run_external_critic_orchestrator.py`. The Critic adapter image is provider-neutral but must be pinned as `image@sha256:<digest>`. The container receives only `/critic/input` read-only and `/critic/output` writable. It receives only environment variable names explicitly allowed with `--pass-env`; the host/Author environment is not forwarded wholesale.
+The low-level runner is `scripts/story-engine/run_external_critic_orchestrator.py`. The Critic adapter image must be pinned as `image@sha256:<digest>`. The container receives only `/critic/input` read-only and `/critic/output` writable. It receives only environment variable names explicitly allowed with `--pass-env`; the host/Author environment is not forwarded wholesale.
 
 The adapter must read:
 
@@ -119,9 +119,36 @@ and write:
 
 The private signing key must never be placed in this repository, a GitHub Actions secret used by the production renderer, the Critic input bundle, or the Author context.
 
-The trust registry is intentionally empty until a real external Critic orchestrator is provisioned. A self-authored JSON file, an unknown key, a revoked key, a tampered signed field, a Request/Review SHA mismatch, an invalid runtime record, or an Author/Critic ID collision must all fail closed.
+### Built-in OpenAI Critic adapter
 
-GitHub Actions may verify signatures and hashes. It must not create the Critic review, create the private-key signature, rewrite the attestation, or upgrade a repository-provenance receipt to production eligibility.
+The maintained provider implementation is under `critic-adapters/openai/`.
+
+It uses the OpenAI Responses API with Structured Outputs and defaults to `gpt-5.6`. It receives only the sealed Critic bundle, does not enable web search or tools, and emits a schema-constrained `creative_review.json`. It does **not** apply patches, sign receipts, or decide production eligibility.
+
+Use `scripts/story-engine/run_openai_critic_pipeline.py` for the OpenAI path. It always forwards only:
+
+- `OPENAI_API_KEY`
+- `OPENAI_CRITIC_MODEL`
+- `OPENAI_CRITIC_MAX_OUTPUT_TOKENS`
+- `OPENAI_CRITIC_TIMEOUT_SECONDS`
+
+The OpenAI SDK version is pinned in `critic-adapters/openai/requirements.txt` and the adapter is built in Story Engine gate CI without calling the model.
+
+After this change is merged to `main`, run the manual `Publish OpenAI Critic Adapter` workflow. It builds and pushes the adapter to GHCR and emits an immutable `image@sha256:<digest>` release artifact. That workflow does not receive `OPENAI_API_KEY` and must never invoke a model.
+
+### External signing key provisioning
+
+Generate the production Ed25519 key only on the trusted external orchestrator host:
+
+```text
+scripts/story-engine/bootstrap_external_critic_key.py
+```
+
+The bootstrap requires an encryption password from an environment variable, writes the private key with owner-only permissions, refuses any private-key path inside the repository, and prints the public trust-registry row. Commit only the public row to `trusted_critic_orchestrators.json`; never commit or upload the private key.
+
+A self-authored JSON file, an unknown key, a revoked key, a tampered signed field, a Request/Review SHA mismatch, an invalid runtime record, or an Author/Critic ID collision must all fail closed.
+
+GitHub Actions may verify signatures and hashes and may build/publish the model-free adapter image. It must not create the Critic review, receive the external private signing key, create the private-key signature, rewrite the attestation, or upgrade a repository-provenance receipt to production eligibility.
 
 ## Pass E — Targeted Rewrite
 
@@ -160,13 +187,18 @@ artifact / lineage validation = PASS
 production eligibility = BLOCKED
 ```
 
-The code path for a real external Critic execution now exists, but three external items are intentionally not fabricated by this repository:
+The software path for a real independent Critic is now complete through the provider adapter source and release workflow. Do not fabricate the remaining runtime credentials or attestations.
 
-1. a real Critic adapter container image that calls the chosen model provider, pinned by image digest;
-2. an Ed25519 private key held outside the repository/Author/GitHub Actions renderer environment;
-3. the matching public key registered as `active` in `trusted_critic_orchestrators.json`.
+Remaining activation sequence:
 
-Keep the current compatibility workflow unchanged until those three items are provisioned and a real orchestrator-signed acceptance passes. The v1.1 wrapper then becomes a small explicit activation switch rather than another Story Engine redesign.
+1. merge the reviewed Story Engine v1.1 gate and OpenAI adapter implementation;
+2. run `Publish OpenAI Critic Adapter` from `main` and retain the emitted immutable image digest;
+3. on the trusted external orchestrator host, run `bootstrap_external_critic_key.py` and keep the encrypted private key outside the repository;
+4. add only the generated public key row to `trusted_critic_orchestrators.json` and validate CI;
+5. provide `OPENAI_API_KEY` only to the external orchestrator process and run one real isolated Critic execution;
+6. require the resulting `orchestrator_signed` receipt to pass the v1.1 production acceptance before activating the public Daily Production gate.
+
+Keep the current compatibility workflow unchanged until step 6 passes. The v1.1 wrapper then becomes a small explicit activation switch rather than another Story Engine redesign.
 
 ## Required artifacts
 
