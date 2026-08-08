@@ -1,0 +1,27 @@
+{
+  "causality_changes": [],
+  "critic_isolation_mode": "logical_shadow",
+  "critical_findings_after": [],
+  "critical_findings_before": [
+    "HOOK_EXHAUSTS_THE_STORY",
+    "REPEATED_CONCLUSION",
+    "NO_BELIEF_CHANGE",
+    "PROCEDURAL_NARRATION",
+    "NO_LATE_PAYOFF",
+    "FOX_VOICE_ABSENT"
+  ],
+  "episode_date": "2026-08-06",
+  "mode": "shadow",
+  "new_package": "episodes/2026-08-06/episode_package_story_engine_shadow_2026-08-06.md",
+  "old_package": "episodes/2026-08-06/episode_package_public_2026-08-06.md",
+  "production_eligible": false,
+  "production_gate_connected": false,
+  "structural_changes": [
+    "Scene 1 no longer reveals the central answer or SpaceX proof.",
+    "Scenes 2–5 have distinct jobs: reject naive explanation, expose positive Gap, reveal higher standard, reveal customer proof.",
+    "Procedural bridges were removed.",
+    "Scenes 6–8 now add chronology boundary, Nasdaq counterevidence and testable implications.",
+    "Scene 9 reinterprets the opening instead of repeating Scene 1."
+  ],
+  "user_review_required": true
+}

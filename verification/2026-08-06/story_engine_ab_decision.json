@@ -1,0 +1,19 @@
+{
+  "episode_date": "2026-08-06",
+  "baseline": "episodes/2026-08-06/episode_package_public_2026-08-06.md",
+  "candidate": "episodes/2026-08-06/episode_package_story_engine_shadow_2026-08-06.md",
+  "decision": "prefer_story_engine_candidate",
+  "dimensions": {
+    "opening_reason_to_continue": "story_engine",
+    "scene_progression": "story_engine",
+    "late_payoff": "story_engine",
+    "fox_voice": "story_engine",
+    "causality_preservation": "tie_strong"
+  },
+  "claim_ledger_preserved": "6/6",
+  "causality_diff": "pass",
+  "production_eligible": false,
+  "production_blocker": "A genuinely independent Critic execution path is not yet implemented and verified.",
+  "authorizes": ["open_vertical_slice_pr", "continue_story_engine_implementation"],
+  "does_not_authorize": ["daily_production_gate", "preview", "final", "publication"]
+}

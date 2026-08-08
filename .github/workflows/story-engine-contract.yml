@@ -1,0 +1,15 @@
+name: Story Engine Contract
+on:
+  pull_request:
+    paths: ['skills/nasdaq-cafe-story-engine/**','tests/story-engine/test_story_engine.py','designs/STORY_ENGINE_UNIFIED_FINAL_DESIGN_v1.1.md','.github/workflows/story-engine-contract.yml']
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install jsonschema
+      - run: python tests/story-engine/test_story_engine.py
