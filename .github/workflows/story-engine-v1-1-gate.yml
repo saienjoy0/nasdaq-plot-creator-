@@ -1,0 +1,41 @@
+name: Story Engine v1.1 Gate
+
+on:
+  pull_request:
+    paths:
+      - 'skills/nasdaq-cafe-story-engine/**'
+      - 'scripts/story-engine/**'
+      - 'scripts/run_daily_production_story_engine_v1_1.py'
+      - 'tests/story-engine-integration/test_story_engine_v1_1_gate.py'
+      - 'working/**/story-engine/templates/critic_request.json'
+      - 'working/**/story-engine/templates/critic_execution_receipt.json'
+      - '.github/workflows/story-engine-v1-1-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gate-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install validation dependencies
+        run: python -m pip install --disable-pip-version-check pytest jsonschema
+      - name: Compile v1.1 gate validators
+        run: |
+          python -m py_compile \
+            scripts/story-engine/validate_critic_execution_receipt.py \
+            scripts/story-engine/validate_story_engine_acceptance_v1_1.py \
+            scripts/run_daily_production_story_engine_v1_1.py
+      - name: Validate committed Critic request and receipt
+        run: |
+          python scripts/story-engine/validate_critic_execution_receipt.py \
+            --repo-root . \
+            --request working/2026-08-06/story-engine/templates/critic_request.json \
+            --receipt working/2026-08-06/story-engine/templates/critic_execution_receipt.json
+      - name: Run v1.1 gate regressions
+        run: python -m pytest -q tests/story-engine-integration/test_story_engine_v1_1_gate.py
