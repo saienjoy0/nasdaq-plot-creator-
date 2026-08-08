@@ -26,8 +26,24 @@
         "note": {"type": "string", "minLength": 1}
       }
     },
-    "attestation": {"type": "string", "minLength": 1}
+    "attestation": {"type": "string", "minLength": 1},
+    "orchestrator_attestation": {"$ref": "#/$defs/sha256Ref"}
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "provenance": {
+            "properties": {
+              "attestation_strength": {"const": "orchestrator_signed"}
+            },
+            "required": ["attestation_strength"]
+          }
+        }
+      },
+      "then": {"required": ["orchestrator_attestation"]}
+    }
+  ],
   "$defs": {
     "blobRef": {
       "type": "object",
@@ -36,6 +52,15 @@
       "properties": {
         "path": {"type": "string", "minLength": 1},
         "git_blob_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+      }
+    },
+    "sha256Ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path","sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
       }
     }
   }
