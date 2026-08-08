@@ -3,7 +3,9 @@
 
 The Author/Critic judgment is completed before GitHub Actions. This materializer is
 mechanical: it binds lineage fields, copies the pre-authored review unchanged, verifies
-the sealed Critic request/receipt, and emits a single Story Engine acceptance gate.
+the sealed Critic request/receipt, and emits a single Story Engine acceptance artifact.
+A repository-provenance receipt may validate the artifacts but is not production-eligible
+until a real orchestrator produces an `orchestrator_signed` receipt.
 """
 from __future__ import annotations
 
@@ -143,10 +145,12 @@ def main() -> int:
         raise SystemExit("final independent critic review must be PASS with score >=25")
 
     receipt = load(critic_receipt)
+    production_eligible = receipt.get("provenance", {}).get("attestation_strength") == "orchestrator_signed"
     acceptance = {
         "contract_version": "1.1.0",
         "episode_date": date,
         "status": "pass",
+        "production_eligible": production_eligible,
         "artifacts": {
             "causal_dossier": ref(root, dossier),
             "story_plan": ref(root, plan_path),
@@ -171,6 +175,7 @@ def main() -> int:
             "author_invocation_id": receipt["author_invocation_id"],
             "critic_invocation_id": receipt["critic_invocation_id"],
             "isolation_mode": receipt["isolation_mode"],
+            "attestation_strength": receipt.get("provenance", {}).get("attestation_strength"),
             "execution_receipt": ref(root, critic_receipt),
         },
     }
@@ -180,14 +185,20 @@ def main() -> int:
         "story_engine_acceptance_v1_1",
         root / "scripts/story-engine/validate_story_engine_acceptance_v1_1.py",
     )
-    acceptance_result = acceptance_validator.validate_acceptance(acceptance_path, repo_root=root)
+    acceptance_result = acceptance_validator.validate_acceptance(
+        acceptance_path,
+        repo_root=root,
+        require_production=False,
+    )
     if acceptance_result["status"] != "pass":
         messages = [item.get("message", "acceptance failed") for item in acceptance_result.get("errors", [])]
-        raise SystemExit("Story Engine v1.1 acceptance failed: " + "; ".join(messages))
+        raise SystemExit("Story Engine v1.1 artifact acceptance failed: " + "; ".join(messages))
 
     print(json.dumps({
         "status": "pass",
+        "production_eligible": production_eligible,
         "critic_isolation_mode": receipt["isolation_mode"],
+        "critic_attestation_strength": receipt.get("provenance", {}).get("attestation_strength"),
         "paths": {
             "story_plan": str(plan_path),
             "story_script": str(script_path),
