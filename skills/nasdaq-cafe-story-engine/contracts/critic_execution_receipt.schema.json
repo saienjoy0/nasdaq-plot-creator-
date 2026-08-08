@@ -18,10 +18,12 @@
     "provenance": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["source_pr","source_merge_commit","attestation_strength","note"],
+      "required": ["attestation_strength","note"],
       "properties": {
         "source_pr": {"type": "integer", "minimum": 1},
         "source_merge_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "orchestrator_id": {"type": "string", "minLength": 1},
+        "orchestrator_run_id": {"type": "string", "minLength": 1},
         "attestation_strength": {"enum": ["repository_provenance","orchestrator_signed"]},
         "note": {"type": "string", "minLength": 1}
       }
@@ -34,14 +36,32 @@
       "if": {
         "properties": {
           "provenance": {
-            "properties": {
-              "attestation_strength": {"const": "orchestrator_signed"}
-            },
+            "properties": {"attestation_strength": {"const": "repository_provenance"}},
             "required": ["attestation_strength"]
           }
         }
       },
-      "then": {"required": ["orchestrator_attestation"]}
+      "then": {
+        "properties": {
+          "provenance": {"required": ["source_pr","source_merge_commit"]}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "provenance": {
+            "properties": {"attestation_strength": {"const": "orchestrator_signed"}},
+            "required": ["attestation_strength"]
+          }
+        }
+      },
+      "then": {
+        "required": ["orchestrator_attestation"],
+        "properties": {
+          "provenance": {"required": ["orchestrator_id","orchestrator_run_id"]}
+        }
+      }
     }
   ],
   "$defs": {
