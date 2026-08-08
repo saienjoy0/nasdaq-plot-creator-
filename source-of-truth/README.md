@@ -30,4 +30,8 @@ python scripts/materialize_sources.py
 6. `materialize_sources.py --check-only`を通す
 7. 復元した平文と原本のSHA-256が一致することを確認する
 
+### transport-only repair
+
+packed部品だけが破損し、手元の正本が`packed_sources.json`に記録された`raw_bytes`と復元後SHA-256へ完全一致する場合は、原本文書を編集せずpacked transportだけを再生成してよいです。この場合は部品パス、`raw_bytes`、復元後SHA-256を変更せず、再生成後に必ず`materialize_sources.py --check-only`を通します。
+
 01〜04の内容を外部プロジェクトの仕様へ自動変換しません。外部プロジェクトは調査機構の参考であり、正本ではありません。
