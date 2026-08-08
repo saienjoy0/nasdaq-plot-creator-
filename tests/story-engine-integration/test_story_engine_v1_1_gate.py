@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import copy
 import hashlib
 import importlib.util
@@ -9,6 +10,9 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -78,12 +82,130 @@ class CriticReceiptTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             request_path = Path(temp) / "request.json"
             request_path.write_text(json.dumps(request_doc, ensure_ascii=False), encoding="utf-8")
-            # The receipt intentionally points to the committed request, so a
-            # substituted request cannot satisfy either the receipt or input bind.
             result = self.validate(request_path, self.receipt, ROOT)
         codes = {item["code"] for item in result["errors"]}
         self.assertIn("E_REQUEST_PATH", codes)
         self.assertIn("E_BLOB_SHA", codes)
+
+    def test_orchestrator_signed_without_signed_attestation_is_rejected(self):
+        receipt_doc = copy.deepcopy(json.loads(self.receipt.read_text(encoding="utf-8")))
+        receipt_doc["provenance"]["attestation_strength"] = "orchestrator_signed"
+        with tempfile.TemporaryDirectory() as temp:
+            receipt_path = Path(temp) / "receipt.json"
+            receipt_path.write_text(json.dumps(receipt_doc, ensure_ascii=False), encoding="utf-8")
+            result = self.validate(self.request, receipt_path, ROOT)
+        self.assertEqual("fail", result["status"])
+        self.assertIn("E_SCHEMA", {item["code"] for item in result["errors"]})
+
+
+class OrchestratorAttestationTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.validator = load_module(
+            "critic_orchestrator_attestation_test",
+            ROOT / "scripts/story-engine/validate_critic_orchestrator_attestation.py",
+        )
+        cls.attestation_schema = ROOT / "skills/nasdaq-cafe-story-engine/contracts/critic_orchestrator_attestation.schema.json"
+        cls.trust_schema = ROOT / "skills/nasdaq-cafe-story-engine/contracts/trusted_critic_orchestrators.schema.json"
+
+    def build_fixture(self, root: Path):
+        request = root / "request.json"
+        review = root / "review.json"
+        verification = root / "verification.json"
+        request.write_text('{"request":"sealed"}\n', encoding="utf-8")
+        review.write_text('{"review":"pass"}\n', encoding="utf-8")
+        verification.write_text('{"distinct_execution":true}\n', encoding="utf-8")
+
+        private_key = Ed25519PrivateKey.generate()
+        public_pem = private_key.public_key().public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        ).decode("utf-8")
+        registry = root / "trusted.json"
+        registry.write_text(json.dumps({
+            "contract_version": "1.0.0",
+            "keys": [{
+                "key_id": "test-key-01",
+                "orchestrator_id": "test-independent-critic-orchestrator",
+                "algorithm": "ed25519",
+                "public_key_pem": public_pem,
+                "status": "active",
+            }],
+        }), encoding="utf-8")
+
+        doc = {
+            "contract_version": "1.0.0",
+            "episode_date": "2026-08-06",
+            "attestation_id": "att-test-001",
+            "orchestrator_id": "test-independent-critic-orchestrator",
+            "orchestrator_run_id": "critic-run-002",
+            "author_invocation_id": "author-run-001",
+            "critic_invocation_id": "critic-run-002",
+            "request_sha256": sha256(request),
+            "review_sha256": sha256(review),
+            "execution_boundary": {
+                "distinct_execution": True,
+                "shared_author_context": False,
+                "request_only_input": True,
+                "critic_started_after_request_sealed": True,
+            },
+            "issued_at": "2026-08-08T10:00:00Z",
+            "verification": {
+                "method": "external_verifier",
+                "verifier_id": "test-verifier",
+                "verification_record": {
+                    "path": "verification.json",
+                    "sha256": sha256(verification),
+                },
+            },
+        }
+        signature = private_key.sign(self.validator.canonical_signed_payload(doc))
+        doc["signature"] = {
+            "algorithm": "ed25519",
+            "key_id": "test-key-01",
+            "signature_base64": base64.b64encode(signature).decode("ascii"),
+        }
+        attestation = root / "attestation.json"
+        attestation.write_text(json.dumps(doc, ensure_ascii=False), encoding="utf-8")
+        return attestation, registry, request, review, doc
+
+    def validate(self, attestation: Path, registry: Path, request: Path, review: Path, root: Path):
+        return self.validator.validate(
+            attestation,
+            repo_root=root,
+            attestation_schema=self.attestation_schema,
+            trust_registry=registry,
+            trust_schema=self.trust_schema,
+            expected_request_path=request,
+            expected_review_path=review,
+        )
+
+    def test_valid_ed25519_orchestrator_attestation_passes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            attestation, registry, request, review, _ = self.build_fixture(root)
+            result = self.validate(attestation, registry, request, review, root)
+        self.assertEqual("pass", result["status"], result)
+
+    def test_tampered_signed_payload_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            attestation, registry, request, review, doc = self.build_fixture(root)
+            doc["orchestrator_run_id"] = "tampered-run"
+            attestation.write_text(json.dumps(doc, ensure_ascii=False), encoding="utf-8")
+            result = self.validate(attestation, registry, request, review, root)
+        self.assertEqual("fail", result["status"])
+        self.assertIn("E_SIGNATURE", {item["code"] for item in result["errors"]})
+
+    def test_unknown_signing_key_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            attestation, registry, request, review, doc = self.build_fixture(root)
+            doc["signature"]["key_id"] = "unknown-key"
+            attestation.write_text(json.dumps(doc, ensure_ascii=False), encoding="utf-8")
+            result = self.validate(attestation, registry, request, review, root)
+        self.assertEqual("fail", result["status"])
+        self.assertIn("E_TRUST_KEY", {item["code"] for item in result["errors"]})
 
 
 class ProductionEligibilityTests(unittest.TestCase):
@@ -99,7 +221,6 @@ class ProductionEligibilityTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            # Copy the sealed request/receipt and every file the request is allowed to expose.
             copy_relative(ROOT, root, "working/2026-08-06/story-engine/templates/critic_request.json")
             copy_relative(ROOT, root, "working/2026-08-06/story-engine/templates/critic_execution_receipt.json")
             for item in request_doc["inputs"]:
