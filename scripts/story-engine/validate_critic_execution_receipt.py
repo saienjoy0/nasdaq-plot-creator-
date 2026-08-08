@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -21,6 +23,16 @@ class Item:
         return {"code": self.code, "message": self.message, "path": self.path}
 
 
+def load_module(name: str, path: Path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    if not spec or not spec.loader:
+        raise RuntimeError(f"cannot import {name}: {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
 def load(path: Path) -> dict[str, Any]:
     value = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(value, dict):
@@ -31,6 +43,10 @@ def load(path: Path) -> dict[str, Any]:
 def git_blob_sha(path: Path) -> str:
     data = path.read_bytes()
     return hashlib.sha1(f"blob {len(data)}\0".encode() + data).hexdigest()
+
+
+def sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def safe(root: Path, value: str, label: str, errors: list[Item]) -> Path | None:
@@ -54,7 +70,8 @@ def schema_errors(instance: dict[str, Any], schema_path: Path, label: str) -> li
     validator = Draft202012Validator(schema, format_checker=FormatChecker())
     out: list[Item] = []
     for err in sorted(validator.iter_errors(instance), key=lambda x: list(x.absolute_path)):
-        out.append(Item("E_SCHEMA", err.message, f"{label}." + ".".join(map(str, err.absolute_path))))
+        suffix = ".".join(map(str, err.absolute_path))
+        out.append(Item("E_SCHEMA", err.message, f"{label}.{suffix}" if suffix else label))
     return out
 
 
@@ -65,6 +82,9 @@ def validate(
     repo_root: Path,
     request_schema: Path,
     receipt_schema: Path,
+    attestation_schema: Path | None = None,
+    trust_registry: Path | None = None,
+    trust_schema: Path | None = None,
 ) -> dict[str, Any]:
     root = repo_root.resolve()
     errors: list[Item] = []
@@ -154,13 +174,53 @@ def validate(
         except Exception as exc:
             errors.append(Item("E_REVIEW_JSON", str(exc), "receipt.review"))
 
-    if receipt["provenance"]["attestation_strength"] == "repository_provenance":
+    strength = receipt["provenance"]["attestation_strength"]
+    if strength == "repository_provenance":
         warnings.append(Item("W_NOT_CRYPTOGRAPHIC", "Repository provenance and SHA binding prove artifact separation, not cryptographic proof of a distinct model process.", "receipt.provenance.attestation_strength"))
+    elif strength == "orchestrator_signed":
+        ref = receipt.get("orchestrator_attestation")
+        if not isinstance(ref, dict):
+            errors.append(Item("E_ORCHESTRATOR_ATTESTATION", "orchestrator_signed receipt requires orchestrator_attestation", "orchestrator_attestation"))
+        else:
+            attestation_path = safe(root, ref.get("path", ""), "orchestrator_attestation.path", errors)
+            if attestation_path and sha256(attestation_path) != ref.get("sha256"):
+                errors.append(Item("E_ORCHESTRATOR_ATTESTATION_SHA", "orchestrator attestation SHA-256 mismatch", "orchestrator_attestation.sha256"))
+            if attestation_path:
+                attestation_schema = attestation_schema or root / "skills/nasdaq-cafe-story-engine/contracts/critic_orchestrator_attestation.schema.json"
+                trust_registry = trust_registry or root / "skills/nasdaq-cafe-story-engine/trust/trusted_critic_orchestrators.json"
+                trust_schema = trust_schema or root / "skills/nasdaq-cafe-story-engine/contracts/trusted_critic_orchestrators.schema.json"
+                module = load_module(
+                    "critic_orchestrator_attestation_validator",
+                    root / "scripts/story-engine/validate_critic_orchestrator_attestation.py",
+                )
+                result = module.validate(
+                    attestation_path,
+                    repo_root=root,
+                    attestation_schema=attestation_schema,
+                    trust_registry=trust_registry,
+                    trust_schema=trust_schema,
+                    expected_request_path=request_path,
+                    expected_review_path=review_path,
+                )
+                if result["status"] != "pass":
+                    for item in result.get("errors", []):
+                        errors.append(Item("E_ORCHESTRATOR_ATTESTATION", item.get("message", "attestation failed"), item.get("path", "")))
+                try:
+                    attestation = load(attestation_path)
+                    if attestation.get("episode_date") != receipt["episode_date"]:
+                        errors.append(Item("E_ORCHESTRATOR_DATE", "attestation episode_date differs from receipt", "orchestrator_attestation"))
+                    if attestation.get("author_invocation_id") != receipt["author_invocation_id"]:
+                        errors.append(Item("E_ORCHESTRATOR_AUTHOR", "attestation author invocation differs from receipt", "orchestrator_attestation"))
+                    if attestation.get("critic_invocation_id") != receipt["critic_invocation_id"]:
+                        errors.append(Item("E_ORCHESTRATOR_CRITIC", "attestation critic invocation differs from receipt", "orchestrator_attestation"))
+                except Exception as exc:
+                    errors.append(Item("E_ORCHESTRATOR_ATTESTATION", str(exc), "orchestrator_attestation"))
 
     return {
         "contract_version": "1.0.0",
         "episode_date": request.get("episode_date", "unknown"),
         "status": "fail" if errors else "pass",
+        "attestation_strength": strength,
         "errors": [x.as_dict() for x in errors],
         "warnings": [x.as_dict() for x in warnings],
     }
@@ -173,16 +233,24 @@ def main() -> int:
     ap.add_argument("--receipt", type=Path, required=True)
     ap.add_argument("--request-schema", type=Path, default=Path("skills/nasdaq-cafe-story-engine/contracts/critic_request.schema.json"))
     ap.add_argument("--receipt-schema", type=Path, default=Path("skills/nasdaq-cafe-story-engine/contracts/critic_execution_receipt.schema.json"))
+    ap.add_argument("--attestation-schema", type=Path, default=Path("skills/nasdaq-cafe-story-engine/contracts/critic_orchestrator_attestation.schema.json"))
+    ap.add_argument("--trust-registry", type=Path, default=Path("skills/nasdaq-cafe-story-engine/trust/trusted_critic_orchestrators.json"))
+    ap.add_argument("--trust-schema", type=Path, default=Path("skills/nasdaq-cafe-story-engine/contracts/trusted_critic_orchestrators.schema.json"))
     args = ap.parse_args()
     root = args.repo_root.resolve()
+
     def resolve(path: Path) -> Path:
         return path if path.is_absolute() else root / path
+
     result = validate(
         resolve(args.request),
         resolve(args.receipt),
         repo_root=root,
         request_schema=resolve(args.request_schema),
         receipt_schema=resolve(args.receipt_schema),
+        attestation_schema=resolve(args.attestation_schema),
+        trust_registry=resolve(args.trust_registry),
+        trust_schema=resolve(args.trust_schema),
     )
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
     return 0 if result["status"] == "pass" else 1
