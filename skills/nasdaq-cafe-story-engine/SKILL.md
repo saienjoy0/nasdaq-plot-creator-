@@ -1,6 +1,6 @@
 ---
 name: nasdaq-cafe-story-engine
-version: 1.1.3
+version: 1.1.4
 description: Turn a validated causal dossier into an independently reviewed 9-Scene episode package without changing market causality.
 ---
 
@@ -68,13 +68,60 @@ A shadow run that only isolates the Critic input artifact must declare `critic_i
 
 A receipt that declares `attestation_strength=orchestrator_signed` must reference `critic_orchestrator_attestation.json`.
 
-The attestation must bind the episode date, Author invocation ID, Critic invocation ID, sealed Critic Request SHA-256, final Review SHA-256, a distinct orchestrator run ID, the external verification record, and the process-boundary assertions that Author context was not shared and the Critic started only after the Request was sealed.
+The attestation binds the episode date, Author invocation ID, Critic invocation ID, sealed Critic Request SHA-256, final Review SHA-256, a distinct orchestrator run ID, the runtime verification record, and the process-boundary assertions that Author context was not shared and the Critic started only after the Request was sealed.
 
 The entire attestation payload is signed with Ed25519. Verification is performed by `scripts/story-engine/validate_critic_orchestrator_attestation.py`. Only an `active` public key in `skills/nasdaq-cafe-story-engine/trust/trusted_critic_orchestrators.json` is accepted. The matching private key must remain outside this repository and outside the Author execution context.
 
-The trust registry is intentionally empty until a real external Critic orchestrator is provisioned. A self-authored JSON file, an unknown key, a revoked key, a tampered signed field, a Request/Review SHA mismatch, or an Author/Critic ID collision must all fail closed.
+For the built-in production runner, the runtime verification record must satisfy `critic_external_verification.schema.json`: Docker isolation, digest-pinned adapter image, repository not mounted, Critic input read-only, Author context not mounted, exit code 0, and Request/Review SHA bindings.
 
-GitHub Actions may verify the signature and hashes. It must not create the Critic review, create the private-key signature, rewrite the attestation, or upgrade a repository-provenance receipt to production eligibility.
+### External Critic operational path
+
+Use `scripts/story-engine/run_external_critic_pipeline.py` as the operational entry point. Do not call the model adapter directly from Daily Production or GitHub Actions.
+
+The pipeline is:
+
+```text
+sealed critic_request.json
+↓
+zero-call preflight
+↓
+copy only approved inputs into a temporary sealed bundle
+↓
+reconstruct verified 03 / 04 plaintext into that bundle
+↓
+Docker Critic adapter with repository NOT mounted
+↓
+creative_review.json
+↓
+review threshold / Critical-finding checks
+↓
+runtime verification record
+↓
+Ed25519 orchestrator attestation
+↓
+orchestrator_signed critic_execution_receipt.json
+↓
+repository trust validation
+```
+
+The zero-call preflight is `scripts/story-engine/preflight_external_critic_orchestrator.py`. It must pass before any model/API call. It verifies the request bundle, Docker availability, digest-pinned adapter image syntax, required adapter environment variables, and that the out-of-repository private key matches an active public key already registered in the trust registry.
+
+The low-level runner is `scripts/story-engine/run_external_critic_orchestrator.py`. The Critic adapter image is provider-neutral but must be pinned as `image@sha256:<digest>`. The container receives only `/critic/input` read-only and `/critic/output` writable. It receives only environment variable names explicitly allowed with `--pass-env`; the host/Author environment is not forwarded wholesale.
+
+The adapter must read:
+
+- `NASDAQ_CAFE_CRITIC_REQUEST=/critic/input/critic_request.json`
+- `NASDAQ_CAFE_CRITIC_BUNDLE=/critic/input/bundle_manifest.json`
+
+and write:
+
+- `NASDAQ_CAFE_CRITIC_REVIEW_OUT=/critic/output/creative_review.json`
+
+The private signing key must never be placed in this repository, a GitHub Actions secret used by the production renderer, the Critic input bundle, or the Author context.
+
+The trust registry is intentionally empty until a real external Critic orchestrator is provisioned. A self-authored JSON file, an unknown key, a revoked key, a tampered signed field, a Request/Review SHA mismatch, an invalid runtime record, or an Author/Critic ID collision must all fail closed.
+
+GitHub Actions may verify signatures and hashes. It must not create the Critic review, create the private-key signature, rewrite the attestation, or upgrade a repository-provenance receipt to production eligibility.
 
 ## Pass E — Targeted Rewrite
 
@@ -113,7 +160,13 @@ artifact / lineage validation = PASS
 production eligibility = BLOCKED
 ```
 
-Keep the current compatibility workflow unchanged until a real orchestration boundary can create the stronger signed receipt. The v1.1 wrapper and gate CI exist so that activation becomes a small, explicit switch rather than another Story Engine redesign.
+The code path for a real external Critic execution now exists, but three external items are intentionally not fabricated by this repository:
+
+1. a real Critic adapter container image that calls the chosen model provider, pinned by image digest;
+2. an Ed25519 private key held outside the repository/Author/GitHub Actions renderer environment;
+3. the matching public key registered as `active` in `trusted_critic_orchestrators.json`.
+
+Keep the current compatibility workflow unchanged until those three items are provisioned and a real orchestrator-signed acceptance passes. The v1.1 wrapper then becomes a small explicit activation switch rather than another Story Engine redesign.
 
 ## Required artifacts
 
@@ -123,6 +176,7 @@ Keep the current compatibility workflow unchanged until a real orchestration bou
 - `verification/YYYY-MM-DD/story_engine_validation_report.json` when the unified package validator is run
 - `working/YYYY-MM-DD/story-engine/templates/critic_request.json`
 - `working/YYYY-MM-DD/story-engine/templates/critic_execution_receipt.json`
+- `working/YYYY-MM-DD/story-engine/templates/critic_external_verification.json` when the built-in external runner is used
 - `working/YYYY-MM-DD/story-engine/templates/critic_orchestrator_attestation.json` when a trusted external orchestrator is active
 
 Run `validators/validate_story_engine_hardening.py` for the unified Story Engine package and the v1.1 receipt/acceptance validators for the production gate. Passing deterministic validators does not itself prove the story is interesting; that judgment belongs to the independent Critic and the user's A/B review.
