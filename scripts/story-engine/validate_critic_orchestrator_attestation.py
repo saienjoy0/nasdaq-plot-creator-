@@ -74,6 +74,7 @@ def validate(
     attestation_schema: Path,
     trust_registry: Path,
     trust_schema: Path,
+    verification_schema: Path | None = None,
     expected_request_path: Path | None = None,
     expected_review_path: Path | None = None,
 ) -> dict[str, Any]:
@@ -94,11 +95,8 @@ def validate(
     if attestation["author_invocation_id"] == attestation["critic_invocation_id"]:
         errors.append(Item("E_NOT_INDEPENDENT", "Author and Critic invocation IDs must differ", "critic_invocation_id"))
 
-    record_ref = attestation["verification"]["verification_record"]
-    record_path = safe(root, record_ref["path"], "verification.verification_record.path", errors)
-    if record_path and sha256(record_path) != record_ref["sha256"]:
-        errors.append(Item("E_VERIFICATION_RECORD_SHA", "verification record SHA-256 mismatch", "verification.verification_record.sha256"))
-
+    request_path: Path | None = None
+    review_path: Path | None = None
     if expected_request_path is not None:
         request_path = expected_request_path.resolve()
         if not request_path.is_file():
@@ -112,6 +110,43 @@ def validate(
             errors.append(Item("E_REVIEW", "expected review does not exist", "review_sha256"))
         elif sha256(review_path) != attestation["review_sha256"]:
             errors.append(Item("E_REVIEW_SHA", "attestation review SHA-256 mismatch", "review_sha256"))
+
+    record_ref = attestation["verification"]["verification_record"]
+    record_path = safe(root, record_ref["path"], "verification.verification_record.path", errors)
+    record: dict[str, Any] | None = None
+    if record_path and sha256(record_path) != record_ref["sha256"]:
+        errors.append(Item("E_VERIFICATION_RECORD_SHA", "verification record SHA-256 mismatch", "verification.verification_record.sha256"))
+    if record_path:
+        try:
+            record = load(record_path)
+            verification_schema = verification_schema or root / "skills/nasdaq-cafe-story-engine/contracts/critic_external_verification.schema.json"
+            errors += schema_errors(record, verification_schema, "verification_record")
+        except Exception as exc:
+            errors.append(Item("E_VERIFICATION_RECORD", str(exc), "verification.verification_record"))
+
+    if record is not None:
+        comparisons = {
+            "episode_date": attestation["episode_date"],
+            "orchestrator_id": attestation["orchestrator_id"],
+            "orchestrator_run_id": attestation["orchestrator_run_id"],
+            "author_invocation_id": attestation["author_invocation_id"],
+            "critic_invocation_id": attestation["critic_invocation_id"],
+            "request_sha256": attestation["request_sha256"],
+            "review_sha256": attestation["review_sha256"],
+        }
+        for key, expected in comparisons.items():
+            if record.get(key) != expected:
+                errors.append(Item("E_VERIFICATION_BINDING", f"verification record {key} differs from attestation", f"verification_record.{key}"))
+        if record.get("isolation_backend") != "docker-readonly-bundle":
+            errors.append(Item("E_ISOLATION_BACKEND", "production Critic verification must use docker-readonly-bundle", "verification_record.isolation_backend"))
+        if record.get("repo_mounted") is not False:
+            errors.append(Item("E_REPO_MOUNTED", "repository must not be mounted into Critic execution", "verification_record.repo_mounted"))
+        if record.get("input_mount_read_only") is not True:
+            errors.append(Item("E_INPUT_MOUNT", "Critic input mount must be read-only", "verification_record.input_mount_read_only"))
+        if record.get("author_context_mounted") is not False:
+            errors.append(Item("E_CONTEXT_LEAK", "Author context must not be mounted into Critic execution", "verification_record.author_context_mounted"))
+        if record.get("exit_code") != 0:
+            errors.append(Item("E_CRITIC_EXIT", "Critic execution must exit with code 0", "verification_record.exit_code"))
 
     signature = attestation["signature"]
     key_id = signature["key_id"]
@@ -158,6 +193,7 @@ def main() -> int:
     ap.add_argument("--attestation-schema", type=Path, default=Path("skills/nasdaq-cafe-story-engine/contracts/critic_orchestrator_attestation.schema.json"))
     ap.add_argument("--trust-registry", type=Path, default=Path("skills/nasdaq-cafe-story-engine/trust/trusted_critic_orchestrators.json"))
     ap.add_argument("--trust-schema", type=Path, default=Path("skills/nasdaq-cafe-story-engine/contracts/trusted_critic_orchestrators.schema.json"))
+    ap.add_argument("--verification-schema", type=Path, default=Path("skills/nasdaq-cafe-story-engine/contracts/critic_external_verification.schema.json"))
     ap.add_argument("--request", type=Path)
     ap.add_argument("--review", type=Path)
     args = ap.parse_args()
@@ -174,6 +210,7 @@ def main() -> int:
         attestation_schema=resolve(args.attestation_schema),
         trust_registry=resolve(args.trust_registry),
         trust_schema=resolve(args.trust_schema),
+        verification_schema=resolve(args.verification_schema),
         expected_request_path=resolve(args.request),
         expected_review_path=resolve(args.review),
     )
