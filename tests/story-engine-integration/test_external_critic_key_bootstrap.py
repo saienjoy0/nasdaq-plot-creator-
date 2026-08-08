@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import stat
@@ -9,12 +10,20 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from cryptography.hazmat.primitives import serialization
+CRYPTO_AVAILABLE = importlib.util.find_spec("cryptography") is not None
+if CRYPTO_AVAILABLE:
+    from cryptography.hazmat.primitives import serialization
+else:
+    serialization = None
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts/story-engine/bootstrap_external_critic_key.py"
 
 
+@unittest.skipUnless(
+    CRYPTO_AVAILABLE,
+    "external Critic key bootstrap checks run in the dedicated Story Engine v1.1 Gate CI",
+)
 class ExternalCriticKeyBootstrapTests(unittest.TestCase):
     def test_refuses_private_key_inside_repository(self):
         target = ROOT / ".never-create-critic-private-key.pem"
@@ -39,6 +48,7 @@ class ExternalCriticKeyBootstrapTests(unittest.TestCase):
         self.assertFalse(target.exists())
 
     def test_generates_encrypted_key_outside_repository_and_public_registry_row(self):
+        assert serialization is not None
         with tempfile.TemporaryDirectory() as temp:
             target = Path(temp) / "critic-ed25519.pem"
             env = os.environ.copy()
