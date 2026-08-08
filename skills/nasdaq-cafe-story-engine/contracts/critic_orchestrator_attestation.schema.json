@@ -45,7 +45,7 @@
       "additionalProperties": false,
       "required": ["method", "verifier_id", "verification_record"],
       "properties": {
-        "method": {"const": "external_verifier"},
+        "method": {"enum": ["orchestrator_supervisor", "external_verifier"]},
         "verifier_id": {"type": "string", "minLength": 1},
         "verification_record": {
           "type": "object",
