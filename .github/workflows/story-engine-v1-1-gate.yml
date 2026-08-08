@@ -31,6 +31,8 @@ jobs:
         run: |
           python -m py_compile \
             critic-adapters/openai/main.py \
+            scripts/story-engine/bootstrap_external_critic_key.py \
+            scripts/story-engine/run_openai_critic_pipeline.py \
             scripts/story-engine/run_external_critic_orchestrator.py \
             scripts/story-engine/preflight_external_critic_orchestrator.py \
             scripts/story-engine/run_external_critic_pipeline.py \
