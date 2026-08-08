@@ -76,7 +76,7 @@ def normalize_script(runtime: dict[str, Any], template: dict[str, Any]) -> dict[
     return value
 
 
-def validate_acceptance(path: Path, *, repo_root: Path) -> dict[str, Any]:
+def validate_acceptance(path: Path, *, repo_root: Path, require_production: bool = False) -> dict[str, Any]:
     root = repo_root.resolve()
     errors: list[Item] = []
     warnings: list[Item] = []
@@ -89,7 +89,8 @@ def validate_acceptance(path: Path, *, repo_root: Path) -> dict[str, Any]:
         errors.append(Item("E_CONTRACT_VERSION", "Story Engine acceptance must be contract_version 1.1.0", "contract_version"))
     date = str(acceptance.get("episode_date", ""))
     if acceptance.get("status") != "pass":
-        errors.append(Item("E_STATUS", "Story Engine acceptance must be PASS", "status"))
+        errors.append(Item("E_STATUS", "Story Engine artifact acceptance must be PASS", "status"))
+    production_eligible = acceptance.get("production_eligible") is True
 
     artifacts = acceptance.get("artifacts")
     if not isinstance(artifacts, dict):
@@ -169,9 +170,27 @@ def validate_acceptance(path: Path, *, repo_root: Path) -> dict[str, Any]:
         if validation.get(key) != "pass":
             errors.append(Item("E_VALIDATION", f"validation check is not PASS: {key}", f"validation.{key}"))
 
+    attestation_strength = receipt.get("provenance", {}).get("attestation_strength")
+    if require_production:
+        if not production_eligible:
+            errors.append(Item("E_PRODUCTION_ELIGIBILITY", "Story Engine acceptance is not production eligible", "production_eligible"))
+        if attestation_strength != "orchestrator_signed":
+            errors.append(Item(
+                "E_CRITIC_PROCESS_NOT_PROVEN",
+                "production requires orchestrator_signed proof of a distinct Critic execution; repository provenance is insufficient",
+                "critic.execution_receipt",
+            ))
+    elif not production_eligible:
+        warnings.append(Item(
+            "W_PRODUCTION_BLOCKED",
+            "Story Engine artifacts are valid but production remains blocked until an orchestrator_signed independent Critic receipt exists",
+            "production_eligible",
+        ))
+
     return {
         "contract_version": "1.1.0",
         "episode_date": date,
+        "production_eligible": production_eligible,
         "status": "fail" if errors else "pass",
         "errors": [x.as_dict() for x in errors],
         "warnings": [x.as_dict() for x in warnings],
@@ -182,10 +201,11 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo-root", type=Path, default=ROOT)
     ap.add_argument("--acceptance", type=Path, required=True)
+    ap.add_argument("--require-production", action="store_true")
     args = ap.parse_args()
     root = args.repo_root.resolve()
     acceptance = args.acceptance if args.acceptance.is_absolute() else root / args.acceptance
-    result = validate_acceptance(acceptance, repo_root=root)
+    result = validate_acceptance(acceptance, repo_root=root, require_production=args.require_production)
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
     return 0 if result["status"] == "pass" else 1
 
