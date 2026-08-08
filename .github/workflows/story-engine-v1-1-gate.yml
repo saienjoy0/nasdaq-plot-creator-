@@ -36,6 +36,8 @@ jobs:
             scripts/story-engine/validate_critic_execution_receipt.py \
             scripts/story-engine/validate_story_engine_acceptance_v1_1.py \
             scripts/run_daily_production_story_engine_v1_1.py
+      - name: Verify packed source-of-truth before Critic bundling
+        run: python scripts/materialize_sources.py --check-only
       - name: Validate committed Critic request and receipt
         run: |
           python scripts/story-engine/validate_critic_execution_receipt.py \
