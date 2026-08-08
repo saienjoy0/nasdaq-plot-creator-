@@ -1,6 +1,6 @@
 ---
 name: nasdaq-cafe-story-engine
-version: 1.1.2
+version: 1.1.3
 description: Turn a validated causal dossier into an independently reviewed 9-Scene episode package without changing market causality.
 ---
 
@@ -64,6 +64,18 @@ A shadow run that only isolates the Critic input artifact must declare `critic_i
 
 `repository_provenance` proves artifact separation and repository lineage. It is deliberately reported as non-cryptographic evidence of process separation and cannot unlock production. GitHub Actions must never invent or rewrite the Critic judgment.
 
+### Cryptographic orchestrator attestation
+
+A receipt that declares `attestation_strength=orchestrator_signed` must reference `critic_orchestrator_attestation.json`.
+
+The attestation must bind the episode date, Author invocation ID, Critic invocation ID, sealed Critic Request SHA-256, final Review SHA-256, a distinct orchestrator run ID, the external verification record, and the process-boundary assertions that Author context was not shared and the Critic started only after the Request was sealed.
+
+The entire attestation payload is signed with Ed25519. Verification is performed by `scripts/story-engine/validate_critic_orchestrator_attestation.py`. Only an `active` public key in `skills/nasdaq-cafe-story-engine/trust/trusted_critic_orchestrators.json` is accepted. The matching private key must remain outside this repository and outside the Author execution context.
+
+The trust registry is intentionally empty until a real external Critic orchestrator is provisioned. A self-authored JSON file, an unknown key, a revoked key, a tampered signed field, a Request/Review SHA mismatch, or an Author/Critic ID collision must all fail closed.
+
+GitHub Actions may verify the signature and hashes. It must not create the Critic review, create the private-key signature, rewrite the attestation, or upgrade a repository-provenance receipt to production eligibility.
+
 ## Pass E — Targeted Rewrite
 
 Patch only finding-linked fields. Full regeneration is not the default. General Scene reordering is forbidden. `move_explanation_block` may move comparison or explanation only when real chronology remains unchanged.
@@ -90,7 +102,7 @@ The v1.1 gate requires one `story_engine_acceptance.json` bound to:
 
 The acceptance is validated by `scripts/story-engine/validate_story_engine_acceptance_v1_1.py`. It also checks that materialized Story Plan/Script differ from the Critic-reviewed templates only by deterministic lineage bindings and that the materialized review is semantically identical to the pre-authored review.
 
-Artifact validation may PASS while `production_eligible=false`. Daily Production may advance directly from `causal_dossier_valid` to `episode_package_final` only when the same acceptance also passes `--require-production`, which requires an `orchestrator_signed` receipt.
+Artifact validation may PASS while `production_eligible=false`. Daily Production may advance directly from `causal_dossier_valid` to `episode_package_final` only when the same acceptance also passes `--require-production`, which requires an Ed25519-verified `orchestrator_signed` receipt from an active trusted orchestrator key.
 
 ## Current migration status
 
@@ -101,7 +113,7 @@ artifact / lineage validation = PASS
 production eligibility = BLOCKED
 ```
 
-Keep the current compatibility workflow unchanged until a real orchestration boundary can create the stronger receipt. The v1.1 wrapper and gate CI exist so that activation becomes a small, explicit switch rather than another Story Engine redesign.
+Keep the current compatibility workflow unchanged until a real orchestration boundary can create the stronger signed receipt. The v1.1 wrapper and gate CI exist so that activation becomes a small, explicit switch rather than another Story Engine redesign.
 
 ## Required artifacts
 
@@ -111,5 +123,6 @@ Keep the current compatibility workflow unchanged until a real orchestration bou
 - `verification/YYYY-MM-DD/story_engine_validation_report.json` when the unified package validator is run
 - `working/YYYY-MM-DD/story-engine/templates/critic_request.json`
 - `working/YYYY-MM-DD/story-engine/templates/critic_execution_receipt.json`
+- `working/YYYY-MM-DD/story-engine/templates/critic_orchestrator_attestation.json` when a trusted external orchestrator is active
 
 Run `validators/validate_story_engine_hardening.py` for the unified Story Engine package and the v1.1 receipt/acceptance validators for the production gate. Passing deterministic validators does not itself prove the story is interesting; that judgment belongs to the independent Critic and the user's A/B review.
