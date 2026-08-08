@@ -15,7 +15,8 @@
     "review_sha256",
     "execution_boundary",
     "issued_at",
-    "verification"
+    "verification",
+    "signature"
   ],
   "properties": {
     "contract_version": {"const": "1.0.0"},
@@ -44,7 +45,7 @@
       "additionalProperties": false,
       "required": ["method", "verifier_id", "verification_record"],
       "properties": {
-        "method": {"enum": ["external_verifier"]},
+        "method": {"const": "external_verifier"},
         "verifier_id": {"type": "string", "minLength": 1},
         "verification_record": {
           "type": "object",
@@ -55,6 +56,16 @@
             "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
           }
         }
+      }
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "key_id", "signature_base64"],
+      "properties": {
+        "algorithm": {"const": "ed25519"},
+        "key_id": {"type": "string", "minLength": 1},
+        "signature_base64": {"type": "string", "minLength": 1}
       }
     }
   }
