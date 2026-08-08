@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Nasdaq Cafe Critic Execution Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version","episode_date","author_invocation_id","critic_invocation_id","isolation_mode","author_context_excluded","forbidden_author_context_present","review_round","request","review","provenance","attestation"],
+  "properties": {
+    "contract_version": {"const": "1.0.0"},
+    "episode_date": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+    "author_invocation_id": {"type": "string", "minLength": 1},
+    "critic_invocation_id": {"type": "string", "minLength": 1},
+    "isolation_mode": {"const": "separate_invocation"},
+    "author_context_excluded": {"const": true},
+    "forbidden_author_context_present": {"const": false},
+    "review_round": {"type": "integer", "minimum": 1, "maximum": 2},
+    "request": {"$ref": "#/$defs/blobRef"},
+    "review": {"$ref": "#/$defs/blobRef"},
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attestation_strength","note"],
+      "properties": {
+        "source_pr": {"type": "integer", "minimum": 1},
+        "source_merge_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "orchestrator_id": {"type": "string", "minLength": 1},
+        "orchestrator_run_id": {"type": "string", "minLength": 1},
+        "attestation_strength": {"enum": ["repository_provenance","orchestrator_signed"]},
+        "note": {"type": "string", "minLength": 1}
+      }
+    },
+    "attestation": {"type": "string", "minLength": 1},
+    "orchestrator_attestation": {"$ref": "#/$defs/sha256Ref"}
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "provenance": {
+            "properties": {"attestation_strength": {"const": "repository_provenance"}},
+            "required": ["attestation_strength"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "provenance": {"required": ["source_pr","source_merge_commit"]}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "provenance": {
+            "properties": {"attestation_strength": {"const": "orchestrator_signed"}},
+            "required": ["attestation_strength"]
+          }
+        }
+      },
+      "then": {
+        "required": ["orchestrator_attestation"],
+        "properties": {
+          "provenance": {"required": ["orchestrator_id","orchestrator_run_id"]}
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "blobRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path","git_blob_sha"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "git_blob_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+      }
+    },
+    "sha256Ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path","sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    }
+  }
+}

@@ -1,12 +1,23 @@
 ---
 name: nasdaq-cafe-story-engine
-version: 1.1.0
+version: 1.1.5
 description: Turn a validated causal dossier into an independently reviewed 9-Scene episode package without changing market causality.
 ---
 
 # Unified Story Engine
 
-Run after `causal_dossier_valid` and before `episode_package_final`. This first implementation is shadow-only and does not modify Daily Production state.
+Run after `causal_dossier_valid` and before `episode_package_final`.
+
+Story Discovery, Narrative Architecture, Authoring, Critic, Rewrite and Re-review are **internal Story Engine passes**. They are not Daily Production states. The intended public Daily Production transition is:
+
+```text
+causal_dossier_valid
+→ episode_package_final
+```
+
+The v1.1 gate implementation lives in `scripts/run_daily_production_story_engine_v1_1.py`. Older `story_plan_valid`, `script_draft_ready`, and `creative_review_passed` states are compatibility history only and must not be used once the v1.1 gate is activated.
+
+**Activation rule:** do not route the production workflow through the v1.1 gate until an `orchestrator_signed` Critic execution receipt exists. A `repository_provenance` receipt is sufficient to validate artifact separation and regression behavior, but it must leave `production_eligible=false`.
 
 ## Absolute boundary
 
@@ -38,7 +49,106 @@ Start a separate invocation/context. Give it the baseline, Claim Ledger, selecte
 
 Review the complete production package, not narration alone. Each finding must name exact Scene IDs/field paths, viewer effect, required fix and claims/evidence to preserve. Any unresolved Critical finding blocks finalization.
 
-A shadow run that only isolates the Critic input artifact must declare `critic_isolation_mode=logical_shadow` and `production_eligible=false`. Production mode requires `critic_isolation_mode=separate_invocation`; distinct string IDs alone do not prove independence.
+### Production isolation contract
+
+Production requires both of the following pre-authored artifacts:
+
+- `working/YYYY-MM-DD/story-engine/templates/critic_request.json`
+- `working/YYYY-MM-DD/story-engine/templates/critic_execution_receipt.json`
+
+The request freezes the exact Critic input set and records Author-only context that must be excluded. The receipt binds a different Critic invocation ID, the frozen request, and the final review artifact.
+
+Run `scripts/story-engine/validate_critic_execution_receipt.py`. It verifies input Git blob SHAs, 03/04 logical source SHAs, Author/Critic ID separation, review round, PASS threshold, and absence of unresolved Critical findings.
+
+A shadow run that only isolates the Critic input artifact must declare `critic_isolation_mode=logical_shadow` and `production_eligible=false`. Production mode requires `separate_invocation`, a valid receipt, and `attestation_strength=orchestrator_signed`. Distinct string IDs alone do not prove independence.
+
+`repository_provenance` proves artifact separation and repository lineage. It is deliberately reported as non-cryptographic evidence of process separation and cannot unlock production. GitHub Actions must never invent or rewrite the Critic judgment.
+
+### Cryptographic orchestrator attestation
+
+A receipt that declares `attestation_strength=orchestrator_signed` must reference `critic_orchestrator_attestation.json`.
+
+The attestation binds the episode date, Author invocation ID, Critic invocation ID, sealed Critic Request SHA-256, final Review SHA-256, a distinct orchestrator run ID, the runtime verification record, and the process-boundary assertions that Author context was not shared and the Critic started only after the Request was sealed.
+
+The entire attestation payload is signed with Ed25519. Verification is performed by `scripts/story-engine/validate_critic_orchestrator_attestation.py`. Only an `active` public key in `skills/nasdaq-cafe-story-engine/trust/trusted_critic_orchestrators.json` is accepted. The matching private key must remain outside this repository and outside the Author execution context.
+
+For the built-in production runner, the runtime verification record must satisfy `critic_external_verification.schema.json`: Docker isolation, digest-pinned adapter image, repository not mounted, Critic input read-only, Author context not mounted, exit code 0, and Request/Review SHA bindings.
+
+### External Critic operational path
+
+Use `scripts/story-engine/run_external_critic_pipeline.py` as the provider-neutral operational entry point. Do not call the model adapter directly from Daily Production or GitHub Actions.
+
+The pipeline is:
+
+```text
+sealed critic_request.json
+↓
+zero-call preflight
+↓
+copy only approved inputs into a temporary sealed bundle
+↓
+reconstruct verified 03 / 04 plaintext into that bundle
+↓
+Docker Critic adapter with repository NOT mounted
+↓
+creative_review.json
+↓
+review threshold / Critical-finding checks
+↓
+runtime verification record
+↓
+Ed25519 orchestrator attestation
+↓
+orchestrator_signed critic_execution_receipt.json
+↓
+repository trust validation
+```
+
+The zero-call preflight is `scripts/story-engine/preflight_external_critic_orchestrator.py`. It must pass before any model/API call. It verifies the request bundle, Docker availability, digest-pinned adapter image syntax, required adapter environment variables, and that the out-of-repository private key matches an active public key already registered in the trust registry.
+
+The low-level runner is `scripts/story-engine/run_external_critic_orchestrator.py`. The Critic adapter image must be pinned as `image@sha256:<digest>`. The container receives only `/critic/input` read-only and `/critic/output` writable. It receives only environment variable names explicitly allowed with `--pass-env`; the host/Author environment is not forwarded wholesale.
+
+The adapter must read:
+
+- `NASDAQ_CAFE_CRITIC_REQUEST=/critic/input/critic_request.json`
+- `NASDAQ_CAFE_CRITIC_BUNDLE=/critic/input/bundle_manifest.json`
+
+and write:
+
+- `NASDAQ_CAFE_CRITIC_REVIEW_OUT=/critic/output/creative_review.json`
+
+The private signing key must never be placed in this repository, a GitHub Actions secret used by the production renderer, the Critic input bundle, or the Author context.
+
+### Built-in OpenAI Critic adapter
+
+The maintained provider implementation is under `critic-adapters/openai/`.
+
+It uses the OpenAI Responses API with Structured Outputs and defaults to `gpt-5.6`. It receives only the sealed Critic bundle, does not enable web search or tools, and emits a schema-constrained `creative_review.json`. It does **not** apply patches, sign receipts, or decide production eligibility.
+
+Use `scripts/story-engine/run_openai_critic_pipeline.py` for the OpenAI path. It always forwards only:
+
+- `OPENAI_API_KEY`
+- `OPENAI_CRITIC_MODEL`
+- `OPENAI_CRITIC_MAX_OUTPUT_TOKENS`
+- `OPENAI_CRITIC_TIMEOUT_SECONDS`
+
+The OpenAI SDK version is pinned in `critic-adapters/openai/requirements.txt` and the adapter is built in Story Engine gate CI without calling the model.
+
+After this change is merged to `main`, run the manual `Publish OpenAI Critic Adapter` workflow. It builds and pushes the adapter to GHCR and emits an immutable `image@sha256:<digest>` release artifact. That workflow does not receive `OPENAI_API_KEY` and must never invoke a model.
+
+### External signing key provisioning
+
+Generate the production Ed25519 key only on the trusted external orchestrator host:
+
+```text
+scripts/story-engine/bootstrap_external_critic_key.py
+```
+
+The bootstrap requires an encryption password from an environment variable, writes the private key with owner-only permissions, refuses any private-key path inside the repository, and prints the public trust-registry row. Commit only the public row to `trusted_critic_orchestrators.json`; never commit or upload the private key.
+
+A self-authored JSON file, an unknown key, a revoked key, a tampered signed field, a Request/Review SHA mismatch, an invalid runtime record, or an Author/Critic ID collision must all fail closed.
+
+GitHub Actions may verify signatures and hashes and may build/publish the model-free adapter image. It must not create the Critic review, receive the external private signing key, create the private-key signature, rewrite the attestation, or upgrade a repository-provenance receipt to production eligibility.
 
 ## Pass E — Targeted Rewrite
 
@@ -52,10 +162,53 @@ Compare draft and rewrite against the Claim Ledger. Reject evidence loss, modali
 
 Normally use one Critic → patch → re-review cycle. A second round is allowed only while Critical findings remain. Never exceed two rounds. If Critical findings remain, block and return to Pass A/B/C or upstream research.
 
+## Unified production gate
+
+The v1.1 gate requires one `story_engine_acceptance.json` bound to:
+
+- validated causal dossier
+- materialized Story Plan
+- materialized Story Script
+- final creative review
+- sealed Critic request
+- Critic execution receipt
+- causality/Scene guards
+
+The acceptance is validated by `scripts/story-engine/validate_story_engine_acceptance_v1_1.py`. It also checks that materialized Story Plan/Script differ from the Critic-reviewed templates only by deterministic lineage bindings and that the materialized review is semantically identical to the pre-authored review.
+
+Artifact validation may PASS while `production_eligible=false`. Daily Production may advance directly from `causal_dossier_valid` to `episode_package_final` only when the same acceptance also passes `--require-production`, which requires an Ed25519-verified `orchestrator_signed` receipt from an active trusted orchestrator key.
+
+## Current migration status
+
+For the committed 2026-08-06 regression fixture, the available receipt is intentionally `repository_provenance`. Therefore:
+
+```text
+artifact / lineage validation = PASS
+production eligibility = BLOCKED
+```
+
+The software path for a real independent Critic is now complete through the provider adapter source and release workflow. Do not fabricate the remaining runtime credentials or attestations.
+
+Remaining activation sequence:
+
+1. merge the reviewed Story Engine v1.1 gate and OpenAI adapter implementation;
+2. run `Publish OpenAI Critic Adapter` from `main` and retain the emitted immutable image digest;
+3. on the trusted external orchestrator host, run `bootstrap_external_critic_key.py` and keep the encrypted private key outside the repository;
+4. add only the generated public key row to `trusted_critic_orchestrators.json` and validate CI;
+5. provide `OPENAI_API_KEY` only to the external orchestrator process and run one real isolated Critic execution;
+6. require the resulting `orchestrator_signed` receipt to pass the v1.1 production acceptance before activating the public Daily Production gate.
+
+Keep the current compatibility workflow unchanged until step 6 passes. The v1.1 wrapper then becomes a small explicit activation switch rather than another Story Engine redesign.
+
 ## Required artifacts
 
-- `working/YYYY-MM-DD/story_engine_package_YYYY-MM-DD.json`
+- `working/YYYY-MM-DD/story_engine_package_YYYY-MM-DD.json` for the unified editorial/provenance record when produced
+- `working/YYYY-MM-DD/story-engine/story_engine_acceptance.json` for the production transition
 - `episodes/YYYY-MM-DD/episode_package_YYYY-MM-DD.md`
-- `verification/YYYY-MM-DD/story_engine_validation_report.json`
+- `verification/YYYY-MM-DD/story_engine_validation_report.json` when the unified package validator is run
+- `working/YYYY-MM-DD/story-engine/templates/critic_request.json`
+- `working/YYYY-MM-DD/story-engine/templates/critic_execution_receipt.json`
+- `working/YYYY-MM-DD/story-engine/templates/critic_external_verification.json` when the built-in external runner is used
+- `working/YYYY-MM-DD/story-engine/templates/critic_orchestrator_attestation.json` when a trusted external orchestrator is active
 
-Run `validators/validate_story_engine_hardening.py`. Passing the validator does not itself prove the story is interesting; that judgment belongs to the independent Critic and the user's A/B review.
+Run `validators/validate_story_engine_hardening.py` for the unified Story Engine package and the v1.1 receipt/acceptance validators for the production gate. Passing deterministic validators does not itself prove the story is interesting; that judgment belongs to the independent Critic and the user's A/B review.

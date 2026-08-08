@@ -1,0 +1,54 @@
+name: Story Engine v1.1 Gate
+
+on:
+  pull_request:
+    paths:
+      - 'skills/nasdaq-cafe-story-engine/**'
+      - 'scripts/story-engine/**'
+      - 'scripts/run_daily_production_story_engine_v1_1.py'
+      - 'critic-adapters/**'
+      - 'tests/story-engine-integration/**'
+      - 'working/**/story-engine/templates/critic_request.json'
+      - 'working/**/story-engine/templates/critic_execution_receipt.json'
+      - 'working/**/story-engine/templates/critic_orchestrator_attestation.json'
+      - '.github/workflows/story-engine-v1-1-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gate-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install validation and adapter test dependencies
+        run: python -m pip install --disable-pip-version-check pytest jsonschema cryptography openai==2.47.0
+      - name: Compile v1.1 gate, external orchestrator and Critic adapter
+        run: |
+          python -m py_compile \
+            critic-adapters/openai/main.py \
+            scripts/story-engine/bootstrap_external_critic_key.py \
+            scripts/story-engine/run_openai_critic_pipeline.py \
+            scripts/story-engine/run_external_critic_orchestrator.py \
+            scripts/story-engine/preflight_external_critic_orchestrator.py \
+            scripts/story-engine/run_external_critic_pipeline.py \
+            scripts/story-engine/validate_critic_orchestrator_attestation.py \
+            scripts/story-engine/validate_critic_execution_receipt.py \
+            scripts/story-engine/validate_story_engine_acceptance_v1_1.py \
+            scripts/run_daily_production_story_engine_v1_1.py
+      - name: Verify packed source-of-truth before Critic bundling
+        run: python scripts/materialize_sources.py --check-only
+      - name: Validate committed Critic request and receipt
+        run: |
+          python scripts/story-engine/validate_critic_execution_receipt.py \
+            --repo-root . \
+            --request working/2026-08-06/story-engine/templates/critic_request.json \
+            --receipt working/2026-08-06/story-engine/templates/critic_execution_receipt.json
+      - name: Run v1.1 gate, external orchestrator and adapter regressions
+        run: python -m pytest -q tests/story-engine-integration
+      - name: Build Critic adapter image without invoking a model
+        run: docker build -t nasdaq-cafe-openai-critic:ci critic-adapters/openai

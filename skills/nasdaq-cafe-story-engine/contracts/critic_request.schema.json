@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Nasdaq Cafe Critic Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version","episode_date","author_invocation_id","requested_critic_invocation_id","isolation_contract","inputs","logical_rules","required_review","instruction"],
+  "properties": {
+    "contract_version": {"const": "1.0.0"},
+    "episode_date": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+    "author_invocation_id": {"type": "string", "minLength": 1},
+    "requested_critic_invocation_id": {"type": "string", "minLength": 1},
+    "isolation_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode","author_context_must_be_excluded","forbidden_inputs"],
+      "properties": {
+        "mode": {"const": "separate_invocation"},
+        "author_context_must_be_excluded": {"const": true},
+        "forbidden_inputs": {"type": "array", "minItems": 4, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "minItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role","path","git_blob_sha"],
+        "properties": {
+          "role": {"type": "string", "minLength": 1},
+          "path": {"type": "string", "minLength": 1},
+          "git_blob_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+        }
+      }
+    },
+    "logical_rules": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["logical_path","sha256"],
+        "properties": {
+          "logical_path": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      }
+    },
+    "required_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["round","minimum_total_score","required_verdict","critical_findings_allowed","must_review_complete_episode_package","must_preserve_causality"],
+      "properties": {
+        "round": {"type": "integer", "minimum": 1, "maximum": 2},
+        "minimum_total_score": {"type": "integer", "minimum": 0},
+        "required_verdict": {"const": "pass"},
+        "critical_findings_allowed": {"const": 0},
+        "must_review_complete_episode_package": {"const": true},
+        "must_preserve_causality": {"const": true}
+      }
+    },
+    "instruction": {"type": "string", "minLength": 1}
+  }
+}

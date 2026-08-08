@@ -1,0 +1,25 @@
+{
+  "contract_version": "1.0.0",
+  "episode_date": "2026-08-06",
+  "author_invocation_id": "story-author-2026-08-06-pr32",
+  "critic_invocation_id": "story-critic-2026-08-06-pr32-r2",
+  "isolation_mode": "separate_invocation",
+  "author_context_excluded": true,
+  "forbidden_author_context_present": false,
+  "review_round": 2,
+  "request": {
+    "path": "working/2026-08-06/story-engine/templates/critic_request.json",
+    "git_blob_sha": "4687002afda42c7898cefe5f3fd1657af4463b7b"
+  },
+  "review": {
+    "path": "working/2026-08-06/story-engine/templates/creative_review.template.json",
+    "git_blob_sha": "ffe0d4315f73738652fdf62555949c7b03aff120"
+  },
+  "provenance": {
+    "source_pr": 32,
+    "source_merge_commit": "cddf4b730272337ad757e75ac3a894e563629a05",
+    "attestation_strength": "repository_provenance",
+    "note": "PR #32 records the Independent Entertainment Critic round-2 PASS separately from the authored Story Plan/Script artifacts. This receipt binds that review to the frozen critic request."
+  },
+  "attestation": "The Critic review is bound to the frozen request inputs and excludes Author self-scoring, Author thought notes, Author quality claims, and rejected drafts."
+}

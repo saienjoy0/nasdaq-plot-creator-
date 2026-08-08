@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Nasdaq Cafe Critic Orchestrator Attestation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "episode_date",
+    "attestation_id",
+    "orchestrator_id",
+    "orchestrator_run_id",
+    "author_invocation_id",
+    "critic_invocation_id",
+    "request_sha256",
+    "review_sha256",
+    "execution_boundary",
+    "issued_at",
+    "verification",
+    "signature"
+  ],
+  "properties": {
+    "contract_version": {"const": "1.0.0"},
+    "episode_date": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+    "attestation_id": {"type": "string", "minLength": 1},
+    "orchestrator_id": {"type": "string", "minLength": 1},
+    "orchestrator_run_id": {"type": "string", "minLength": 1},
+    "author_invocation_id": {"type": "string", "minLength": 1},
+    "critic_invocation_id": {"type": "string", "minLength": 1},
+    "request_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "review_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "execution_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["distinct_execution", "shared_author_context", "request_only_input", "critic_started_after_request_sealed"],
+      "properties": {
+        "distinct_execution": {"const": true},
+        "shared_author_context": {"const": false},
+        "request_only_input": {"const": true},
+        "critic_started_after_request_sealed": {"const": true}
+      }
+    },
+    "issued_at": {"type": "string", "format": "date-time"},
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "verifier_id", "verification_record"],
+      "properties": {
+        "method": {"enum": ["orchestrator_supervisor", "external_verifier"]},
+        "verifier_id": {"type": "string", "minLength": 1},
+        "verification_record": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "sha256"],
+          "properties": {
+            "path": {"type": "string", "minLength": 1},
+            "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+          }
+        }
+      }
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "key_id", "signature_base64"],
+      "properties": {
+        "algorithm": {"const": "ed25519"},
+        "key_id": {"type": "string", "minLength": 1},
+        "signature_base64": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

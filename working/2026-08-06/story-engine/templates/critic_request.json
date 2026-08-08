@@ -1,0 +1,72 @@
+{
+  "contract_version": "1.0.0",
+  "episode_date": "2026-08-06",
+  "author_invocation_id": "story-author-2026-08-06-pr32",
+  "requested_critic_invocation_id": "story-critic-2026-08-06-pr32-r2",
+  "isolation_contract": {
+    "mode": "separate_invocation",
+    "author_context_must_be_excluded": true,
+    "forbidden_inputs": [
+      "author_self_score",
+      "author_thought_notes",
+      "author_quality_claims",
+      "rejected_drafts"
+    ]
+  },
+  "inputs": [
+    {
+      "role": "story_plan_template",
+      "path": "working/2026-08-06/story-engine/templates/story_plan.template.json",
+      "git_blob_sha": "7a8de63609e2c50b13c3b45234c8db2fa33e0ba1"
+    },
+    {
+      "role": "story_script_template",
+      "path": "working/2026-08-06/story-engine/templates/story_script.template.json",
+      "git_blob_sha": "93dc433e51ac14ce02b6f01d9267946dc7e3b706"
+    },
+    {
+      "role": "draft_episode_package",
+      "path": "episodes/2026-08-06/episode_package_story_engine_shadow_2026-08-06.md",
+      "git_blob_sha": "a18887695a0f9964f8fd11f2fff7d57dd8cc8ee4"
+    },
+    {
+      "role": "visual_bindings",
+      "path": "working/2026-08-06/story-engine/story_production_bindings.json",
+      "git_blob_sha": "307957b8d9f7a430095bf09b881f58778b352541"
+    },
+    {
+      "role": "fox_bible",
+      "path": "source-of-truth/01_fox_character_bible.md",
+      "git_blob_sha": "d8910345b854f91cc381fc7573b0b748c60e876b"
+    },
+    {
+      "role": "editorial_bible",
+      "path": "source-of-truth/02_editorial_bible.md",
+      "git_blob_sha": "74f20cedeac9dfe9e7631d05c5934a6486dd9baf"
+    },
+    {
+      "role": "packed_rules_manifest",
+      "path": "source-of-truth/packed_sources.json",
+      "git_blob_sha": "40e039ac3176eeb71b8352b90e13a024c6cae14d"
+    }
+  ],
+  "logical_rules": [
+    {
+      "logical_path": "source-of-truth/03_episode_production_spec.md",
+      "sha256": "c0e476f36b387961277ffa008d7b2258942e1fe44c475bebe1d79b31b9f4dc3f"
+    },
+    {
+      "logical_path": "source-of-truth/04_entertainment_inquisitor.md",
+      "sha256": "62d7807eb01b3433fc3b3f8bce8f6bad96109f1ae2366ec417c35bac8fa47936"
+    }
+  ],
+  "required_review": {
+    "round": 2,
+    "minimum_total_score": 25,
+    "required_verdict": "pass",
+    "critical_findings_allowed": 0,
+    "must_review_complete_episode_package": true,
+    "must_preserve_causality": true
+  },
+  "instruction": "Review only the frozen inputs listed here. Do not use Author self-scoring, Author thought notes, rejected drafts, or Author claims that the draft is already interesting."
+}
