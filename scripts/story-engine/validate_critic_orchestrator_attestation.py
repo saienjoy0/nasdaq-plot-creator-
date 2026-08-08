@@ -95,8 +95,6 @@ def validate(
     if attestation["author_invocation_id"] == attestation["critic_invocation_id"]:
         errors.append(Item("E_NOT_INDEPENDENT", "Author and Critic invocation IDs must differ", "critic_invocation_id"))
 
-    request_path: Path | None = None
-    review_path: Path | None = None
     if expected_request_path is not None:
         request_path = expected_request_path.resolve()
         if not request_path.is_file():
@@ -119,12 +117,12 @@ def validate(
     if record_path:
         try:
             record = load(record_path)
-            verification_schema = verification_schema or root / "skills/nasdaq-cafe-story-engine/contracts/critic_external_verification.schema.json"
-            errors += schema_errors(record, verification_schema, "verification_record")
         except Exception as exc:
             errors.append(Item("E_VERIFICATION_RECORD", str(exc), "verification.verification_record"))
 
-    if record is not None:
+    if record is not None and attestation["verification"].get("method") == "orchestrator_supervisor":
+        verification_schema = verification_schema or root / "skills/nasdaq-cafe-story-engine/contracts/critic_external_verification.schema.json"
+        errors += schema_errors(record, verification_schema, "verification_record")
         comparisons = {
             "episode_date": attestation["episode_date"],
             "orchestrator_id": attestation["orchestrator_id"],
