@@ -7,6 +7,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+OPENAI_AVAILABLE = importlib.util.find_spec("openai") is not None
+
 ROOT = Path(__file__).resolve().parents[2]
 ADAPTER = ROOT / "critic-adapters/openai/main.py"
 
@@ -41,6 +43,10 @@ class FakeClient:
         self.responses = FakeResponses(review)
 
 
+@unittest.skipUnless(
+    OPENAI_AVAILABLE,
+    "OpenAI Critic adapter checks run in the dedicated Story Engine v1.1 Gate CI",
+)
 class OpenAICriticAdapterTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
