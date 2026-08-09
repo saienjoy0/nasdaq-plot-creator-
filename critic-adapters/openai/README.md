@@ -1,17 +1,32 @@
 # OpenAI Independent Critic Adapter
 
-This image is the provider implementation for the Story Engine v1.1 external Critic boundary.
+This image is the optional provider implementation for the Story Engine external Independent Critic certification boundary.
+
+Normal 04 editorial review does **not** require this adapter. Use it only when an explicitly authorized external paid Critic run is desired.
 
 It reads only the sealed files mounted by `run_external_critic_orchestrator.py`:
 
 - `NASDAQ_CAFE_CRITIC_REQUEST`
 - `NASDAQ_CAFE_CRITIC_BUNDLE`
 
-and writes exactly one review JSON to:
+and writes exactly one Creative Review v1.1 JSON to:
 
 - `NASDAQ_CAFE_CRITIC_REVIEW_OUT`
 
 The adapter does not read the repository, does not receive Author scratch context, does not use web search or tools, and does not sign its own judgment. The outer trusted orchestrator validates the review and creates the Ed25519 attestation/receipt.
+
+## Review contract
+
+The adapter returns:
+
+- `reviewer = independent_critic`
+- six 0–5 scores
+- Scene 1–7 Understanding Progression checks
+- Scene 8 Closure check
+- structured findings using the Creative Review v1.1 issue vocabulary
+- verdict `pass | conditional | restructure | fail`
+
+A PASS requires no immediate failure, no critical/major finding, every score >=3, the frozen score threshold, and successful Scene 8 closure/opening-promise recovery.
 
 ## Provider
 
@@ -51,4 +66,4 @@ The adapter is deliberately not allowed to:
 - sign or upgrade the production receipt;
 - invoke GitHub Actions or Remotion.
 
-A `revise` or `blocked` review is still a valid model result. The outer Story Engine gate decides whether production may continue.
+A non-PASS review is still a valid model result. The outer Story Engine gate decides whether production may continue.
