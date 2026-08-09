@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministically validate NASDAQ Cafe Story Plan v1.1 against a causal dossier."""
+"""Deterministically validate NASDAQ Cafe Story Plan v1.2 against a causal dossier."""
 
 from __future__ import annotations
 
@@ -248,19 +248,33 @@ def validate_story_plan(
     if actual_roles != formal_roles:
         errors.append("scene formal roles do not match the fixed 03 nine-scene skeleton")
 
+    # Understanding Progression Contract: Scenes 1-8 must produce a concrete
+    # market-understanding payoff. Scene 1-7 must also establish a rational
+    # continuation reason. Scene 8 closes the narrative instead of opening one.
     for scene in plan["scenes"][:8]:
-        if not scene["new_evidence_ids"] and not scene["new_meaning"].strip():
-            errors.append(f"{scene['scene_id']}: must add new evidence or new meaning")
+        scene_id = scene["scene_id"]
+        if not scene["viewer_belief_before"].strip():
+            errors.append(f"{scene_id}: viewer_belief_before is required")
+        if not scene["new_meaning"].strip():
+            errors.append(f"{scene_id}: new_meaning payoff is required")
         if not scene["viewer_belief_after"].strip():
-            errors.append(f"{scene['scene_id']}: viewer_belief_after is required")
+            errors.append(f"{scene_id}: viewer_belief_after is required")
+
+    for scene in plan["scenes"][:7]:
+        if not scene["continuation_reason"].strip():
+            errors.append(f"{scene['scene_id']}: continuation_reason is required for Scenes 1-7")
+
+    scene_08 = plan["scenes"][7]
+    if scene_08["continuation_reason"].strip():
+        errors.append("scene-08: continuation_reason must be empty because Scene 8 closes the story")
 
     closing = plan["scenes"][8]
     if closing["new_evidence_ids"]:
         errors.append("scene-09: fixed closing cannot add new evidence")
     if closing["new_meaning"].strip():
         errors.append("scene-09: fixed closing cannot add new narrative meaning")
-    if closing["remaining_question"].strip():
-        errors.append("scene-09: fixed closing cannot leave or open a question")
+    if closing["continuation_reason"].strip():
+        errors.append("scene-09: fixed closing cannot leave a continuation reason")
     if closing["connector"] != "closing":
         errors.append("scene-09: connector must be closing")
 
