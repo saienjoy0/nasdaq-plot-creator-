@@ -1,0 +1,1 @@
+Visual Source Upgrade v1.1 implementation starts with PR-0 formal baseline, then PR-1 renderer handoff intake, PR-2 exact-locator resolver, and PR-3 same-story A/B preview. Reuse-first rules are mandatory.
