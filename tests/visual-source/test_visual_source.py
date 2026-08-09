@@ -149,10 +149,18 @@ def test_resolve_select_and_project_generated_local_image(tmp_path: Path) -> Non
         "rightsStatus": "cleared",
     }
     fallback = existing_candidate("vsp-proof-fallback", "company_amd")
+    intents = intent_document(primary, fallback)
+    intent_path = tmp_path / "working" / date / "visual_source_intents.json"
+    write_json(intent_path, intents)
+
     contract = minimal_contract(tmp_path)
-    contract["visualSources"] = {"contractVersion": "1.0.0", "intents": intent_document(primary, fallback)["intents"]}
     contract_path = tmp_path / "working" / date / "final_episode_contract.json"
     write_json(contract_path, contract)
+    contract_module.attach_visual_sources(
+        contract_path=contract_path,
+        intent_path=intent_path,
+        schema_path=tmp_path / "contracts/final_episode_contract.schema.json",
+    )
 
     raw_log = tmp_path / "verification" / date / "asset_resolution_raw.json"
     resolved = resolver_module.resolve_all(
