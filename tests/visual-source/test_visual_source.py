@@ -28,6 +28,13 @@ def write_json(path: Path, value: dict) -> None:
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def install_final_contract_schema(tmp_path: Path) -> None:
+    source = ROOT / "contracts/final_episode_contract.schema.json"
+    target = tmp_path / "contracts/final_episode_contract.schema.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+
+
 def minimal_contract(tmp_path: Path) -> dict:
     package = tmp_path / "episode.md"
     sidecar = tmp_path / "sidecar.json"
@@ -127,6 +134,7 @@ def test_contract_accepts_reuse_first_existing_assets(tmp_path: Path) -> None:
 
 def test_resolve_select_and_project_generated_local_image(tmp_path: Path) -> None:
     date = "2026-08-06"
+    install_final_contract_schema(tmp_path)
     image_path = tmp_path / "working" / date / "generated" / "proof.png"
     image_path.parent.mkdir(parents=True, exist_ok=True)
     Image.new("RGB", (640, 360), (20, 30, 40)).save(image_path)
