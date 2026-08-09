@@ -1,7 +1,7 @@
 ---
 name: nasdaq-cafe-story-plan
-description: Transform a validated causal research dossier into an evidence-bound nine-scene belief arc before fox narration is written.
-version: 1.1.0
+description: Transform a validated causal research dossier into an evidence-bound nine-scene understanding progression before fox narration is written.
+version: 1.2.0
 ---
 
 # NASDAQ Cafe Story Plan
@@ -9,18 +9,19 @@ version: 1.1.0
 ## Purpose
 
 This skill sits between the validated causal research dossier and Fox Script Authoring.
+It does not redo market research and does not write final narration.
 
-It does not redo market research. It does not write final narration.
+Its job is:
 
-Its job is narrower:
+> Preserve facts, causality, timeline, confidence, counterevidence, and the fixed nine formal Scene roles, then arrange them so the viewer's market understanding progresses across Scenes 1–8.
 
-> Preserve the facts, causality, timeline, confidence, and counterevidence already accepted under 02, then arrange that material so the viewer's understanding changes across the fixed nine-scene structure defined by 03.
+The governing retention principle is:
 
-Story Plan converts a correct causal dossier into an explainable story architecture.
+> **朝のNASDAQカフェは、質問を連鎖させる番組ではない。視聴者の理解を連鎖させる番組である。**
+
+A viewer should continue because a new piece of understanding makes the next comparison, test, boundary, counterevidence, implication, or verification valuable — not because an already-known answer was artificially withheld.
 
 ## Authority boundary
-
-Priority:
 
 ```text
 Project Instructions
@@ -29,31 +30,20 @@ Project Instructions
 → 03_episode_production_spec.md
 → 04_entertainment_inquisitor.md
 → this Skill
-→ external storytelling references
 ```
 
-External Storytelling OSS is never an editorial authority.
-
-The vendored Doza Assist Storytelling Foundation and the adapted patterns from Toonflow, ViMax, FireRed-OpenStoryline, video_explainer, and OpenMontage are implementation aids only.
+This Skill may design explanation order. It may not change the accepted market meaning.
 
 ## Inputs
 
 Required:
-
 - validated causal research dossier JSON
 - episode date and information cutoff
-- `source-of-truth/02_editorial_bible.md`
-- `source-of-truth/03_episode_production_spec.md`
-- `references/external/doza-assist/storytelling-foundation-oss.md`
-- `references/STORY_ENGINE_DIRECT_IMPORT_MATRIX.md`
+- current 01–04 source-of-truth documents
 
-The causal dossier must already contain the evidence needed to make the editorial decision.
-
-If the dossier is incomplete, return to Causal Research. Do not use Story Plan to fill evidence gaps.
+If evidence is insufficient, return to Causal Research / 02. Never use story design to fill evidence gaps.
 
 ## Output
-
-Required:
 
 ```text
 working/YYYY-MM-DD/story-engine/story_plan.json
@@ -63,11 +53,6 @@ The artifact must validate against:
 
 ```text
 skills/nasdaq-cafe-story-plan/contracts/story_plan.schema.json
-```
-
-and:
-
-```text
 skills/nasdaq-cafe-story-plan/validators/validate_story_plan.py
 ```
 
@@ -77,73 +62,31 @@ No narration is generated at this stage.
 
 ## Stage 0 — Lock the dossier
 
-Before designing a story:
+Freeze before story design:
+- lead / lead theme
+- Expected / Actual / Gap
+- Evidence IDs
+- chronology
+- confidence
+- primary / amplifier / offset / counterevidence roles
+- company / sector / NASDAQ causal scope
+- unresolved points
 
-1. Read the validated causal dossier.
-2. Record its repository-relative path and SHA-256.
-3. Freeze:
-   - lead / lead theme
-   - Expected / Actual / Gap
-   - Evidence IDs
-   - timeline
-   - confidence
-   - factor roles
-   - company-vs-sector-vs-NASDAQ scope
-   - counterevidence
-   - unresolved questions
-4. Do not add a new Expected.
-5. Do not strengthen confidence.
-6. Do not promote a company-specific explanation into a NASDAQ-wide primary cause.
-7. Do not reorder actual events to improve drama.
-
-If any of those inputs are wrong, return to 02 / Causal Research instead of fixing them here.
-
----
+Forbidden:
+- inventing Expected
+- strengthening confidence
+- promoting a company cause to NASDAQ primary without evidence
+- reordering real events for drama
+- removing material counterevidence
 
 ## Stage 1 — Select the central contradiction
 
-Select one existing `CON-*` item from the dossier.
-
-Store:
-
-- `central_contradiction_id`
-- exact contradiction statement
-- one central viewer question
-
-Do not invent a new contradiction that the dossier did not support.
-
-The contradiction should express the important overnight tension, for example:
-
-```text
-Good result
-BUT
-bad price reaction
-```
-
-or:
-
-```text
-AI demand remained strong
-BUT
-related suppliers diverged
-```
-
-The central question should be answerable by the existing evidence chain.
-
----
+Select one supported dossier contradiction and bind it exactly.
+The contradiction should explain the important overnight tension rather than merely repeat the largest headline.
 
 ## Stage 2 — Naive Explanation Test
 
-Generate 1–4 simple explanations that a viewer might reasonably assume from the headline.
-
-Examples:
-
-- the result was simply bad
-- the whole semiconductor sector sold off uniformly
-- one company alone explains the index move
-- rates alone explain the move
-
-Each explanation must be classified with existing Evidence IDs as:
+Generate 1–4 plausible first-pass explanations and classify each using existing Evidence IDs as:
 
 ```text
 survives
@@ -152,30 +95,18 @@ rejected
 unresolved
 ```
 
-This is not permission to invent a strawman.
-Use plausible first-pass explanations tied to the actual contradiction.
-
-A naive explanation is useful when later evidence changes the viewer's understanding.
-
----
+Do not invent strawmen.
+The purpose is to create explainable belief change when evidence rules a simple explanation in or out.
 
 ## Stage 3 — Headline-beyond discovery
 
-Use the dossier's `editorial_handoff.headline_beyond_discovery` as the locked discovery.
-
-Do not rewrite it into a stronger causal claim.
-
-This is the minimum insight the final episode must deliver beyond the headline.
-
-If the dossier has no defensible headline-beyond discovery, return to Causal Research / 02.
-
----
+Preserve the dossier's `editorial_handoff.headline_beyond_discovery` without strengthening it.
+This is the minimum insight the episode must deliver beyond the headline.
 
 ## Stage 4 — Angle Competition
 
-Create 3–5 genuinely different editorial angles using the same locked facts.
-
-Allowed initial types:
+Create 3–5 structurally distinct angles using the same locked evidence.
+Allowed types:
 
 ```text
 contradiction
@@ -186,81 +117,41 @@ causal_chain
 reason_unknown
 ```
 
-Each angle must contain:
-
-- central question
-- story spine
-- opening promise
-- midpoint turn claim
-- Scene 8 closing reframe
-- causality scope
-- confidence
-- Evidence IDs
-- counterevidence IDs
-- risk
-- why it is structurally different from the other angles
-
-Different wording is not a different angle.
-
-A valid difference changes at least one of:
-
-- entry question
-- comparison frame
-- order of explanation
-- location of the explanatory turn
-- final reframe
-
-without changing the underlying facts.
-
-### Selection rule
-
 Select the angle that best:
-
-1. explains the central contradiction
-2. reaches NASDAQ without causal overreach
+1. explains the contradiction
+2. reaches NASDAQ without overreach
 3. creates a real explanatory turn
-4. preserves important counterevidence
-5. leaves useful verification value for Scenes 6–8
-6. delivers the dossier's headline-beyond discovery
-
-The chosen angle may never exceed the dossier's confidence.
-
----
+4. preserves counterevidence
+5. leaves independent value for Scenes 6–8
+6. delivers the headline-beyond discovery
 
 ## Stage 5 — Opening Promise
 
-The opening promise must establish, within Scenes 1–2:
-
+Scenes 1–2 must establish:
 - direction
 - contradiction
-- question
+- an answerable promise/question
 
-It must not reveal the whole proof before the viewer reaches the later evidence.
-
-Doza's hook principle is adapted here as an information gap, not as sensationalism.
+The opening must provide early value, not merely promise later value.
+Do not hide evidence that is already needed to make the opening truthful.
 
 Bad:
 
 ```text
-Here is the full answer and every supporting number.
+「答えは後半で分かります」
 ```
 
-Better:
+Better structure:
 
 ```text
-The index fell and AMD dropped hard.
-But the reported outlook was above the normal forecast.
-So what was the market actually grading?
+方向を示す
+→ 単純説明では噛み合わないことを示す
+→ そのズレを何で判定するかが次の価値になる
 ```
 
-The final wording is written later by Fox Script Authoring.
-Story Plan only defines the promise.
+## Stage 6 — Build the fixed nine-scene Understanding Progression
 
----
-
-## Stage 6 — Build the fixed nine-scene belief arc
-
-The formal scene order comes from 03 and is not negotiable.
+The formal Scene order from 03 is fixed:
 
 ```text
 Scene 1  direction_and_conclusion
@@ -275,82 +166,95 @@ Scene 9  fixed_closing
 ```
 
 For every Scene record:
+- `viewer_belief_before`
+- `new_evidence_ids`
+- `new_meaning`
+- `viewer_belief_after`
+- `continuation_reason`
+- `connector`
 
-- viewer belief before
-- new Evidence IDs
-- new meaning created from existing evidence
-- viewer belief after
-- remaining question
-- connector
+### Understanding contract
 
-### Scene acceptance rule
+Scenes 1–8 must each provide a concrete market-understanding payoff in `new_meaning`.
 
-Scenes 1–8 must do at least one:
+A payoff does **not** require a new causal explanation. Valid payoffs include:
+- ruling out a simple explanation
+- narrowing the uncertainty
+- fixing the confirmed timeline
+- understanding Expected / Actual / Gap
+- making a peer difference concrete
+- testing the hypothesis against price reaction
+- limiting the causal scope
+- understanding contrary evidence
+- understanding what remains unknown
+- learning what would strengthen or weaken the hypothesis
 
-1. add new evidence
-2. add new meaning from existing evidence
+### Scenes 1–7 — continuation
 
-If neither occurs, the Scene is a repetition problem.
-
-Scene 9 is the exception: it is a fixed closing and must add neither new evidence nor new argument.
-
-### Belief progression
-
-The viewer should not remain in the same explanatory state across multiple Scenes.
-
-Typical progression:
+Each Scene must have a non-empty `continuation_reason`.
+A continuation reason is not required to be a question.
+Allowed forms include:
 
 ```text
-Scene 1: I know what kind of night it was.
-Scene 2: The obvious explanation does not fit cleanly.
-Scene 3: I know the confirmed facts.
-Scene 4: I understand the expectation gap.
-Scene 5: I understand why that gap mattered in the wider system.
-Scene 6: The price/timeline tests the hypothesis and creates the turn.
-Scene 7: Comparison shows the scope and limits of the hypothesis.
-Scene 8: I know what would strengthen or weaken this interpretation.
-Scene 9: fixed close.
+question
+comparison
+test
+boundary
+counterevidence
+implication
+verification
 ```
 
-This is a default reasoning model, not replacement names for 03 Scenes.
+Examples:
 
----
+```text
+「NVIDIA側を見ると、この差を比較できる」
+「この説明が値動きとも整合するか試す価値がある」
+「個別半導体の説明をNASDAQ全体へ広げてよいか切り分ける必要がある」
+```
+
+### Scene 8 — closure
+
+Scene 8 must have:
+
+```text
+continuation_reason = ""
+```
+
+It closes the narrative by:
+- preserving strengthen/weaken verification points
+- retaining important uncertainty/counterevidence
+- recovering the opening promise as a more informed interpretation
+- stating only a conclusion within the dossier confidence ceiling
+
+Scene 8 is not required to create another reason to continue.
+
+### Scene 9 — fixed close
+
+Scene 9 has:
+- no new Evidence IDs
+- no new meaning
+- no continuation reason
+- connector `closing`
+
+Do not repair an unresolved story in Scene 9.
 
 ## Stage 7 — Midpoint Turn
 
-A real explanatory turn must exist in Scene 4, 5, or 6.
+A real explanatory turn must occur in Scene 4, 5, or 6.
+A turn changes the explanation, not just the amount of information.
 
-Preferred order:
-
-1. Scene 6
-2. Scene 5
-3. Scene 4
-
-A turn means the explanation changes, not merely that another fact appears.
-
-Valid turn examples:
-
-- the naive explanation is rejected
+Valid examples:
+- a naive explanation is rejected
 - peer comparison changes the evaluation axis
-- market reaction shows the company story is not enough to explain NASDAQ alone
-- a reason-unknown conclusion becomes the most defensible answer
+- price reaction meaningfully tests the hypothesis
+- reason_unknown becomes the most defensible conclusion
 
-Invalid turn:
-
-- repeat the same conclusion with another number
-- introduce an unsupported surprise
-- reorder events for drama
-
-Doza's "a sequence without a turn is a list" is adopted as an explanatory rule.
-
----
-
-## Stage 8 — Open Loops
+## Stage 8 — Macro Open Loops
 
 Maximum: 2.
 
-Each open loop records:
-
+Each loop records:
 - open Scene
 - question
 - promised Evidence IDs
@@ -358,154 +262,76 @@ Each open loop records:
 - resolution
 
 Rules:
-
-- close after it opens
+- close after opening
 - close by Scene 8
-- never carry a fresh unresolved dramatic question into Scene 9
-- do not hide already-known evidence merely to create suspense
+- do not hide already-known evidence to manufacture suspense
+- no fresh dramatic loop may survive into Scene 9
 
-The goal is guided discovery, not artificial withholding.
+These are macro episode loops only. `continuation_reason` is local Scene-to-Scene value and does not need to be an open loop.
 
----
+## Stage 9 — Closing Reframe
 
-## Stage 9 — Scene 8 Closing Reframe
+The bookend belongs in Scene 8.
+The viewer should see the opening contradiction differently because of the evidence and meaning accumulated across the episode.
 
-The bookend belongs in Scene 8, not Scene 9.
+## Stage 10 — reason_unknown episodes
 
-The closing reframe should answer the opening promise using the meaning accumulated across Scenes 2–8.
+Do not create an answer for retention.
+Valid payoffs include:
+- candidate A conflicts with one piece of evidence
+- candidate B remains weak for another reason
+- a single cause cannot be isolated
+- the missing data needed to distinguish candidates becomes clear
 
-It must not be a stronger claim than the dossier.
-
-Example structure:
-
-```text
-Opening:
-This looked like a bad-results story.
-
-Scene 8 reframe:
-The evidence says the more useful interpretation was not whether AI demand existed, but what proof the market required before rewarding it.
-```
-
-Scene 8 also preserves 03's required strengthen/weaken verification points.
-
----
-
-## Stage 10 — Scene 9 Guard
-
-Scene 9 is fixed closing.
-
-It must have:
-
-- no new Evidence IDs
-- no new narrative meaning
-- no remaining question
-- connector `closing`
-
-Do not use Scene 9 to repair an unresolved story.
-
-If the story is not resolved by Scene 8, Story Plan fails.
-
----
-
-## External rule adapter
-
-### Doza Assist
-
-Use:
-
-- explicit role
-- adjacent redundancy rejection
-- Turn requirement
-- information-only rejection
-- topic vs theme/claim distinction
-
-Do not use:
-
-- breath/filler/tense documentary heuristics
-- emotional arc requirements that change the facts
-
-### Toonflow
-
-Use responsibility separation:
-
-```text
-Decision → Execution → Supervision
-```
-
-Story Plan is Decision architecture.
-Fox Script later executes it.
-Independent Critic later supervises it.
-
-### ViMax
-
-Use targeted revision and stale invalidation.
-A Story Plan change makes all downstream Story Engine artifacts stale.
-
-### FireRed-OpenStoryline
-
-Use stage-localized rerun.
-A Story Plan failure returns here, not automatically to the beginning of daily production.
-
-### video_explainer / OpenMontage
-
-Use clean-room concepts only:
-
-- plan before script
-- information gap
-- BUT / THEREFORE
-- guided discovery
-- progressive revelation
-- artifact-specific review
-
-Do not copy their prompt text or schemas into runtime.
+「分からない理由が分かる」 is a valid understanding payoff.
 
 ---
 
 ## Deterministic validation
 
-The validator checks what code can safely know:
-
-- schema
-- date
-- dossier path and SHA-256
+Python validates structure and evidence safety only:
+- schema / contract version
+- dossier path and SHA
 - Evidence ID existence
-- exact contradiction binding
-- exact headline-beyond discovery binding
-- at least 3 angle candidates
-- selected angle binding
-- no confidence strengthening
-- causal scope guard
+- contradiction and headline-discovery binding
+- angle binding / confidence ceiling / causal scope
 - material counterevidence preservation
-- fixed Scene 1–9 order and formal roles
-- each Scene 1–8 advances by evidence or meaning
+- fixed Scene order and roles
+- Scenes 1–8 have before / payoff / after
+- Scenes 1–7 have `continuation_reason`
+- Scene 8 has no continuation reason
 - Scene 4–6 midpoint turn
 - Scene 8 closing reframe
-- maximum 2 loops and closure order
-- Scene 9 no new evidence / meaning / question
+- macro loops close by Scene 8
+- Scene 9 adds nothing new
 
-The validator does not decide whether prose is interesting.
-That belongs to the Independent Critic and 04.
+Python does **not** judge whether prose is interesting, whether belief change is meaningful enough, or whether the continuation reason feels natural. That belongs to 04 / the Entertainment Critic.
 
-## Failure codes for later Critic integration
+Forbidden validators:
+- question-mark counting
+- requiring a question at every Scene end
+- requiring new Evidence in every Scene
+- requiring a fixed connective phrase
+- requiring a surprise word
+- judging interestingness from character count
 
-Story Plan should make these detectable downstream:
+## Downstream failure vocabulary
+
+The Story Plan must make these detectable by the Entertainment Critic:
 
 ```text
 REPEATED_CONCLUSION
+NO_PAYOFF
 NO_BELIEF_CHANGE
-ANSWER_REVEALED_TOO_EARLY
+FAKE_OPEN_LOOP
+DEAD_END_SCENE
+PROCEDURAL_NARRATION
+SCENE_ORDER_INTERCHANGEABLE
 NO_MIDPOINT_TURN
 NO_LATE_PAYOFF
-OPEN_LOOP_UNRESOLVED
-NASDAQ_SCOPE_OVERREACH
-COUNTEREVIDENCE_REMOVED
-TIMELINE_DRIFT
+OPENING_PROMISE_NOT_RECOVERED
+ENDING_NOT_BOOKENDED
+NO_NEW_EVIDENCE_OR_MEANING
 ```
 
-## Shadow-mode rule
-
-Until the Story Engine A/B acceptance is complete, this Skill does not replace the current daily production state machine.
-
-Generate and validate Story Plan as a sidecar from the same causal dossier.
-
-Only after the 2026-08-06 failure fixture and later author/critic stages pass should `story_plan_valid` become a production state.
+Causal-safety failures remain critical and upstream-owned.
