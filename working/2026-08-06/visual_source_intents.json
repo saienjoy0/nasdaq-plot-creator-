@@ -1,0 +1,78 @@
+{
+  "contractVersion": "1.0.0",
+  "episodeDate": "2026-08-06",
+  "intents": [
+    {
+      "intentId": "vsi-scene-02-amd-q2-evidence",
+      "target": {"sceneId": "scene-02", "visualBeatId": "vb-02-01"},
+      "presentationClass": "source-document",
+      "purpose": "AMDのQ2実績と決算後反応を報じた当日source-004を画面で示し、Scene 2の『悪い決算だった』という単純説明を検証する。本文にない追加因果は示さない。",
+      "sourceIds": ["source-004"],
+      "placement": {
+        "placementId": "scene-02-placement-entity-001",
+        "role": "main-media",
+        "region": "main-stage",
+        "fit": "contain",
+        "focalPoint": null
+      },
+      "primary": {
+        "candidateId": "vsp-scene-02-amd-q2-reuters-primary",
+        "assetId": "daily-2026-08-06-amd-q2-reuters",
+        "sourceKind": "web-page",
+        "sourceLocator": {"url": "https://www.reuters.com/business/ai-darling-amd-shares-slide-after-chips-firms-earnings-leave-investors-2026-08-05/"},
+        "captureMethod": "webpage-screenshot",
+        "captureSpec": {
+          "selector": null,
+          "viewport": {"width": 1440, "height": 900},
+          "outputFormat": "png"
+        },
+        "rightsStatus": "user-review-required"
+      },
+      "fallback": {
+        "candidateId": "vsp-scene-02-amd-card-fallback",
+        "assetId": "company_amd",
+        "sourceKind": "existing-asset",
+        "sourceLocator": {"assetId": "company_amd"},
+        "captureMethod": "registry-reference",
+        "captureSpec": null,
+        "rightsStatus": "cleared"
+      }
+    },
+    {
+      "intentId": "vsi-scene-05-spacex-nvidia-evidence",
+      "target": {"sceneId": "scene-05", "visualBeatId": "vb-05-01"},
+      "presentationClass": "source-document",
+      "purpose": "SpaceXのAIサーバー向けGPU採用関係を報じたsource-005を画面で示し、Scene 5の追加的な受注証拠を可視化する。分足寄与やNASDAQ全体の主因へは拡張しない。",
+      "sourceIds": ["source-005"],
+      "placement": {
+        "placementId": "scene-05-placement-entity-001",
+        "role": "main-media",
+        "region": "main-stage",
+        "fit": "contain",
+        "focalPoint": null
+      },
+      "primary": {
+        "candidateId": "vsp-scene-05-spacex-nvidia-reuters-primary",
+        "assetId": "daily-2026-08-06-spacex-nvidia-reuters",
+        "sourceKind": "web-page",
+        "sourceLocator": {"url": "https://www.reuters.com/business/autos-transportation/elon-musks-spacex-will-use-nvidia-chips-exclusively-ai-servers-2026-08-04/"},
+        "captureMethod": "webpage-screenshot",
+        "captureSpec": {
+          "selector": null,
+          "viewport": {"width": 1440, "height": 900},
+          "outputFormat": "png"
+        },
+        "rightsStatus": "user-review-required"
+      },
+      "fallback": {
+        "candidateId": "vsp-scene-05-nvidia-card-fallback",
+        "assetId": "company_nvda",
+        "sourceKind": "existing-asset",
+        "sourceLocator": {"assetId": "company_nvda"},
+        "captureMethod": "registry-reference",
+        "captureSpec": null,
+        "rightsStatus": "cleared"
+      }
+    }
+  ]
+}
