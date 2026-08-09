@@ -1,0 +1,32 @@
+name: Check OpenAI Key Presence Once
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/check-openai-key-presence-once.yml
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    if: github.head_ref == 'ops/bootstrap-critic-orchestrator-20260809'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check secret presence without exposing value
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p result
+          if [ -n "$OPENAI_API_KEY" ]; then
+            printf '{"openai_api_key_present":true}\n' > result/openai_key_presence.json
+          else
+            printf '{"openai_api_key_present":false}\n' > result/openai_key_presence.json
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: openai-key-presence-20260809
+          path: result/openai_key_presence.json
+          retention-days: 1
