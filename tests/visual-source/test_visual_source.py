@@ -188,6 +188,7 @@ def test_resolve_select_and_project_generated_local_image(tmp_path: Path) -> Non
 
     render = {
         "schemaVersion": "2.4.0",
+        "episode": {"targetDate": date},
         "scenes": [
             {
                 "sceneId": "scene-02",
