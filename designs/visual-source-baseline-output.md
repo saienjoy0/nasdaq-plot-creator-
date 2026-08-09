@@ -1,0 +1,1 @@
+`visual_source_baseline.json` is verification evidence, not an editorial or renderer input. It may be regenerated only by rerunning the same validated pipeline against an explicitly pinned Plot/Renderer pair.

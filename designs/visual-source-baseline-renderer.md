@@ -1,0 +1,1 @@
+PR-0 baseline records the exact strict Remotion 2.4 renderer commit used by the existing hardened production validation. This pin is intentionally pre-Visual-Source and will be superseded only after PR-1 is merged and revalidated.
