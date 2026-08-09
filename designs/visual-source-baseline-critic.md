@@ -1,0 +1,1 @@
+`external_critic_status=not_certified` is valid only when the existing Story Engine acceptance explicitly allows production under `external_critic_optional`. Baseline evidence must never upgrade certification status.
