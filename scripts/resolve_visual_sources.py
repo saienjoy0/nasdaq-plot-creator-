@@ -26,7 +26,6 @@ from typing import Any
 
 from PIL import Image
 
-
 MAX_DOWNLOAD_BYTES = 20 * 1024 * 1024
 ALLOWED_IMAGE_FORMATS = {"PNG", "JPEG", "WEBP"}
 
@@ -71,6 +70,16 @@ def safe_relative_file(root: Path, relative: str, label: str) -> Path:
         raise VisualSourceResolutionError(f"{label}: path escapes root: {relative}")
     if not resolved.is_file() or resolved.stat().st_size == 0:
         raise VisualSourceResolutionError(f"{label}: missing or empty file: {relative}")
+    return resolved
+
+
+def _ensure_output_root(repo_root: Path, asset_root: Path) -> Path:
+    root = repo_root.resolve()
+    resolved = asset_root.resolve()
+    if resolved != root and root not in resolved.parents:
+        raise VisualSourceResolutionError(
+            f"E_VISUAL_SOURCE_OUTPUT_INVALID: asset root escapes repository: {resolved}"
+        )
     return resolved
 
 
@@ -126,7 +135,7 @@ class SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
-def download_exact(url: str, target: Path) -> tuple[str, str | None]:
+def _open_exact(url: str):
     validate_external_url(url)
     opener = urllib.request.build_opener(SafeRedirectHandler())
     request = urllib.request.Request(
@@ -134,14 +143,21 @@ def download_exact(url: str, target: Path) -> tuple[str, str | None]:
         headers={"User-Agent": "NasdaqCafeVisualSource/1.0 (+auditable exact-locator resolver)"},
     )
     try:
-        with opener.open(request, timeout=25) as response:
-            final_url = validate_external_url(response.geturl())
-            content_type = response.headers.get_content_type()
-            length = response.headers.get("Content-Length")
-            if length and int(length) > MAX_DOWNLOAD_BYTES:
-                raise VisualSourceResolutionError("E_VISUAL_SOURCE_TOO_LARGE")
-            target.parent.mkdir(parents=True, exist_ok=True)
-            received = 0
+        return opener.open(request, timeout=25)
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        raise VisualSourceResolutionError(f"E_VISUAL_SOURCE_FETCH_FAILED: {exc}") from exc
+
+
+def download_exact(url: str, target: Path) -> tuple[str, str | None]:
+    with _open_exact(url) as response:
+        final_url = validate_external_url(response.geturl())
+        content_type = response.headers.get_content_type()
+        length = response.headers.get("Content-Length")
+        if length and int(length) > MAX_DOWNLOAD_BYTES:
+            raise VisualSourceResolutionError("E_VISUAL_SOURCE_TOO_LARGE")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        received = 0
+        try:
             with target.open("wb") as handle:
                 while True:
                     chunk = response.read(1024 * 1024)
@@ -151,9 +167,27 @@ def download_exact(url: str, target: Path) -> tuple[str, str | None]:
                     if received > MAX_DOWNLOAD_BYTES:
                         raise VisualSourceResolutionError("E_VISUAL_SOURCE_TOO_LARGE")
                     handle.write(chunk)
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        raise VisualSourceResolutionError(f"E_VISUAL_SOURCE_FETCH_FAILED: {exc}") from exc
+        except OSError as exc:
+            raise VisualSourceResolutionError(f"E_VISUAL_SOURCE_FETCH_FAILED: {exc}") from exc
     return final_url, content_type
+
+
+def _json_exact(url: str) -> tuple[str, dict[str, Any]]:
+    with _open_exact(url) as response:
+        final_url = validate_external_url(response.geturl())
+        length = response.headers.get("Content-Length")
+        if length and int(length) > 2 * 1024 * 1024:
+            raise VisualSourceResolutionError("E_VISUAL_SOURCE_TOO_LARGE")
+        raw = response.read(2 * 1024 * 1024 + 1)
+        if len(raw) > 2 * 1024 * 1024:
+            raise VisualSourceResolutionError("E_VISUAL_SOURCE_TOO_LARGE")
+    try:
+        value = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise VisualSourceResolutionError(f"E_VISUAL_SOURCE_FETCH_FAILED: invalid JSON: {exc}") from exc
+    if not isinstance(value, dict):
+        raise VisualSourceResolutionError("E_VISUAL_SOURCE_FETCH_FAILED: JSON root must be object")
+    return final_url, value
 
 
 def _normalize_image(source: Path, output: Path) -> tuple[int, int, str]:
@@ -251,7 +285,7 @@ def _capture_webpage(
         from playwright.sync_api import sync_playwright
     except ImportError as exc:
         raise VisualSourceResolutionError(
-            "E_VISUAL_SOURCE_FETCH_FAILED: playwright==1.61.0 is required for webpage-screenshot"
+            "E_VISUAL_SOURCE_FETCH_FAILED: playwright==1.61.0 is required for webpage capture"
         ) from exc
 
     viewport = capture_spec.get("viewport") or {"width": 1440, "height": 900}
@@ -295,7 +329,8 @@ def _capture_webpage(
                     page.wait_for_load_state("networkidle", timeout=5000)
                 except PlaywrightTimeoutError:
                     pass
-                page.add_style_tag(content="""
+                page.add_style_tag(
+                    content="""
                     *, *::before, *::after {
                       animation-duration: 0s !important;
                       animation-delay: 0s !important;
@@ -303,12 +338,13 @@ def _capture_webpage(
                       caret-color: transparent !important;
                     }
                     html { scroll-behavior: auto !important; }
-                """)
+                    """
+                )
                 page.wait_for_timeout(250)
                 if isinstance(selector, str) and selector.strip():
-                    locator = page.locator(selector).first
-                    locator.wait_for(state="visible", timeout=5000)
-                    locator.screenshot(path=str(raw), animations="disabled")
+                    selected = page.locator(selector).first
+                    selected.wait_for(state="visible", timeout=5000)
+                    selected.screenshot(path=str(raw), animations="disabled")
                 else:
                     page.screenshot(
                         path=str(raw),
@@ -321,10 +357,53 @@ def _capture_webpage(
             raise
         except (PlaywrightTimeoutError, PlaywrightError, OSError) as exc:
             raise VisualSourceResolutionError(
-                f"E_VISUAL_SOURCE_FETCH_FAILED: webpage screenshot failed: {exc}"
+                f"E_VISUAL_SOURCE_FETCH_FAILED: webpage capture failed: {exc}"
             ) from exc
         image_width, image_height, mime = _normalize_image(raw, output)
         return final_url, image_width, image_height, mime
+
+
+def _wikimedia_exact(locator: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    url = locator.get("url")
+    if isinstance(url, str) and url:
+        return validate_external_url(url), {}
+    page_id = locator.get("pageId")
+    if not isinstance(page_id, str) or not page_id.strip():
+        raise VisualSourceResolutionError("E_VISUAL_SOURCE_LOCATOR_MISSING: Wikimedia pageId/url")
+    title = page_id.strip()
+    if not title.startswith("File:"):
+        title = f"File:{title}"
+    query = urllib.parse.urlencode(
+        {
+            "action": "query",
+            "format": "json",
+            "formatversion": "2",
+            "prop": "imageinfo",
+            "iiprop": "url|mime|size|extmetadata",
+            "titles": title,
+        }
+    )
+    api_url = f"https://commons.wikimedia.org/w/api.php?{query}"
+    _, payload = _json_exact(api_url)
+    query_obj = payload.get("query")
+    pages = query_obj.get("pages") if isinstance(query_obj, dict) else None
+    if not isinstance(pages, list) or len(pages) != 1:
+        raise VisualSourceResolutionError("E_VISUAL_SOURCE_FETCH_FAILED: Wikimedia page response invalid")
+    page = pages[0]
+    infos = page.get("imageinfo") if isinstance(page, dict) else None
+    if not isinstance(infos, list) or len(infos) < 1 or not isinstance(infos[0], dict):
+        raise VisualSourceResolutionError("E_VISUAL_SOURCE_FETCH_FAILED: Wikimedia imageinfo missing")
+    info = infos[0]
+    source_url = info.get("url")
+    if not isinstance(source_url, str):
+        raise VisualSourceResolutionError("E_VISUAL_SOURCE_FETCH_FAILED: Wikimedia image URL missing")
+    metadata = info.get("extmetadata") if isinstance(info.get("extmetadata"), dict) else {}
+    attribution = {}
+    for key in ("Artist", "Credit", "LicenseShortName", "LicenseUrl", "UsageTerms"):
+        value = metadata.get(key)
+        if isinstance(value, dict) and isinstance(value.get("value"), str):
+            attribution[key] = value["value"]
+    return validate_external_url(source_url), attribution
 
 
 def _resolve_candidate(
@@ -356,6 +435,7 @@ def _resolve_candidate(
         "mimeType": None,
         "width": None,
         "height": None,
+        "attribution": {},
         "failureCode": None,
         "failureReason": None,
     }
@@ -373,7 +453,11 @@ def _resolve_candidate(
             )
             return result
 
-        if capture == "webpage-screenshot" and source_kind in {"official-url", "web-page"}:
+        if capture in {"webpage-screenshot", "social-capture"} and source_kind in {
+            "official-url",
+            "web-page",
+            "social-post",
+        }:
             resolved_source, width, height, mime = _capture_webpage(
                 url=locator["url"],
                 capture_spec=candidate.get("captureSpec") or {},
@@ -387,6 +471,31 @@ def _resolve_candidate(
                 mimeType=mime,
                 width=width,
                 height=height,
+            )
+            return result
+
+        if source_kind == "wikimedia" and capture == "mediawiki-fetch":
+            source_url, attribution = _wikimedia_exact(locator)
+            with tempfile.TemporaryDirectory(prefix="nasdaq-cafe-wikimedia-") as temp_dir:
+                downloaded = Path(temp_dir) / "source-image"
+                resolved_source, declared_type = download_exact(source_url, downloaded)
+                if declared_type and not (
+                    declared_type.startswith("image/") or declared_type == "application/octet-stream"
+                ):
+                    raise VisualSourceResolutionError(
+                        f"E_VISUAL_SOURCE_MIME_INVALID: declared {declared_type}"
+                    )
+                result["sourceSha256"] = sha256_file(downloaded)
+                width, height, mime = _normalize_image(downloaded, output)
+            result.update(
+                status="ready",
+                resolvedSource=resolved_source,
+                outputPath=output.relative_to(repo_root).as_posix(),
+                outputSha256=sha256_file(output),
+                mimeType=mime,
+                width=width,
+                height=height,
+                attribution=attribution,
             )
             return result
 
@@ -419,13 +528,9 @@ def _resolve_candidate(
                 downloaded = Path(temporary.name) / f"source{suffix}"
                 resolved_source, declared_type = download_exact(locator["url"], downloaded)
                 source_file = downloaded
-            elif source_kind in {"web-page", "social-post", "wikimedia"}:
-                raise VisualSourceResolutionError(
-                    f"E_VISUAL_SOURCE_FETCH_FAILED: {source_kind}/{capture} adapter is not enabled; use Approved Fallback"
-                )
             else:
                 raise VisualSourceResolutionError(
-                    f"E_VISUAL_SOURCE_FETCH_FAILED: unsupported sourceKind {source_kind}"
+                    f"E_VISUAL_SOURCE_FETCH_FAILED: unsupported sourceKind/capture {source_kind}/{capture}"
                 )
 
             if source_file is None:
@@ -448,7 +553,7 @@ def _resolve_candidate(
                 width, height, mime = _normalize_image(source_file, output)
             else:
                 raise VisualSourceResolutionError(
-                    f"E_VISUAL_SOURCE_FETCH_FAILED: captureMethod {capture} is not implemented in core resolver"
+                    f"E_VISUAL_SOURCE_FETCH_FAILED: captureMethod {capture} is not implemented"
                 )
             result.update(
                 status="ready",
@@ -483,6 +588,7 @@ def resolve_all(
     collector_root: Path | None,
 ) -> dict[str, Any]:
     repo_root = repo_root.resolve()
+    asset_root = _ensure_output_root(repo_root, asset_root)
     contract = load_json(contract_path, "Final Episode Contract")
     visual_sources = contract.get("visualSources") or {"contractVersion": "1.0.0", "intents": []}
     if visual_sources.get("contractVersion") != "1.0.0":
@@ -498,7 +604,7 @@ def resolve_all(
                     intent_id=intent["intentId"],
                     path_name=path_name,
                     candidate=intent[path_name],
-                    asset_root=asset_root.resolve(),
+                    asset_root=asset_root,
                 )
             )
     document = {
