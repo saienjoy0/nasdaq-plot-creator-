@@ -1,0 +1,162 @@
+name: Configure Critic Orchestrator Once
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/configure-critic-orchestrator-once.yml
+
+permissions:
+  actions: read
+  contents: read
+  packages: read
+
+jobs:
+  configure:
+    if: github.head_ref == 'ops/bootstrap-critic-orchestrator-20260809'
+    runs-on: ubuntu-latest
+    env:
+      DROPLET_IP: '152.42.240.140'
+      TRANSPORT_RUN_ID: '31289896094'
+      SOURCE_SHA: 'df0be73291a463874063810da040424d06892108'
+      ADAPTER_IMAGE: 'ghcr.io/saienjoy0/nasdaq-cafe-openai-critic@sha256:438452e74bca436cf8fbac995a23af95adfd1d93712e2566a707846a8087f46c'
+      KEY_ID: 'do-sgp1-critic-20260809-v1'
+      ORCHESTRATOR_ID: 'do-sgp1-nasdaq-cafe-critic-v1'
+    steps:
+      - name: Download one-shot SSH transport key
+        uses: actions/download-artifact@v4
+        with:
+          name: critic-orchestrator-ssh-transport-20260809
+          path: transport-key
+          github-token: ${{ github.token }}
+          run-id: ${{ env.TRANSPORT_RUN_ID }}
+
+      - name: Prepare SSH transport
+        run: |
+          set -euo pipefail
+          chmod 600 transport-key/id_ed25519
+          mkdir -p ~/.ssh
+          for attempt in $(seq 1 30); do
+            if ssh-keyscan -T 5 -H "$DROPLET_IP" >> ~/.ssh/known_hosts 2>/dev/null; then
+              break
+            fi
+            sleep 5
+          done
+          test -s ~/.ssh/known_hosts
+          for attempt in $(seq 1 30); do
+            if ssh -o BatchMode=yes -o ConnectTimeout=5 -i transport-key/id_ed25519 root@"$DROPLET_IP" 'echo SSH_READY' >/tmp/ssh-ready.txt 2>/dev/null; then
+              cat /tmp/ssh-ready.txt
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'Droplet SSH did not become ready' >&2
+          exit 1
+
+      - name: Install runtime and generate production signing key on Droplet
+        run: |
+          set -euo pipefail
+          ssh -o BatchMode=yes -i transport-key/id_ed25519 root@"$DROPLET_IP" \
+            "SOURCE_SHA='$SOURCE_SHA' KEY_ID='$KEY_ID' ORCHESTRATOR_ID='$ORCHESTRATOR_ID' bash -s" <<'REMOTE'
+          set -euo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update -qq
+          apt-get install -y -qq ca-certificates git docker.io python3-cryptography
+          systemctl enable --now docker
+
+          install -d -m 700 /etc/nasdaq-cafe-critic
+          install -d -m 755 /opt/nasdaq-cafe
+
+          if [ ! -d /opt/nasdaq-cafe/repo/.git ]; then
+            git clone -q https://github.com/saienjoy0/nasdaq-plot-creator-.git /opt/nasdaq-cafe/repo
+          fi
+          cd /opt/nasdaq-cafe/repo
+          git fetch -q origin
+          git checkout -q --detach "$SOURCE_SHA"
+
+          if [ ! -s /etc/nasdaq-cafe-critic/signing-key-password ]; then
+            umask 077
+            python3 - <<'PY' > /etc/nasdaq-cafe-critic/signing-key-password
+          import secrets
+          print(secrets.token_urlsafe(48))
+          PY
+            chmod 600 /etc/nasdaq-cafe-critic/signing-key-password
+          fi
+
+          export NASDAQ_CAFE_CRITIC_KEY_PASSWORD="$(cat /etc/nasdaq-cafe-critic/signing-key-password)"
+          PRIVATE_KEY=/etc/nasdaq-cafe-critic/critic-ed25519.pem
+          TRUST_ROW=/etc/nasdaq-cafe-critic/trust_registry_row.json
+
+          if [ ! -f "$PRIVATE_KEY" ]; then
+            python3 scripts/story-engine/bootstrap_external_critic_key.py \
+              --repo-root /opt/nasdaq-cafe/repo \
+              --private-key-out "$PRIVATE_KEY" \
+              --password-env NASDAQ_CAFE_CRITIC_KEY_PASSWORD \
+              --key-id "$KEY_ID" \
+              --orchestrator-id "$ORCHESTRATOR_ID" \
+              > /tmp/bootstrap-result.json
+            python3 - <<'PY'
+          import json
+          p=json.load(open('/tmp/bootstrap-result.json',encoding='utf-8'))
+          json.dump(p['trust_registry_row'],open('/etc/nasdaq-cafe-critic/trust_registry_row.json','w',encoding='utf-8'),ensure_ascii=False,indent=2,sort_keys=True)
+          open('/etc/nasdaq-cafe-critic/trust_registry_row.json','a',encoding='utf-8').write('\n')
+          PY
+          else
+            python3 - <<'PY'
+          import json, os
+          from cryptography.hazmat.primitives import serialization
+          password=open('/etc/nasdaq-cafe-critic/signing-key-password','rb').read().strip()
+          key=serialization.load_pem_private_key(open('/etc/nasdaq-cafe-critic/critic-ed25519.pem','rb').read(),password=password)
+          public=key.public_key().public_bytes(serialization.Encoding.PEM,serialization.PublicFormat.SubjectPublicKeyInfo).decode()
+          row={'key_id':os.environ['KEY_ID'],'orchestrator_id':os.environ['ORCHESTRATOR_ID'],'algorithm':'ed25519','public_key_pem':public,'status':'active'}
+          with open('/etc/nasdaq-cafe-critic/trust_registry_row.json','w',encoding='utf-8') as f:
+            json.dump(row,f,ensure_ascii=False,indent=2,sort_keys=True); f.write('\n')
+          PY
+          fi
+          chmod 600 "$PRIVATE_KEY" /etc/nasdaq-cafe-critic/signing-key-password
+          chmod 644 "$TRUST_ROW"
+          test -s "$PRIVATE_KEY"
+          test -s "$TRUST_ROW"
+          REMOTE
+
+      - name: Pull immutable Critic adapter onto Droplet
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$GHCR_TOKEN" | ssh -o BatchMode=yes -i transport-key/id_ed25519 root@"$DROPLET_IP" \
+            "docker login ghcr.io -u '${GITHUB_ACTOR}' --password-stdin"
+          ssh -o BatchMode=yes -i transport-key/id_ed25519 root@"$DROPLET_IP" \
+            "docker pull '$ADAPTER_IMAGE' >/dev/null && docker image inspect '$ADAPTER_IMAGE' >/dev/null && docker logout ghcr.io >/dev/null"
+
+      - name: Collect public orchestrator identity only
+        run: |
+          set -euo pipefail
+          mkdir -p orchestrator-public
+          scp -q -i transport-key/id_ed25519 root@"$DROPLET_IP":/etc/nasdaq-cafe-critic/trust_registry_row.json orchestrator-public/trust_registry_row.json
+          python3 - <<'PY'
+          import json, os
+          row=json.load(open('orchestrator-public/trust_registry_row.json',encoding='utf-8'))
+          payload={
+            'contract_version':'1.0.0',
+            'droplet_id':591001833,
+            'region':'sgp1',
+            'public_ip':'152.42.240.140',
+            'source_commit':os.environ['SOURCE_SHA'],
+            'adapter_image':os.environ['ADAPTER_IMAGE'],
+            'key_id':row['key_id'],
+            'orchestrator_id':row['orchestrator_id'],
+            'production_private_key_exported':False,
+            'production_private_key_location':'/etc/nasdaq-cafe-critic/critic-ed25519.pem',
+          }
+          with open('orchestrator-public/orchestrator_host.json','w',encoding='utf-8') as f:
+            json.dump(payload,f,ensure_ascii=False,indent=2,sort_keys=True); f.write('\n')
+          PY
+
+      - name: Upload public bootstrap result
+        uses: actions/upload-artifact@v4
+        with:
+          name: critic-orchestrator-public-bootstrap-20260809
+          path: orchestrator-public/
+          retention-days: 7
+          if-no-files-found: error
