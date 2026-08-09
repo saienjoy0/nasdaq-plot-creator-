@@ -12,12 +12,10 @@ import argparse
 import hashlib
 import ipaddress
 import json
-import mimetypes
 import os
 import shutil
 import socket
 import subprocess
-import sys
 import tempfile
 import urllib.error
 import urllib.parse
@@ -243,6 +241,92 @@ def _render_pdf_page(source_pdf: Path, page_number: int, output: Path) -> tuple[
         return _normalize_image(rendered, output)
 
 
+def _capture_webpage(
+    *, url: str, capture_spec: dict[str, Any], output: Path
+) -> tuple[str, int, int, str]:
+    validate_external_url(url)
+    try:
+        from playwright.sync_api import Error as PlaywrightError
+        from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+        from playwright.sync_api import sync_playwright
+    except ImportError as exc:
+        raise VisualSourceResolutionError(
+            "E_VISUAL_SOURCE_FETCH_FAILED: playwright==1.61.0 is required for webpage-screenshot"
+        ) from exc
+
+    viewport = capture_spec.get("viewport") or {"width": 1440, "height": 900}
+    width = int(viewport.get("width", 1440))
+    height = int(viewport.get("height", 900))
+    selector = capture_spec.get("selector")
+    with tempfile.TemporaryDirectory(prefix="nasdaq-cafe-web-capture-") as temp_dir:
+        raw = Path(temp_dir) / "capture.png"
+        try:
+            with sync_playwright() as playwright:
+                browser = playwright.chromium.launch(headless=True)
+                context = browser.new_context(
+                    viewport={"width": width, "height": height},
+                    reduced_motion="reduce",
+                    color_scheme="dark",
+                    locale="en-US",
+                    user_agent="NasdaqCafeVisualSource/1.0 exact-locator capture",
+                )
+
+                def route_guard(route, request):
+                    request_url = request.url
+                    if request_url.startswith(("data:", "blob:", "about:")):
+                        route.continue_()
+                        return
+                    try:
+                        validate_external_url(request_url)
+                    except VisualSourceResolutionError:
+                        route.abort()
+                        return
+                    route.continue_()
+
+                context.route("**/*", route_guard)
+                page = context.new_page()
+                response = page.goto(url, wait_until="domcontentloaded", timeout=25000)
+                final_url = validate_external_url(page.url)
+                if response is not None and response.status >= 400:
+                    raise VisualSourceResolutionError(
+                        f"E_VISUAL_SOURCE_FETCH_FAILED: HTTP {response.status}"
+                    )
+                try:
+                    page.wait_for_load_state("networkidle", timeout=5000)
+                except PlaywrightTimeoutError:
+                    pass
+                page.add_style_tag(content="""
+                    *, *::before, *::after {
+                      animation-duration: 0s !important;
+                      animation-delay: 0s !important;
+                      transition-duration: 0s !important;
+                      caret-color: transparent !important;
+                    }
+                    html { scroll-behavior: auto !important; }
+                """)
+                page.wait_for_timeout(250)
+                if isinstance(selector, str) and selector.strip():
+                    locator = page.locator(selector).first
+                    locator.wait_for(state="visible", timeout=5000)
+                    locator.screenshot(path=str(raw), animations="disabled")
+                else:
+                    page.screenshot(
+                        path=str(raw),
+                        full_page=False,
+                        animations="disabled",
+                        caret="hide",
+                    )
+                browser.close()
+        except VisualSourceResolutionError:
+            raise
+        except (PlaywrightTimeoutError, PlaywrightError, OSError) as exc:
+            raise VisualSourceResolutionError(
+                f"E_VISUAL_SOURCE_FETCH_FAILED: webpage screenshot failed: {exc}"
+            ) from exc
+        image_width, image_height, mime = _normalize_image(raw, output)
+        return final_url, image_width, image_height, mime
+
+
 def _resolve_candidate(
     *,
     repo_root: Path,
@@ -289,6 +373,23 @@ def _resolve_candidate(
             )
             return result
 
+        if capture == "webpage-screenshot" and source_kind in {"official-url", "web-page"}:
+            resolved_source, width, height, mime = _capture_webpage(
+                url=locator["url"],
+                capture_spec=candidate.get("captureSpec") or {},
+                output=output,
+            )
+            result.update(
+                status="ready",
+                resolvedSource=resolved_source,
+                outputPath=output.relative_to(repo_root).as_posix(),
+                outputSha256=sha256_file(output),
+                mimeType=mime,
+                width=width,
+                height=height,
+            )
+            return result
+
         source_file: Path | None = None
         resolved_source: str | None = None
         declared_type: str | None = None
@@ -320,7 +421,7 @@ def _resolve_candidate(
                 source_file = downloaded
             elif source_kind in {"web-page", "social-post", "wikimedia"}:
                 raise VisualSourceResolutionError(
-                    f"E_VISUAL_SOURCE_FETCH_FAILED: {source_kind}/{capture} adapter is deferred; use Approved Fallback"
+                    f"E_VISUAL_SOURCE_FETCH_FAILED: {source_kind}/{capture} adapter is not enabled; use Approved Fallback"
                 )
             else:
                 raise VisualSourceResolutionError(
