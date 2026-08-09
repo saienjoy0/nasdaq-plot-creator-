@@ -1,0 +1,110 @@
+name: Visual Source Candidate Review
+
+on:
+  pull_request:
+    paths:
+      - "working/**/visual_source_intents.json"
+      - "working/**/visual_source_selection.json"
+      - "scripts/prepare_visual_sources.py"
+      - "scripts/resolve_visual_sources.py"
+      - "scripts/select_visual_sources.py"
+      - "scripts/visual_source_contract.py"
+      - "scripts/visual_source_projection.py"
+      - ".github/workflows/visual-source-candidate-review.yml"
+  workflow_dispatch:
+    inputs:
+      episode_date:
+        description: "YYYY-MM-DD"
+        required: true
+        default: "2026-08-06"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  review-candidates:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      EPISODE_DATE: ${{ inputs.episode_date || '2026-08-06' }}
+      RENDERER_COMMIT: 8ab75eeff60885a3e53870065a6e21d08f2e5965
+      NASDAQ_CAFE_RENDERER_ROOT: ${{ github.workspace }}/.renderer
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Validate requested date and committed intent
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EPISODE_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || exit 1
+          test -s "working/$EPISODE_DATE/visual_source_intents.json"
+          test -s "working/$EPISODE_DATE/visual_source_selection.json"
+
+      - name: Checkout pinned renderer contract source
+        uses: actions/checkout@v6
+        with:
+          repository: saienjoy0/saienjoy0-nasdaq-cafe-remotion
+          ref: ${{ env.RENDERER_COMMIT }}
+          path: .renderer
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install exact-locator capture dependencies
+        run: |
+          python -m pip install --disable-pip-version-check jsonschema pillow playwright==1.61.0
+          python -m playwright install --with-deps chromium
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
+
+      - name: Resolve Primary and Approved Fallback candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "verification/$EPISODE_DATE"
+          python scripts/prepare_visual_sources.py \
+            --date "$EPISODE_DATE" \
+            --repo-root . \
+            | tee "verification/$EPISODE_DATE/visual-source-candidate-review.log"
+
+      - name: Summarize candidate states
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          date = os.environ["EPISODE_DATE"]
+          raw = Path(f"verification/{date}/asset_resolution_raw.json")
+          if not raw.is_file():
+              raise SystemExit(0)
+          doc = json.loads(raw.read_text(encoding="utf-8"))
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as out:
+              out.write("### Visual Source candidate review\n")
+              out.write(f"- Episode: `{date}`\n")
+              for item in doc.get("results", []):
+                  out.write(
+                      f"- `{item.get('intentId')}` / `{item.get('path')}`: "
+                      f"`{item.get('status')}` rights=`{item.get('rightsStatus')}` "
+                      f"asset=`{item.get('assetId')}`\n"
+                  )
+          PY
+
+      - name: Upload Primary/Fallback review evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-source-candidates-${{ env.EPISODE_DATE }}-${{ github.run_id }}
+          path: |
+            daily-assets/${{ env.EPISODE_DATE }}/
+            verification/${{ env.EPISODE_DATE }}/asset_resolution_raw.json
+            verification/${{ env.EPISODE_DATE }}/asset_resolution_log.json
+            verification/${{ env.EPISODE_DATE }}/visual-source-candidate-review.log
+            working/${{ env.EPISODE_DATE }}/visual_source_selected_assets.json
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 0
