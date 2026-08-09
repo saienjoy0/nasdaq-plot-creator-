@@ -1,0 +1,32 @@
+name: Bootstrap Critic Orchestrator Transport
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/bootstrap-critic-orchestrator-transport.yml
+
+permissions:
+  contents: read
+
+jobs:
+  generate-transport-key:
+    if: github.head_ref == 'ops/bootstrap-critic-orchestrator-20260809'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate one-shot SSH transport key
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p transport
+          ssh-keygen -t ed25519 -N '' -C 'nasdaq-cafe-critic-bootstrap-20260809' -f transport/id_ed25519
+          chmod 600 transport/id_ed25519
+          chmod 644 transport/id_ed25519.pub
+          printf 'transport_only=true\nproduction_signing_key=false\n' > transport/README.txt
+      - name: Upload one-shot transport material
+        uses: actions/upload-artifact@v4
+        with:
+          name: critic-orchestrator-ssh-transport-20260809
+          path: transport/
+          retention-days: 1
+          if-no-files-found: error
