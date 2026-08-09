@@ -1,7 +1,23 @@
 name: Story Engine Contract
 on:
   pull_request:
-    paths: ['skills/nasdaq-cafe-story-engine/**','tests/story-engine/test_story_engine.py','tests/story-engine/test_committed_valid_fixtures.py','designs/STORY_ENGINE_UNIFIED_FINAL_DESIGN_v1.1.md','.github/workflows/story-engine-contract.yml']
+    paths:
+      - 'skills/nasdaq-cafe-story-engine/**'
+      - 'skills/nasdaq-cafe-story-plan/**'
+      - 'skills/nasdaq-cafe-story-authoring/**'
+      - 'skills/nasdaq-cafe-entertainment-critic/**'
+      - 'scripts/story-engine/**'
+      - 'tests/story-engine/test_story_engine.py'
+      - 'tests/story-engine/test_story_engine_2026_08_06_fixture.py'
+      - 'tests/story-engine/fixtures/2026-08-06/**'
+      - 'tests/story-engine/test_committed_valid_fixtures.py'
+      - 'tests/story-engine/test_understanding_progression_review.py'
+      - 'tests/story-engine-integration/test_optional_external_critic_policy.py'
+      - 'tests/story-plan/**'
+      - 'working/2026-08-06/story-engine/templates/**'
+      - 'designs/STORY_ENGINE_UNIFIED_FINAL_DESIGN_v1.1.md'
+      - 'designs/STORY_ENGINE_UNDERSTANDING_PROGRESSION_DESIGN_v1.1.md'
+      - '.github/workflows/story-engine-contract.yml'
   workflow_dispatch:
 permissions: {contents: read}
 jobs:
@@ -11,6 +27,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: '3.12'}
-      - run: pip install jsonschema
+      - run: pip install jsonschema pytest
       - run: python tests/story-engine/test_story_engine.py
       - run: python tests/story-engine/test_committed_valid_fixtures.py
+      - run: pytest -q tests/story-plan/test_story_plan.py tests/story-plan/test_story_plan_migration.py tests/story-engine/test_story_engine_2026_08_06_fixture.py tests/story-engine/test_understanding_progression_review.py tests/story-engine-integration/test_optional_external_critic_policy.py

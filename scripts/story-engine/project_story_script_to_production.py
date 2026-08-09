@@ -118,20 +118,12 @@ def replace_beat_cues(md: str, beat_id: str, start: str, end: str) -> str:
     return md[:match.start(1)] + block + md[match.end(1):]
 
 
-def replace_beat_visual_copy(
-    md: str,
-    beat_id: str,
-    override: dict[str, Any],
-    beat: dict[str, Any],
-) -> str:
+def replace_beat_visual_copy(md: str, beat_id: str, override: dict[str, Any], beat: dict[str, Any]) -> str:
     match, block = beat_block(md, beat_id)
     mapping = {
-        "screenQuestion": "画面の問い",
-        "primaryElement": "主要要素",
-        "viewerTexts": "視聴者向けテキスト",
-        "changeCue": "変化合図",
-        "screenState": "画面状態",
-        "visualTemplate": "Visual Template ID",
+        "screenQuestion": "画面の問い", "primaryElement": "主要要素",
+        "viewerTexts": "視聴者向けテキスト", "changeCue": "変化合図",
+        "screenState": "画面状態", "visualTemplate": "Visual Template ID",
         "templateVariant": "Template Variant",
     }
     for key, label in mapping.items():
@@ -151,9 +143,7 @@ def replace_beat_visual_copy(
         if not isinstance(grammar, dict):
             raise ValueError(f"{beat_id}: visualGrammar is required for grammar override")
         pattern = r"(?m)^  - Visual Grammar：.*$"
-        replacement = (
-            f"  - Visual Grammar：{grammar['grammarId']} / {grammar['transitionRole']}"
-        )
+        replacement = f"  - Visual Grammar：{grammar['grammarId']} / {grammar['transitionRole']}"
         if not re.search(pattern, block):
             raise ValueError(f"{beat_id}: markdown field missing for Visual Grammar")
         block = re.sub(pattern, replacement, block, count=1)
@@ -166,18 +156,10 @@ def replace_scene_visual_copy(md: str, scene_number: int, override: dict[str, An
     if not match:
         raise ValueError(f"episode package Scene {scene_number} block not found")
     block = match.group(1)
-    mapping = {
-        "purpose": "目的",
-        "performanceIntent": "狐の演技意図",
-    }
+    mapping = {"purpose": "目的", "performanceIntent": "狐の演技意図"}
     for key, label in mapping.items():
         if key in override:
-            block = re.sub(
-                rf"(?m)^- {re.escape(label)}：.*$",
-                f"- {label}：{override[key]}",
-                block,
-                count=1,
-            )
+            block = re.sub(rf"(?m)^- {re.escape(label)}：.*$", f"- {label}：{override[key]}", block, count=1)
     return md[:match.start(1)] + block + md[match.end(1):]
 
 
@@ -190,25 +172,12 @@ def apply_visual_overrides(render: dict[str, Any], bindings: dict[str, Any]) -> 
         for key in ("headline", "supportingTexts", "purpose", "performanceIntent"):
             if key in override:
                 scene[key] = override[key]
-    beat_map = {
-        beat["beatId"]: beat
-        for scene in render.get("scenes", [])
-        for beat in scene.get("visualBeats", [])
-    }
+    beat_map = {beat["beatId"]: beat for scene in render.get("scenes", []) for beat in scene.get("visualBeats", [])}
     for beat_id, override in bindings.get("beat_overrides", {}).items():
         beat = beat_map.get(beat_id)
         if beat is None:
             raise ValueError(f"unknown beat override: {beat_id}")
-        for key in (
-            "screenQuestion",
-            "primaryElement",
-            "viewerTexts",
-            "changeCue",
-            "contentType",
-            "visualTemplate",
-            "visualMode",
-            "screenState",
-        ):
+        for key in ("screenQuestion", "primaryElement", "viewerTexts", "changeCue", "contentType", "visualTemplate", "visualMode", "screenState"):
             if key in override:
                 beat[key] = override[key]
         if "templateVariant" in override:
@@ -275,11 +244,7 @@ def main() -> int:
     apply_visual_overrides(render, bindings)
     for scene_id, override in bindings.get("scene_overrides", {}).items():
         md = replace_scene_visual_copy(md, int(scene_id.split("-")[1]), override)
-    beat_map = {
-        beat["beatId"]: beat
-        for scene in render.get("scenes", [])
-        for beat in scene.get("visualBeats", [])
-    }
+    beat_map = {beat["beatId"]: beat for scene in render.get("scenes", []) for beat in scene.get("visualBeats", [])}
     for beat_id, override in bindings.get("beat_overrides", {}).items():
         md = replace_beat_visual_copy(md, beat_id, override, beat_map[beat_id])
 
@@ -291,11 +256,17 @@ def main() -> int:
         "foxCharacter": review["scores"]["fox_voice"],
         "reasonToFinish": review["scores"]["late_payoff"],
     }
+    reviewer = review.get("reviewer", "editorial_critic")
+    review_note = (
+        "External Independent Critic PASS after targeted patch"
+        if reviewer == "independent_critic"
+        else "04 editorial review PASS after targeted rewrite"
+    )
     render.setdefault("review", {})["verdict"] = "approved"
     render["review"]["scores"] = score_map
     render["review"]["totalScore"] = review["total_score"]
     render["review"]["requiredChanges"] = []
-    render["review"]["changesApplied"] = ["Story Engine independent critic PASS after targeted patch"]
+    render["review"]["changesApplied"] = [review_note]
 
     for idx, scene in enumerate(script["scenes"], start=1):
         rscene = render["scenes"][idx - 1]
@@ -314,6 +285,7 @@ def main() -> int:
         "status": "pass",
         "source_story_script_sha256": sha(args.story_script),
         "source_creative_review_sha256": sha(args.creative_review),
+        "reviewer": reviewer,
         "before": before,
         "after": {"render_spec": sha(args.render_spec), "episode_package_public": sha(args.episode_package_public)},
         "scene_count": 9,

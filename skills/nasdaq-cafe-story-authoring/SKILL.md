@@ -1,146 +1,223 @@
 ---
 name: nasdaq-cafe-story-authoring
-description: Convert an approved NASDAQ Cafe Story Plan into the fox's nine-scene narration without changing market causality, confidence, timing, counterevidence, or the formal scene roles.
-version: 1.0.0
+description: Convert an approved NASDAQ Cafe Story Plan into the fox's natural nine-scene narration without changing market causality, confidence, timing, counterevidence, or formal scene roles.
+version: 1.1.0
 ---
 
 # NASDAQ Cafe Story Authoring
 
 ## Purpose
 
-This skill begins only after the causal dossier and Story Plan have passed their validators. It writes the fox's spoken draft. It does not research new facts, choose a new lead, change Expected / Actual / Gap, or alter the nine formal scene roles.
+This skill begins only after the causal dossier and Story Plan v1.2 pass their validators.
+It writes the fox's spoken draft. It does not research new facts, choose a new lead, change Expected / Actual / Gap, or alter the nine formal Scene roles.
+
+The key rule is:
+
+> **The Story Plan is strict about meaning. The spoken surface is free.**
+
+The fox must never sound like he is reading the production process.
 
 ## Inputs
 
 Required:
 - validated causal dossier
-- validated `story_plan.json`
+- validated Story Plan v1.2
 - current 01–04 source-of-truth documents
-
-Optional:
-- approved historical style memory, only when already allowed by the current memory contract
 
 ## Output
 
 `story_script.json` matching the Story Engine `story_script.schema.json`.
 
-## Non-negotiable boundary
+## Frozen editorial state
 
-Treat the following as frozen editorial state:
-- Evidence IDs and source meaning
-- central contradiction and selected angle
+Never change:
+- Evidence IDs and evidence meaning
+- central contradiction / selected angle
 - Expected / Actual / Gap
+- chronology
 - causal edge scope
 - confidence
-- important contrary evidence
+- material counterevidence
 - unresolved factors
 - Scene 1–9 order and formal roles
 
-If the prose would be easier only by changing one of these, stop and return the artifact to the owning upstream stage.
+If natural prose would require changing these, return upstream instead.
 
-## Authoring workflow
+---
 
-### Stage 1 — Read the Story Plan as viewer-state transitions
+## Stage 1 — Read each Scene as an Understanding Progression
 
-For each Scene, read:
+For Scenes 1–7 read:
 - `viewer_belief_before`
 - `new_evidence_ids`
 - `new_meaning`
 - `viewer_belief_after`
-- `remaining_question`
+- `continuation_reason`
 - `connector`
 
-The narration must make that change legible. A Scene that merely restates the previous conclusion is not complete.
+For Scene 8 read:
+- `viewer_belief_before`
+- `new_evidence_ids`
+- `new_meaning`
+- `viewer_belief_after`
+- `closing_reframe`
+- strengthen / weaken / uncertainty material
 
-### Stage 2 — Protect the opening information gap
+The narration must deliver the meaning transition.
+It must **not** recite those field names or their production-language paraphrases.
 
-Scene 1 must give:
+## Stage 2 — Give early value without exhausting the story
+
+Scene 1 must provide:
 - NASDAQ direction
 - the contradiction
-- the question or promise
+- a useful early interpretation/promise
 
-Do not fully resolve the central question in Scene 1. The viewer should know what is strange and why it matters, but still need Scenes 3–6 to understand the mechanism.
+Do not use artificial withholding such as:
 
-### Stage 3 — Write causal connectors, not slide transitions
+```text
+「答えは後半で分かります」
+```
 
-Prefer connections whose meaning is equivalent to `but`, `therefore`, `contrast`, or `callback`.
+Do not fully exhaust the later proof either.
+The viewer should already have learned something and still have a rational reason to inspect the mechanism.
 
-Avoid procedural narration such as:
+## Stage 3 — Translate continuation reason into natural speech
+
+`continuation_reason` is an internal meaning contract, not spoken copy.
+
+It may surface as:
+- a question
+- a comparison
+- a test
+- a boundary
+- counterevidence
+- an implication
+- a short contrast
+
+Do **not** force every Scene to end with a question.
+
+Bad procedural transitions:
 - 「次に見ます」
 - 「続いて確認します」
+- 「時系列を固定します」
+- 「ここまでが確認済み事実です」
 - 「ではExpectedとActualです」
+- 「仮説を検証します」
 
-A connection must explain why the next evidence changes the current understanding.
+Better examples:
+- 「しかも、見通しは市場予想にも勝っています。」
+- 「ここでNVIDIA側を見ると、差が具体的になります。」
+- 「じゃあ、この説明は実際の値動きとも合うのか。」
+- 「ただ、NASDAQまでAMD一社で説明すると、話がきれいすぎます。」
 
-### Stage 4 — Preserve the fox
+## Stage 4 — Preserve the fox
 
 - first person is 「僕」
-- the fox is a guide, not an outside announcer or teacher
-- all Scenes are voiced by the same fox
-- IT analogy: 0–2 per episode
-- self-deprecating / poverty / loss / leverage joke: total 0–1
-- jokes and analogies are optional and must return immediately to the real market mechanism
-- never invent holdings, trades, P&L, past wins/losses, or personal market history
+- one fox voice across all Scenes
+- guide, not teacher or outside announcer
+- short spoken sentences where useful
+- IT analogy 0–2 total
+- self-deprecating / poverty / loss / leverage joke 0–1 total
+- jokes and analogies are optional
+- never invent holdings, trades, P&L, wins/losses, or history
 
-Fox character comes mainly from the way the audience is guided: short observations, human-scale comparisons, and a feeling of checking the market together.
+Fox character should emerge primarily from observation and guidance, not from inserted jokes.
 
-### Stage 5 — Make difficult mechanisms understandable
+## Stage 5 — Clarify without replacing the mechanism
 
-When a concept is difficult, use one of:
-- a concrete comparison
-- a short daily-life example
-- a university-life example
-- a short IT analogy
+For difficult concepts, use at most a short:
+- concrete comparison
+- daily-life example
+- university-life example
+- IT analogy
 
-Then return to the actual market structure in the next sentence. Do not replace the real mechanism with the analogy.
+Return immediately to the actual market mechanism.
 
-### Stage 6 — Keep the late payoff alive
+## Stage 6 — Protect late value
 
-Scene 4 may state the central hypothesis, but it must not make Scenes 6–8 unnecessary.
+Scene 4 may reveal the central hypothesis.
+That does not authorize Scenes 6–8 to become appendices.
 
-Preferred progression:
-- Scene 4: hypothesis becomes visible
-- Scene 5: context explains why the gap matters
-- Scene 6: market reaction tests the hypothesis and acts as the preferred midpoint turn
-- Scene 7: comparison defines the hypothesis's range and limit
-- Scene 8: validation points and closing reframe
+Preferred functions:
+- Scene 4: evaluation axis becomes visible
+- Scene 5: concrete mechanism / comparison
+- Scene 6: price reaction tests the hypothesis
+- Scene 7: boundary and counterevidence define scope
+- Scene 8: verification conditions + opening reframe + closure
 
-### Stage 7 — Scene 9 is fixed closing
+Scene 6 and Scene 7 must each provide independent understanding value.
 
-Use the meaning of:
+## Stage 7 — Scene 8 closes; Scene 9 exits
+
+Scene 8 should make the opening contradiction look different after the evidence accumulated across the episode.
+It must not manufacture another open loop.
+
+Scene 9 uses the fixed closing meaning:
 
 `以上、朝のNASDAQカフェでした。今日も気をつけて、いってらっしゃい。こちらはそろそろ、おやすみなさい。`
 
-Punctuation and natural pauses may vary, but do not add evidence, a new thesis, investment advice, or a long disclaimer.
+No new evidence, thesis, advice, or long disclaimer.
+
+---
+
+## Surface-only Spoken Delivery Pass
+
+Run exactly one delivery pass after the factual draft is complete and before Entertainment Critic review.
+
+Allowed changes:
+- word order
+- sentence length
+- connectors
+- spoken phrasing
+- short fox reaction
+- whether a question is explicit or implicit
+- optional short analogy
+- pauses/punctuation
+
+Forbidden changes:
+- Claim ID
+- Evidence ID
+- numeric values
+- Expected / Actual / Gap
+- chronology
+- claim type
+- confidence
+- causal scope
+- counterevidence
+- formal role
+
+After the pass, run the causal before/after validator. Any guarded metadata difference fails.
 
 ## Causal claim metadata
 
 Every material causal sentence must have a `causal_claims` entry.
 
-- `fact`: directly supported fact; confidence may follow the evidence
-- `reported_interpretation`: reported market interpretation; may not exceed dossier central confidence
-- `grounded_inference`: editorial inference; may not exceed dossier central confidence
-- `unknown`: must remain confidence `unknown`, scope `reason_unknown`
+- `fact`: direct fact
+- `reported_interpretation`: reported market interpretation
+- `grounded_inference`: evidence-bound editorial inference
+- `unknown`: confidence `unknown`, scope `reason_unknown`
 
-Allowed scope ends at `nasdaq_support`. This Story Engine may not promote a company-specific event to `nasdaq_primary`.
+Non-fact confidence may never exceed dossier confidence.
+Allowed scope ends at `nasdaq_support`.
 
 ## Counterevidence and uncertainty
 
-Every dossier `contrary_evidence` item with `effect_on_confidence=material` must remain represented in the script and listed in `retained_counterevidence_ids`.
-
-If the dossier has unresolved factors, record them in `unresolved_points`. Do not convert missing data into a clean answer for narrative convenience.
+Every material dossier counterevidence item must remain represented and listed in `retained_counterevidence_ids`.
+Missing data must remain in `unresolved_points`.
 
 ## Final self-check
 
-Before handing the draft to the Independent Critic:
-- nine Scenes are present and in fixed order
-- Scene roles match Story Plan
-- Scene 1 preserves an information gap
-- every Scene 2–8 changes understanding
-- Scene 6 is a real test/turn when evidence permits
-- Scene 8 contains the closing reframe
-- Scene 9 contains no new evidence
+Before Critic handoff:
+- nine Scenes present and ordered
+- formal roles match Story Plan
+- Scenes 1–8 each deliver their planned understanding payoff
+- Scenes 1–7 naturally justify continuation without question-factory behavior
+- Scene 6 and 7 have independent value
+- Scene 8 closes the opening promise
+- Scene 9 adds nothing new
+- procedural narration is not dominant
 - first person is 「僕」
 - no investment advice or deterministic price prediction
 - material counterevidence and unresolved factors remain
-- all causal claim IDs have Evidence IDs and unchanged confidence/scope
+- causal metadata is unchanged

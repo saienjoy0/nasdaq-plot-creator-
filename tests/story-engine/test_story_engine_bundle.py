@@ -13,6 +13,13 @@ def dump(root,name,obj):
 
 def ref(p,root): return {'path':p.relative_to(root).as_posix(),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}
 
+def passing_scene_checks():
+    checks=[]
+    for i in range(1,8):
+        checks.append({'scene_id':f'scene-{i:02d}','mode':'continue','payoff_delivered':True,'belief_changed':True,'continuation_reason_natural':True,'closure_effective':None,'opening_promise_recovered':None,'procedural_language_dominant':False})
+    checks.append({'scene_id':'scene-08','mode':'close','payoff_delivered':True,'belief_changed':True,'continuation_reason_natural':None,'closure_effective':True,'opening_promise_recovered':True,'procedural_language_dominant':False})
+    return checks
+
 def base(tmp_path):
     root=tmp_path
     dossier={
@@ -34,7 +41,7 @@ def base(tmp_path):
     scenes[-1]['narration']='以上、朝のNASDAQカフェでした。今日も気をつけて、いってらっしゃい。こちらはそろそろ、おやすみなさい。'
     script={'contract_version':'1.0.0','episode_date':'2026-08-06','producer':'chatgpt','story_plan':ref(pp,root),'causal_dossier':ref(dp,root),'scenes':scenes,'retained_counterevidence_ids':['E-001','E-004'],'unresolved_points':[{'statement':'金利・VIXの寄与は未確認です。','evidence_ids':['E-009']}]}
     sp=dump(root,'working/script.json',script)
-    review={'contract_version':'1.0.0','episode_date':'2026-08-06','reviewer':'independent_critic','round':1,'scores':{'opening':5,'progression':4,'discovery':4,'clarity':4,'fox_voice':4,'late_payoff':4},'total_score':25,'immediate_failures':[],'findings':[],'verdict':'pass'}
+    review={'contract_version':'1.1.0','episode_date':'2026-08-06','reviewer':'editorial_critic','round':1,'scores':{'opening':5,'progression':4,'discovery':4,'clarity':4,'fox_voice':4,'late_payoff':4},'total_score':25,'scene_checks':passing_scene_checks(),'immediate_failures':[],'findings':[],'verdict':'pass'}
     rp=dump(root,'working/review.json',review)
     return root,dp,pp,sp,rp,script,review
 
