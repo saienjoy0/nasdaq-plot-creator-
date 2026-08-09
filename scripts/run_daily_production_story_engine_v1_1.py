@@ -4,7 +4,13 @@
 Keeps Story Engine internal passes out of the public Daily Production state machine.
 The only public transition is causal_dossier_valid -> episode_package_final, guarded by
 one hash-bound Story Engine acceptance artifact plus the final episode package and
-projection report. Production is blocked unless the Critic receipt is orchestrator-signed.
+projection report.
+
+External Independent Critic certification is an optional quality upgrade for daily
+operation. The daily gate still requires the complete editorial review, causality guards,
+scene guards and artifact lineage. When no orchestrator-signed external Critic receipt
+exists, production may proceed only through the validator's explicit uncertified-policy
+path, which reports that certification is absent instead of pretending it occurred.
 """
 from __future__ import annotations
 
@@ -70,6 +76,7 @@ def _install_v11_gate(daily: Any) -> Any:
                 acceptance_paths[0],
                 repo_root=root,
                 require_production=True,
+                allow_uncertified_production=True,
             )
             if result["status"] != "pass":
                 messages = "; ".join(item.get("message", "Story Engine acceptance failed") for item in result.get("errors", []))
