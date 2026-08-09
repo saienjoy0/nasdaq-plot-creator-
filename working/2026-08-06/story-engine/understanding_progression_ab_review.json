@@ -1,0 +1,104 @@
+{
+  "contract_version": "1.0.0",
+  "episode_date": "2026-08-06",
+  "experiment": "understanding_progression_v1.1",
+  "status": "implementation_candidate",
+  "baseline": {
+    "story_plan_contract": "1.1.0",
+    "creative_review_score": 27,
+    "known_surface_risks": [
+      "PROCEDURAL_NARRATION",
+      "ABSTRACT_EDITORIAL_LANGUAGE",
+      "FOX_VOICE_TOO_RESTRAINED"
+    ],
+    "examples": [
+      "解釈を足す前に順番を固定します。",
+      "ここまでは確認できる事実です。",
+      "ここで値動きを重ねます。"
+    ]
+  },
+  "candidate": {
+    "story_plan_contract": "1.2.0",
+    "creative_review_contract": "1.1.0",
+    "reviewer": "editorial_critic",
+    "external_critic_status": "not_run",
+    "critic_certified": false,
+    "creative_review_score": 28,
+    "scene_08_mode": "close",
+    "major_or_critical_findings": []
+  },
+  "frozen_invariants": {
+    "market_numbers_changed": false,
+    "claim_ids_changed": false,
+    "evidence_ids_changed": false,
+    "claim_types_changed": false,
+    "confidence_changed": false,
+    "causal_scope_changed": false,
+    "material_counterevidence_removed": false,
+    "chronology_reordered": false,
+    "nasdaq_scope_strengthened": false,
+    "scene_order_changed": false,
+    "scene_09_changed": false
+  },
+  "scene_changes": [
+    {
+      "scene_id": "scene-01",
+      "change": "none",
+      "reason": "Opening already delivered direction, contradiction and a usable promise without exhausting later proof."
+    },
+    {
+      "scene_id": "scene-02",
+      "change": "none",
+      "reason": "Contradiction was already concise and naturally removed the simple bad-numbers explanation."
+    },
+    {
+      "scene_id": "scene-03",
+      "change": "surface_rewrite",
+      "before_problem": "Production-process language announced that facts would be fixed before interpretation.",
+      "after_payoff": "The usual-consensus-miss explanation is directly ruled out while chronology remains visible."
+    },
+    {
+      "scene_id": "scene-04",
+      "change": "surface_rewrite",
+      "before_problem": "Expected/Actual/Gap explanation was accurate but report-like.",
+      "after_payoff": "The viewer understands that AMD passed the ordinary test while a second evaluation axis may have mattered."
+    },
+    {
+      "scene_id": "scene-05",
+      "change": "surface_rewrite",
+      "before_problem": "The NVIDIA comparison was introduced as an abstract scoring-column explanation.",
+      "after_payoff": "SpaceX appears as a concrete relative adoption proof, with an explicit guard against treating it as the sole cause of NVIDIA's rise."
+    },
+    {
+      "scene_id": "scene-06",
+      "change": "surface_rewrite",
+      "before_problem": "Market-reaction test was framed as a production step.",
+      "after_payoff": "The hypothesis is openly tested against NVIDIA/AMD/SOXX price divergence, then bounded before NASDAQ-wide extrapolation."
+    },
+    {
+      "scene_id": "scene-07",
+      "change": "surface_rewrite",
+      "before_problem": "Counterevidence was presented mainly as a cautionary appendix.",
+      "after_payoff": "The story deliberately tries to break its own explanation using Alphabet, Microsoft and Dow, creating distinct late value."
+    },
+    {
+      "scene_id": "scene-08",
+      "change": "surface_rewrite_and_bookend",
+      "before_problem": "Validation conditions were accurate but felt like a checklist before a summary.",
+      "after_payoff": "The episode returns to the opening AMD contradiction, states the conditional interpretation, preserves missing-data limits and closes the analytical story."
+    },
+    {
+      "scene_id": "scene-09",
+      "change": "none",
+      "reason": "Fixed closing remains unchanged and adds no evidence or thesis."
+    }
+  ],
+  "acceptance_requirements_before_formal_promotion": [
+    "Story Plan v1.2 validator PASS",
+    "Creative Review v1.1 / Understanding Progression checks PASS",
+    "Story Engine bundle causality guard PASS",
+    "optional external Critic policy regression PASS",
+    "Daily Production projection/package regression PASS",
+    "no paid external model invocation"
+  ]
+}
