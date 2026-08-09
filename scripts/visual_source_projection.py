@@ -3,12 +3,17 @@
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
+import os
 import re
 from pathlib import Path
 from typing import Any
 
+import resolve_visual_sources
+import select_visual_sources
+import verify_visual_source_ab
 import visual_source_contract
 
 
@@ -28,6 +33,14 @@ def load_json(path: Path, label: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise VisualSourceProjectionError(f"{label} root must be an object")
     return value
+
+
+def write_json(path: Path, value: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    text = json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    tmp = path.with_name(f".{path.name}.visual-source.tmp")
+    tmp.write_text(text, encoding="utf-8")
+    tmp.replace(path)
 
 
 def _beat_aliases(beat_id: str) -> set[str]:
@@ -67,12 +80,7 @@ def _existing_asset_is_exact_current_placement(
     placement_config: dict[str, Any],
     asset_id: str,
 ) -> bool:
-    """Return true only when an existing reusable asset is already the exact Beat placement.
-
-    In that case the Approved Fallback is the current renderer state itself, so projection
-    must not rewrite role/fit/region/focal point or Beat state. This is what makes a
-    fallback a true preservation path rather than a second visual design.
-    """
+    """Return true only when an existing reusable asset is already the exact Beat placement."""
     placement_id = placement_config["placementId"]
     existing = next(
         (
@@ -150,6 +158,79 @@ def _apply_selected_placement(
     beat["assetState"] = "ready"
 
 
+def _rebind_selection_to_final_contract(
+    *, root: Path, date: str, final_contract_path: Path
+) -> Path:
+    """Resolve/select again only when the persisted selection is not bound to the final contract.
+
+    The selection decision itself stays in visual_source_selection.json. This function does not
+    choose a path; it only recomputes mechanical resolution against the exact post-Story contract.
+    """
+    work = root / "working" / date
+    verification = root / "verification" / date
+    selection_path = work / "visual_source_selection.json"
+    if not selection_path.is_file():
+        raise VisualSourceProjectionError(
+            "E_VISUAL_SOURCE_SELECTED_PATH_INVALID: visual_source_selection.json is required"
+        )
+    selected_output = work / "visual_source_selected_assets.json"
+    current_sha = sha256_file(final_contract_path)
+    if selected_output.is_file():
+        selected = load_json(selected_output, "Visual Source selected assets")
+        if selected.get("finalEpisodeContractSha256") == current_sha:
+            return selected_output
+
+    raw_resolution = verification / "asset_resolution_raw.json"
+    audit_output = verification / "asset_resolution_log.json"
+    collector_root = None
+    if os.environ.get("NASDAQ_CAFE_COLLECTOR_ROOT"):
+        collector_root = Path(os.environ["NASDAQ_CAFE_COLLECTOR_ROOT"])
+    try:
+        resolve_visual_sources.resolve_all(
+            contract_path=final_contract_path,
+            repo_root=root,
+            output_path=raw_resolution,
+            asset_root=root / "daily-assets",
+            collector_root=collector_root,
+        )
+        select_visual_sources.select(
+            contract_path=final_contract_path,
+            resolution_path=raw_resolution,
+            selection_path=selection_path,
+            selected_output=selected_output,
+            audit_output=audit_output,
+        )
+    except (
+        OSError,
+        KeyError,
+        json.JSONDecodeError,
+        resolve_visual_sources.VisualSourceResolutionError,
+        select_visual_sources.VisualSourceSelectionError,
+    ) as exc:
+        raise VisualSourceProjectionError(str(exc)) from exc
+    return selected_output
+
+
+def _run_ab_gate(
+    *, root: Path, date: str, baseline_render: dict[str, Any], candidate_render: dict[str, Any], selected_path: Path
+) -> None:
+    verification = root / "verification" / date
+    baseline_path = verification / "visual_source_ab_baseline_render.json"
+    candidate_path = verification / "visual_source_ab_candidate_render.json"
+    report_path = verification / "visual_source_ab_report.json"
+    write_json(baseline_path, baseline_render)
+    write_json(candidate_path, candidate_render)
+    try:
+        verify_visual_source_ab.verify(
+            baseline_path=baseline_path,
+            candidate_path=candidate_path,
+            selected_path=selected_path,
+            report_path=report_path,
+        )
+    except (verify_visual_source_ab.VisualSourceABError, OSError, KeyError, json.JSONDecodeError) as exc:
+        raise VisualSourceProjectionError(f"E_VISUAL_SOURCE_AB_DRIFT: {exc}") from exc
+
+
 def prepare_visual_sources(
     *,
     root: Path,
@@ -176,11 +257,9 @@ def prepare_visual_sources(
             "has_visual_sources": False,
         }
 
-    selected_path = work / "visual_source_selected_assets.json"
-    if not selected_path.is_file():
-        raise VisualSourceProjectionError(
-            "E_VISUAL_SOURCE_SELECTED_PATH_INVALID: working visual_source_selected_assets.json is required"
-        )
+    selected_path = _rebind_selection_to_final_contract(
+        root=root, date=date, final_contract_path=final_contract_path
+    )
     selected = load_json(selected_path, "Visual Source selected assets")
     if selected.get("episodeDate") != date:
         raise VisualSourceProjectionError("Visual Source selected assets episodeDate mismatch")
@@ -193,6 +272,7 @@ def prepare_visual_sources(
     if not isinstance(selected_assets, list) or len(selected_assets) != len(intents):
         raise VisualSourceProjectionError("selected Visual Source asset count mismatch")
 
+    baseline_render = copy.deepcopy(render)
     intent_map = {item["intentId"]: item for item in intents}
     seen_intents: set[str] = set()
     overrides: dict[str, dict[str, Any]] = {}
@@ -267,6 +347,14 @@ def prepare_visual_sources(
         raise VisualSourceProjectionError(
             f"selected Visual Source intents incomplete: {sorted(set(intent_map) - seen_intents)}"
         )
+
+    _run_ab_gate(
+        root=root,
+        date=date,
+        baseline_render=baseline_render,
+        candidate_render=copy.deepcopy(render),
+        selected_path=selected_path,
+    )
     return {
         "selected_path": global_path,
         "routes": routes,
