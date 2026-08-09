@@ -76,7 +76,21 @@ def normalize_script(runtime: dict[str, Any], template: dict[str, Any]) -> dict[
     return value
 
 
-def validate_acceptance(path: Path, *, repo_root: Path, require_production: bool = False) -> dict[str, Any]:
+def validate_acceptance(
+    path: Path,
+    *,
+    repo_root: Path,
+    require_production: bool = False,
+    allow_uncertified_production: bool = False,
+) -> dict[str, Any]:
+    """Validate Story Engine acceptance.
+
+    `allow_uncertified_production` is an explicit operating policy switch. It never
+    upgrades Critic provenance and never makes an unsigned receipt certified. When
+    enabled together with `require_production`, a fully valid editorial package may
+    proceed while the response remains explicit that external Critic certification
+    is absent.
+    """
     root = repo_root.resolve()
     errors: list[Item] = []
     warnings: list[Item] = []
@@ -152,7 +166,7 @@ def validate_acceptance(path: Path, *, repo_root: Path, require_production: bool
     review_runtime = load(resolved["creative_review"])
     review_source = load((root / receipt["review"]["path"]).resolve())
     if review_runtime != review_source:
-        errors.append(Item("E_REVIEW_DRIFT", "materialized review differs from the Critic-reviewed source artifact", "artifacts.creative_review"))
+        errors.append(Item("E_REVIEW_DRIFT", "materialized review differs from the reviewed source artifact", "artifacts.creative_review"))
 
     critic = acceptance.get("critic", {})
     if critic.get("author_invocation_id") != receipt.get("author_invocation_id"):
@@ -160,9 +174,9 @@ def validate_acceptance(path: Path, *, repo_root: Path, require_production: bool
     if critic.get("critic_invocation_id") != receipt.get("critic_invocation_id"):
         errors.append(Item("E_CRITIC_ID", "acceptance critic invocation differs from receipt", "critic.critic_invocation_id"))
     if critic.get("isolation_mode") != "separate_invocation":
-        errors.append(Item("E_ISOLATION", "acceptance requires separate_invocation Critic", "critic.isolation_mode"))
+        errors.append(Item("E_ISOLATION", "acceptance requires separate_invocation review lineage", "critic.isolation_mode"))
     if critic.get("verdict") != "pass" or int(critic.get("score", 0)) < 25:
-        errors.append(Item("E_CRITIC_PASS", "final independent Critic must PASS with score >=25", "critic"))
+        errors.append(Item("E_CRITIC_PASS", "final editorial review must PASS with score >=25", "critic"))
 
     validation = acceptance.get("validation", {})
     required_checks = {"story_plan", "story_script", "independent_critic", "independent_critic_receipt", "causality_guard", "scene_order_guard", "scene_09_guard"}
@@ -171,26 +185,54 @@ def validate_acceptance(path: Path, *, repo_root: Path, require_production: bool
             errors.append(Item("E_VALIDATION", f"validation check is not PASS: {key}", f"validation.{key}"))
 
     attestation_strength = receipt.get("provenance", {}).get("attestation_strength")
+    critic_certified = attestation_strength == "orchestrator_signed"
+    external_critic_status = "certified" if critic_certified else "not_certified"
+    production_policy = (
+        "external_critic_optional"
+        if require_production and allow_uncertified_production
+        else "external_critic_required"
+        if require_production
+        else "artifact_validation_only"
+    )
+
     if require_production:
-        if not production_eligible:
-            errors.append(Item("E_PRODUCTION_ELIGIBILITY", "Story Engine acceptance is not production eligible", "production_eligible"))
-        if attestation_strength != "orchestrator_signed":
-            errors.append(Item(
-                "E_CRITIC_PROCESS_NOT_PROVEN",
-                "production requires orchestrator_signed proof of a distinct Critic execution; repository provenance is insufficient",
-                "critic.execution_receipt",
-            ))
+        if allow_uncertified_production:
+            if not critic_certified:
+                warnings.append(Item(
+                    "W_EXTERNAL_CRITIC_NOT_CERTIFIED",
+                    "production is allowed by explicit optional-Critic policy, but no orchestrator-signed external Critic certification exists",
+                    "critic.execution_receipt",
+                ))
+        else:
+            if not production_eligible:
+                errors.append(Item("E_PRODUCTION_ELIGIBILITY", "Story Engine acceptance is not production eligible", "production_eligible"))
+            if not critic_certified:
+                errors.append(Item(
+                    "E_CRITIC_PROCESS_NOT_PROVEN",
+                    "production requires orchestrator_signed proof of a distinct Critic execution; repository provenance is insufficient",
+                    "critic.execution_receipt",
+                ))
     elif not production_eligible:
         warnings.append(Item(
-            "W_PRODUCTION_BLOCKED",
-            "Story Engine artifacts are valid but production remains blocked until an orchestrator_signed independent Critic receipt exists",
+            "W_EXTERNAL_CRITIC_NOT_CERTIFIED",
+            "Story Engine artifacts are valid, but external Critic certification is not present",
             "production_eligible",
         ))
+
+    production_allowed_by_policy = not errors and (
+        not require_production
+        or critic_certified
+        or allow_uncertified_production
+    )
 
     return {
         "contract_version": "1.1.0",
         "episode_date": date,
         "production_eligible": production_eligible,
+        "production_allowed_by_policy": production_allowed_by_policy,
+        "production_policy": production_policy,
+        "critic_certified": critic_certified,
+        "external_critic_status": external_critic_status,
         "status": "fail" if errors else "pass",
         "errors": [x.as_dict() for x in errors],
         "warnings": [x.as_dict() for x in warnings],
@@ -202,10 +244,20 @@ def main() -> int:
     ap.add_argument("--repo-root", type=Path, default=ROOT)
     ap.add_argument("--acceptance", type=Path, required=True)
     ap.add_argument("--require-production", action="store_true")
+    ap.add_argument(
+        "--allow-uncertified-production",
+        action="store_true",
+        help="allow production after all editorial/causality guards pass even when external Critic certification is absent",
+    )
     args = ap.parse_args()
     root = args.repo_root.resolve()
     acceptance = args.acceptance if args.acceptance.is_absolute() else root / args.acceptance
-    result = validate_acceptance(acceptance, repo_root=root, require_production=args.require_production)
+    result = validate_acceptance(
+        acceptance,
+        repo_root=root,
+        require_production=args.require_production,
+        allow_uncertified_production=args.allow_uncertified_production,
+    )
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
     return 0 if result["status"] == "pass" else 1
 
