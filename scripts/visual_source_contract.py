@@ -119,14 +119,21 @@ def _validate_candidate(
 def validate_visual_sources(
     *, contract: dict[str, Any], visual_sources: dict[str, Any], schema: dict[str, Any]
 ) -> dict[str, Any]:
-    candidate_contract = dict(contract)
-    candidate_contract["visualSources"] = visual_sources
-    validator = Draft202012Validator(schema)
-    schema_errors = sorted(validator.iter_errors(candidate_contract), key=lambda e: list(e.path))
+    # The base Final Episode Contract was already validated by the existing
+    # validator, including its external Financial Visual candidate-plan ref.
+    # Validate only the new extension against the exact same $defs to avoid
+    # re-resolving unrelated external refs or duplicating existing validation.
+    extension_schema = {
+        "$schema": schema.get("$schema", "https://json-schema.org/draft/2020-12/schema"),
+        "$defs": schema["$defs"],
+        "$ref": "#/$defs/visualSources",
+    }
+    validator = Draft202012Validator(extension_schema)
+    schema_errors = sorted(validator.iter_errors(visual_sources), key=lambda e: list(e.path))
     if schema_errors:
         formatted = []
         for error in schema_errors:
-            location = "$" + "".join(
+            location = "$.visualSources" + "".join(
                 f"[{part}]" if isinstance(part, int) else f".{part}"
                 for part in error.path
             )
@@ -190,6 +197,8 @@ def validate_visual_sources(
 
     if errors:
         raise VisualSourceContractError("\n".join(errors))
+    candidate_contract = dict(contract)
+    candidate_contract["visualSources"] = visual_sources
     return candidate_contract
 
 
