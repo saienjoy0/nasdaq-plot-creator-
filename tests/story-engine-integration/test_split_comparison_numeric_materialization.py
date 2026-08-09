@@ -12,7 +12,7 @@ if str(SCRIPTS) not in sys.path:
 import remotion_template_data  # noqa: E402
 
 
-def test_mixed_metric_conversion_reuses_numbers_and_authored_lane_labels():
+def test_mixed_metric_conversion_reuses_numbers_and_existing_numeric_labels():
     scene = {
         "sceneId": "scene-02",
         "cards": [
@@ -34,10 +34,7 @@ def test_mixed_metric_conversion_reuses_numbers_and_authored_lane_labels():
                 "visualMode": "number-comparison",
                 "contentType": "diverging-stock-bars",
                 "visualGrammarId": "comparison",
-                "viewerTexts": [
-                    "追い風｜Q2売上 115.4億ドル",
-                    "向かい風｜AMD -7.04%",
-                ],
+                "viewerTexts": ["Q2売上 115.4億ドル", "AMD -7.04%"],
                 "objectIds": ["scene-02-card-002"],
                 "templateConfig": {"variant": "default", "laneLabels": []},
             }
@@ -56,4 +53,4 @@ def test_mixed_metric_conversion_reuses_numbers_and_authored_lane_labels():
     assert beat["visualTemplate"] == "tailwind-headwind"
     assert beat["templateVariant"] == "two-lane"
     assert beat["visualGrammarId"] == "evidence"
-    assert beat["templateConfig"]["laneLabels"] == ["追い風", "向かい風"]
+    assert beat["templateConfig"]["laneLabels"] == ["Q2売上", "AMD"]
