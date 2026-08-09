@@ -15,6 +15,7 @@ import argparse
 import copy
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -67,12 +68,35 @@ def _scene_map(spec: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return result
 
 
+def _beat_aliases(beat_id: str) -> set[str]:
+    aliases = {beat_id}
+    canonical = re.fullmatch(r"vb-(0[1-9])-([0-9]{2})", beat_id)
+    if canonical:
+        aliases.add(
+            f"scene-{canonical.group(1)}-beat-{int(canonical.group(2)):03d}"
+        )
+    producer = re.fullmatch(r"scene-(0[1-9])-beat-([0-9]{3})", beat_id)
+    if producer:
+        aliases.add(f"vb-{producer.group(1)}-{int(producer.group(2)):02d}")
+    return aliases
+
+
 def _beat_map(scene: dict[str, Any]) -> dict[str, dict[str, Any]]:
     result: dict[str, dict[str, Any]] = {}
     for beat in scene.get("visualBeats", []):
         if not isinstance(beat, dict) or not isinstance(beat.get("beatId"), str):
             raise VisualSourceABError(f"{scene.get('sceneId')}: invalid Visual Beat")
-        result[beat["beatId"]] = beat
+        ids = {beat["beatId"]}
+        if isinstance(beat.get("visualBeatId"), str):
+            ids.add(beat["visualBeatId"])
+        expanded = set().union(*(_beat_aliases(value) for value in ids))
+        for alias in expanded:
+            existing = result.get(alias)
+            if existing is not None and existing is not beat:
+                raise VisualSourceABError(
+                    f"{scene.get('sceneId')}: duplicate Visual Beat alias {alias}"
+                )
+            result[alias] = beat
     return result
 
 
@@ -108,7 +132,10 @@ def _sanitize(
         beats = _beat_map(scene)
         beat = beats.get(beat_id)
         if beat is None:
-            raise VisualSourceABError(f"selected target Beat missing: {scene_id}/{beat_id}")
+            raise VisualSourceABError(
+                f"selected target Beat missing: {scene_id}/{beat_id} "
+                f"aliases={sorted(_beat_aliases(beat_id))}"
+            )
         placements = _placement_map(scene)
         selected_placement = placements.get(placement_id)
         if selected_placement is None:
