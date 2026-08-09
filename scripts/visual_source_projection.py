@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -29,14 +30,33 @@ def load_json(path: Path, label: str) -> dict[str, Any]:
     return value
 
 
+def _beat_aliases(beat_id: str) -> set[str]:
+    aliases = {beat_id}
+    match = re.fullmatch(r"vb-(0[1-9])-([0-9]{2})", beat_id)
+    if match:
+        scene_number = match.group(1)
+        beat_number = int(match.group(2))
+        aliases.add(f"scene-{scene_number}-beat-{beat_number:03d}")
+    match = re.fullmatch(r"scene-(0[1-9])-beat-([0-9]{3})", beat_id)
+    if match:
+        scene_number = match.group(1)
+        beat_number = int(match.group(2))
+        aliases.add(f"vb-{scene_number}-{beat_number:02d}")
+    return aliases
+
+
 def _find_beat(render: dict[str, Any], scene_id: str, beat_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    aliases = _beat_aliases(beat_id)
     for scene in render.get("scenes", []):
         if scene.get("sceneId") != scene_id:
             continue
         for beat in scene.get("visualBeats", []):
-            if beat.get("beatId") == beat_id or beat.get("visualBeatId") == beat_id:
+            values = {beat.get("beatId"), beat.get("visualBeatId")}
+            if aliases.intersection(item for item in values if isinstance(item, str)):
                 return scene, beat
-    raise VisualSourceProjectionError(f"Visual Source target Beat not found: {scene_id}/{beat_id}")
+    raise VisualSourceProjectionError(
+        f"Visual Source target Beat not found: {scene_id}/{beat_id} aliases={sorted(aliases)}"
+    )
 
 
 def _apply_selected_placement(
