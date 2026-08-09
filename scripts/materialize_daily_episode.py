@@ -14,6 +14,7 @@ import zlib
 from pathlib import Path
 
 import materialize_renderer_sources as renderer_sources
+import visual_source_projection
 
 STORY_BEGIN = "<!--BEGIN_STORY_ENGINE_ANNEX-->"
 STORY_END = "<!--END_STORY_ENGINE_ANNEX-->"
@@ -171,6 +172,17 @@ def main() -> int:
     )
     render = renderer_materialization["render"]
     contract_package = renderer_materialization["contract_package_path"]
+    final_contract_path = renderer_materialization["final_contract_path"]
+
+    try:
+        visual_source = visual_source_projection.prepare_visual_sources(
+            root=root,
+            date=date,
+            final_contract_path=final_contract_path,
+            render=render,
+        )
+    except visual_source_projection.VisualSourceProjectionError as exc:
+        raise SystemExit(str(exc)) from exc
 
     story_acceptance_doc = json.loads(story_acceptance.read_text(encoding="utf-8"))
     story_annex = {
@@ -220,16 +232,14 @@ def main() -> int:
         "references": refs,
         "validation_intent": {"past_mentions_complete": True, "title_thumbnail_checked": True, "post_inquisition_final": True},
     }
-    asset_ids = sorted({
-        placement["assetId"]
-        for scene in render["scenes"]
-        for placement in scene.get("assetPlacements", [])
-        if isinstance(placement, dict) and isinstance(placement.get("assetId"), str)
-    })
-    asset_catalog = [
-        {"asset_id": asset_id, "path": f"renderer-registry/{asset_id}", "media_type": "image", "status": "not-required", "sha256": None}
-        for asset_id in asset_ids
-    ]
+
+    asset_catalog = visual_source_projection.build_asset_catalog(render, visual_source)
+    image_resolution = {
+        "status": "resolved",
+        "selected_path": visual_source["selected_path"],
+        "unresolved_count": 0,
+        "routes": visual_source["routes"],
+    }
     production_annex = {
         "contract_version": "1.0.0",
         "episode_date": date,
@@ -238,7 +248,7 @@ def main() -> int:
             "required_changes_applied": True,
             "unresolved_required_changes": 0,
         },
-        "image_resolution": {"status": "resolved", "selected_path": "not-required", "unresolved_count": 0, "routes": []},
+        "image_resolution": image_resolution,
         "renderer_contract": {"repository": "saienjoy0/saienjoy0-nasdaq-cafe-remotion", "schema_version": render["schemaVersion"]},
         "asset_catalog": asset_catalog,
         "render_spec": render,
@@ -253,14 +263,37 @@ def main() -> int:
     final_package.write_text(final, encoding="utf-8")
 
     verification = root / "verification" / date
-    (verification / "asset_resolution_log.json").write_text(
-        dump({"episode_date": date, "status": "resolved", "selected_path": "not-required", "unresolved_count": 0, "registered_assets": asset_ids}) + "\n",
-        encoding="utf-8",
-    )
-    (verification / "image_generation_log.json").write_text(
-        dump({"episode_date": date, "status": "not-required", "attempts": 0, "selected_path": "not-required"}) + "\n",
-        encoding="utf-8",
-    )
+    asset_log = verification / "asset_resolution_log.json"
+    if visual_source["has_visual_sources"]:
+        if not asset_log.is_file():
+            raise SystemExit(
+                "Visual Source selection requires precomputed verification asset_resolution_log.json"
+            )
+        audit = json.loads(asset_log.read_text(encoding="utf-8"))
+        selection = audit.get("selection") if isinstance(audit, dict) else None
+        if not isinstance(selection, dict) or selection.get("status") != "resolved":
+            raise SystemExit("Visual Source asset_resolution_log selection is unresolved")
+        if selection.get("selected_path") != visual_source["selected_path"]:
+            raise SystemExit("Visual Source asset_resolution_log selected_path mismatch")
+    else:
+        asset_ids = [item["asset_id"] for item in asset_catalog]
+        asset_log.write_text(
+            dump({"episode_date": date, "status": "resolved", "selected_path": "not-required", "unresolved_count": 0, "registered_assets": asset_ids}) + "\n",
+            encoding="utf-8",
+        )
+    selected_generated = [
+        item for item in visual_source["selected_assets"] if item.get("sourceKind") == "generated-image"
+    ]
+    image_generation_log = verification / "image_generation_log.json"
+    if not selected_generated:
+        image_generation_log.write_text(
+            dump({"episode_date": date, "status": "not-required", "attempts": 0, "selected_path": visual_source["selected_path"]}) + "\n",
+            encoding="utf-8",
+        )
+    elif not image_generation_log.is_file():
+        raise SystemExit(
+            "selected generated-image requires precomputed image_generation_log.json from ChatGPT image generation"
+        )
     print(f"WROTE {final_package}")
     return 0
 
