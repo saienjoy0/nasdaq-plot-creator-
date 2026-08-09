@@ -1,20 +1,37 @@
 ---
 name: nasdaq-cafe-entertainment-critic
-description: Independently review a NASDAQ Cafe story for interest, clarity, understanding progression, fox voice, and late payoff while preserving the frozen causal contract.
-version: 1.1.0
+description: Review a NASDAQ Cafe story for interest, clarity, understanding progression, fox voice, and late payoff while preserving the frozen causal contract.
+version: 1.1.1
 ---
 
-# NASDAQ Cafe Independent Entertainment Critic
+# NASDAQ Cafe Entertainment Critic
 
 ## Purpose
 
-Review the completed fox draft using 04 without inheriting the author's self-justification.
+Review the completed fox draft using 04 without accepting the author's self-justification as evidence of quality.
 
 The Critic may improve presentation. It may not change facts, chronology, Expected / Actual / Gap, confidence, counterevidence, causal scope, or the nine formal Scene roles.
 
 The governing principle is:
 
 > **Do not ask whether the script contains enough questions. Ask whether the viewer understands something new, and whether that new understanding makes the next Scene valuable.**
+
+## Reviewer modes
+
+The 04 review itself is mandatory. External certification is not.
+
+Two reviewer labels are allowed:
+
+```text
+editorial_critic
+independent_critic
+```
+
+Use `editorial_critic` for the normal ChatGPT-side 04 review when no separately proven external model process executed.
+
+Use `independent_critic` only when the review actually came from the external Critic path. A reviewer label alone does not prove certification; certification still requires the external request/receipt and an `orchestrator_signed` attestation.
+
+Never relabel an editorial review as independent merely to pass a gate.
 
 ## Inputs
 
@@ -203,5 +220,14 @@ Final title and thumbnail promise audits occur only after the final episode pack
 
 ## Acceptance
 
-A pass review plus a passing causal bundle validator is required for Story Engine creative acceptance.
-External Independent Critic certification may remain optional under the current production policy; if not externally certified, that status must remain explicit.
+A PASS 04 review plus a passing causal bundle validator is required for Story Engine creative acceptance.
+
+When no external Critic executed, keep:
+
+```text
+reviewer = editorial_critic
+critic_certified = false
+external_critic_status = not_run
+```
+
+When a real external review is later executed, the external lineage/certification layer may upgrade the status. It must never rewrite the editorial judgment or causal contract merely to obtain certification.
