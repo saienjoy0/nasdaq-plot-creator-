@@ -85,7 +85,19 @@ def _single_approved_card_id(scene: dict[str, Any], beat: dict[str, Any]) -> str
     return cards[0]["cardId"]
 
 
-def _use_mixed_metric_template(beat: dict[str, Any]) -> None:
+def _use_mixed_metric_template(
+    beat: dict[str, Any], numbers: list[dict[str, Any]]
+) -> None:
+    if len(numbers) != 2:
+        raise TemplateDataError(
+            f"{beat.get('beatId')}: mixed metric two-lane template requires exactly two numbers"
+        )
+    lane_labels = [item.get("label") for item in numbers]
+    if not all(isinstance(item, str) and item.strip() for item in lane_labels):
+        raise TemplateDataError(
+            f"{beat.get('beatId')}: mixed metric two-lane template requires two numeric labels"
+        )
+
     beat["visualTemplate"] = "tailwind-headwind"
     beat["contentType"] = "tailwind-headwind"
     beat["visualGrammarId"] = "evidence"
@@ -96,21 +108,7 @@ def _use_mixed_metric_template(beat: dict[str, Any]) -> None:
             f"{beat.get('beatId')}: numeric templateConfig missing"
         )
     config["variant"] = "two-lane"
-
-    viewer_texts = beat.get("viewerTexts")
-    if isinstance(viewer_texts, list) and len(viewer_texts) == 2:
-        labels: list[str] = []
-        for text in viewer_texts:
-            if not isinstance(text, str) or "｜" not in text:
-                labels = []
-                break
-            label = text.split("｜", 1)[0].strip()
-            if not label:
-                labels = []
-                break
-            labels.append(label)
-        if len(labels) == 2:
-            config["laneLabels"] = labels
+    config["laneLabels"] = [item.strip() for item in lane_labels]
 
 
 def _materialize_numeric_template(scene: dict[str, Any], beat: dict[str, Any]) -> None:
@@ -138,7 +136,7 @@ def _materialize_numeric_template(scene: dict[str, Any], beat: dict[str, Any]) -
     numbers = _normalize_referenced_numbers(scene, beat)
     units = {item.get("unit", "") for item in numbers}
     if original_template in SHARED_UNIT_TEMPLATE_IDS and len(units) != 1:
-        _use_mixed_metric_template(beat)
+        _use_mixed_metric_template(beat, numbers)
     beat["visualMode"] = "number-comparison"
 
 
