@@ -28,22 +28,28 @@ jobs:
           python-version: '3.12'
       - name: Install validation and adapter test dependencies
         run: python -m pip install --disable-pip-version-check pytest jsonschema cryptography openai==2.47.0
-      - name: Compile v1.1 gate, external orchestrator and Critic adapter
+      - name: Compile Story Engine, Understanding Progression and external Critic code
         run: |
           python -m py_compile \
             critic-adapters/openai/main.py \
+            skills/nasdaq-cafe-story-plan/migrate_v1_1_to_v1_2.py \
+            skills/nasdaq-cafe-story-plan/validators/validate_story_plan.py \
             scripts/story-engine/bootstrap_external_critic_key.py \
             scripts/story-engine/materialize_story_engine.py \
+            scripts/story-engine/project_story_script_to_production.py \
             scripts/story-engine/run_openai_critic_pipeline.py \
             scripts/story-engine/run_external_critic_orchestrator.py \
             scripts/story-engine/preflight_external_critic_orchestrator.py \
             scripts/story-engine/run_external_critic_pipeline.py \
             scripts/story-engine/validate_critic_orchestrator_attestation.py \
             scripts/story-engine/validate_critic_execution_receipt.py \
+            scripts/story-engine/validate_story_engine_bundle.py \
             scripts/story-engine/validate_story_engine_acceptance_v1_1.py \
             scripts/run_daily_production_story_engine_v1_1.py
       - name: Verify packed source-of-truth before Critic bundling
         run: python scripts/materialize_sources.py --check-only
+      - name: Smoke-test 2026-08-06 editorial Story Engine without external Critic or paid model
+        run: python scripts/story-engine/materialize_story_engine.py --repo-root . --date 2026-08-06 --external-critic off
       - name: Verify historical PR32 receipt fails closed after reviewed-input drift
         shell: bash
         run: |
