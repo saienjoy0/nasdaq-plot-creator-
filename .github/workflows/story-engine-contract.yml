@@ -1,7 +1,7 @@
 name: Story Engine Contract
 on:
   pull_request:
-    paths: ['skills/nasdaq-cafe-story-engine/**','tests/story-engine/test_story_engine.py','designs/STORY_ENGINE_UNIFIED_FINAL_DESIGN_v1.1.md','.github/workflows/story-engine-contract.yml']
+    paths: ['skills/nasdaq-cafe-story-engine/**','tests/story-engine/test_story_engine.py','tests/story-engine/test_committed_valid_fixtures.py','designs/STORY_ENGINE_UNIFIED_FINAL_DESIGN_v1.1.md','.github/workflows/story-engine-contract.yml']
   workflow_dispatch:
 permissions: {contents: read}
 jobs:
@@ -13,3 +13,4 @@ jobs:
         with: {python-version: '3.12'}
       - run: pip install jsonschema
       - run: python tests/story-engine/test_story_engine.py
+      - run: python tests/story-engine/test_committed_valid_fixtures.py

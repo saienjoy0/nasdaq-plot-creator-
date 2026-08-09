@@ -1,0 +1,16 @@
+{
+  "contract_version": "1.0.0",
+  "id": "valid_reason_unknown",
+  "harness_kind": "unknown",
+  "expected": {
+    "validation_status": "pass",
+    "lead_type": "reason_unknown",
+    "causality_scope": "reason_unknown",
+    "confidence": "unknown",
+    "primary_driver": null,
+    "unresolved_factors": ["unknown"],
+    "angle_type": "reason_unknown",
+    "eligible_angle_count": 1
+  },
+  "purpose": "Regression fixture proving that an unconfirmed cause remains unknown and the story uses validation conditions instead of inventing a driver."
+}

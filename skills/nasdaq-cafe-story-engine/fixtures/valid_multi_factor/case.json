@@ -1,0 +1,17 @@
+{
+  "contract_version": "1.0.0",
+  "id": "valid_multi_factor",
+  "harness_kind": "multi",
+  "expected": {
+    "validation_status": "pass",
+    "lead_type": "composite",
+    "causality_scope": "nasdaq_support",
+    "confidence": "medium",
+    "primary_driver": "driver",
+    "amplifiers": ["amp"],
+    "offsets": ["off"],
+    "angle_type": "contradiction",
+    "eligible_angle_count": 1
+  },
+  "purpose": "Regression fixture proving that primary driver, amplifier and offset stay distinct and Nasdaq-wide causality is not promoted beyond support scope."
+}

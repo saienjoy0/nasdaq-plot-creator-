@@ -17,6 +17,7 @@
     {
       "id": "valid_single_driver",
       "kind": "valid",
+      "case_path": "skills/nasdaq-cafe-story-engine/fixtures/valid_single_driver/case.json",
       "requirements": [
         "one eligible angle is allowed when alternatives are unsupported",
         "company scope preserved"
@@ -25,6 +26,7 @@
     {
       "id": "valid_multi_factor",
       "kind": "valid",
+      "case_path": "skills/nasdaq-cafe-story-engine/fixtures/valid_multi_factor/case.json",
       "requirements": [
         "primary, amplifier and offset remain distinct",
         "Nasdaq scope is not overclaimed"
@@ -33,6 +35,7 @@
     {
       "id": "valid_reason_unknown",
       "kind": "valid",
+      "case_path": "skills/nasdaq-cafe-story-engine/fixtures/valid_reason_unknown/case.json",
       "requirements": [
         "reason_unknown remains unknown",
         "validation conditions replace invented cause"
