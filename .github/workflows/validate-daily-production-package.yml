@@ -24,10 +24,12 @@ on:
       - "scripts/build_final_production_package_hardened.py"
       - "scripts/build_renderer_handoff_240.py"
       - "scripts/build_renderer_handoff_hardened.py"
+      - "scripts/record_visual_source_baseline.py"
       - "scripts/run_daily_production_hardened.py"
       - "tests/daily-production-hardening/**"
       - "tests/story-engine-integration/**"
       - "tests/remotion-compat/**"
+      - "tests/visual-source-baseline/**"
       - ".github/workflows/validate-daily-production-package.yml"
   workflow_dispatch:
     inputs:
@@ -45,7 +47,7 @@ jobs:
     timeout-minutes: 45
     env:
       EPISODE_DATE: ${{ inputs.episode_date || '2026-08-06' }}
-      RENDERER_COMMIT: 750f993bd00cf2f67fdb4ab18907e82ed0dc68df
+      RENDERER_COMMIT: 8ab75eeff60885a3e53870065a6e21d08f2e5965
       RENDERER_CONTRACT_VERSION: 2.4.0
       NASDAQ_CAFE_RENDERER_ROOT: ${{ github.workspace }}/.renderer
     steps:
@@ -154,7 +156,7 @@ jobs:
         run: |
           python tests/remotion-compat/test_remotion_compat.py
           python tests/daily-production-hardening/test_daily_production_hardening.py
-          python -m pytest -q tests/story-engine-integration
+          python -m pytest -q tests/story-engine-integration tests/visual-source-baseline
           python -m py_compile \
             scripts/materialize_renderer_sources.py \
             scripts/materialize_daily_episode.py \
@@ -168,6 +170,7 @@ jobs:
             scripts/finalize_renderer_package_compat.py \
             scripts/build_final_production_package_hardened.py \
             scripts/build_renderer_handoff_240.py \
+            scripts/record_visual_source_baseline.py \
             scripts/run_daily_production_hardened.py
 
       - name: Materialize lineage-bound episode package
@@ -227,6 +230,19 @@ jobs:
             --bundle-root production-bundles \
             --plot-commit "${{ github.event.pull_request.head.sha || github.sha }}" \
             2>&1 | tee "verification/$EPISODE_DATE/build-handoff.log"
+
+      - name: Record immutable Visual Source baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/record_visual_source_baseline.py \
+            --repo-root . \
+            --episode-date "$EPISODE_DATE" \
+            --plot-commit "${{ github.event.pull_request.head.sha || github.sha }}" \
+            --renderer-commit "$RENDERER_COMMIT" \
+            --renderer-contract-version "$RENDERER_CONTRACT_VERSION" \
+            --bundle-root production-bundles \
+            --output "verification/$EPISODE_DATE/visual_source_baseline.json"
 
       - name: Upload validation outputs
         if: always()
