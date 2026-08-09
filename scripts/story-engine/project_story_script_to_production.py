@@ -263,7 +263,6 @@ def main() -> int:
         else "04 editorial review PASS after targeted rewrite"
     )
     render.setdefault("review", {})["verdict"] = "approved"
-    render["review"]["reviewer"] = reviewer
     render["review"]["scores"] = score_map
     render["review"]["totalScore"] = review["total_score"]
     render["review"]["requiredChanges"] = []
