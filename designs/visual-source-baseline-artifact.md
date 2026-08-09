@@ -1,0 +1,1 @@
+The dedicated `nasdaq-cafe-handoff-YYYY-MM-DD-runID` Artifact transports the existing immutable handoff bundle without modifying it. The general production Artifact remains available for audit/debug evidence.
