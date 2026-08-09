@@ -1,14 +1,14 @@
 {
   "$schema":"https://json-schema.org/draft/2020-12/schema",
   "$id":"https://nasdaq-cafe.local/contracts/creative_review_v1.1.schema.json",
-  "title":"NASDAQ Cafe Independent Creative Review",
+  "title":"NASDAQ Cafe Creative Review",
   "type":"object",
   "additionalProperties":false,
   "required":["contract_version","episode_date","reviewer","round","scores","total_score","scene_checks","immediate_failures","findings","verdict"],
   "properties":{
     "contract_version":{"const":"1.1.0"},
     "episode_date":{"type":"string","format":"date"},
-    "reviewer":{"const":"independent_critic"},
+    "reviewer":{"type":"string","enum":["editorial_critic","independent_critic"]},
     "round":{"type":"integer","minimum":1,"maximum":2},
     "scores":{"type":"object","additionalProperties":false,"required":["opening","progression","discovery","clarity","fox_voice","late_payoff"],"properties":{"opening":{"type":"integer","minimum":0,"maximum":5},"progression":{"type":"integer","minimum":0,"maximum":5},"discovery":{"type":"integer","minimum":0,"maximum":5},"clarity":{"type":"integer","minimum":0,"maximum":5},"fox_voice":{"type":"integer","minimum":0,"maximum":5},"late_payoff":{"type":"integer","minimum":0,"maximum":5}}},
     "total_score":{"type":"integer","minimum":0,"maximum":30},
