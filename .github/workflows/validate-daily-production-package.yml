@@ -7,16 +7,25 @@ on:
       - "working/**/memory_query_plan.json"
       - "working/**/financial_visual_bindings.json"
       - "working/**/terminal_assembly_bindings.json"
+      - "working/**/visual_source_intents.json"
+      - "working/**/visual_source_selection.json"
       - "working/**/story-engine/**"
       - "research/**"
       - "episodes/**"
       - "render-specs/**"
+      - "daily-assets/**"
+      - "contracts/final_episode_contract.schema.json"
       - "contracts/financial_visual_compatibility.json"
       - "contracts/financial_visual_compatibility_2_4.json"
       - "scripts/materialize_daily_episode.py"
       - "scripts/materialize_renderer_sources.py"
       - "scripts/materialize_financial_contract_1_0.py"
       - "scripts/financial_final_episode_contract_1_0.py"
+      - "scripts/prepare_visual_sources.py"
+      - "scripts/visual_source_contract.py"
+      - "scripts/resolve_visual_sources.py"
+      - "scripts/select_visual_sources.py"
+      - "scripts/visual_source_projection.py"
       - "scripts/story-engine/**"
       - "scripts/remotion_template_data.py"
       - "scripts/finalize_renderer_package.py"
@@ -30,6 +39,7 @@ on:
       - "tests/story-engine-integration/**"
       - "tests/remotion-compat/**"
       - "tests/visual-source-baseline/**"
+      - "tests/visual-source/**"
       - ".github/workflows/validate-daily-production-package.yml"
   workflow_dispatch:
     inputs:
@@ -146,20 +156,37 @@ jobs:
           episode = spec.get("episode", {})
           if episode.get("id") != date or episode.get("targetDate") != date:
               raise SystemExit("render spec date mismatch")
+          intent_path = root / f"working/{date}/visual_source_intents.json"
+          if intent_path.is_file():
+              selection_path = root / f"working/{date}/visual_source_selection.json"
+              if not selection_path.is_file():
+                  raise SystemExit("visual_source_selection.json is required when Visual Source intents exist")
+              for path in (intent_path, selection_path):
+                  value = json.loads(path.read_text(encoding="utf-8"))
+                  if not isinstance(value, dict) or value.get("episodeDate") != date:
+                      raise SystemExit(f"Visual Source input date mismatch: {path.relative_to(root)}")
           print("direct daily inputs verified")
           PY
 
-      - name: Install validator dependency
-        run: python -m pip install --disable-pip-version-check jsonschema pytest
+      - name: Install validator and Visual Source dependencies
+        run: |
+          python -m pip install --disable-pip-version-check jsonschema pytest pillow
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
 
       - name: Run compatibility and hardening regression tests
         run: |
           python tests/remotion-compat/test_remotion_compat.py
           python tests/daily-production-hardening/test_daily_production_hardening.py
-          python -m pytest -q tests/story-engine-integration tests/visual-source-baseline
+          python -m pytest -q tests/story-engine-integration tests/visual-source-baseline tests/visual-source
           python -m py_compile \
             scripts/materialize_renderer_sources.py \
             scripts/materialize_daily_episode.py \
+            scripts/prepare_visual_sources.py \
+            scripts/visual_source_contract.py \
+            scripts/resolve_visual_sources.py \
+            scripts/select_visual_sources.py \
+            scripts/visual_source_projection.py \
             scripts/story-engine/materialize_story_engine.py \
             scripts/story-engine/project_story_script_to_production.py \
             scripts/story-engine/validate_story_engine_bundle.py \
@@ -172,6 +199,19 @@ jobs:
             scripts/build_renderer_handoff_240.py \
             scripts/record_visual_source_baseline.py \
             scripts/run_daily_production_hardened.py
+
+      - name: Prepare explicit Visual Source candidates and selection
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -s "working/$EPISODE_DATE/visual_source_intents.json" ]]; then
+            python scripts/prepare_visual_sources.py \
+              --date "$EPISODE_DATE" \
+              --repo-root . \
+              | tee "verification/$EPISODE_DATE/visual-source-prepare.log"
+          else
+            echo "Visual Source not required for $EPISODE_DATE"
+          fi
 
       - name: Materialize lineage-bound episode package
         shell: bash
@@ -231,11 +271,15 @@ jobs:
             --plot-commit "${{ github.event.pull_request.head.sha || github.sha }}" \
             2>&1 | tee "verification/$EPISODE_DATE/build-handoff.log"
 
-      - name: Record immutable Visual Source baseline
+      - name: Record immutable Visual Source baseline when source upgrade is inactive
         id: baseline
         shell: bash
         run: |
           set -euo pipefail
+          if [[ -s "working/$EPISODE_DATE/visual_source_intents.json" ]]; then
+            echo "Visual Source active; preimplementation baseline recording skipped"
+            exit 0
+          fi
           BASELINE="verification/$EPISODE_DATE/visual_source_baseline.json"
           python scripts/record_visual_source_baseline.py \
             --repo-root . \
