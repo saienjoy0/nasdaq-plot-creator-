@@ -109,8 +109,25 @@ def _placement_map(scene: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return result
 
 
+def _normalized_visual_source_placement(placement_id: str) -> dict[str, Any]:
+    return {
+        "placementId": placement_id,
+        "assetId": "<VISUAL_SOURCE_ASSET>",
+        "role": "<VISUAL_SOURCE_ROLE>",
+        "region": "<VISUAL_SOURCE_REGION>",
+        "fit": "<VISUAL_SOURCE_FIT>",
+        "focalPoint": "<VISUAL_SOURCE_FOCAL_POINT>",
+        "opacity": "<VISUAL_SOURCE_OPACITY>",
+        "startChunkId": "<VISUAL_SOURCE_START_CHUNK>",
+        "endChunkId": "<VISUAL_SOURCE_END_CHUNK>",
+    }
+
+
 def _sanitize(
-    spec: dict[str, Any], selected: dict[str, Any]
+    spec: dict[str, Any],
+    selected: dict[str, Any],
+    *,
+    allow_missing_placement: bool,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     sanitized = copy.deepcopy(spec)
     scenes = _scene_map(sanitized)
@@ -139,21 +156,22 @@ def _sanitize(
         placements = _placement_map(scene)
         selected_placement = placements.get(placement_id)
         if selected_placement is None:
-            raise VisualSourceABError(
-                f"selected placement missing from final spec: {scene_id}/{placement_id}"
-            )
+            if not allow_missing_placement:
+                raise VisualSourceABError(
+                    f"selected placement missing from final spec: {scene_id}/{placement_id}"
+                )
+            if beat.get("assetPlacementIds"):
+                raise VisualSourceABError(
+                    f"baseline target Beat already owns another external placement: {scene_id}/{beat_id}"
+                )
+            selected_placement = _normalized_visual_source_placement(placement_id)
+            scene.setdefault("assetPlacements", []).append(selected_placement)
+        else:
+            selected_placement.update(_normalized_visual_source_placement(placement_id))
 
         # Remove exactly the fields Visual Source is authorized to change.
         beat["assetPlacementIds"] = ["<VISUAL_SOURCE_PLACEMENT>"]
         beat["assetState"] = "<VISUAL_SOURCE_ASSET_STATE>"
-        selected_placement["assetId"] = "<VISUAL_SOURCE_ASSET>"
-        selected_placement["role"] = "<VISUAL_SOURCE_ROLE>"
-        selected_placement["region"] = "<VISUAL_SOURCE_REGION>"
-        selected_placement["fit"] = "<VISUAL_SOURCE_FIT>"
-        selected_placement["focalPoint"] = "<VISUAL_SOURCE_FOCAL_POINT>"
-        selected_placement["opacity"] = "<VISUAL_SOURCE_OPACITY>"
-        selected_placement["startChunkId"] = "<VISUAL_SOURCE_START_CHUNK>"
-        selected_placement["endChunkId"] = "<VISUAL_SOURCE_END_CHUNK>"
         allowed_changes.append(
             {
                 "sceneId": scene_id,
@@ -181,8 +199,12 @@ def verify(
     if selected.get("episodeDate") != candidate.get("episode", {}).get("targetDate"):
         raise VisualSourceABError("selected assets episode date mismatch")
 
-    baseline_sanitized, baseline_targets = _sanitize(baseline, selected)
-    candidate_sanitized, candidate_targets = _sanitize(candidate, selected)
+    baseline_sanitized, baseline_targets = _sanitize(
+        baseline, selected, allow_missing_placement=True
+    )
+    candidate_sanitized, candidate_targets = _sanitize(
+        candidate, selected, allow_missing_placement=False
+    )
     if baseline_targets != candidate_targets:
         raise VisualSourceABError("baseline/candidate target normalization mismatch")
 
