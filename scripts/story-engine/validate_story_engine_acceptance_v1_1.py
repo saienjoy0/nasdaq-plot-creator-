@@ -214,6 +214,11 @@ def validate_acceptance(
                 ))
     elif not production_eligible:
         warnings.append(Item(
+            "W_PRODUCTION_BLOCKED",
+            "strict external-Critic-certified production remains unavailable until an orchestrator_signed receipt exists",
+            "production_eligible",
+        ))
+        warnings.append(Item(
             "W_EXTERNAL_CRITIC_NOT_CERTIFIED",
             "Story Engine artifacts are valid, but external Critic certification is not present",
             "production_eligible",
