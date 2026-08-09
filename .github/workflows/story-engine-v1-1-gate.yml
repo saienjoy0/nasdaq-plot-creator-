@@ -49,7 +49,9 @@ jobs:
       - name: Verify packed source-of-truth before Critic bundling
         run: python scripts/materialize_sources.py --check-only
       - name: Smoke-test 2026-08-06 editorial Story Engine without external Critic or paid model
-        run: python scripts/story-engine/materialize_story_engine.py --repo-root . --date 2026-08-06 --external-critic off
+        run: |
+          cp research/2026-08-06/causal_research_dossier.template.json research/2026-08-06/causal_research_dossier_2026-08-06.json
+          python scripts/story-engine/materialize_story_engine.py --repo-root . --date 2026-08-06 --external-critic off
       - name: Verify historical PR32 receipt fails closed after reviewed-input drift
         shell: bash
         run: |
