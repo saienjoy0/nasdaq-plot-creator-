@@ -39,6 +39,60 @@ def _find_beat(render: dict[str, Any], scene_id: str, beat_id: str) -> tuple[dic
     raise VisualSourceProjectionError(f"Visual Source target Beat not found: {scene_id}/{beat_id}")
 
 
+def _apply_selected_placement(
+    *,
+    intent_id: str,
+    scene: dict[str, Any],
+    beat: dict[str, Any],
+    placement_config: dict[str, Any],
+    asset_id: str,
+) -> None:
+    placement_id = placement_config["placementId"]
+    scene_placements = scene.setdefault("assetPlacements", [])
+    existing = next(
+        (item for item in scene_placements if item.get("placementId") == placement_id),
+        None,
+    )
+    owned_ids = list(beat.get("assetPlacementIds", []))
+    if existing is not None:
+        if placement_id not in owned_ids or set(owned_ids) != {placement_id}:
+            raise VisualSourceProjectionError(
+                f"{intent_id}: replacement placement must be the target Beat's only owned placement"
+            )
+        existing.update(
+            {
+                "assetId": asset_id,
+                "role": placement_config["role"],
+                "region": placement_config["region"],
+                "fit": placement_config["fit"],
+                "focalPoint": placement_config.get("focalPoint"),
+                "opacity": 1,
+                "startChunkId": beat["startChunkId"],
+                "endChunkId": beat["endChunkId"],
+            }
+        )
+    else:
+        if owned_ids:
+            raise VisualSourceProjectionError(
+                f"{intent_id}: target Beat already owns another external placement"
+            )
+        scene_placements.append(
+            {
+                "placementId": placement_id,
+                "assetId": asset_id,
+                "role": placement_config["role"],
+                "region": placement_config["region"],
+                "fit": placement_config["fit"],
+                "focalPoint": placement_config.get("focalPoint"),
+                "opacity": 1,
+                "startChunkId": beat["startChunkId"],
+                "endChunkId": beat["endChunkId"],
+            }
+        )
+        beat["assetPlacementIds"] = [placement_id]
+    beat["assetState"] = "ready"
+
+
 def prepare_visual_sources(
     *,
     root: Path,
@@ -100,28 +154,13 @@ def prepare_visual_sources(
         scene_id = intent["target"]["sceneId"]
         beat_id = intent["target"]["visualBeatId"]
         scene, beat = _find_beat(render, scene_id, beat_id)
-        if beat.get("assetPlacementIds"):
-            raise VisualSourceProjectionError(
-                f"{intent_id}: Visual Source target Beat already owns an external asset placement"
-            )
-        placement_config = intent["placement"]
-        placement_id = placement_config["placementId"]
-        if any(p.get("placementId") == placement_id for p in scene.get("assetPlacements", [])):
-            raise VisualSourceProjectionError(f"duplicate placementId: {placement_id}")
-        placement = {
-            "placementId": placement_id,
-            "assetId": candidate["assetId"],
-            "role": placement_config["role"],
-            "region": placement_config["region"],
-            "fit": placement_config["fit"],
-            "focalPoint": placement_config.get("focalPoint"),
-            "opacity": 1,
-            "startChunkId": beat["startChunkId"],
-            "endChunkId": beat["endChunkId"],
-        }
-        scene.setdefault("assetPlacements", []).append(placement)
-        beat["assetPlacementIds"] = [placement_id]
-        beat["assetState"] = "ready"
+        _apply_selected_placement(
+            intent_id=intent_id,
+            scene=scene,
+            beat=beat,
+            placement_config=intent["placement"],
+            asset_id=candidate["assetId"],
+        )
 
         if candidate["sourceKind"] == "existing-asset":
             overrides[candidate["assetId"]] = {
