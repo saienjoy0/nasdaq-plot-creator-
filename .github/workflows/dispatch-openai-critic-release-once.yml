@@ -6,6 +6,12 @@ on:
       - ops/dispatch-openai-critic-release-20260809
     paths:
       - .github/workflows/dispatch-openai-critic-release-once.yml
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+    paths:
+      - .github/workflows/dispatch-openai-critic-release-once.yml
 
 permissions:
   contents: read
@@ -13,12 +19,19 @@ permissions:
 
 jobs:
   publish:
+    if: >-
+      (github.event_name == 'push' && github.ref_name == 'ops/dispatch-openai-critic-release-20260809') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'ops/dispatch-openai-critic-release-20260809' && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
-      - name: Verify one-shot bridge branch
+      - name: Verify one-shot bridge event
         run: |
           set -euo pipefail
-          test "${GITHUB_REF_NAME}" = "ops/dispatch-openai-critic-release-20260809"
+          case "${GITHUB_EVENT_NAME}" in
+            push) test "${GITHUB_REF_NAME}" = "ops/dispatch-openai-critic-release-20260809" ;;
+            pull_request) ;;
+            *) exit 1 ;;
+          esac
       - name: Checkout fixed main release source
         uses: actions/checkout@v4
         with:
