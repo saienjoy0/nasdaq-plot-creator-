@@ -59,6 +59,43 @@ def _find_beat(render: dict[str, Any], scene_id: str, beat_id: str) -> tuple[dic
     )
 
 
+def _existing_asset_is_exact_current_placement(
+    *,
+    intent_id: str,
+    scene: dict[str, Any],
+    beat: dict[str, Any],
+    placement_config: dict[str, Any],
+    asset_id: str,
+) -> bool:
+    """Return true only when an existing reusable asset is already the exact Beat placement.
+
+    In that case the Approved Fallback is the current renderer state itself, so projection
+    must not rewrite role/fit/region/focal point or Beat state. This is what makes a
+    fallback a true preservation path rather than a second visual design.
+    """
+    placement_id = placement_config["placementId"]
+    existing = next(
+        (
+            item
+            for item in scene.get("assetPlacements", [])
+            if item.get("placementId") == placement_id
+        ),
+        None,
+    )
+    if existing is None or existing.get("assetId") != asset_id:
+        return False
+    owned_ids = list(beat.get("assetPlacementIds", []))
+    if placement_id not in owned_ids or set(owned_ids) != {placement_id}:
+        raise VisualSourceProjectionError(
+            f"{intent_id}: existing fallback placement must be the target Beat's only owned placement"
+        )
+    if beat.get("assetState") != "ready":
+        raise VisualSourceProjectionError(
+            f"{intent_id}: existing fallback placement is not already production-ready"
+        )
+    return True
+
+
 def _apply_selected_placement(
     *,
     intent_id: str,
@@ -174,13 +211,24 @@ def prepare_visual_sources(
         scene_id = intent["target"]["sceneId"]
         beat_id = intent["target"]["visualBeatId"]
         scene, beat = _find_beat(render, scene_id, beat_id)
-        _apply_selected_placement(
-            intent_id=intent_id,
-            scene=scene,
-            beat=beat,
-            placement_config=intent["placement"],
-            asset_id=candidate["assetId"],
+        preserve_existing = (
+            candidate["sourceKind"] == "existing-asset"
+            and _existing_asset_is_exact_current_placement(
+                intent_id=intent_id,
+                scene=scene,
+                beat=beat,
+                placement_config=intent["placement"],
+                asset_id=candidate["assetId"],
+            )
         )
+        if not preserve_existing:
+            _apply_selected_placement(
+                intent_id=intent_id,
+                scene=scene,
+                beat=beat,
+                placement_config=intent["placement"],
+                asset_id=candidate["assetId"],
+            )
 
         if candidate["sourceKind"] == "existing-asset":
             overrides[candidate["assetId"]] = {
