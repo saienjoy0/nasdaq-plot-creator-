@@ -232,9 +232,11 @@ jobs:
             2>&1 | tee "verification/$EPISODE_DATE/build-handoff.log"
 
       - name: Record immutable Visual Source baseline
+        id: baseline
         shell: bash
         run: |
           set -euo pipefail
+          BASELINE="verification/$EPISODE_DATE/visual_source_baseline.json"
           python scripts/record_visual_source_baseline.py \
             --repo-root . \
             --episode-date "$EPISODE_DATE" \
@@ -242,7 +244,29 @@ jobs:
             --renderer-commit "$RENDERER_COMMIT" \
             --renderer-contract-version "$RENDERER_CONTRACT_VERSION" \
             --bundle-root production-bundles \
-            --output "verification/$EPISODE_DATE/visual_source_baseline.json"
+            --output "$BASELINE"
+          BUNDLE_ID="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["handoff"]["bundle_id"])' "$BASELINE")"
+          MANIFEST_SHA="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["handoff"]["manifest_sha256"])' "$BASELINE")"
+          echo "bundle_id=$BUNDLE_ID" >> "$GITHUB_OUTPUT"
+          echo "manifest_sha256=$MANIFEST_SHA" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Visual Source preimplementation baseline"
+            echo "- Episode: \`$EPISODE_DATE\`"
+            echo "- Renderer: \`$RENDERER_COMMIT\` / \`$RENDERER_CONTRACT_VERSION\`"
+            echo "- Handoff bundle ID: \`$BUNDLE_ID\`"
+            echo "- Handoff manifest SHA-256: \`$MANIFEST_SHA\`"
+            echo "- Final authorized: \`false\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload immutable renderer handoff
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nasdaq-cafe-handoff-${{ env.EPISODE_DATE }}-${{ github.run_id }}
+          path: production-bundles/${{ env.EPISODE_DATE }}/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
 
       - name: Upload validation outputs
         if: always()
