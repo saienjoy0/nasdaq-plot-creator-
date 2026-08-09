@@ -37,7 +37,8 @@
       "maxItems": 9,
       "items": {"$ref": "#/$defs/scene"}
     },
-    "financialVisuals": {"$ref": "#/$defs/financialVisuals"}
+    "financialVisuals": {"$ref": "#/$defs/financialVisuals"},
+    "visualSources": {"$ref": "#/$defs/visualSources"}
   },
   "$defs": {
     "fileRef": {
@@ -154,6 +155,148 @@
           }
         }
       ]
+    },
+    "visualSources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contractVersion", "intents"],
+      "properties": {
+        "contractVersion": {"const": "1.0.0"},
+        "intents": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/visualSourceIntent"}
+        }
+      }
+    },
+    "visualSourceIntent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "intentId",
+        "target",
+        "presentationClass",
+        "purpose",
+        "sourceIds",
+        "placement",
+        "primary",
+        "fallback"
+      ],
+      "properties": {
+        "intentId": {"type": "string", "pattern": "^vsi-[a-z0-9][a-z0-9._-]{2,100}$"},
+        "target": {"$ref": "#/$defs/target"},
+        "presentationClass": {
+          "enum": ["source-document", "real-world-photo", "social-post", "generated-illustration", "existing-asset"]
+        },
+        "purpose": {"type": "string", "minLength": 1, "maxLength": 300},
+        "sourceIds": {
+          "type": "array",
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^source-[0-9]{3}$"}
+        },
+        "placement": {"$ref": "#/$defs/visualSourcePlacement"},
+        "primary": {"$ref": "#/$defs/visualSourceCandidate"},
+        "fallback": {"$ref": "#/$defs/visualSourceCandidate"}
+      }
+    },
+    "visualSourcePlacement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["placementId", "role", "region", "fit", "focalPoint"],
+      "properties": {
+        "placementId": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
+        "role": {"enum": ["main-media", "illustration", "entity-card", "picture-book"]},
+        "region": {"enum": ["main-stage", "main-primary", "main-entity"]},
+        "fit": {"enum": ["cover", "contain", "fill"]},
+        "focalPoint": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["x", "y"],
+              "properties": {
+                "x": {"type": "number", "minimum": 0, "maximum": 1},
+                "y": {"type": "number", "minimum": 0, "maximum": 1}
+              }
+            }
+          ]
+        }
+      }
+    },
+    "visualSourceCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidateId",
+        "assetId",
+        "sourceKind",
+        "sourceLocator",
+        "captureMethod",
+        "captureSpec",
+        "rightsStatus"
+      ],
+      "properties": {
+        "candidateId": {"type": "string", "pattern": "^vsp-[a-z0-9][a-z0-9._-]{2,120}$"},
+        "assetId": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
+        "sourceKind": {
+          "enum": ["existing-asset", "collector-document", "official-url", "web-page", "social-post", "wikimedia", "generated-image"]
+        },
+        "sourceLocator": {"$ref": "#/$defs/visualSourceLocator"},
+        "captureMethod": {
+          "enum": ["registry-reference", "archive-file", "direct-download", "pdf-page-render", "webpage-screenshot", "social-capture", "mediawiki-fetch", "local-file-validation"]
+        },
+        "captureSpec": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "#/$defs/visualSourceCaptureSpec"}
+          ]
+        },
+        "rightsStatus": {"enum": ["cleared", "user-review-required", "not-required"]}
+      }
+    },
+    "visualSourceLocator": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "assetId": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"},
+        "documentId": {"type": "string", "minLength": 1, "maxLength": 200},
+        "url": {"type": "string", "pattern": "^https?://"},
+        "localPath": {"type": "string", "minLength": 1, "maxLength": 500},
+        "pageId": {"type": "string", "minLength": 1, "maxLength": 200}
+      },
+      "minProperties": 1
+    },
+    "visualSourceCaptureSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "pageNumber": {"type": "integer", "minimum": 1},
+        "selector": {"type": ["string", "null"], "maxLength": 500},
+        "viewport": {"$ref": "#/$defs/visualSourceViewport"},
+        "crop": {"$ref": "#/$defs/visualSourceCrop"},
+        "outputFormat": {"enum": ["png", "jpg", "webp"]}
+      }
+    },
+    "visualSourceViewport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width", "height"],
+      "properties": {
+        "width": {"type": "integer", "minimum": 320, "maximum": 3840},
+        "height": {"type": "integer", "minimum": 240, "maximum": 2160}
+      }
+    },
+    "visualSourceCrop": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "width", "height"],
+      "properties": {
+        "x": {"type": "integer", "minimum": 0},
+        "y": {"type": "integer", "minimum": 0},
+        "width": {"type": "integer", "minimum": 1},
+        "height": {"type": "integer", "minimum": 1}
+      }
     },
     "financialVisuals": {
       "type": "object",
