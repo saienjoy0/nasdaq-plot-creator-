@@ -1,0 +1,68 @@
+name: Dispatch OpenAI Critic Adapter Release Once
+
+on:
+  push:
+    branches:
+      - ops/dispatch-openai-critic-release-20260809
+    paths:
+      - .github/workflows/dispatch-openai-critic-release-once.yml
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify one-shot bridge branch
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REF_NAME}" = "ops/dispatch-openai-critic-release-20260809"
+      - name: Checkout fixed main release source
+        uses: actions/checkout@v4
+        with:
+          ref: df0be73291a463874063810da040424d06892108
+      - name: Login to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - name: Build and push fixed OpenAI Critic adapter
+        run: |
+          set -euo pipefail
+          SOURCE_SHA="df0be73291a463874063810da040424d06892108"
+          OWNER="${GITHUB_REPOSITORY_OWNER,,}"
+          IMAGE="ghcr.io/${OWNER}/nasdaq-cafe-openai-critic"
+          TAG="sha-${SOURCE_SHA}"
+          docker build -t "${IMAGE}:${TAG}" critic-adapters/openai
+          docker push "${IMAGE}:${TAG}"
+          REPO_DIGEST="$(docker inspect --format='{{index .RepoDigests 0}}' "${IMAGE}:${TAG}")"
+          case "$REPO_DIGEST" in
+            *@sha256:*) ;;
+            *) echo "registry did not return an immutable digest" >&2; exit 1 ;;
+          esac
+          printf '%s\n' "$REPO_DIGEST" > critic_adapter_image.txt
+          python - <<'PY'
+          import json
+          source_sha = 'df0be73291a463874063810da040424d06892108'
+          digest = open('critic_adapter_image.txt', encoding='utf-8').read().strip()
+          payload = {
+              'contract_version': '1.0.0',
+              'source_commit': source_sha,
+              'source_ref': 'main',
+              'image': digest,
+              'model_api_invoked': False,
+              'dispatch_bridge': 'ops/dispatch-openai-critic-release-20260809',
+          }
+          with open('critic_adapter_release.json', 'w', encoding='utf-8') as f:
+              json.dump(payload, f, ensure_ascii=False, indent=2, sort_keys=True)
+              f.write('\n')
+          PY
+      - name: Upload immutable release reference
+        uses: actions/upload-artifact@v4
+        with:
+          name: openai-critic-adapter-df0be73291a463874063810da040424d06892108
+          path: |
+            critic_adapter_image.txt
+            critic_adapter_release.json
+          if-no-files-found: error
