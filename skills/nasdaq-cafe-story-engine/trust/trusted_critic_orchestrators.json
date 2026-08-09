@@ -1,4 +1,12 @@
 {
   "contract_version": "1.0.0",
-  "keys": []
+  "keys": [
+    {
+      "algorithm": "ed25519",
+      "key_id": "do-sgp1-critic-20260809-v1",
+      "orchestrator_id": "do-sgp1-nasdaq-cafe-critic-v1",
+      "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAFMpFpHPnp3SrRNhpQkSD9CybO7EKXIECo3tVCn5//rs=\n-----END PUBLIC KEY-----\n",
+      "status": "active"
+    }
+  ]
 }
