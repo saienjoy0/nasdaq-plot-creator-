@@ -10,8 +10,10 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -55,6 +57,67 @@ def safe_file(root: Path, relative: str, label: str) -> Path:
     return resolved
 
 
+def load_module(name: str, path: Path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    if not spec or not spec.loader:
+        raise BaselineError(f"cannot import validator: {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def story_engine_policy(root: Path, acceptance_path: Path) -> dict[str, Any]:
+    """Return the effective production policy without inventing new policy logic.
+
+    Newer persisted acceptances may already contain the derived policy fields.
+    Legacy/current 1.1.0 acceptances do not, so in that case delegate to the
+    existing Story Engine acceptance validator with the same optional-Critic
+    operating policy used by the daily production wrapper.
+    """
+    acceptance = load_json(acceptance_path, "Story Engine acceptance")
+    if acceptance.get("production_allowed_by_policy") is True:
+        critic = acceptance.get("critic", {})
+        if not isinstance(critic, dict):
+            raise BaselineError("Story Engine acceptance critic must be an object")
+        return {
+            "status": "pass",
+            "production_allowed_by_policy": True,
+            "production_policy": acceptance.get("production_policy")
+            or critic.get("production_policy")
+            or "external_critic_optional",
+            "critic_certified": bool(
+                acceptance.get("critic_certified", critic.get("critic_certified", False))
+            ),
+            "external_critic_status": acceptance.get("external_critic_status")
+            or critic.get("external_critic_status")
+            or "not_certified",
+            "warnings": acceptance.get("warnings", []),
+        }
+
+    validator_path = root / "scripts/story-engine/validate_story_engine_acceptance_v1_1.py"
+    if not validator_path.is_file():
+        raise BaselineError("Story Engine acceptance validator is missing")
+    validator = load_module("visual_source_story_acceptance_validator", validator_path)
+    result = validator.validate_acceptance(
+        acceptance_path,
+        repo_root=root,
+        require_production=True,
+        allow_uncertified_production=True,
+    )
+    if result.get("status") != "pass" or result.get("production_allowed_by_policy") is not True:
+        messages = [
+            item.get("message", "Story Engine policy validation failed")
+            for item in result.get("errors", [])
+            if isinstance(item, dict)
+        ]
+        raise BaselineError(
+            "Story Engine production must be allowed by the selected policy"
+            + (f": {'; '.join(messages)}" if messages else "")
+        )
+    return result
+
+
 def find_handoff_manifest(
     bundle_root: Path,
     *,
@@ -69,9 +132,7 @@ def find_handoff_manifest(
     matches: list[tuple[Path, dict[str, Any]]] = []
     for manifest_path in sorted(date_root.glob("*/handoff_manifest.json")):
         manifest = load_json(manifest_path, "handoff manifest")
-        if manifest.get("episode_date") != episode_date:
-            continue
-        if manifest.get("mode") != "preview":
+        if manifest.get("episode_date") != episode_date or manifest.get("mode") != "preview":
             continue
         plot = manifest.get("plot_creator", {})
         renderer = manifest.get("renderer", {})
@@ -141,16 +202,7 @@ def build_baseline(
     if not isinstance(episode, dict) or episode.get("targetDate") != episode_date:
         raise BaselineError("strict render_spec targetDate mismatch")
 
-    acceptance = load_json(resolved["story_engine_acceptance"], "Story Engine acceptance")
-    critic = acceptance.get("critic", {})
-    if not isinstance(critic, dict):
-        raise BaselineError("Story Engine acceptance critic must be an object")
-    external_status = critic.get("external_critic_status", "not_certified")
-    critic_certified = bool(critic.get("critic_certified", False))
-    production_policy = acceptance.get("production_policy") or critic.get("production_policy")
-    production_allowed = acceptance.get("production_allowed_by_policy")
-    if production_allowed is not True:
-        raise BaselineError("Story Engine production must be allowed by the selected policy")
+    policy = story_engine_policy(root, resolved["story_engine_acceptance"])
 
     handoff_path, handoff = find_handoff_manifest(
         bundle_root.resolve(),
@@ -164,10 +216,7 @@ def build_baseline(
         raise BaselineError("handoff bundle_id must be a SHA-256")
 
     artifacts = {
-        key: {
-            "path": paths[key],
-            "sha256": sha256_file(path),
-        }
+        key: {"path": paths[key], "sha256": sha256_file(path)}
         for key, path in resolved.items()
     }
     return {
@@ -186,9 +235,10 @@ def build_baseline(
         },
         "story_engine": {
             "production_allowed_by_policy": True,
-            "production_policy": production_policy,
-            "critic_certified": critic_certified,
-            "external_critic_status": external_status,
+            "production_policy": policy.get("production_policy"),
+            "critic_certified": bool(policy.get("critic_certified", False)),
+            "external_critic_status": policy.get("external_critic_status", "not_certified"),
+            "warnings": policy.get("warnings", []),
         },
         "artifacts": artifacts,
         "handoff": {
@@ -203,6 +253,7 @@ def build_baseline(
             "official_preflight": "pass",
             "production_consistency": "pass",
             "strict_renderer_contract": "pass",
+            "story_engine_policy": "pass",
             "unresolved_states": 0,
             "final_authorized": False,
         },
