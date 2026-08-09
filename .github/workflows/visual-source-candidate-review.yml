@@ -28,12 +28,13 @@ jobs:
     timeout-minutes: 20
     env:
       EPISODE_DATE: ${{ inputs.episode_date || '2026-08-06' }}
-      RENDERER_COMMIT: 8ab75eeff60885a3e53870065a6e21d08f2e5965
+      RENDERER_COMMIT: 36440cbe84331d020d4fe808d5c2fcbcac20833c
       NASDAQ_CAFE_RENDERER_ROOT: ${{ github.workspace }}/.renderer
     steps:
       - uses: actions/checkout@v6
 
       - name: Validate requested date and committed intent
+        id: guard
         shell: bash
         run: |
           set -euo pipefail
@@ -41,16 +42,23 @@ jobs:
             echo "::error::episode_date must be YYYY-MM-DD"
             exit 1
           }
-          test -s "working/$EPISODE_DATE/visual_source_intents.json" || {
-            echo "::error::Visual Source intents are not committed for $EPISODE_DATE"
-            exit 1
-          }
+          if [[ ! -s "working/$EPISODE_DATE/visual_source_intents.json" ]]; then
+            echo "active=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Visual Source candidate review"
+              echo "- Episode: \`$EPISODE_DATE\`"
+              echo "- Status: not-required (no committed Visual Source intents)"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           test -s "working/$EPISODE_DATE/visual_source_selection.json" || {
-            echo "::error::Visual Source selection is not committed for $EPISODE_DATE"
+            echo "::error::Visual Source selection is required when intents exist for $EPISODE_DATE"
             exit 1
           }
+          echo "active=true" >> "$GITHUB_OUTPUT"
 
       - name: Checkout pinned renderer contract source
+        if: steps.guard.outputs.active == 'true'
         uses: actions/checkout@v6
         with:
           repository: saienjoy0/saienjoy0-nasdaq-cafe-remotion
@@ -59,10 +67,12 @@ jobs:
           persist-credentials: false
 
       - uses: actions/setup-python@v5
+        if: steps.guard.outputs.active == 'true'
         with:
           python-version: "3.12"
 
       - name: Install exact-locator capture dependencies
+        if: steps.guard.outputs.active == 'true'
         run: |
           python -m pip install --disable-pip-version-check \
             jsonschema \
@@ -73,6 +83,7 @@ jobs:
           sudo apt-get install -y poppler-utils
 
       - name: Resolve Primary and Approved Fallback candidates
+        if: steps.guard.outputs.active == 'true'
         shell: bash
         run: |
           set -euo pipefail
