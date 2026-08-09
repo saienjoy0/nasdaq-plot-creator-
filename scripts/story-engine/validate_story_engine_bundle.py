@@ -50,8 +50,7 @@ def validate_script(script:dict, plan:dict, dossier:dict, errors:list[str], warn
     plan_roles=[s['formal_role'] for s in plan['scenes']]
     if roles!=plan_roles: errors.append('script formal roles differ from story plan')
     evidence={e['evidence_id']:e for e in dossier['evidence']}
-    all_used=set()
-    claims={}
+    all_used=set(); claims={}
     for scene in scenes:
         for eid in scene['evidence_ids']:
             all_used.add(eid)
@@ -98,16 +97,57 @@ def validate_script(script:dict, plan:dict, dossier:dict, errors:list[str], warn
             if eid not in evidence: errors.append(f'unresolved point uses unknown evidence {eid}')
     return claims
 
+def _has_finding(review:dict, scene_id:str, issue_types:set[str])->bool:
+    return any(scene_id in f.get('scene_ids',[]) and f.get('issue_type') in issue_types for f in review.get('findings',[]))
+
+def validate_scene_checks(review:dict, errors:list[str]):
+    checks=review['scene_checks']
+    ids=[c['scene_id'] for c in checks]
+    wanted=[f'scene-{i:02d}' for i in range(1,9)]
+    if ids!=wanted: errors.append(f'review scene_checks must be exactly ordered {wanted}')
+    for index,check in enumerate(checks, start=1):
+        sid=check['scene_id']
+        if index<=7:
+            if check['mode']!='continue': errors.append(f'{sid}: scene check mode must be continue')
+            if not isinstance(check['continuation_reason_natural'],bool): errors.append(f'{sid}: continuation_reason_natural must be boolean')
+            if check['closure_effective'] is not None or check['opening_promise_recovered'] is not None:
+                errors.append(f'{sid}: closure fields must be null before Scene 8')
+            if not check['payoff_delivered'] and not _has_finding(review,sid,{'NO_PAYOFF','NO_NEW_EVIDENCE','NO_NEW_EVIDENCE_OR_MEANING'}):
+                errors.append(f'{sid}: missing payoff requires a matching finding')
+            if not check['belief_changed'] and not _has_finding(review,sid,{'NO_BELIEF_CHANGE'}):
+                errors.append(f'{sid}: unchanged belief requires NO_BELIEF_CHANGE finding')
+            if check['continuation_reason_natural'] is False and not _has_finding(review,sid,{'DEAD_END_SCENE','FAKE_OPEN_LOOP'}):
+                errors.append(f'{sid}: unnatural continuation requires DEAD_END_SCENE or FAKE_OPEN_LOOP finding')
+        else:
+            if check['mode']!='close': errors.append('scene-08: scene check mode must be close')
+            if check['continuation_reason_natural'] is not None: errors.append('scene-08: continuation_reason_natural must be null')
+            if not isinstance(check['closure_effective'],bool): errors.append('scene-08: closure_effective must be boolean')
+            if not isinstance(check['opening_promise_recovered'],bool): errors.append('scene-08: opening_promise_recovered must be boolean')
+            if not check['payoff_delivered'] and not _has_finding(review,sid,{'NO_PAYOFF','NO_NEW_EVIDENCE_OR_MEANING'}):
+                errors.append('scene-08: missing payoff requires a matching finding')
+            if not check['belief_changed'] and not _has_finding(review,sid,{'NO_BELIEF_CHANGE'}):
+                errors.append('scene-08: unchanged belief requires NO_BELIEF_CHANGE finding')
+            if check['closure_effective'] is False and review['verdict']=='pass': errors.append('scene-08: ineffective closure cannot PASS')
+            if check['opening_promise_recovered'] is False and review['verdict']=='pass': errors.append('scene-08: unrecovered opening promise cannot PASS')
+        if check['procedural_language_dominant'] and not _has_finding(review,sid,{'PROCEDURAL_NARRATION'}):
+            errors.append(f'{sid}: procedural-language dominance requires PROCEDURAL_NARRATION finding')
+
 def validate_review(review:dict, errors:list[str]):
     vals=list(review['scores'].values()); total=sum(vals)
     if review['total_score']!=total: errors.append(f'review total_score={review["total_score"]} but sum={total}')
+    validate_scene_checks(review,errors)
     severe=any(f['severity']=='critical' for f in review['findings'])
+    major=any(f['severity']=='major' for f in review['findings'])
     if review['immediate_failures'] or severe:
         expected='fail'
-    elif total>=25 and min(vals)>=3 and not any(f['severity']=='major' for f in review['findings']): expected='pass'
-    elif total>=21: expected='conditional'
-    elif total>=16: expected='restructure'
-    else: expected='fail'
+    elif total>=25 and min(vals)>=3 and not major:
+        expected='pass'
+    elif total>=21:
+        expected='conditional'
+    elif total>=16:
+        expected='restructure'
+    else:
+        expected='fail'
     if review['verdict']!=expected: errors.append(f'review verdict must be {expected} for scores/findings')
     return {f['finding_id']:f for f in review['findings']}
 

@@ -53,8 +53,30 @@ class OpenAICriticAdapterTests(unittest.TestCase):
         cls.adapter = load_adapter()
 
     def valid_review(self, date: str = "2026-08-06", round_no: int = 2) -> dict:
+        checks = []
+        for i in range(1, 8):
+            checks.append({
+                "scene_id": f"scene-{i:02d}",
+                "mode": "continue",
+                "payoff_delivered": True,
+                "belief_changed": True,
+                "continuation_reason_natural": True,
+                "closure_effective": None,
+                "opening_promise_recovered": None,
+                "procedural_language_dominant": False,
+            })
+        checks.append({
+            "scene_id": "scene-08",
+            "mode": "close",
+            "payoff_delivered": True,
+            "belief_changed": True,
+            "continuation_reason_natural": None,
+            "closure_effective": True,
+            "opening_promise_recovered": True,
+            "procedural_language_dominant": False,
+        })
         return {
-            "contract_version": "1.0.0",
+            "contract_version": "1.1.0",
             "episode_date": date,
             "reviewer": "independent_critic",
             "round": round_no,
@@ -67,6 +89,7 @@ class OpenAICriticAdapterTests(unittest.TestCase):
                 "late_payoff": 5,
             },
             "total_score": 27,
+            "scene_checks": checks,
             "immediate_failures": [],
             "findings": [],
             "verdict": "pass",
@@ -76,6 +99,29 @@ class OpenAICriticAdapterTests(unittest.TestCase):
         request = {"episode_date": "2026-08-06", "required_review": {"round": 2, "minimum_total_score": 25}}
         review = self.valid_review()
         review["total_score"] = 26
+        with self.assertRaises(self.adapter.AdapterError):
+            self.adapter.validate_review(review, request)
+
+    def test_validate_review_rejects_scene_08_continuation_mode(self):
+        request = {"episode_date": "2026-08-06", "required_review": {"round": 2, "minimum_total_score": 25}}
+        review = self.valid_review()
+        review["scene_checks"][7]["mode"] = "continue"
+        review["scene_checks"][7]["continuation_reason_natural"] = True
+        with self.assertRaises(self.adapter.AdapterError):
+            self.adapter.validate_review(review, request)
+
+    def test_validate_review_rejects_major_finding_on_pass(self):
+        request = {"episode_date": "2026-08-06", "required_review": {"round": 2, "minimum_total_score": 25}}
+        review = self.valid_review()
+        review["findings"] = [{
+            "finding_id": "finding-01",
+            "severity": "major",
+            "issue_type": "FAKE_OPEN_LOOP",
+            "scene_ids": ["scene-04"],
+            "problem": "答えを隠している。",
+            "viewer_impact": "引き延ばしに見える。",
+            "minimal_fix": "現在SceneでPayoffを渡す。",
+        }]
         with self.assertRaises(self.adapter.AdapterError):
             self.adapter.validate_review(review, request)
 
@@ -152,8 +198,10 @@ class OpenAICriticAdapterTests(unittest.TestCase):
                 os.environ.clear()
                 os.environ.update(old_env)
 
-            self.assertTrue(review_path.is_file())
-            self.assertEqual("pass", json.loads(review_path.read_text(encoding="utf-8"))["verdict"])
+            result = json.loads(review_path.read_text(encoding="utf-8"))
+            self.assertEqual("1.1.0", result["contract_version"])
+            self.assertEqual("pass", result["verdict"])
+            self.assertEqual("close", result["scene_checks"][7]["mode"])
             self.assertEqual(1, len(fake.responses.calls))
             call = fake.responses.calls[0]
             self.assertEqual("gpt-5.6", call["model"])

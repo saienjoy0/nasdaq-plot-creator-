@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """Bind authored Story Engine artifacts to the validated daily dossier and validate them.
 
-The Author/Critic judgment is completed before GitHub Actions. This materializer is
-mechanical: it binds lineage fields, copies the pre-authored review unchanged, verifies
-the sealed Critic request/receipt, and emits a single Story Engine acceptance artifact.
-A repository-provenance receipt may validate the artifacts but is not production-eligible
-until a real orchestrator produces an `orchestrator_signed` receipt.
+The editorial review is always required. External Independent Critic certification is
+an optional quality upgrade. By default this materializer does not consume or claim an
+external Critic receipt; callers may request `auto` or `required` explicitly.
 """
 from __future__ import annotations
 
@@ -57,6 +55,12 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--date", required=True)
     ap.add_argument("--repo-root", type=Path, default=ROOT)
+    ap.add_argument(
+        "--external-critic",
+        choices=("off", "auto", "required"),
+        default="off",
+        help="off=editorial review only; auto=use a valid receipt when present; required=fail without a valid external receipt",
+    )
     args = ap.parse_args()
     root = args.repo_root.resolve()
     date = args.date
@@ -73,32 +77,32 @@ def main() -> int:
     review_path = work / "creative_review.json"
     acceptance_path = work / "story_engine_acceptance.json"
 
-    required_inputs = (
-        dossier,
-        plan_template,
-        script_template,
-        review_template,
-        critic_request,
-        critic_receipt,
-    )
-    for path in required_inputs:
+    for path in (dossier, plan_template, script_template, review_template):
         if not path.is_file() or path.stat().st_size == 0:
             raise SystemExit(f"missing Story Engine input: {path.relative_to(root)}")
 
-    receipt_validator = load_module(
-        "critic_execution_receipt_validator",
-        root / "scripts/story-engine/validate_critic_execution_receipt.py",
-    )
-    receipt_result = receipt_validator.validate(
-        critic_request,
-        critic_receipt,
-        repo_root=root,
-        request_schema=root / "skills/nasdaq-cafe-story-engine/contracts/critic_request.schema.json",
-        receipt_schema=root / "skills/nasdaq-cafe-story-engine/contracts/critic_execution_receipt.schema.json",
-    )
-    if receipt_result["status"] != "pass":
-        messages = [item.get("message", "critic receipt failed") for item in receipt_result.get("errors", [])]
-        raise SystemExit("Independent Critic execution receipt failed: " + "; ".join(messages))
+    external_files_present = critic_request.is_file() and critic_receipt.is_file()
+    external_active = args.external_critic == "required" or (args.external_critic == "auto" and external_files_present)
+    if args.external_critic == "required" and not external_files_present:
+        raise SystemExit("external Critic is required but critic_request.json / critic_execution_receipt.json are missing")
+
+    receipt: dict[str, Any] | None = None
+    if external_active:
+        receipt_validator = load_module(
+            "critic_execution_receipt_validator",
+            root / "scripts/story-engine/validate_critic_execution_receipt.py",
+        )
+        receipt_result = receipt_validator.validate(
+            critic_request,
+            critic_receipt,
+            repo_root=root,
+            request_schema=root / "skills/nasdaq-cafe-story-engine/contracts/critic_request.schema.json",
+            receipt_schema=root / "skills/nasdaq-cafe-story-engine/contracts/critic_execution_receipt.schema.json",
+        )
+        if receipt_result["status"] != "pass":
+            messages = [item.get("message", "critic receipt failed") for item in receipt_result.get("errors", [])]
+            raise SystemExit("External Independent Critic execution receipt failed: " + "; ".join(messages))
+        receipt = load(critic_receipt)
 
     plan = load(plan_template)
     plan["causal_dossier"] = ref(root, dossier)
@@ -122,7 +126,6 @@ def main() -> int:
     script["causal_dossier"] = ref(root, dossier)
     dump(script_path, script)
 
-    # The Critic judgment is authored before Actions. Copy its JSON content unchanged.
     review = load(review_template)
     dump(review_path, review)
 
@@ -142,42 +145,64 @@ def main() -> int:
     if not bundle_result.ok:
         raise SystemExit("Story Engine bundle validation failed: " + "; ".join(bundle_result.errors))
     if review.get("verdict") != "pass" or review.get("total_score", 0) < 25:
-        raise SystemExit("final independent critic review must be PASS with score >=25")
+        raise SystemExit("final editorial review must be PASS with score >=25")
 
-    receipt = load(critic_receipt)
-    production_eligible = receipt.get("provenance", {}).get("attestation_strength") == "orchestrator_signed"
-    acceptance = {
-        "contract_version": "1.1.0",
-        "episode_date": date,
-        "status": "pass",
-        "production_eligible": production_eligible,
-        "artifacts": {
-            "causal_dossier": ref(root, dossier),
-            "story_plan": ref(root, plan_path),
-            "story_script": ref(root, script_path),
-            "creative_review": ref(root, review_path),
-            "critic_request": ref(root, critic_request),
-            "critic_execution_receipt": ref(root, critic_receipt),
-        },
-        "validation": {
-            "story_plan": "pass",
-            "story_script": "pass",
-            "independent_critic": "pass",
-            "independent_critic_receipt": "pass",
-            "causality_guard": "pass",
-            "scene_order_guard": "pass",
-            "scene_09_guard": "pass",
-        },
-        "critic": {
-            "round": review["round"],
-            "score": review["total_score"],
-            "verdict": review["verdict"],
+    production_eligible = bool(
+        receipt and receipt.get("provenance", {}).get("attestation_strength") == "orchestrator_signed"
+    )
+    critic_certified = production_eligible
+    external_status = (
+        "certified"
+        if critic_certified
+        else "not_certified"
+        if receipt
+        else "not_run"
+    )
+
+    artifacts: dict[str, Any] = {
+        "causal_dossier": ref(root, dossier),
+        "story_plan": ref(root, plan_path),
+        "story_script": ref(root, script_path),
+        "creative_review": ref(root, review_path),
+    }
+    validation: dict[str, str] = {
+        "story_plan": "pass",
+        "story_script": "pass",
+        "editorial_review": "pass",
+        "understanding_progression": "pass",
+        "causality_guard": "pass",
+        "scene_order_guard": "pass",
+        "scene_09_guard": "pass",
+    }
+    critic: dict[str, Any] = {
+        "round": review["round"],
+        "score": review["total_score"],
+        "verdict": review["verdict"],
+        "reviewer": review["reviewer"],
+        "critic_certified": critic_certified,
+        "external_critic_status": external_status,
+    }
+
+    if receipt:
+        artifacts["critic_request"] = ref(root, critic_request)
+        artifacts["critic_execution_receipt"] = ref(root, critic_receipt)
+        validation["independent_critic_receipt"] = "pass"
+        critic.update({
             "author_invocation_id": receipt["author_invocation_id"],
             "critic_invocation_id": receipt["critic_invocation_id"],
             "isolation_mode": receipt["isolation_mode"],
             "attestation_strength": receipt.get("provenance", {}).get("attestation_strength"),
             "execution_receipt": ref(root, critic_receipt),
-        },
+        })
+
+    acceptance = {
+        "contract_version": "1.1.0",
+        "episode_date": date,
+        "status": "pass",
+        "production_eligible": production_eligible,
+        "artifacts": artifacts,
+        "validation": validation,
+        "critic": critic,
     }
     dump(acceptance_path, acceptance)
 
@@ -197,14 +222,12 @@ def main() -> int:
     print(json.dumps({
         "status": "pass",
         "production_eligible": production_eligible,
-        "critic_isolation_mode": receipt["isolation_mode"],
-        "critic_attestation_strength": receipt.get("provenance", {}).get("attestation_strength"),
+        "critic_certified": critic_certified,
+        "external_critic_status": external_status,
         "paths": {
             "story_plan": str(plan_path),
             "story_script": str(script_path),
             "creative_review": str(review_path),
-            "critic_request": str(critic_request),
-            "critic_execution_receipt": str(critic_receipt),
             "acceptance": str(acceptance_path),
         },
     }, ensure_ascii=False, indent=2))

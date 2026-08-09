@@ -1,10 +1,20 @@
 {
-  "contract_version":"1.0.0",
+  "contract_version":"1.1.0",
   "episode_date":"2026-08-06",
-  "reviewer":"independent_critic",
+  "reviewer":"editorial_critic",
   "round":2,
-  "scores":{"opening":4,"progression":5,"discovery":5,"clarity":4,"fox_voice":4,"late_payoff":5},
-  "total_score":27,
+  "scores":{"opening":4,"progression":5,"discovery":5,"clarity":5,"fox_voice":4,"late_payoff":5},
+  "total_score":28,
+  "scene_checks":[
+    {"scene_id":"scene-01","mode":"continue","payoff_delivered":true,"belief_changed":true,"continuation_reason_natural":true,"closure_effective":null,"opening_promise_recovered":null,"procedural_language_dominant":false},
+    {"scene_id":"scene-02","mode":"continue","payoff_delivered":true,"belief_changed":true,"continuation_reason_natural":true,"closure_effective":null,"opening_promise_recovered":null,"procedural_language_dominant":false},
+    {"scene_id":"scene-03","mode":"continue","payoff_delivered":true,"belief_changed":true,"continuation_reason_natural":true,"closure_effective":null,"opening_promise_recovered":null,"procedural_language_dominant":false},
+    {"scene_id":"scene-04","mode":"continue","payoff_delivered":true,"belief_changed":true,"continuation_reason_natural":true,"closure_effective":null,"opening_promise_recovered":null,"procedural_language_dominant":false},
+    {"scene_id":"scene-05","mode":"continue","payoff_delivered":true,"belief_changed":true,"continuation_reason_natural":true,"closure_effective":null,"opening_promise_recovered":null,"procedural_language_dominant":false},
+    {"scene_id":"scene-06","mode":"continue","payoff_delivered":true,"belief_changed":true,"continuation_reason_natural":true,"closure_effective":null,"opening_promise_recovered":null,"procedural_language_dominant":false},
+    {"scene_id":"scene-07","mode":"continue","payoff_delivered":true,"belief_changed":true,"continuation_reason_natural":true,"closure_effective":null,"opening_promise_recovered":null,"procedural_language_dominant":false},
+    {"scene_id":"scene-08","mode":"close","payoff_delivered":true,"belief_changed":true,"continuation_reason_natural":null,"closure_effective":true,"opening_promise_recovered":true,"procedural_language_dominant":false}
+  ],
   "immediate_failures":[],
   "findings":[],
   "verdict":"pass"

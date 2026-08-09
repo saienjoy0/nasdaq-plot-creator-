@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import sys
@@ -28,6 +29,12 @@ def load_module(name: str, path: Path):
     return module
 
 
+def git_blob_sha(path: Path) -> str:
+    data = path.read_bytes()
+    payload = b"blob " + str(len(data)).encode("ascii") + b"\0" + data
+    return hashlib.sha1(payload).hexdigest()
+
+
 @unittest.skipUnless(CRYPTO_AVAILABLE, "external Critic crypto tests run in Story Engine v1.1 Gate CI")
 class ExternalCriticOrchestratorTests(unittest.TestCase):
     @classmethod
@@ -43,12 +50,34 @@ class ExternalCriticOrchestratorTests(unittest.TestCase):
         cls.request = ROOT / "working/2026-08-06/story-engine/templates/critic_request.json"
         cls.request_schema = ROOT / "skills/nasdaq-cafe-story-engine/contracts/critic_request.schema.json"
 
-    def test_prepare_bundle_reconstructs_all_allowed_inputs_and_03_04(self):
+    def fresh_request_path(self, base: Path) -> Path:
+        request = json.loads(self.request.read_text(encoding="utf-8"))
+        request["author_invocation_id"] = "story-author-understanding-progression-test"
+        request["requested_critic_invocation_id"] = "story-critic-understanding-progression-test"
+        for row in request["inputs"]:
+            row["git_blob_sha"] = git_blob_sha(ROOT / row["path"])
+        path = base / "critic_request.json"
+        path.write_text(json.dumps(request, ensure_ascii=False, indent=2), encoding="utf-8")
+        return path
+
+    def test_historical_request_fails_closed_after_reviewed_input_revision(self):
         with tempfile.TemporaryDirectory() as temp:
-            bundle = Path(temp) / "bundle"
+            with self.assertRaises(self.runner.OrchestratorError):
+                self.runner.prepare_bundle(
+                    repo_root=ROOT,
+                    request_path=self.request,
+                    request_schema=self.request_schema,
+                    bundle_dir=Path(temp) / "bundle",
+                )
+
+    def test_prepare_bundle_reconstructs_all_allowed_inputs_and_03_04_with_fresh_request(self):
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            request_path = self.fresh_request_path(base)
+            bundle = base / "bundle"
             request, manifest = self.runner.prepare_bundle(
                 repo_root=ROOT,
-                request_path=self.request,
+                request_path=request_path,
                 request_schema=self.request_schema,
                 bundle_dir=bundle,
             )
