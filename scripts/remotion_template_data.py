@@ -97,6 +97,21 @@ def _use_mixed_metric_template(beat: dict[str, Any]) -> None:
         )
     config["variant"] = "two-lane"
 
+    viewer_texts = beat.get("viewerTexts")
+    if isinstance(viewer_texts, list) and len(viewer_texts) == 2:
+        labels: list[str] = []
+        for text in viewer_texts:
+            if not isinstance(text, str) or "｜" not in text:
+                labels = []
+                break
+            label = text.split("｜", 1)[0].strip()
+            if not label:
+                labels = []
+                break
+            labels.append(label)
+        if len(labels) == 2:
+            config["laneLabels"] = labels
+
 
 def _materialize_numeric_template(scene: dict[str, Any], beat: dict[str, Any]) -> None:
     original_template = beat.get("visualTemplate")
