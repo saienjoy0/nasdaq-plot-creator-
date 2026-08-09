@@ -1,0 +1,17 @@
+{
+  "contract_version": "1.0.0",
+  "id": "valid_single_driver",
+  "harness_kind": "single",
+  "expected": {
+    "validation_status": "pass",
+    "lead_type": "news",
+    "causality_scope": "company",
+    "confidence": "medium",
+    "primary_driver": "driver",
+    "amplifiers": [],
+    "offsets": [],
+    "angle_type": "contradiction",
+    "eligible_angle_count": 1
+  },
+  "purpose": "Regression fixture proving that one eligible angle is valid when alternatives are unsupported and company scope remains company scope."
+}
