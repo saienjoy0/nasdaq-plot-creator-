@@ -25,7 +25,7 @@
         "assetId": "daily-2026-08-06-amd-official-q2-event",
         "sourceKind": "official-url",
         "sourceLocator": {
-          "url": "https://ir.amd.com/news-events/press-releases/detail/1294/amd-to-report-fiscal-second-quarter-2026-financial-results"
+          "url": "https://ir.amd.com/news-events/press-releases/detail/1289/amd-to-report-fiscal-second-quarter-2026-financial-results"
         },
         "captureMethod": "webpage-screenshot",
         "captureSpec": {
@@ -73,7 +73,7 @@
         "assetId": "daily-2026-08-06-spacex-official-evidence",
         "sourceKind": "official-url",
         "sourceLocator": {
-          "url": "https://ir.spacex.com/news-releases/news-release-details/spacex-reports-third-quarter-2026-financial-results"
+          "url": "https://ir.spacex.com/updates/releases-details/2026/SpaceX-to-Post-Second-Quarter-2026-Results-and-Host-Webcast-on-August-4-2026-2026-g8layJlbFm/default.aspx"
         },
         "captureMethod": "webpage-screenshot",
         "captureSpec": {
