@@ -1,0 +1,102 @@
+{
+  "contractVersion": "1.0.0",
+  "episodeDate": "2026-08-06",
+  "intents": [
+    {
+      "intentId": "vsi-scene-02-amd-official-anchor",
+      "target": {
+        "sceneId": "scene-02",
+        "visualBeatId": "vb-02-01"
+      },
+      "presentationClass": "source-document",
+      "purpose": "AMDという主役企業とQ2発表イベントの公式出所を画面で示す。Q2実績数値そのものの根拠へ拡張しない。",
+      "sourceIds": [
+        "source-003"
+      ],
+      "placement": {
+        "placementId": "scene-02-placement-entity-001",
+        "role": "main-media",
+        "region": "main-stage",
+        "fit": "contain",
+        "focalPoint": null
+      },
+      "primary": {
+        "candidateId": "vsp-scene-02-amd-official-primary",
+        "assetId": "daily-2026-08-06-amd-official-q2-event",
+        "sourceKind": "official-url",
+        "sourceLocator": {
+          "url": "https://ir.amd.com/news-events/press-releases/detail/1294/amd-to-report-fiscal-second-quarter-2026-financial-results"
+        },
+        "captureMethod": "webpage-screenshot",
+        "captureSpec": {
+          "selector": null,
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "outputFormat": "png"
+        },
+        "rightsStatus": "user-review-required"
+      },
+      "fallback": {
+        "candidateId": "vsp-scene-02-amd-card-fallback",
+        "assetId": "company_amd",
+        "sourceKind": "existing-asset",
+        "sourceLocator": {
+          "assetId": "company_amd"
+        },
+        "captureMethod": "registry-reference",
+        "captureSpec": null,
+        "rightsStatus": "cleared"
+      }
+    },
+    {
+      "intentId": "vsi-scene-05-spacex-official-anchor",
+      "target": {
+        "sceneId": "scene-05",
+        "visualBeatId": "vb-05-01"
+      },
+      "presentationClass": "source-document",
+      "purpose": "SpaceX側の公式発表ページを、NVIDIAへの追加的な受注証拠を説明する出所アンカーとして示す。分足因果の断定には使わない。",
+      "sourceIds": [
+        "source-006"
+      ],
+      "placement": {
+        "placementId": "scene-05-placement-entity-001",
+        "role": "main-media",
+        "region": "main-stage",
+        "fit": "contain",
+        "focalPoint": null
+      },
+      "primary": {
+        "candidateId": "vsp-scene-05-spacex-official-primary",
+        "assetId": "daily-2026-08-06-spacex-official-evidence",
+        "sourceKind": "official-url",
+        "sourceLocator": {
+          "url": "https://ir.spacex.com/news-releases/news-release-details/spacex-reports-third-quarter-2026-financial-results"
+        },
+        "captureMethod": "webpage-screenshot",
+        "captureSpec": {
+          "selector": null,
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "outputFormat": "png"
+        },
+        "rightsStatus": "user-review-required"
+      },
+      "fallback": {
+        "candidateId": "vsp-scene-05-nvidia-card-fallback",
+        "assetId": "company_nvda",
+        "sourceKind": "existing-asset",
+        "sourceLocator": {
+          "assetId": "company_nvda"
+        },
+        "captureMethod": "registry-reference",
+        "captureSpec": null,
+        "rightsStatus": "cleared"
+      }
+    }
+  ]
+}
