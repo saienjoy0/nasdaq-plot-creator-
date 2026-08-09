@@ -33,7 +33,13 @@ class OptionalExternalCriticPolicyTests(unittest.TestCase):
             ROOT / "scripts/story-engine/validate_story_engine_acceptance_v1_1.py",
         )
 
-    def run_validation(self, *, attestation_strength: str, allow_uncertified: bool):
+    def run_validation(
+        self,
+        *,
+        attestation_strength: str,
+        allow_uncertified: bool,
+        require_production: bool = True,
+    ):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             acceptance_path = root / "story_engine_acceptance.json"
@@ -107,7 +113,7 @@ class OptionalExternalCriticPolicyTests(unittest.TestCase):
                 return self.validator.validate_acceptance(
                     acceptance_path,
                     repo_root=root,
-                    require_production=True,
+                    require_production=require_production,
                     allow_uncertified_production=allow_uncertified,
                 )
 
@@ -151,6 +157,24 @@ class OptionalExternalCriticPolicyTests(unittest.TestCase):
         self.assertTrue(result["critic_certified"])
         self.assertEqual("certified", result["external_critic_status"])
         self.assertEqual("external_critic_required", result["production_policy"])
+
+    def test_artifact_only_mode_preserves_legacy_warning_and_reports_certification(self):
+        result = self.run_validation(
+            attestation_strength="repository_provenance",
+            allow_uncertified=False,
+            require_production=False,
+        )
+        self.assertEqual("pass", result["status"], result)
+        warning_codes = {item["code"] for item in result["warnings"]}
+        self.assertIn("W_PRODUCTION_BLOCKED", warning_codes)
+        self.assertIn("W_EXTERNAL_CRITIC_NOT_CERTIFIED", warning_codes)
+        self.assertEqual("artifact_validation_only", result["production_policy"])
+
+    def test_daily_wrapper_explicitly_selects_optional_external_critic_policy(self):
+        source = (ROOT / "scripts/run_daily_production_story_engine_v1_1.py").read_text(encoding="utf-8")
+        self.assertIn("require_production=True", source)
+        self.assertIn("allow_uncertified_production=True", source)
+        self.assertIn("optional quality upgrade", source)
 
 
 if __name__ == "__main__":
