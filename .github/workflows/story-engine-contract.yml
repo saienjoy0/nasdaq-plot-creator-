@@ -8,6 +8,8 @@ on:
       - 'skills/nasdaq-cafe-entertainment-critic/**'
       - 'scripts/story-engine/**'
       - 'tests/story-engine/test_story_engine.py'
+      - 'tests/story-engine/test_story_engine_2026_08_06_fixture.py'
+      - 'tests/story-engine/fixtures/2026-08-06/**'
       - 'tests/story-engine/test_committed_valid_fixtures.py'
       - 'tests/story-engine/test_understanding_progression_review.py'
       - 'tests/story-engine-integration/test_optional_external_critic_policy.py'
@@ -28,4 +30,4 @@ jobs:
       - run: pip install jsonschema pytest
       - run: python tests/story-engine/test_story_engine.py
       - run: python tests/story-engine/test_committed_valid_fixtures.py
-      - run: pytest -q tests/story-plan/test_story_plan.py tests/story-plan/test_story_plan_migration.py tests/story-engine/test_understanding_progression_review.py tests/story-engine-integration/test_optional_external_critic_policy.py
+      - run: pytest -q tests/story-plan/test_story_plan.py tests/story-plan/test_story_plan_migration.py tests/story-engine/test_story_engine_2026_08_06_fixture.py tests/story-engine/test_understanding_progression_review.py tests/story-engine-integration/test_optional_external_critic_policy.py
