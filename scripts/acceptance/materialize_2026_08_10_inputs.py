@@ -25,6 +25,11 @@ def main():
         expected=PART_SHA256.get(p.name)
         if expected is None or actual!=expected:
             failures.append(f'{p.name}: bytes={len(raw)} actual={actual} expected={expected}')
+            if p.name=='part-08.b64':
+                text=raw.decode('ascii')
+                for offset in range(0,len(text),500):
+                    chunk=text[offset:offset+500]
+                    failures.append(f'part-08 chunk {offset}: {hashlib.sha256(chunk.encode()).hexdigest()}')
     if failures:
         raise SystemExit('acceptance input part SHA mismatch\n'+'\n'.join(failures))
     data=base64.b64decode(''.join(p.read_text(encoding='ascii').strip() for p in parts))
