@@ -7,6 +7,7 @@ import re
 from pathlib import Path
 
 DATE = '2026-08-10'
+TERMINAL_REUSE_LABEL = '主因候補：利上げ観測後退'
 
 
 def sha256_text(text: str) -> str:
@@ -83,6 +84,17 @@ def main() -> int:
         raise SystemExit('render Scene 8 shape drift')
     scene8 = scenes[7]
 
+    # Scene 9 terminal assembly intentionally reuses this already-introduced
+    # Scene 8 label. Keep that stable contract while appending the newly
+    # verified minute-data boundary texts. This does not alter narration or
+    # causal confidence; it restores the approved cross-scene reuse binding.
+    existing_support = list(scene8.get('supportingTexts', []))
+    scene8['supportingTexts'] = [TERMINAL_REUSE_LABEL] + [
+        value for value in existing_support if value != TERMINAL_REUSE_LABEL
+    ]
+    render_text = json.dumps(render, ensure_ascii=False, indent=2, sort_keys=True) + '\n'
+    render_path.write_text(render_text, encoding='utf-8')
+
     text = public_path.read_text(encoding='utf-8')
     match = re.search(r'(?ms)^## B8\. Scene 8.*?(?=^## B9\.)', text)
     if match is None:
@@ -135,7 +147,10 @@ def main() -> int:
         raise SystemExit(f'public package still misses final render strings: {missing}')
 
     public_path.write_text(text, encoding='utf-8')
-    print(f'PASS synchronized episode public package with verified wave2 timing {sha256_text(text)}')
+    print(
+        'PASS synchronized episode public package with verified wave2 timing '
+        f'public_sha256={sha256_text(text)} render_sha256={sha256_text(render_text)}'
+    )
     return 0
 
 
