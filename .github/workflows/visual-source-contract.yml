@@ -5,11 +5,14 @@ on:
     paths:
       - "contracts/final_episode_contract.schema.json"
       - "scripts/visual_source_contract.py"
+      - "scripts/visual_evidence_quality_gate.py"
+      - "scripts/prepare_visual_sources.py"
       - "scripts/resolve_visual_sources.py"
       - "scripts/select_visual_sources.py"
       - "scripts/visual_source_projection.py"
       - "scripts/materialize_daily_episode.py"
       - "tests/visual-source/**"
+      - "tests/real-day-2026-08-10/apply_visual_evidence_first.py"
       - ".github/workflows/visual-source-contract.yml"
   workflow_dispatch:
 
@@ -34,9 +37,12 @@ jobs:
         run: |
           python -m py_compile \
             scripts/visual_source_contract.py \
+            scripts/visual_evidence_quality_gate.py \
+            scripts/prepare_visual_sources.py \
             scripts/resolve_visual_sources.py \
             scripts/select_visual_sources.py \
             scripts/visual_source_projection.py \
-            scripts/materialize_daily_episode.py
+            scripts/materialize_daily_episode.py \
+            tests/real-day-2026-08-10/apply_visual_evidence_first.py
       - name: Run Visual Source tests
         run: python -m pytest -q tests/visual-source
