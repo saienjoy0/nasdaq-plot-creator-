@@ -21,11 +21,13 @@ def test_finance_style_spoken_numbers_become_display_numbers() -> None:
         "Nasdaqは一・三〇パーセント上昇、SOXXは二・〇二パーセント高。"
         "予想はプラス八万人、実際はマイナス二・三万人。"
         "売上十四・八五億ドル、EPS〇・七六ドル。"
+        "次四半期売上は十五・八九億から十六・一八億ドル。"
     )
     assert module.to_display_text(text) == (
         "Nasdaqは1.30%上昇、SOXXは2.02%高。"
         "予想は+8万人、実際は-2.3万人。"
         "売上14.85億ドル、EPS0.76ドル。"
+        "次四半期売上は15.89億から16.18億ドル。"
     )
 
 
