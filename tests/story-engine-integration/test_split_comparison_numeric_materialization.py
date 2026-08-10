@@ -54,3 +54,4 @@ def test_mixed_metric_conversion_reuses_numbers_and_existing_numeric_labels():
     assert beat["templateVariant"] == "two-lane"
     assert beat["visualGrammarId"] == "evidence"
     assert beat["templateConfig"]["laneLabels"] == ["Q2売上", "AMD"]
+    assert beat["viewerTexts"] == ["Q2売上｜115.4億ドル", "AMD｜-7.04%"]
