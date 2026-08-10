@@ -5,6 +5,7 @@ from pathlib import Path
 PAYLOAD_SHA256='b1d9ed94c50843c3b75c6d35e2d25f177a5669c9768e52afd6ef68706badab5d'
 CORRECTED_SUPPLEMENT_SHA256='151f5e124cdd7fda2b17e909387b63ce7b4465f4b7dddbbc205dbd98af5d7270'
 CORRECTED_DOSSIER_SHA256='78c66e20521b0299b2b845a1b0990b7ad938fbb6b9b60849a32415dab60cc44d'
+CORRECTED_STORY_PLAN_SHA256='05c5e79cba26e98180dc4d46ab4470686ef6775eb89fcfd9808fa6a21dc00b09'
 PART_SHA256={
  'part-01.b64':'509e05dc694585aaabc12675228074009ca7791d7b76281c118d20fe396c9a75',
  'part-02.b64':'377a99ae4888f2cb10dba3f075781817015c34a4d3ce216d06ce9f543c6e46cb',
@@ -37,8 +38,7 @@ def write_checked(path:Path,doc:dict,expected_sha:str,label:str)->None:
     print(f'PASS corrected {label} {actual}')
 
 def correct_supplement(root:Path)->None:
-    path=root/'research/2026-08-10/research_evidence_supplement_manifest.json'
-    doc=json.loads(path.read_text(encoding='utf-8'))
+    path=root/'research/2026-08-10/research_evidence_supplement_manifest.json'; doc=json.loads(path.read_text(encoding='utf-8'))
     waves=doc.get('waves')
     if not isinstance(waves,list) or len(waves)!=2 or waves[1].get('wave')!=2: raise SystemExit('unexpected wave-2 supplement shape')
     files=waves[1].get('evidenceFiles')
@@ -47,12 +47,10 @@ def correct_supplement(root:Path)->None:
     if item.get('path')!='research/2026-08-10/evidence/RA-W2-005_exact_url_archive.json': raise SystemExit('unexpected wave-2 evidence path')
     if item.get('sha256')!='53d8d5717cff293a652c3fcba0145a98ded7de21a87ed3db546d933b7819bc06': raise SystemExit('unexpected wave-2 evidence SHA')
     if item.get('requestId') not in (None,'RA-W2-005'): raise SystemExit('unexpected wave-2 requestId before correction')
-    item['requestId']='RA-W2-005'
-    write_checked(path,doc,CORRECTED_SUPPLEMENT_SHA256,'supplement')
+    item['requestId']='RA-W2-005'; write_checked(path,doc,CORRECTED_SUPPLEMENT_SHA256,'supplement')
 
-def correct_dossier(root:Path)->None:
-    path=root/'research/2026-08-10/causal_research_dossier_2026-08-10.json'
-    doc=json.loads(path.read_text(encoding='utf-8'))
+def correct_dossier(root:Path)->dict:
+    path=root/'research/2026-08-10/causal_research_dossier_2026-08-10.json'; doc=json.loads(path.read_text(encoding='utf-8'))
     if doc.get('episode_date')!='2026-08-10': raise SystemExit('unexpected dossier episode date')
     doc['session']={'information_cutoff':'2026-08-10T12:15:00+09:00','market_date':'2026-08-07','timezone':'Asia/Tokyo'}
     matched=0
@@ -60,7 +58,19 @@ def correct_dossier(root:Path)->None:
         if item.get('path_or_reference')=='research/2026-08-10/research_evidence_supplement_manifest.json':
             item['version_or_hash']=CORRECTED_SUPPLEMENT_SHA256; matched+=1
     if matched!=1: raise SystemExit(f'unexpected supplement provenance count: {matched}')
-    write_checked(path,doc,CORRECTED_DOSSIER_SHA256,'causal dossier')
+    write_checked(path,doc,CORRECTED_DOSSIER_SHA256,'causal dossier'); return doc
+
+def correct_story_plan(root:Path,dossier:dict)->None:
+    path=root/'working/2026-08-10/story-engine/templates/story_plan.template.json'; doc=json.loads(path.read_text(encoding='utf-8'))
+    contradiction=next(x for x in dossier['contradictions'] if x['id']==doc['central_contradiction_id'])
+    doc['central_contradiction']=contradiction['statement']
+    doc['headline_beyond_discovery']=dossier['editorial_handoff']['headline_beyond_discovery']
+    selected=next((x for x in doc['angle_candidates'] if x['id']==doc['selected_angle_id']),None)
+    if selected is None or selected['id']!='angle-02': raise SystemExit('unexpected selected story angle')
+    selected['central_question']=doc['central_question']; selected['story_spine']=doc['story_spine']; selected['opening_promise']=doc['opening_promise']
+    selected['midpoint_turn_claim']=doc['midpoint_turn']['claim']; selected['closing_reframe']=doc['closing_reframe']['text']
+    selected['counterevidence_ids']=sorted(set(selected['counterevidence_ids']+['E-002']))
+    write_checked(path,doc,CORRECTED_STORY_PLAN_SHA256,'story plan')
 
 def main():
     root=Path.cwd().resolve(); parts=sorted((root/'acceptance-inputs/2026-08-10').glob('part-*.b64'))
@@ -78,6 +88,6 @@ def main():
             target=(root/info.filename).resolve()
             if target == root or root not in target.parents: raise SystemExit(f'unsafe payload path: {info.filename}')
             target.parent.mkdir(parents=True,exist_ok=True); target.write_bytes(z.read(info.filename))
-    correct_supplement(root); correct_dossier(root)
+    correct_supplement(root); dossier=correct_dossier(root); correct_story_plan(root,dossier)
     print(f'PASS materialized {len(infos)} acceptance inputs payload={PAYLOAD_SHA256}')
 if __name__=='__main__': main()
