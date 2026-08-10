@@ -63,7 +63,7 @@ def to_display_text(text: str) -> str:
         text,
     )
     text = re.sub(
-        rf"(?:(プラス|マイナス))?({_JP_NUMBER})(億ドル|万ドル|ドル|万人|億円|万円|円)",
+        rf"(?:(プラス|マイナス))?({_JP_NUMBER})(億ドル|万ドル|ドル|万人|億円|万円|円|億)",
         lambda match: f"{_signed(match.group(1), match.group(2))}{match.group(3)}",
         text,
     )
