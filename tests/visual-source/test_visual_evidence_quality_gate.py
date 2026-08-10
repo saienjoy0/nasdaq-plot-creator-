@@ -69,12 +69,15 @@ def render(sources: list[dict], beats: list[dict], numbers: list[dict] | None = 
     }
 
 
-def intents(*rows: dict) -> dict:
-    return {
+def intents(*rows: dict, strict: bool = True) -> dict:
+    document = {
         "contractVersion": "1.0.0",
         "episodeDate": "2026-08-10",
         "intents": list(rows),
     }
+    if strict:
+        document["qualityPolicy"] = "evidence-first-v1"
+    return document
 
 
 def intent(source_id: str, beat_id: str = "vb-02-01") -> dict:
@@ -87,6 +90,16 @@ def intent(source_id: str, beat_id: str = "vb-02-01") -> dict:
 
 def codes(report: dict) -> set[str]:
     return {item["code"] for item in report["violations"]}
+
+
+def test_legacy_package_is_not_retroactively_invalidated() -> None:
+    doc = render(
+        [source("source-002", "official", "Employment Situation — July 2026", ["7月雇用者数"])],
+        [beat("vb-02-01", ["source-002"], primary_function="Anchor")],
+    )
+    report = gate.validate_visual_evidence(render=doc, intents_doc=intents(strict=False))
+    assert report["status"] == "PASS"
+    assert report["policyMode"] == "legacy"
 
 
 def test_official_anchor_cannot_silently_be_not_required() -> None:
