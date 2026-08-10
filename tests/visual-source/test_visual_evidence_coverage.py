@@ -26,6 +26,7 @@ def base_render(source: dict, beat: dict | None = None) -> dict:
                 "evidenceSourceIds": [source["sourceId"]],
                 "visualBeats": [beat or {
                     "beatId": "vb-02-01",
+                    "primaryFunction": "Evidence",
                     "evidenceSourceIds": [source["sourceId"]],
                     "visualTemplate": "metric-comparison-board",
                     "templateConfig": {},
@@ -89,6 +90,26 @@ def test_day_specific_company_evidence_requires_visual_source_intent() -> None:
         raise AssertionError("day-specific company evidence must be covered")
 
 
+def test_non_evidence_beat_does_not_create_a_source_quota() -> None:
+    module = load_module()
+    source = {
+        "sourceId": "source-002",
+        "sourceType": "official",
+        "title": "Employment Situation",
+        "publisher": "BLS",
+        "reference": "https://www.bls.gov/news.release/empsit.nr0.htm",
+        "usedFor": ["context"],
+    }
+    beat = {
+        "beatId": "vb-02-01",
+        "primaryFunction": "Explain",
+        "evidenceSourceIds": ["source-002"],
+        "visualTemplate": "causal-lane",
+        "templateConfig": {},
+    }
+    module.validate_visual_evidence_coverage(render=base_render(source, beat), intents=[])
+
+
 def test_generic_legacy_company_url_does_not_create_new_quota() -> None:
     module = load_module()
     render = base_render({
@@ -134,6 +155,7 @@ def test_verified_intraday_existing_series_visual_is_enough() -> None:
     }
     beat = {
         "beatId": "vb-08-01",
+        "primaryFunction": "Evidence",
         "evidenceSourceIds": ["source-005"],
         "visualTemplate": "event-reaction-timeline",
         "templateConfig": {
@@ -165,7 +187,7 @@ def test_closing_only_source_references_do_not_force_visuals() -> None:
             "sceneNumber": 9,
             "sceneRole": "closing-recap-sendoff-goodnight",
             "evidenceSourceIds": ["source-002"],
-            "visualBeats": [{"evidenceSourceIds": ["source-002"]}],
+            "visualBeats": [{"primaryFunction": "Evidence", "evidenceSourceIds": ["source-002"]}],
         }],
     }
     module.validate_visual_evidence_coverage(render=render, intents=[])
