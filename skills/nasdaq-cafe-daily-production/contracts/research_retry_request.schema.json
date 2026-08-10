@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nasdaq-cafe.local/schemas/research_retry_request.schema.json",
+  "title": "NASDAQ Cafe Research Retry Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "episode_date",
+    "requested_action",
+    "reason_type",
+    "creative_review",
+    "finding_ids",
+    "immediate_failure_texts"
+  ],
+  "properties": {
+    "contract_version": {"const": "1.0.0"},
+    "episode_date": {"type": "string", "format": "date"},
+    "requested_action": {"const": "restart_causal_research"},
+    "reason_type": {
+      "enum": [
+        "FACTUAL_ERROR",
+        "CAUSALITY_DRIFT",
+        "COUNTEREVIDENCE_REMOVED",
+        "TIMELINE_DRIFT",
+        "NASDAQ_SCOPE_OVERREACH"
+      ]
+    },
+    "creative_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "finding_ids": {
+      "type": "array",
+      "items": {"type": "string", "pattern": "^finding-[0-9]{2,}$"},
+      "uniqueItems": true
+    },
+    "immediate_failure_texts": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "note": {"type": "string"}
+  }
+}
