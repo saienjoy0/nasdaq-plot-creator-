@@ -1,0 +1,88 @@
+name: Real-Day Research Acceptance 2026-08-10
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/real-day-research-acceptance-2026-08-10.yml"
+      - "daily-inputs/2026-08-10/**"
+      - "working/2026-08-10/memory_query_plan.json"
+      - "research/2026-08-10/**"
+
+permissions:
+  contents: read
+
+jobs:
+  research-intake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deterministic validation dependencies
+        run: python -m pip install --disable-pip-version-check jsonschema pytest
+
+      - name: Run editorial memory retrieval
+        run: |
+          mkdir -p working/2026-08-10 research/2026-08-10
+          python scripts/editorial_memory_retrieval.py \
+            --query-plan working/2026-08-10/memory_query_plan.json \
+            --context-output working/2026-08-10/memory_context_2026-08-10.md \
+            --report-output working/2026-08-10/memory_retrieval_report_2026-08-10.json
+
+      - name: Freeze research input manifest
+        run: |
+          python scripts/build_research_input_manifest.py \
+            --episode-date 2026-08-10 \
+            --market-date 2026-08-07 \
+            --timezone Asia/Tokyo \
+            --information-cutoff 2026-08-10T12:15:00+09:00 \
+            --daily-source-package daily-inputs/2026-08-10/daily_source_package_2026-08-10.md \
+            --memory-query-plan working/2026-08-10/memory_query_plan.json \
+            --memory-context working/2026-08-10/memory_context_2026-08-10.md \
+            --memory-retrieval-report working/2026-08-10/memory_retrieval_report_2026-08-10.json \
+            --output research/2026-08-10/research_input_manifest.json \
+            --repo-root "$GITHUB_WORKSPACE"
+
+      - name: Record intake acceptance
+        run: |
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          manifest = Path('research/2026-08-10/research_input_manifest.json')
+          value = json.loads(manifest.read_text(encoding='utf-8'))
+          if value['validation']['status'] != 'pass':
+              raise SystemExit('research input manifest did not pass')
+          digest = hashlib.sha256(manifest.read_bytes()).hexdigest()
+          Path('working/2026-08-10/base_manifest_sha.txt').write_text(digest + '\n', encoding='utf-8')
+          report = {
+              'status': 'pass',
+              'episodeDate': '2026-08-10',
+              'marketDateUsed': '2026-08-07',
+              'collectorDeclaredMarketDate': '2026-08-09',
+              'collectorMarketDateIssue': 'detected-sunday-mismatch',
+              'researchInputManifestSha256': digest,
+          }
+          Path('working/2026-08-10/research_intake_acceptance.json').write_text(
+              json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + '\n',
+              encoding='utf-8'
+          )
+          print(json.dumps(report, indent=2))
+          PY
+
+      - name: Upload research intake artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nasdaq-cafe-research-intake-2026-08-10
+          path: |
+            daily-inputs/2026-08-10/daily_source_package_2026-08-10.md
+            working/2026-08-10/memory_query_plan.json
+            working/2026-08-10/memory_context_2026-08-10.md
+            working/2026-08-10/memory_retrieval_report_2026-08-10.json
+            working/2026-08-10/base_manifest_sha.txt
+            working/2026-08-10/research_intake_acceptance.json
+            research/2026-08-10/research_input_manifest.json
+          if-no-files-found: error
