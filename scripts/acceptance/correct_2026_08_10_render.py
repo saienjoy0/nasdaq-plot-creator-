@@ -17,6 +17,12 @@ SCENE8_CHUNK2 = (
     'Microchip好決算と原油・利回り低下が増幅要因。成長不安と個別の下落銘柄が反対材料です。'
     '悪材料が消えた夜ではなく、どの採点表が優先されたかが変わった夜でした。'
 )
+PUBLISHING_DESCRIPTION = (
+    '8月7日のNasdaq Compositeは1.30%上昇、SOXXは2.02%高でした。一方、7月の米非農業部門雇用者数は'
+    '市場予想+8万人に対して-2.3万人。動画ではExpected / Actual / Gap、利上げ観測の後退、Microchip好決算による'
+    '半導体の増幅、AMD・Alphabetの逆行、8:30 ETの1分足初動と因果上の限界まで分けて確認します。'
+    '本動画はニュース解説であり、個別銘柄の売買を勧めるものではありません。'
+)
 
 
 def cue_start(text: str, size: int = 42) -> str:
@@ -138,6 +144,11 @@ def main() -> int:
             break
     else:
         raise SystemExit('source-005 missing')
+
+    publishing = doc.get('publishing')
+    if not isinstance(publishing, dict):
+        raise SystemExit('publishing block missing')
+    publishing['description'] = PUBLISHING_DESCRIPTION
 
     text = json.dumps(doc, ensure_ascii=False, indent=2, sort_keys=True) + '\n'
     actual = hashlib.sha256(text.encode('utf-8')).hexdigest()
