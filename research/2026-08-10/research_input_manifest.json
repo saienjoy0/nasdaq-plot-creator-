@@ -1,0 +1,86 @@
+{
+  "contract_version": "1.0.0",
+  "episode_date": "2026-08-10",
+  "inputs": {
+    "daily_source_package": {
+      "path": "daily-inputs/2026-08-10/daily_source_package_2026-08-10.md",
+      "sha256": "b9839552828d2ad13a19b1aa4550c4940683e0f2055733873a2022cda56e2416"
+    },
+    "memory_context": {
+      "path": "working/2026-08-10/memory_context_2026-08-10.md",
+      "sha256": "2baa55abf833d436244e09370a7e95e8c1c3065952474cab9309aaf6e5b3298a"
+    },
+    "memory_query_plan": {
+      "path": "working/2026-08-10/memory_query_plan.json",
+      "sha256": "3810722311d8ba2d7dddcda16425c0fdc8058b8690ea7984cf65d011007c5010"
+    },
+    "memory_retrieval_report": {
+      "path": "working/2026-08-10/memory_retrieval_report_2026-08-10.json",
+      "sha256": "0be51bc4231dfd6705f8ead53dda904bee6a1ea3b03373e0d046a70b377ab744"
+    }
+  },
+  "memory_intake": {
+    "current_revalidation_required": [
+      {
+        "historical_confidence": "unknown",
+        "item_id": "2026-07-31/v001",
+        "item_type": "episode",
+        "path": "editorial-memory/episodes/2026-07-31/revisions/v001/episode_summary.md",
+        "provenance_paths": [
+          "editorial-memory/episodes/2026-07-31/revisions/v001/provenance.json"
+        ],
+        "requires_current_revalidation": true,
+        "retrieval_status": "approved_preview"
+      }
+    ],
+    "historical_context_only": [],
+    "not_selected": [
+      {
+        "detail": "",
+        "item_id": "ai-capex-evaluation-axis",
+        "item_type": "claim",
+        "reason": "low_relevance"
+      },
+      {
+        "detail": "",
+        "item_id": "ai-capex-payback",
+        "item_type": "thread",
+        "reason": "low_relevance"
+      }
+    ],
+    "procedural": [
+      {
+        "historical_confidence": "unknown",
+        "item_id": "active-context",
+        "item_type": "core",
+        "path": "editorial-memory/active_context.md",
+        "provenance_paths": [
+          "editorial-memory/active_context.md"
+        ],
+        "requires_current_revalidation": false,
+        "retrieval_status": "read_only"
+      },
+      {
+        "historical_confidence": "unknown",
+        "item_id": "fox-editorial-state",
+        "item_type": "core",
+        "path": "editorial-memory/core/fox_editorial_state.md",
+        "provenance_paths": [
+          "editorial-memory/core/fox_editorial_state.md"
+        ],
+        "requires_current_revalidation": false,
+        "retrieval_status": "read_only"
+      }
+    ]
+  },
+  "session": {
+    "information_cutoff": "2026-08-10T12:15:00+09:00",
+    "market_date": "2026-08-07",
+    "timezone": "Asia/Tokyo"
+  },
+  "validation": {
+    "errors": [],
+    "status": "pass",
+    "warnings": []
+  }
+}
