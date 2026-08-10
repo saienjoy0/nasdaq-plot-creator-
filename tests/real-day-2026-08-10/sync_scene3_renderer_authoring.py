@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Finalize mixed Scene 2/3 Renderer authoring for the frozen H4 fixture.
 
-TEST ONLY. Scene 2 uses a matrix comparison on Beat 2, which Renderer 2.4 requires
-to bind to 2-6 numeric objects. Scene 3 intentionally uses Expected/Actual/Gap on
-Beat 1 and a numeric comparison on Beat 2; once Beat 2 is bound to stable number
-objects, its legacy source card must not survive because an expected-actual-gap scene
-must contain exactly the three projected role cards.
+TEST ONLY. Scene 2 Beat 2 compares a payroll revision (people) with NASDAQ return
+(percent), so it must stay a card-based evidence boundary rather than a shared-axis
+numeric matrix. Scene 3 intentionally uses Expected/Actual/Gap on Beat 1 and a numeric
+comparison on Beat 2; once Beat 2 is bound to stable number objects, its legacy source
+card must not survive because an expected-actual-gap scene must contain exactly the
+three projected role cards.
 """
 
 from __future__ import annotations
@@ -19,7 +20,6 @@ from typing import Any
 
 DATE = "2026-08-10"
 SCENE2_CARD_ID = "scene-02-card-002"
-SCENE2_NUMBER_IDS = ["scene-02-number-compare-001", "scene-02-number-compare-002"]
 SCENE3_CARD_ID = "scene-03-card-002"
 SCENE3_NUMBER_IDS = ["scene-03-number-compare-001", "scene-03-number-compare-002"]
 
@@ -46,7 +46,7 @@ def write_json(path: Path, value: dict[str, Any]) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def _sync_scene2(render: dict[str, Any]) -> dict[str, Any]:
+def _sync_scene2(render: dict[str, Any], bindings: dict[str, Any]) -> dict[str, Any]:
     scene = render["scenes"][1]
     if scene.get("sceneId") != "scene-02":
         raise Scene3AuthoringError("Scene 2 identity drift")
@@ -63,8 +63,8 @@ def _sync_scene2(render: dict[str, Any]) -> dict[str, Any]:
         ),
         None,
     )
-    if beat2 is None or beat2.get("visualTemplate") != "focus-matrix":
-        raise Scene3AuthoringError("Scene 2 Beat 2 focus-matrix authoring drift")
+    if beat2 is None:
+        raise Scene3AuthoringError("Scene 2 Beat 2 missing")
 
     cards = {
         item.get("cardId"): item
@@ -74,70 +74,97 @@ def _sync_scene2(render: dict[str, Any]) -> dict[str, Any]:
     card = cards.get(SCENE2_CARD_ID)
     if not isinstance(card, dict):
         raise Scene3AuthoringError("Scene 2 comparison source card missing")
-    lines = card.get("lines")
-    if not isinstance(lines, list) or len(lines) < 2:
-        raise Scene3AuthoringError("Scene 2 comparison source card requires two lines")
+    values = [
+        line.get("value")
+        for line in card.get("lines", [])
+        if isinstance(line, dict) and isinstance(line.get("value"), str)
+    ]
+    if len(values) < 2 or not any("万人" in value for value in values) or not any("%" in value for value in values):
+        raise Scene3AuthoringError(
+            "Scene 2 Beat 2 no longer represents the mixed-unit payroll/NASDAQ comparison"
+        )
 
-    numbers = scene.setdefault("numbers", [])
+    # The renderer-native representation is a card boundary, not numeric axes.
+    beat2["objectIds"] = [SCENE2_CARD_ID]
+    for field, value in {
+        "contentType": "text-focus",
+        "visualMode": "text-focus",
+        "visualTemplate": "evidence-boundary",
+        "templateVariant": "confirmed-vs-unconfirmed",
+    }.items():
+        beat2[field] = value
+    config = beat2.get("templateConfig")
+    if not isinstance(config, dict):
+        raise Scene3AuthoringError("Scene 2 Beat 2 templateConfig missing")
+    config["variant"] = "confirmed-vs-unconfirmed"
+    grammar = beat2.get("visualGrammar")
+    if not isinstance(grammar, dict):
+        raise Scene3AuthoringError("Scene 2 Beat 2 visualGrammar missing")
+    grammar["grammarId"] = "evidence"
+    grammar["transitionRole"] = "continuation"
+
+    overrides = bindings.get("beat_overrides")
+    if not isinstance(overrides, dict):
+        raise Scene3AuthoringError("story production beat_overrides must be an object")
+    override = overrides.setdefault("scene-02-beat-002", {})
+    override.update(
+        {
+            "contentType": "text-focus",
+            "visualMode": "text-focus",
+            "visualTemplate": "evidence-boundary",
+            "templateVariant": "confirmed-vs-unconfirmed",
+            "visualGrammarId": "evidence",
+            "transitionRole": "continuation",
+        }
+    )
+
+    # Remove any stale test-only numeric materialization from prior fixture revisions.
+    stale_number_ids = {"scene-02-number-compare-001", "scene-02-number-compare-002"}
+    numbers = scene.get("numbers")
     if not isinstance(numbers, list):
         raise Scene3AuthoringError("Scene 2 numbers must be an array")
-    id_set = set(SCENE2_NUMBER_IDS)
     numbers[:] = [
         item
         for item in numbers
-        if not (isinstance(item, dict) and item.get("numberId") in id_set)
+        if not (isinstance(item, dict) and item.get("numberId") in stale_number_ids)
     ]
-    numbers.extend(
-        [
-            {
-                "numberId": SCENE2_NUMBER_IDS[0],
-                "label": "5月・6月 改定",
-                "value": "-10.3",
-                "unit": "万人",
-                "numericValue": -10.3,
-                "comparison": None,
-                "tone": "neutral",
-            },
-            {
-                "numberId": SCENE2_NUMBER_IDS[1],
-                "label": "NASDAQ",
-                "value": "+1.30",
-                "unit": "%",
-                "numericValue": 1.30,
-                "comparison": None,
-                "tone": "neutral",
-            },
-        ]
-    )
-    beat2["objectIds"] = SCENE2_NUMBER_IDS
-
     events = scene.get("visualEvents")
     if not isinstance(events, list):
         raise Scene3AuthoringError("Scene 2 visualEvents missing")
-    source_index = next(
-        (
-            index
-            for index, event in enumerate(events)
-            if isinstance(event, dict)
-            and event.get("action") == "show"
-            and event.get("targetId") == SCENE2_CARD_ID
-        ),
-        None,
-    )
-    if source_index is None:
-        raise Scene3AuthoringError("Scene 2 comparison show event missing")
-    source_event = events[source_index]
-    first_event = deepcopy(source_event)
-    first_event["targetId"] = SCENE2_NUMBER_IDS[0]
-    second_event = deepcopy(source_event)
-    second_event["eventId"] = "event-020"
-    second_event["targetId"] = SCENE2_NUMBER_IDS[1]
-    second_event["offsetMs"] = max(int(source_event.get("offsetMs", 0)), 0) + 120
-    events[source_index : source_index + 1] = [first_event, second_event]
+    events[:] = [
+        event
+        for event in events
+        if not (
+            isinstance(event, dict)
+            and event.get("targetId") in stale_number_ids
+        )
+    ]
+    if not any(
+        isinstance(event, dict)
+        and event.get("action") == "show"
+        and event.get("targetId") == SCENE2_CARD_ID
+        for event in events
+    ):
+        events.append(
+            {
+                "eventId": "event-004",
+                "action": "show",
+                "atChunkId": beat2["startChunkId"],
+                "durationMs": 560,
+                "easingPreset": "smooth-out",
+                "expression": None,
+                "motionPreset": "rise-soft",
+                "offsetMs": 0,
+                "targetId": SCENE2_CARD_ID,
+                "timing": "chunk-start",
+            }
+        )
 
     return {
-        "beat_2_number_ids": SCENE2_NUMBER_IDS,
-        "show_event_ids": [first_event.get("eventId"), second_event.get("eventId")],
+        "beat_2_object_ids": beat2["objectIds"],
+        "visual_template": beat2["visualTemplate"],
+        "template_variant": beat2["templateVariant"],
+        "visible_values": values,
     }
 
 
@@ -224,22 +251,28 @@ def _sync_scene3(render: dict[str, Any]) -> dict[str, Any]:
 
 def sync(*, repo_root: Path) -> dict[str, Any]:
     root = repo_root.resolve()
-    path = root / f"render-specs/{DATE}/render_spec.json"
-    render = load_json(path)
+    render_path = root / f"render-specs/{DATE}/render_spec.json"
+    bindings_path = root / f"working/{DATE}/story-engine/story_production_bindings.json"
+    render = load_json(render_path)
+    bindings = load_json(bindings_path)
     if render.get("episode", {}).get("targetDate") != DATE:
         raise Scene3AuthoringError("render targetDate drift")
+    if bindings.get("episode_date") != DATE:
+        raise Scene3AuthoringError("Story production bindings date drift")
 
     scenes = render.get("scenes")
     if not isinstance(scenes, list) or len(scenes) != 9:
         raise Scene3AuthoringError("render must contain exactly nine scenes")
 
-    scene2_result = _sync_scene2(render)
+    scene2_result = _sync_scene2(render, bindings)
     scene3_result = _sync_scene3(render)
-    digest = write_json(path, render)
+    render_digest = write_json(render_path, render)
+    bindings_digest = write_json(bindings_path, bindings)
     return {
         "status": "pass",
         "episode_date": DATE,
-        "render_authoring_sha256": digest,
+        "render_authoring_sha256": render_digest,
+        "story_production_bindings_sha256": bindings_digest,
         "scene_2": scene2_result,
         "scene_3": scene3_result,
     }
