@@ -150,6 +150,48 @@ class Renderer240TransactionTests(unittest.TestCase):
         self.assertIn("scene-test-card-gap", event_targets)
         self.assertNotIn("source-gap-card", event_targets)
 
+    def test_renderer_card_projection_drops_legacy_producer_only_fields(self):
+        scene = {
+            "sceneId": "scene-test",
+            "cards": [
+                {
+                    "cardId": "card-001",
+                    "role": None,
+                    "title": "Verified timing",
+                    "label": "producer-only label",
+                    "text": "producer-only text",
+                    "sourceId": "source-001",
+                    "lines": [
+                        {
+                            "label": "QQQ",
+                            "value": "719.16 → 720.23",
+                            "tone": "neutral",
+                            "sourceId": "source-001",
+                            "note": "producer-only note",
+                        }
+                    ],
+                }
+            ],
+        }
+
+        projection._normalize_renderer_cards(scene)
+
+        self.assertEqual(
+            {
+                "cardId": "card-001",
+                "role": None,
+                "title": "Verified timing",
+                "lines": [
+                    {
+                        "label": "QQQ",
+                        "value": "719.16 → 720.23",
+                        "tone": "neutral",
+                    }
+                ],
+            },
+            scene["cards"][0],
+        )
+
     def test_snapshot_restore_is_byte_exact_and_removes_new_files(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
