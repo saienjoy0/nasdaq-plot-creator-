@@ -6,10 +6,10 @@ Unified Story Engine v1.1 gating is integrated directly into
 the historical v1.1 entrypoint name; it must not install a second state-machine layer.
 
 The authoritative gate validates Story Engine acceptance with
-``require_production=True`` and ``allow_uncertified_production=True``. Those policy
-choices live in the hardened entrypoint; they are documented here so legacy tooling
-that audits the historical alias can verify that the optional external-Critic policy did
-not silently change.
+``require_production=True`` and ``allow_uncertified_production=True``. The External
+Independent Critic remains an optional quality upgrade; those policy choices live in
+the hardened entrypoint and are documented here so legacy tooling that audits the
+historical alias can verify that the policy did not silently change.
 """
 from __future__ import annotations
 
