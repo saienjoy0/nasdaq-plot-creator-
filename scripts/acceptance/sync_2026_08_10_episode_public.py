@@ -8,6 +8,11 @@ from pathlib import Path
 
 DATE = '2026-08-10'
 TERMINAL_REUSE_LABEL = '主因候補：利上げ観測後退'
+NEW_STORY_SPINE = (
+    '雇用予想+8万人→実際-2.3万人→利上げ観測後退→8:30 ETにQQQ・SOXX・NVIDIAが上向き→'
+    '大型テックへの金利逆風緩和→Microchip好決算と原油・利回り低下が増幅→NASDAQ +1.30%、'
+    'ただし1分足は因果証明ではなく個別差を残す。'
+)
 
 
 def sha256_text(text: str) -> str:
@@ -102,6 +107,8 @@ def main() -> int:
     text = text[:match.start()] + build_scene8(scene8) + text[match.end():]
 
     replacements = {
+        'ストーリーの背骨：雇用予想+8万人→実際-2.3万人→利上げ観測後退→大型テックへの金利逆風緩和→Microchip好決算と原油・利回り低下が増幅→NASDAQ +1.30%、ただし個別差と分足欠損を残す。':
+            f'ストーリーの背骨：{NEW_STORY_SPINE}',
         '不確実性：分足反応は未確認':
             '不確実性：8:30 ETの初動は確認済み。ただし1分足だけで因果や寄与度は確定しない',
         'QQQ/SOXX/MCHP/NVDAの8:30 ET直後分足は取得できない。':
@@ -129,6 +136,7 @@ def main() -> int:
         '8:30 ET直後の分足は未確認',
         '分足未取得',
         '未取得の分足',
+        '分足欠損',
     )
     found_stale = [value for value in stale if value in text]
     if found_stale:
