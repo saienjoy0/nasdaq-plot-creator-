@@ -29,7 +29,6 @@ class PreTTSVisualGateTests(unittest.TestCase):
         cls.semantics_path = ROOT / "contracts/visual_grammar_semantics.json"
         cls.semantics_schema_path = ROOT / "contracts/visual_grammar_semantics.schema.json"
         cls.compatibility_path = ROOT / "contracts/visual_grammar_renderer_compatibility.json"
-        cls.compatibility_schema_path = ROOT / "contracts/visual_grammar_renderer_compatibility.schema.json"
         cls.report_schema_path = ROOT / "contracts/visual_grammar_structural_report.schema.json"
 
     def load_inputs(self):
@@ -39,7 +38,6 @@ class PreTTSVisualGateTests(unittest.TestCase):
             "semantics": json.loads(self.semantics_path.read_text(encoding="utf-8")),
             "semantics_schema": json.loads(self.semantics_schema_path.read_text(encoding="utf-8")),
             "compatibility_registry": json.loads(self.compatibility_path.read_text(encoding="utf-8")),
-            "compatibility_schema": json.loads(self.compatibility_schema_path.read_text(encoding="utf-8")),
             "report_schema": json.loads(self.report_schema_path.read_text(encoding="utf-8")),
         }
 
@@ -58,7 +56,8 @@ class PreTTSVisualGateTests(unittest.TestCase):
         report = self.gate.validate_pre_tts(**inputs)
         self.assertEqual("FAIL", report["status"])
         matching = [
-            item for item in report["violations"]
+            item
+            for item in report["violations"]
             if item["code"] == "VG_GRAMMAR_TEMPLATE_MISMATCH"
         ]
         self.assertTrue(matching, report)
@@ -71,10 +70,21 @@ class PreTTSVisualGateTests(unittest.TestCase):
         inputs["story_bindings"] = bindings
         report = self.gate.validate_pre_tts(**inputs)
         self.assertEqual("FAIL", report["status"])
-        self.assertTrue(any(
-            item["code"] == "VG_GRAMMAR_TEMPLATE_MISMATCH" and "unregistered" in item["message"]
-            for item in report["violations"]
-        ))
+        self.assertTrue(
+            any(
+                item["code"] == "VG_GRAMMAR_TEMPLATE_MISMATCH"
+                and "unregistered" in item["message"]
+                for item in report["violations"]
+            )
+        )
+
+    def test_malformed_compatibility_mirror_fails_closed(self):
+        inputs = self.load_inputs()
+        registry = copy.deepcopy(inputs["compatibility_registry"])
+        del registry["templates"][0]["appearanceClass"]
+        inputs["compatibility_registry"] = registry
+        with self.assertRaises(self.gate.PreTTSVisualGateError):
+            self.gate.validate_pre_tts(**inputs)
 
     def test_validation_does_not_mutate_input_render_or_bindings(self):
         inputs = self.load_inputs()
