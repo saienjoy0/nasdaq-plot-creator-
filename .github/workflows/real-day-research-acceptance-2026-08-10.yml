@@ -57,6 +57,9 @@ jobs:
           if value['validation']['status'] != 'pass':
               raise SystemExit('research input manifest did not pass')
           digest = hashlib.sha256(manifest.read_bytes()).hexdigest()
+          expected = '76fd1cbfeb90597e5d26121b9769a5730c46faca0ae74335ecf7404f2d6ecf14'
+          if digest != expected:
+              raise SystemExit(f'base manifest SHA changed: {digest} != {expected}')
           Path('working/2026-08-10/base_manifest_sha.txt').write_text(digest + '\n', encoding='utf-8')
           report = {
               'status': 'pass',
@@ -67,6 +70,70 @@ jobs:
               'researchInputManifestSha256': digest,
           }
           Path('working/2026-08-10/research_intake_acceptance.json').write_text(
+              json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + '\n',
+              encoding='utf-8'
+          )
+          print(json.dumps(report, indent=2))
+          PY
+
+      - name: Validate canonical wave 1 bytes
+        run: |
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+
+          request = Path('research/2026-08-10/research_acquisition_request_w01.json')
+          result = Path('research/2026-08-10/research_acquisition_result_w01.json')
+          request_sha = hashlib.sha256(request.read_bytes()).hexdigest()
+          result_sha = hashlib.sha256(result.read_bytes()).hexdigest()
+          expected_request = 'fc2b05931af2a8f24129459d0e1dbc86bfe46c62bb9622baf05d4db7c0b0b366'
+          expected_result = 'b08f45d6692f379eb87962d6c8421b318a5f2818ca48c2a9ab1503e8d93b067e'
+          if request_sha != expected_request:
+              raise SystemExit(f'wave 1 request SHA mismatch: {request_sha}')
+          if result_sha != expected_result:
+              raise SystemExit(f'wave 1 result SHA mismatch: {result_sha}')
+          value = json.loads(result.read_text(encoding='utf-8'))
+          if value.get('status') != 'unavailable':
+              raise SystemExit('wave 1 is expected to preserve the real unavailable result')
+          if any(item.get('status') == 'success' for item in value.get('results', [])):
+              raise SystemExit('wave 1 unexpectedly contains successful evidence')
+          print('PASS canonical wave 1', request_sha, result_sha)
+          PY
+
+      - name: Append and validate wave 1 supplement lineage
+        run: |
+          python scripts/research_evidence_supplement.py append \
+            --manifest research/2026-08-10/research_evidence_supplement_manifest.json \
+            --episode-date 2026-08-10 \
+            --base-research-input-manifest research/2026-08-10/research_input_manifest.json \
+            --wave 1 \
+            --request research/2026-08-10/research_acquisition_request_w01.json \
+            --result research/2026-08-10/research_acquisition_result_w01.json \
+            --collector-run-id 31352456756
+          python scripts/research_evidence_supplement.py validate \
+            research/2026-08-10/research_evidence_supplement_manifest.json
+
+      - name: Record wave 1 acceptance
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          supplement = json.loads(Path('research/2026-08-10/research_evidence_supplement_manifest.json').read_text(encoding='utf-8'))
+          if len(supplement.get('waves', [])) != 1:
+              raise SystemExit('expected exactly one recorded wave')
+          wave = supplement['waves'][0]
+          if wave.get('wave') != 1 or wave.get('evidenceFiles') != []:
+              raise SystemExit('unavailable wave must be recorded with zero evidence files')
+          report = {
+              'status': 'pass',
+              'wave': 1,
+              'collectorRunId': 31352456756,
+              'acquisitionStatus': 'unavailable',
+              'evidenceFileCount': 0,
+              'lineageValidated': True,
+              'nextAction': 'collector parser fix must merge before a live wave 2 retry on main',
+          }
+          Path('working/2026-08-10/wave1_lineage_acceptance.json').write_text(
               json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + '\n',
               encoding='utf-8'
           )
@@ -84,5 +151,9 @@ jobs:
             working/2026-08-10/memory_retrieval_report_2026-08-10.json
             working/2026-08-10/base_manifest_sha.txt
             working/2026-08-10/research_intake_acceptance.json
+            working/2026-08-10/wave1_lineage_acceptance.json
             research/2026-08-10/research_input_manifest.json
+            research/2026-08-10/research_acquisition_request_w01.json
+            research/2026-08-10/research_acquisition_result_w01.json
+            research/2026-08-10/research_evidence_supplement_manifest.json
           if-no-files-found: error
