@@ -1,0 +1,102 @@
+{
+  "contract_version": "1.0.0",
+  "diversity": {
+    "distinct_episode_ids": [
+      "2026-07-31"
+    ],
+    "distinct_thread_ids": [],
+    "duplicate_groups_removed": 0
+  },
+  "episode_date": "2026-08-10",
+  "limits": {
+    "max_characters": 10000,
+    "max_claims": 4,
+    "max_episodes": 2,
+    "max_lessons": 2,
+    "max_threads": 3
+  },
+  "query_plan_path": "working/2026-08-10/memory_query_plan.json",
+  "rejected": [
+    {
+      "item_id": "ai-capex-payback",
+      "item_type": "thread",
+      "reason": "low_relevance"
+    },
+    {
+      "item_id": "ai-capex-evaluation-axis",
+      "item_type": "claim",
+      "reason": "low_relevance"
+    }
+  ],
+  "selected": [
+    {
+      "episode_ids": [],
+      "historical_confidence": "unknown",
+      "item_id": "active-context",
+      "item_type": "core",
+      "path": "editorial-memory/active_context.md",
+      "provenance_paths": [
+        "editorial-memory/active_context.md"
+      ],
+      "reasons": [
+        "core_memory_always_attached"
+      ],
+      "requires_current_revalidation": false,
+      "score": 100,
+      "status": "read_only",
+      "use_mode": "procedural"
+    },
+    {
+      "episode_ids": [],
+      "historical_confidence": "unknown",
+      "item_id": "fox-editorial-state",
+      "item_type": "core",
+      "path": "editorial-memory/core/fox_editorial_state.md",
+      "provenance_paths": [
+        "editorial-memory/core/fox_editorial_state.md"
+      ],
+      "reasons": [
+        "core_memory_always_attached"
+      ],
+      "requires_current_revalidation": false,
+      "score": 100,
+      "status": "read_only",
+      "use_mode": "procedural"
+    },
+    {
+      "episode_ids": [
+        "2026-07-31"
+      ],
+      "historical_confidence": "unknown",
+      "item_id": "2026-07-31/v001",
+      "item_type": "episode",
+      "path": "editorial-memory/episodes/2026-07-31/revisions/v001/episode_summary.md",
+      "provenance_paths": [
+        "editorial-memory/episodes/2026-07-31/revisions/v001/provenance.json"
+      ],
+      "reasons": [
+        "counterevidence_preserved",
+        "episode_content_match",
+        "provenance_verified",
+        "within_30_days"
+      ],
+      "requires_current_revalidation": true,
+      "score": 10,
+      "status": "approved_preview",
+      "use_mode": "historical_context"
+    }
+  ],
+  "usage": {
+    "characters": 2817,
+    "claims": 0,
+    "episodes": 1,
+    "lessons": 0,
+    "threads": 0
+  },
+  "warnings": [
+    "unresolved entity alias: AMD",
+    "unresolved entity alias: BLS",
+    "unresolved entity alias: MCHP",
+    "unresolved entity alias: NVDA"
+  ]
+}
