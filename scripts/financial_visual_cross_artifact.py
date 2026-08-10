@@ -15,7 +15,7 @@ import hashlib
 import json
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from jsonschema import Draft202012Validator
 
@@ -27,20 +27,38 @@ class CrossArtifactError(ValueError):
     pass
 
 
-EXPECTED_COMPATIBILITY_MATRIX = {
-    "matrixId": "financial-visual-compat-2026-08",
-    "status": "pass",
-    "plotCreator": {
-        "repository": "saienjoy0/nasdaq-plot-creator-",
-        "financialIntentVersion": "1.1.0",
-        "financialRecipePlanVersion": "1.0.0",
-        "finalEpisodeContractVersion": "1.0.0",
+APPROVED_COMPATIBILITY_MATRICES = {
+    "2.3.0": {
+        "matrixId": "financial-visual-compat-2026-08",
+        "status": "pass",
+        "plotCreator": {
+            "repository": "saienjoy0/nasdaq-plot-creator-",
+            "financialIntentVersion": "1.1.0",
+            "financialRecipePlanVersion": "1.0.0",
+            "finalEpisodeContractVersion": "1.0.0",
+        },
+        "renderer": {
+            "repository": "saienjoy0/saienjoy0-nasdaq-cafe-remotion",
+            "renderSpecVersion": "2.3.0",
+            "financialTemplateRegistryVersion": "1.0.0",
+            "financialVisualTraceVersion": "1.0.0",
+        },
     },
-    "renderer": {
-        "repository": "saienjoy0/saienjoy0-nasdaq-cafe-remotion",
-        "renderSpecVersion": "2.3.0",
-        "financialTemplateRegistryVersion": "1.0.0",
-        "financialVisualTraceVersion": "1.0.0",
+    "2.4.0": {
+        "matrixId": "financial-visual-compat-2026-08",
+        "status": "pass",
+        "plotCreator": {
+            "repository": "saienjoy0/nasdaq-plot-creator-",
+            "financialIntentVersion": "1.1.0",
+            "financialRecipePlanVersion": "1.0.0",
+            "finalEpisodeContractVersion": "1.0.0",
+        },
+        "renderer": {
+            "repository": "saienjoy0/saienjoy0-nasdaq-cafe-remotion",
+            "renderSpecVersion": "2.4.0",
+            "financialTemplateRegistryVersion": "1.0.0",
+            "financialVisualTraceVersion": "1.0.0",
+        },
     },
 }
 
@@ -82,7 +100,12 @@ def validate_compatibility_matrix(
     renderer_schema_version: str,
 ) -> tuple[dict[str, Any], str]:
     matrix = load_json(path, "financial visual compatibility matrix")
-    if matrix != EXPECTED_COMPATIBILITY_MATRIX:
+    approved = APPROVED_COMPATIBILITY_MATRICES.get(renderer_schema_version)
+    if approved is None:
+        raise CrossArtifactError(
+            f"unsupported renderer schema version for financial visual compatibility: {renderer_schema_version}"
+        )
+    if matrix != approved:
         raise CrossArtifactError(
             "financial visual compatibility matrix does not exactly match the approved cross-repository tuple"
         )
@@ -382,14 +405,18 @@ def integrate(
     consistency_schema_path: Path,
     diversity_report_path: Path | None = None,
     compatibility_matrix_path: Path | None = None,
+    final_contract_validator: Callable[..., Any] | None = None,
+    recipe_plan_compiler: Callable[..., dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    final_contract_module.validate_contract(
+    validate_final = final_contract_validator or final_contract_module.validate_contract
+    compile_plan = recipe_plan_compiler or recipe_compiler.compile_recipe_plan
+    validate_final(
         final_contract_path,
         repo_root,
         final_schema_path,
         candidate_schema_path,
     )
-    expected_recipe_plan = recipe_compiler.compile_recipe_plan(
+    expected_recipe_plan = compile_plan(
         final_contract_path,
         repo_root,
         registry_path,

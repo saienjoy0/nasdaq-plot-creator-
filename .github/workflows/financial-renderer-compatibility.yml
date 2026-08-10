@@ -4,9 +4,12 @@ on:
   pull_request:
     paths:
       - "contracts/financial_visual_compatibility.json"
+      - "contracts/financial_visual_compatibility_2_4.json"
       - "contracts/financial_visual_consistency_report.schema.json"
       - "scripts/financial_visual_cross_artifact.py"
+      - "scripts/finalize_renderer_package_compat.py"
       - "tests/financial-visual-cross-artifact/**"
+      - "tests/remotion-compat/test_renderer_240_transaction.py"
       - "designs/FINANCIAL_RENDERER_COMPATIBILITY.md"
       - ".github/workflows/financial-renderer-compatibility.yml"
       - "contracts/final_episode_contract.schema.json"
@@ -19,9 +22,12 @@ on:
     branches: [main]
     paths:
       - "contracts/financial_visual_compatibility.json"
+      - "contracts/financial_visual_compatibility_2_4.json"
       - "contracts/financial_visual_consistency_report.schema.json"
       - "scripts/financial_visual_cross_artifact.py"
+      - "scripts/finalize_renderer_package_compat.py"
       - "tests/financial-visual-cross-artifact/**"
+      - "tests/remotion-compat/test_renderer_240_transaction.py"
       - "designs/FINANCIAL_RENDERER_COMPATIBILITY.md"
       - ".github/workflows/financial-renderer-compatibility.yml"
   workflow_dispatch:
@@ -46,31 +52,37 @@ jobs:
             scripts/final_episode_contract.py \
             scripts/financial_recipe_compiler.py \
             scripts/financial_visual_cross_artifact.py \
+            scripts/finalize_renderer_package_compat.py \
             tests/final-episode-contract/generate_fixtures.py \
-            tests/financial-visual-cross-artifact/test_financial_visual_cross_artifact.py
+            tests/financial-visual-cross-artifact/test_financial_visual_cross_artifact.py \
+            tests/remotion-compat/test_renderer_240_transaction.py
       - name: Parse strict JSON contracts
         run: |
           python -m json.tool contracts/financial_visual_compatibility.json >/dev/null
+          python -m json.tool contracts/financial_visual_compatibility_2_4.json >/dev/null
           python -m json.tool contracts/financial_visual_consistency_report.schema.json >/dev/null
-      - name: Verify exact approved compatibility tuple
+      - name: Verify exact approved compatibility tuples
         run: |
           python - <<'PY'
           from pathlib import Path
           import sys
           sys.path.insert(0, "scripts")
           import financial_visual_cross_artifact as cross
-          matrix, digest = cross.validate_compatibility_matrix(
-              Path("contracts/financial_visual_compatibility.json"),
-              "2.3.0",
-          )
-          assert matrix == cross.EXPECTED_COMPATIBILITY_MATRIX
-          assert len(digest) == 64
-          print(matrix["matrixId"], digest)
+          for version, path in (
+              ("2.3.0", Path("contracts/financial_visual_compatibility.json")),
+              ("2.4.0", Path("contracts/financial_visual_compatibility_2_4.json")),
+          ):
+              matrix, digest = cross.validate_compatibility_matrix(path, version)
+              assert matrix == cross.APPROVED_COMPATIBILITY_MATRICES[version]
+              assert len(digest) == 64
+              print(version, matrix["matrixId"], digest)
           PY
       - name: Generate deterministic Final Episode fixtures
         run: python tests/final-episode-contract/generate_fixtures.py
-      - name: Run 18 cross-artifact tests
+      - name: Run cross-artifact tests
         run: python -m unittest discover -s tests/financial-visual-cross-artifact -p 'test_*.py' -v
+      - name: Run Renderer 2.4 transaction regression
+        run: python tests/remotion-compat/test_renderer_240_transaction.py
       - name: Run Recipe Compiler regression
         run: python -m unittest discover -s tests/financial-recipe-compiler -p 'test_*.py' -v
       - name: Run Final Episode Contract regression
