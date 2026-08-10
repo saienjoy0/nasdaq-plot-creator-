@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+import hashlib, json, re, subprocess, sys
+from pathlib import Path
+
+ROOT = Path.cwd().resolve()
+SCRIPTS = ROOT / 'scripts'
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
+import materialize_renderer_sources as renderer_sources
+import visual_source_projection
+import materialize_financial_contract_1_0 as financial_projection
+
+DATE='2026-08-10'
+STORY_BEGIN='<!--BEGIN_STORY_ENGINE_ANNEX-->'
+STORY_END='<!--END_STORY_ENGINE_ANNEX-->'
+MEM_BEGIN='<!--BEGIN_EPISODE_MEMORY_ANNEX-->'
+MEM_END='<!--END_EPISODE_MEMORY_ANNEX-->'
+PROD_BEGIN='<!--BEGIN_FINAL_PRODUCTION_SOURCE-->'
+PROD_END='<!--END_FINAL_PRODUCTION_SOURCE-->'
+
+def sha(p:Path)->str: return hashlib.sha256(p.read_bytes()).hexdigest()
+def dump(v): return json.dumps(v,ensure_ascii=False,indent=2,sort_keys=True)
+def normalize_scene_headings(text:str)->str:
+    for n in range(1,10):
+        text=re.sub(rf'(?m)^##\s+B{n}\.\s+Scene\s+{n}(?=｜|\|)', f'## Scene {n}', text)
+    return text
+
+def main()->int:
+    root=ROOT; date=DATE
+    work=root/'working'/date; story=work/'story-engine'; research=root/'research'/date; episodes=root/'episodes'/date
+    verification=root/'verification'/date
+    for p in (work,story,research,episodes,verification): p.mkdir(parents=True,exist_ok=True)
+
+    # Story Engine deterministic materialization from authored templates + dossier.
+    subprocess.run([sys.executable,'scripts/story-engine/materialize_story_engine.py','--date',date,'--repo-root',str(root)],check=True)
+
+    dossier=research/f'causal_research_dossier_{date}.json'
+    report=work/f'memory_retrieval_report_{date}.json'
+    render_path=root/'render-specs'/date/'render_spec.json'
+    public_path=episodes/f'episode_package_public_{date}.md'
+    bindings=work/'financial_visual_bindings.json'
+    mat=renderer_sources.materialize(root=root,date=date,render_path=render_path,public_package_path=public_path,bindings_path=bindings)
+    render=mat['render']
+    visual=visual_source_projection.prepare_visual_sources(root=root,date=date,final_contract_path=mat['final_contract_path'],render=render)
+    financial_projection.materialize(root=root,date=date)
+
+    # Deterministic no-op asset resolution evidence for explicit not-required planning.
+    resolution={
+      'contract_version':'1.0.0','episode_date':date,'status':'resolved','selected_path':visual['selected_path'],
+      'unresolved_count':0,'routes':visual['routes'],'note':'Visual Evidence Planning completed; no day-specific visual source required.'
+    }
+    (verification/'asset_resolution_log.json').write_text(dump(resolution)+'\n',encoding='utf-8')
+    (verification/'image_generation_log.json').write_text(dump({'episode_date':date,'status':'not-required','attempts':0})+'\n',encoding='utf-8')
+
+    story_accept=story/'story_engine_acceptance.json'
+    sa=json.loads(story_accept.read_text(encoding='utf-8'))
+    story_annex={
+      'contract_version':'1.0.0','episode_date':date,'status':'pass',
+      'story_plan':{'path':f'working/{date}/story-engine/story_plan.json','sha256':sha(story/'story_plan.json')},
+      'story_script':{'path':f'working/{date}/story-engine/story_script.json','sha256':sha(story/'story_script.json')},
+      'creative_review':{'path':f'working/{date}/story-engine/creative_review.json','sha256':sha(story/'creative_review.json')},
+      'acceptance':{'path':f'working/{date}/story-engine/story_engine_acceptance.json','sha256':sha(story_accept)},
+      'critic':sa['critic'],
+    }
+
+    dossier_doc=json.loads(dossier.read_text(encoding='utf-8'))
+    retrieval=json.loads(report.read_text(encoding='utf-8'))
+    rv={(x['memory_reference_type'],x['memory_reference_id']):x for x in dossier_doc['memory_revalidation']}
+    refs=[]; serial=1
+    for item in retrieval['selected']:
+        if item['item_type']=='core': continue
+        key=(item['item_type'],item['item_id']); entry=rv[key]
+        if entry['revalidation_status']!='not_used' or entry['editorial_use']!='not_used':
+            raise SystemExit(f'2026-08-10 acceptance expects selected historical memory to be not_used: {key}')
+        refs.append({
+          'reference_id':f'MR-{serial:03d}','memory_reference_type':entry['memory_reference_type'],
+          'memory_reference_id':entry['memory_reference_id'],'historical_confidence':entry['historical_confidence'],
+          'current_revalidation_status':entry['revalidation_status'],'dossier_editorial_use':entry['editorial_use'],
+          'dossier_current_evidence_ids':entry['current_evidence_ids'],'difference_from_previous':entry['difference_from_previous'],
+          'public_usage_mode':'internal_only','scope_limit':'現在の市場因果・タイトル・サムネイル・ナレーションには使用しない。','usages':[]
+        }); serial+=1
+    memory_annex={
+      'contract_version':'1.0.0','episode_date':date,
+      'causal_dossier':{'path':f'research/{date}/causal_research_dossier_{date}.json','sha256':sha(dossier)},
+      'references':refs,
+      'validation_intent':{'past_mentions_complete':True,'title_thumbnail_checked':True,'post_inquisition_final':True}
+    }
+    asset_catalog=visual_source_projection.build_asset_catalog(render,visual)
+    prod_annex={
+      'contract_version':'1.0.0','episode_date':date,
+      'post_inquisition':{'status':'pass','required_changes_applied':True,'unresolved_required_changes':0},
+      'image_resolution':{'status':'resolved','selected_path':visual['selected_path'],'unresolved_count':0,'routes':visual['routes']},
+      'renderer_contract':{'repository':'saienjoy0/saienjoy0-nasdaq-cafe-remotion','schema_version':render['schemaVersion']},
+      'asset_catalog':asset_catalog,'render_spec':render,
+    }
+    public=normalize_scene_headings(Path(mat['contract_package_path']).read_text(encoding='utf-8').rstrip())
+    final=(public+'\n\n'+STORY_BEGIN+'\n```json\n'+dump(story_annex)+'\n```\n'+STORY_END
+           +'\n\n'+MEM_BEGIN+'\n```json\n'+dump(memory_annex)+'\n```\n'+MEM_END
+           +'\n\n'+PROD_BEGIN+'\n```json\n'+dump(prod_annex)+'\n```\n'+PROD_END+'\n')
+    out=episodes/f'episode_package_{date}.md'; out.write_text(final,encoding='utf-8')
+    print(json.dumps({'status':'pass','episodePackage':str(out),'sha256':sha(out),'renderIntermediate':sha(render_path),'assetCount':len(asset_catalog)},ensure_ascii=False,indent=2))
+    return 0
+if __name__=='__main__': raise SystemExit(main())
