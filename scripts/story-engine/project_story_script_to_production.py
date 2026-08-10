@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from apply_story_auxiliary_bindings import apply_story_reaction_bindings
+from display_text import to_display_text
 
 SENTENCE_RE = re.compile(r".*?(?:[。！？!?](?:[」』】）)]*)|$)")
 
@@ -229,7 +230,7 @@ def main() -> int:
         chunk_by_id: dict[str, str] = {}
         for chunk, piece in zip(chunks, pieces, strict=True):
             chunk["speechText"] = piece
-            chunk["captionText"] = piece
+            chunk["captionText"] = to_display_text(piece)
             chunk_by_id[chunk["chunkId"]] = piece
         if "".join(chunk["speechText"] for chunk in chunks) != narration:
             raise SystemExit(f"{scene_id}: render narration changed authored script")
