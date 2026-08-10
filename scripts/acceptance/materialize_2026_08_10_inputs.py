@@ -5,6 +5,8 @@ import base64
 import hashlib
 import io
 import json
+import lzma
+import tarfile
 import zipfile
 from pathlib import Path
 
@@ -24,6 +26,17 @@ PART08_OFFSET = 2000
 PART08_CANONICAL_CHUNK = 'uIbxfpjUge0ID94SHoSn34g44M3kPw8PzC3VQvKBeg2DSIwes3KIh2ErVF8NAxw3AWhhU0HJhDXpRmi7HawkNpIcn3zBJyf45DpugufJwmzKhu2grrb4H/A5KgLOBtYItnUjAXf4AZ1FxVYfgi1t0aQ4yAzsmBuNXm8NuNahw7XaDgrXqjT3wV+ADX10CBxz76A+5ZPMPJC6QGz0Xk5dIVptB4VoqW0d5t93l5niyJowPlt4AmJ1TVElR8cyB1MK9enzZkXxnCIIVWdtSE9b/SBUbaceQtVlh97OutH7C4dQtTUgVLbp1CjxZINQfrZip2qpVHlDA2VmG2XWboYya/+s3m65OfB5aQBJLpmNZbgLH1PFT9kqrd7y2y/xNDWY4JNL4q+bfHIbLArMwCXG4LP4bquQwfN+wvOHwibGloT55TIKjJyWqlH7qd8fvKY6yW4MN8vntnHgxAzP7ZB84SzPPcFST6NPham3xRd3CrsZzP2tjJAm'
 
 WAVE2_RUN_ID = 31357986916
+WAVE2_ARCHIVE_SHA256 = '8d7604be9bb35d616147853d7755d7e328bdd3cd94c3e7617a46e6df3fac4135'
+WAVE2_PART_SHA256 = {
+    'wave2-v3-01.b85': '4725ba62419c77d4dc9629fa8a65f8934df16f0c540f8ca9f94a57d4611a0fd1',
+    'wave2-v3-02.b85': '625f996afb25648ccb3c4fb4bb74751e44737710059e8d6439a07266f6050980',
+    'wave2-v3-03.b85': '7e58326fad35378f1930152a9b6509d78c825a157c090b27ad6c72f77317c7fb',
+    'wave2-v3-04.b85': 'c603cbe2ffc1afc89759e9c8f4cadb477fbbedd3d43c57f7635432dfea4a925a',
+    'wave2-v3-05.b85': '1d6a5d4aa87572e56ca3353c4b6d8c552effbb82ee757e6928983bc48354734b',
+    'wave2-v3-06.b85': '69a2e1a269768fed99c0e6825f4142c5d9ddd8e2201662a76513adaa785acea3',
+    'wave2-v3-07.b85': '0d24176ef26102cb597fca15cb299f6f3cb8ce158d3ca00d2ac7dbdab5b45bc4',
+    'wave2-v3-08.b85': '51a5d51e7a7e116e55a2db48016f86a1d9961337371de6a847c5ba80b724ad7f',
+}
 WAVE2_REQUEST_SHA256 = '9626f06b10627a63ee90e1440c5d53bd28d311fa03e33e5d4ed6ffa12043ad86'
 WAVE2_RESULT_SHA256 = '3645ad75e058db2b18da48e4ae63914eb9e949418da814950cf67348c6fb8b51'
 WAVE2_EVIDENCE_SHA256 = {
@@ -106,51 +119,87 @@ def materialize_base(root: Path) -> None:
     print(f'PASS base acceptance payload files={count} sha256={actual}')
 
 
+def read_wave2_archive(root: Path) -> dict[str, bytes]:
+    parts = sorted((root / 'acceptance-inputs/2026-08-10').glob('wave2-v3-*.b85'))
+    if len(parts) != 8:
+        raise SystemExit(f'expected 8 wave2 v3 parts, found {len(parts)}')
+    encoded_parts: list[bytes] = []
+    for part in parts:
+        raw = part.read_bytes()
+        expected = WAVE2_PART_SHA256.get(part.name)
+        actual = sha_bytes(raw)
+        if actual != expected:
+            raise SystemExit(f'{part.name}: wave2 chunk SHA mismatch actual={actual} expected={expected}')
+        encoded_parts.append(raw)
+    try:
+        archive_xz = base64.b85decode(b''.join(encoded_parts))
+    except (ValueError, TypeError) as exc:
+        raise SystemExit(f'wave2 base85 decode failed: {exc}') from exc
+    actual_archive_sha = sha_bytes(archive_xz)
+    if actual_archive_sha != WAVE2_ARCHIVE_SHA256:
+        raise SystemExit(
+            f'wave2 tar.xz SHA mismatch actual={actual_archive_sha} expected={WAVE2_ARCHIVE_SHA256}'
+        )
+    try:
+        tar_bytes = lzma.decompress(archive_xz)
+    except lzma.LZMAError as exc:
+        raise SystemExit(f'wave2 tar.xz decompression failed: {exc}') from exc
+
+    files: dict[str, bytes] = {}
+    with tarfile.open(fileobj=io.BytesIO(tar_bytes), mode='r:') as archive:
+        for member in archive.getmembers():
+            if not member.isfile():
+                raise SystemExit(f'wave2 archive contains non-file member: {member.name}')
+            if Path(member.name).name != member.name or member.name.startswith(('/', '.')):
+                raise SystemExit(f'unsafe wave2 archive member: {member.name}')
+            handle = archive.extractfile(member)
+            if handle is None:
+                raise SystemExit(f'wave2 archive member unreadable: {member.name}')
+            files[member.name] = handle.read()
+
+    required = {
+        'research_acquisition_request.json',
+        'research_acquisition_result.json',
+        *WAVE2_EVIDENCE_SHA256.keys(),
+    }
+    if set(files) != required:
+        raise SystemExit(
+            f'wave2 archive member mismatch missing={sorted(required - set(files))} '
+            f'extra={sorted(set(files) - required)}'
+        )
+    return files
+
+
 def overlay_success_wave2(root: Path) -> str:
-    parts = sorted((root / 'acceptance-inputs/2026-08-10').glob('wave2-success-part-*.b64'))
-    if len(parts) != 2:
-        raise SystemExit(f'expected 2 wave2 success parts, found {len(parts)}')
-    encoded = ''.join(part.read_text(encoding='ascii').strip() for part in parts)
-    data = base64.b64decode(encoded, validate=True)
-    with zipfile.ZipFile(io.BytesIO(data)) as archive:
-        names = set(archive.namelist())
-        prefix = 'followup/wave-02/'
-        required = {
-            prefix + 'research_acquisition_request.json',
-            prefix + 'research_acquisition_result.json',
-            *(prefix + name for name in WAVE2_EVIDENCE_SHA256),
-        }
-        missing = sorted(required - names)
-        if missing:
-            raise SystemExit(f'wave2 success payload missing files: {missing}')
-        request_bytes = archive.read(prefix + 'research_acquisition_request.json')
-        result_bytes = archive.read(prefix + 'research_acquisition_result.json')
-        if sha_bytes(request_bytes) != WAVE2_REQUEST_SHA256:
-            raise SystemExit('wave2 success request SHA mismatch')
-        if sha_bytes(result_bytes) != WAVE2_RESULT_SHA256:
-            raise SystemExit('wave2 success result SHA mismatch')
-        result = json.loads(result_bytes)
-        if result.get('status') != 'success' or result.get('wave') != 2:
-            raise SystemExit(f'wave2 success result status drift: {result.get("status")!r}')
-        result_by_id = {item['requestId']: item for item in result.get('results', [])}
-        research = root / 'research/2026-08-10'
-        evidence_dir = research / 'evidence'
-        evidence_dir.mkdir(parents=True, exist_ok=True)
-        (research / 'research_acquisition_request_w02.json').write_bytes(request_bytes)
-        (research / 'research_acquisition_result_w02.json').write_bytes(result_bytes)
-        evidence_refs = []
-        for filename, expected_sha in WAVE2_EVIDENCE_SHA256.items():
-            payload = archive.read(prefix + filename)
-            actual = sha_bytes(payload)
-            if actual != expected_sha:
-                raise SystemExit(f'{filename}: wave2 evidence SHA mismatch {actual}')
-            request_id = filename.split('_', 1)[0]
-            result_item = result_by_id.get(request_id)
-            if not result_item or result_item.get('status') != 'success' or result_item.get('sha256') != expected_sha:
-                raise SystemExit(f'{filename}: collector result binding mismatch')
-            target = evidence_dir / filename
-            target.write_bytes(payload)
-            evidence_refs.append({'requestId': request_id, 'path': target.relative_to(root).as_posix(), 'sha256': expected_sha})
+    files = read_wave2_archive(root)
+    request_bytes = files['research_acquisition_request.json']
+    result_bytes = files['research_acquisition_result.json']
+    if sha_bytes(request_bytes) != WAVE2_REQUEST_SHA256:
+        raise SystemExit('wave2 success request SHA mismatch')
+    if sha_bytes(result_bytes) != WAVE2_RESULT_SHA256:
+        raise SystemExit('wave2 success result SHA mismatch')
+    result = json.loads(result_bytes)
+    if result.get('status') != 'success' or result.get('wave') != 2:
+        raise SystemExit(f'wave2 success result status drift: {result.get("status")!r}')
+    result_by_id = {item['requestId']: item for item in result.get('results', [])}
+    research = root / 'research/2026-08-10'
+    evidence_dir = research / 'evidence'
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    (research / 'research_acquisition_request_w02.json').write_bytes(request_bytes)
+    (research / 'research_acquisition_result_w02.json').write_bytes(result_bytes)
+    evidence_refs = []
+    for filename, expected_sha in WAVE2_EVIDENCE_SHA256.items():
+        payload = files[filename]
+        actual = sha_bytes(payload)
+        if actual != expected_sha:
+            raise SystemExit(f'{filename}: wave2 evidence SHA mismatch {actual}')
+        request_id = filename.split('_', 1)[0]
+        result_item = result_by_id.get(request_id)
+        if not result_item or result_item.get('status') != 'success' or result_item.get('sha256') != expected_sha:
+            raise SystemExit(f'{filename}: collector result binding mismatch')
+        target = evidence_dir / filename
+        target.write_bytes(payload)
+        evidence_refs.append({'requestId': request_id, 'path': target.relative_to(root).as_posix(), 'sha256': expected_sha})
 
     supplement_path = root / 'research/2026-08-10/research_evidence_supplement_manifest.json'
     supplement = json.loads(supplement_path.read_text(encoding='utf-8'))
