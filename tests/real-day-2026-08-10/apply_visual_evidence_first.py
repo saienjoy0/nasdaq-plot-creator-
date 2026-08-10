@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -50,6 +51,22 @@ def beat_id(beat: dict[str, Any]) -> str:
     if not isinstance(value, str) or not value:
         raise SystemExit("Visual Beat ID missing")
     return value
+
+
+def canonical_visual_beat_id(value: str) -> str:
+    """Return the canonical Final Episode Contract Beat ID.
+
+    Render authoring can carry the long-form alias ``scene-02-beat-001`` while
+    the Final Episode Contract schema intentionally stores ``vb-02-01``. Visual
+    Source projection already understands both aliases; author the contract-side
+    intent in its canonical form so schema validation stays fail-closed.
+    """
+    if re.fullmatch(r"vb-0[1-9]-[0-9]{2}", value):
+        return value
+    match = re.fullmatch(r"scene-(0[1-9])-beat-([0-9]{3})", value)
+    if match:
+        return f"vb-{match.group(1)}-{int(match.group(2)):02d}"
+    raise SystemExit(f"unsupported Visual Beat ID alias: {value}")
 
 
 def scene_map(render: dict[str, Any]) -> dict[int, dict[str, Any]]:
@@ -228,10 +245,10 @@ def apply(root: Path) -> dict[str, Any]:
     replace_scene_background(scenes[6], "background_scene_semiconductor")
     patch_verified_series(scenes[8], receipt)
 
-    scene2_beat = beat_id(scenes[2]["visualBeats"][0])
+    scene2_beat = canonical_visual_beat_id(beat_id(scenes[2]["visualBeats"][0]))
     # The second Scene 6 Beat already cites source-004 in the approved authoring;
     # attach the IR screenshot there rather than inventing a new evidence binding.
-    scene6_beat = beat_id(scenes[6]["visualBeats"][1])
+    scene6_beat = canonical_visual_beat_id(beat_id(scenes[6]["visualBeats"][1]))
     intents = {
         "contractVersion": "1.0.0",
         "episodeDate": DATE,
