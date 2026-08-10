@@ -54,13 +54,7 @@ def beat_id(beat: dict[str, Any]) -> str:
 
 
 def canonical_visual_beat_id(value: str) -> str:
-    """Return the canonical Final Episode Contract Beat ID.
-
-    Render authoring can carry the long-form alias ``scene-02-beat-001`` while
-    the Final Episode Contract schema intentionally stores ``vb-02-01``. Visual
-    Source projection already understands both aliases; author the contract-side
-    intent in its canonical form so schema validation stays fail-closed.
-    """
+    """Return the canonical Final Episode Contract Beat ID."""
     if re.fullmatch(r"vb-0[1-9]-[0-9]{2}", value):
         return value
     match = re.fullmatch(r"scene-(0[1-9])-beat-([0-9]{3})", value)
@@ -246,12 +240,11 @@ def apply(root: Path) -> dict[str, Any]:
     patch_verified_series(scenes[8], receipt)
 
     scene2_beat = canonical_visual_beat_id(beat_id(scenes[2]["visualBeats"][0]))
-    # The second Scene 6 Beat already cites source-004 in the approved authoring;
-    # attach the IR screenshot there rather than inventing a new evidence binding.
     scene6_beat = canonical_visual_beat_id(beat_id(scenes[6]["visualBeats"][1]))
     intents = {
         "contractVersion": "1.0.0",
         "episodeDate": DATE,
+        "qualityPolicy": "evidence-first-v1",
         "intents": [
             source_intent(
                 intent_id="vsi-20260810-bls-employment",
