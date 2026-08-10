@@ -85,6 +85,61 @@ def _single_approved_card_id(scene: dict[str, Any], beat: dict[str, Any]) -> str
     return cards[0]["cardId"]
 
 
+def _normalize_tailwind_headwind_template(beat: dict[str, Any]) -> None:
+    """Normalize the renderer's explicit two-lane text contract.
+
+    Story bindings may choose ``tailwind-headwind`` for a non-numeric contrast. In that
+    case the renderer still needs two lane labels and matching ``label｜text`` viewer
+    strings. Infer labels only from those already-authored viewer strings; never invent
+    or rewrite the displayed meaning.
+    """
+
+    config = beat.get("templateConfig")
+    if not isinstance(config, dict):
+        raise TemplateDataError(
+            f"{beat.get('beatId')}: tailwind-headwind templateConfig missing"
+        )
+    texts = beat.get("viewerTexts")
+    if not isinstance(texts, list) or len(texts) < 2 or not all(
+        isinstance(item, str) and item.strip() for item in texts
+    ):
+        raise TemplateDataError(
+            f"{beat.get('beatId')}: tailwind-headwind requires at least two viewerTexts"
+        )
+
+    labels = config.get("laneLabels")
+    if not isinstance(labels, list) or len(labels) != 2 or not all(
+        isinstance(item, str) and item.strip() for item in labels
+    ):
+        inferred: list[str] = []
+        for text in texts[:2]:
+            if "｜" not in text:
+                raise TemplateDataError(
+                    f"{beat.get('beatId')}: cannot infer tailwind-headwind lane label from {text!r}"
+                )
+            label, _ = text.split("｜", 1)
+            label = label.strip()
+            if not label:
+                raise TemplateDataError(
+                    f"{beat.get('beatId')}: empty tailwind-headwind lane label"
+                )
+            inferred.append(label)
+        labels = inferred
+        config["laneLabels"] = labels
+
+    normalized = [item.strip() for item in labels]
+    config["laneLabels"] = normalized
+    for label in normalized:
+        prefix = f"{label}｜"
+        if not any(text.startswith(prefix) for text in texts):
+            raise TemplateDataError(
+                f"{beat.get('beatId')}: tailwind-headwind viewerTexts missing {prefix!r} prefix"
+            )
+
+    config["variant"] = "two-lane"
+    beat["templateVariant"] = "two-lane"
+
+
 def _use_mixed_metric_template(
     beat: dict[str, Any], numbers: list[dict[str, Any]]
 ) -> None:
@@ -316,6 +371,8 @@ def materialize_template_data(
                 _materialize_numeric_template(scene, beat)
             elif template in CAUSAL_TEMPLATE_IDS:
                 _materialize_causal_template(scene, beat)
+            if beat.get("visualTemplate") == "tailwind-headwind":
+                _normalize_tailwind_headwind_template(beat)
         beats = scene.get("visualBeats", [])
         if beats:
             scene["visualMode"] = beats[0]["visualMode"]
