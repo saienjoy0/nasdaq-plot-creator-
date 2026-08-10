@@ -17,6 +17,7 @@ on:
       - "contracts/final_episode_contract.schema.json"
       - "contracts/financial_visual_compatibility.json"
       - "contracts/financial_visual_compatibility_2_4.json"
+      - "contracts/visual_grammar_*.json"
       - "scripts/materialize_daily_episode.py"
       - "scripts/materialize_renderer_sources.py"
       - "scripts/materialize_financial_contract_1_0.py"
@@ -26,6 +27,7 @@ on:
       - "scripts/resolve_visual_sources.py"
       - "scripts/select_visual_sources.py"
       - "scripts/visual_source_projection.py"
+      - "scripts/pre_tts_visual_gate.py"
       - "scripts/story-engine/**"
       - "scripts/remotion_template_data.py"
       - "scripts/finalize_renderer_package.py"
@@ -112,6 +114,9 @@ jobs:
               root / f"render-specs/{date}/render_spec.json",
               root / f"research/{date}/causal_research_dossier.template.json",
               root / "contracts/financial_visual_compatibility_2_4.json",
+              root / "contracts/visual_grammar_semantics.json",
+              root / "contracts/visual_grammar_renderer_compatibility.json",
+              root / "scripts/pre_tts_visual_gate.py",
               root / "scripts/materialize_daily_episode.py",
               root / "scripts/materialize_renderer_sources.py",
               root / "scripts/story-engine/materialize_story_engine.py",
@@ -191,6 +196,7 @@ jobs:
           python tests/daily-production-hardening/test_daily_production_hardening.py
           python -m pytest -q tests/story-engine-integration tests/visual-source-baseline tests/visual-source
           python -m py_compile \
+            scripts/pre_tts_visual_gate.py \
             scripts/materialize_renderer_sources.py \
             scripts/materialize_daily_episode.py \
             scripts/prepare_visual_sources.py \
@@ -211,6 +217,14 @@ jobs:
             scripts/record_visual_source_baseline.py \
             scripts/run_daily_production_hardened.py \
             scripts/run_daily_production_story_engine_v1_1.py
+
+      - name: Validate authored Visual Grammar before production projection
+        run: |
+          mkdir -p "verification/$EPISODE_DATE"
+          python scripts/pre_tts_visual_gate.py \
+            --render-spec "render-specs/$EPISODE_DATE/render_spec.json" \
+            --story-bindings "working/$EPISODE_DATE/story-engine/story_production_bindings.json" \
+            --output "verification/$EPISODE_DATE/pre_tts_visual_gate.json"
 
       - name: Prepare explicit Visual Source candidates and selection
         shell: bash
@@ -247,7 +261,7 @@ jobs:
           ACCEPT="$STORY/story_engine_acceptance.json"
           python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state research_inputs_bound --evidence "research/$EPISODE_DATE/research_input_manifest.json"
           python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state causal_dossier_valid --evidence "research/$EPISODE_DATE/causal_research_dossier_$EPISODE_DATE.json" "research/$EPISODE_DATE/causal_dossier_validation.json"
-          python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state episode_package_final --evidence "episodes/$EPISODE_DATE/episode_package_$EPISODE_DATE.md" "$ACCEPT" "$STORY/story_projection_report.json"
+          python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state episode_package_final --evidence "episodes/$EPISODE_DATE/episode_package_$EPISODE_DATE.md" "$ACCEPT" "$STORY/story_projection_report.json" "verification/$EPISODE_DATE/pre_tts_visual_gate.json"
           python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state memory_usage_valid --evidence "research/$EPISODE_DATE/causal_dossier_validation.json"
           python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state assets_resolved --evidence "verification/$EPISODE_DATE/asset_resolution_log.json" "verification/$EPISODE_DATE/image_generation_log.json"
 

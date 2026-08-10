@@ -3,8 +3,8 @@
 
 Story Engine passes remain internal to editorial production. The public Daily
 Production state machine advances directly from ``causal_dossier_valid`` to
-``episode_package_final`` only when one hash-bound Story Engine v1.1
-acceptance, the final episode package, and the projection report all pass.
+``episode_package_final`` only when one hash-bound Story Engine v1.1 acceptance,
+the final episode package, projection report, and Pre-TTS Visual Gate report pass.
 """
 
 from __future__ import annotations
@@ -91,6 +91,9 @@ def _install_story_v11_gate(daily_module: Any) -> None:
             projection_paths = [
                 path for path in resolved if path.name == "story_projection_report.json"
             ]
+            visual_gate_paths = [
+                path for path in resolved if path.name == "pre_tts_visual_gate.json"
+            ]
 
             if len(acceptance_paths) != 1:
                 raise daily_module.DailyProductionError(
@@ -106,6 +109,11 @@ def _install_story_v11_gate(daily_module: Any) -> None:
                 raise daily_module.DailyProductionError(
                     daily_module.ERROR_CODES["package"],
                     "episode_package_final requires exactly one story_projection_report.json",
+                )
+            if len(visual_gate_paths) != 1:
+                raise daily_module.DailyProductionError(
+                    daily_module.ERROR_CODES["render"],
+                    "episode_package_final requires exactly one pre_tts_visual_gate.json",
                 )
 
             result = acceptance_validator.validate_acceptance(
@@ -131,6 +139,19 @@ def _install_story_v11_gate(daily_module: Any) -> None:
                 raise daily_module.DailyProductionError(
                     daily_module.ERROR_CODES["package"],
                     "Story Engine projection report must be PASS for the same episode date",
+                )
+
+            visual_gate = daily_module.load_json(
+                visual_gate_paths[0], "Pre-TTS Visual Gate report"
+            )
+            if (
+                visual_gate.get("episodeDate") != date
+                or visual_gate.get("status") != "PASS"
+                or visual_gate.get("violations") != []
+            ):
+                raise daily_module.DailyProductionError(
+                    daily_module.ERROR_CODES["render"],
+                    "Pre-TTS Visual Gate must be PASS with zero violations for the same episode date",
                 )
 
         return original(
