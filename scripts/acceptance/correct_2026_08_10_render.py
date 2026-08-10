@@ -36,11 +36,17 @@ def cue_end(text: str, size: int = 48) -> str:
 def main() -> int:
     path = Path('render-specs/2026-08-10/render_spec.json')
     doc = json.loads(path.read_text(encoding='utf-8'))
-    if doc.get('episode', {}).get('targetDate') != '2026-08-10':
+    episode = doc.get('episode', {})
+    if episode.get('targetDate') != '2026-08-10':
         raise SystemExit('render targetDate drift')
     scenes = doc.get('scenes', [])
     if len(scenes) != 9:
         raise SystemExit('render scene count drift')
+
+    episode['shortenedReason'] = (
+        '雇用統計、金利観測、半導体増幅、反対材料、8:30 ETの初動までを9シーンで完結でき、'
+        '追加ニュースや未検証の因果で水増ししないため。'
+    )
 
     expected_scopes = {2: ('macro', 'nasdaq'), 3: ('macro', 'nasdaq'), 5: ('global', 'multiple')}
     for scene_number, (old, new) in expected_scopes.items():
@@ -50,6 +56,8 @@ def main() -> int:
         if scene.get('causalScope') not in (old, new):
             raise SystemExit(f'Scene {scene_number} causalScope drift: {scene.get("causalScope")}')
         scene['causalScope'] = new
+
+    scenes[0]['uncertainty'] = '8:30 ETの初動は確認済み。ただし1分足だけで因果や寄与度は確定しない'
 
     scene3_followup = scenes[2]['visualBeats'][1]
     beat_id = scene3_followup.get('visualBeatId') or scene3_followup.get('beatId')
@@ -136,13 +144,20 @@ def main() -> int:
     beat2['narrationStartCue'] = cue_start(SCENE8_CHUNK2)
     beat2['narrationEndCue'] = cue_end(SCENE8_CHUNK2)
 
+    source001_seen = False
+    source005_seen = False
     for source in doc.get('sources', []):
-        if source.get('sourceId') == 'source-005':
+        if source.get('sourceId') == 'source-001':
+            source['usedFor'] = ['Nasdaq Composite、SOXX、MCHP、NVDA、AMD、Alphabet、Microsoftの終値と騰落率']
+            source001_seen = True
+        elif source.get('sourceId') == 'source-005':
             source['title'] = 'Research Acquisition Result Wave 2 — verified 1-minute series'
             source['usedFor'] = ['QQQ・SOXX・MCHP・NVDAの2026-08-07検証済み1分足と発表時刻の初動確認']
             source['narrationAttribution'] = '検証済み追加取得結果'
-            break
-    else:
+            source005_seen = True
+    if not source001_seen:
+        raise SystemExit('source-001 missing')
+    if not source005_seen:
         raise SystemExit('source-005 missing')
 
     publishing = doc.get('publishing')
@@ -190,7 +205,10 @@ def main() -> int:
     ]
 
     serialized = json.dumps(doc, ensure_ascii=False, sort_keys=True)
-    stale_terms = ['分足未取得', '分足は未取得', '分足欠損', '8:30 ET直後分足は取得できない']
+    stale_terms = [
+        '分足未取得', '分足は未取得', '分足欠損', '8:30 ET直後分足は取得できない',
+        '分足反応は未確認', '分足取得制約', '2回の追加取得でも得られず',
+    ]
     found_stale = [term for term in stale_terms if term in serialized]
     if found_stale:
         raise SystemExit(f'stale wave2 failure metadata remains in render: {found_stale}')
