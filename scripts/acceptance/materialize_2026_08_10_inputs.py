@@ -6,6 +6,7 @@ PAYLOAD_SHA256='b1d9ed94c50843c3b75c6d35e2d25f177a5669c9768e52afd6ef68706badab5d
 CORRECTED_SUPPLEMENT_SHA256='151f5e124cdd7fda2b17e909387b63ce7b4465f4b7dddbbc205dbd98af5d7270'
 CORRECTED_DOSSIER_SHA256='78c66e20521b0299b2b845a1b0990b7ad938fbb6b9b60849a32415dab60cc44d'
 CORRECTED_STORY_PLAN_SHA256='05c5e79cba26e98180dc4d46ab4470686ef6775eb89fcfd9808fa6a21dc00b09'
+CORRECTED_STORY_SCRIPT_SHA256='dde742241ad02ba966b63eae70801bbfcffc0de6020138aac475c95ba86c8b43'
 PART_SHA256={
  'part-01.b64':'509e05dc694585aaabc12675228074009ca7791d7b76281c118d20fe396c9a75',
  'part-02.b64':'377a99ae4888f2cb10dba3f075781817015c34a4d3ce216d06ce9f543c6e46cb',
@@ -72,6 +73,19 @@ def correct_story_plan(root:Path,dossier:dict)->None:
     selected['counterevidence_ids']=sorted(set(selected['counterevidence_ids']+['E-002']))
     write_checked(path,doc,CORRECTED_STORY_PLAN_SHA256,'story plan')
 
+def correct_story_script(root:Path)->None:
+    path=root/'working/2026-08-10/story-engine/templates/story_script.template.json'; doc=json.loads(path.read_text(encoding='utf-8'))
+    matches=[]
+    for scene in doc.get('scenes',[]):
+        for claim in scene.get('causal_claims',[]):
+            if claim.get('claim_id')=='claim-05': matches.append(claim)
+    if len(matches)!=1: raise SystemExit(f'unexpected claim-05 count: {len(matches)}')
+    claim=matches[0]
+    if claim.get('statement')!='Microchipの強い実績・見通しは半導体上昇の増幅要因だった。': raise SystemExit('claim-05 statement drift')
+    if claim.get('confidence') not in ('high','medium'): raise SystemExit('claim-05 confidence drift')
+    claim['confidence']='medium'
+    write_checked(path,doc,CORRECTED_STORY_SCRIPT_SHA256,'story script')
+
 def main():
     root=Path.cwd().resolve(); parts=sorted((root/'acceptance-inputs/2026-08-10').glob('part-*.b64'))
     if len(parts)!=9: raise SystemExit(f'expected 9 input parts, found {len(parts)}')
@@ -88,6 +102,6 @@ def main():
             target=(root/info.filename).resolve()
             if target == root or root not in target.parents: raise SystemExit(f'unsafe payload path: {info.filename}')
             target.parent.mkdir(parents=True,exist_ok=True); target.write_bytes(z.read(info.filename))
-    correct_supplement(root); dossier=correct_dossier(root); correct_story_plan(root,dossier)
+    correct_supplement(root); dossier=correct_dossier(root); correct_story_plan(root,dossier); correct_story_script(root)
     print(f'PASS materialized {len(infos)} acceptance inputs payload={PAYLOAD_SHA256}')
 if __name__=='__main__': main()
