@@ -180,6 +180,17 @@ def sync(*, repo_root: Path) -> dict[str, Any]:
             "transitionRole": "major-shift",
         }
     )
+    scene3_compare = beat_overrides.setdefault("scene-03-beat-002", {})
+    scene3_compare.update(
+        {
+            "contentType": "number-comparison",
+            "visualMode": "number-comparison",
+            "visualTemplate": "metric-comparison-board",
+            "templateVariant": "default",
+            "visualGrammarId": "evidence",
+            "transitionRole": "continuation",
+        }
+    )
 
     # Scene 9 may only assemble exact display text already introduced in Scenes 1-8.
     # Introduce the already-approved medium-confidence lead label in Scene 8, while
@@ -194,6 +205,69 @@ def sync(*, repo_root: Path) -> dict[str, Any]:
     scenes = render.get("scenes")
     if not isinstance(scenes, list) or len(scenes) != 9:
         raise StoryAuthoringSyncError("render authoring must contain nine scenes")
+
+    # Scene 3 Beat 1 expands its source card into Expected/Actual/Gap cards during the
+    # Renderer 2.4 projection. Bind Beat 2 to stable number objects now so it does not
+    # retain a dangling reference to the sibling source card after that expansion.
+    scene3_render = scenes[2]
+    if scene3_render.get("sceneId") != "scene-03":
+        raise StoryAuthoringSyncError("render Scene 3 identity drift")
+    cards3 = {
+        item.get("cardId"): item
+        for item in scene3_render.get("cards", [])
+        if isinstance(item, dict) and isinstance(item.get("cardId"), str)
+    }
+    compare_card = cards3.get("scene-03-card-002")
+    if not isinstance(compare_card, dict):
+        raise StoryAuthoringSyncError("render Scene 3 comparison card missing")
+    compare_lines = [
+        item
+        for item in compare_card.get("lines", [])[:2]
+        if isinstance(item, dict) and isinstance(item.get("value"), str)
+    ]
+    if len(compare_lines) != 2:
+        raise StoryAuthoringSyncError("render Scene 3 comparison card needs two numeric lines")
+    numbers3 = scene3_render.setdefault("numbers", [])
+    if not isinstance(numbers3, list):
+        raise StoryAuthoringSyncError("render Scene 3 numbers must be an array")
+    stable_number_ids = ["scene-03-number-compare-001", "scene-03-number-compare-002"]
+    numbers3[:] = [
+        item
+        for item in numbers3
+        if not (
+            isinstance(item, dict)
+            and item.get("numberId") in set(stable_number_ids)
+        )
+    ]
+    for number_id, line in zip(stable_number_ids, compare_lines, strict=True):
+        numbers3.append(
+            {
+                "numberId": number_id,
+                "label": str(line.get("label") or compare_card.get("title") or "比較"),
+                "value": line["value"],
+                "unit": "",
+                "comparison": None,
+                "tone": line.get("tone", "neutral"),
+            }
+        )
+    beats3 = scene3_render.get("visualBeats")
+    if not isinstance(beats3, list):
+        raise StoryAuthoringSyncError("render Scene 3 visualBeats missing")
+    beat3_2 = next(
+        (
+            item
+            for item in beats3
+            if isinstance(item, dict)
+            and item.get("beatId") in {"vb-03-02", "scene-03-beat-002"}
+        ),
+        None,
+    )
+    if beat3_2 is None:
+        raise StoryAuthoringSyncError("render scene-03 beat 2 missing")
+    beat3_2["objectIds"] = stable_number_ids
+    beat3_2["contentType"] = "number-comparison"
+    beat3_2["visualMode"] = "number-comparison"
+
     scene8_render = scenes[7]
     if scene8_render.get("sceneId") != "scene-08":
         raise StoryAuthoringSyncError("render Scene 8 identity drift")
@@ -244,6 +318,11 @@ def sync(*, repo_root: Path) -> dict[str, Any]:
                 "visualTemplate": scene3["visualTemplate"],
                 "visualGrammarId": scene3["visualGrammarId"],
                 "transitionRole": scene3["transitionRole"],
+            },
+            "scene-03-beat-002": {
+                "visualTemplate": scene3_compare["visualTemplate"],
+                "visualMode": scene3_compare["visualMode"],
+                "objectIds": stable_number_ids,
             },
             "scene-08": {
                 "supportingTexts": scene8_override["supportingTexts"],
