@@ -44,13 +44,16 @@ def _evidence_beat_source_ids(render: dict[str, Any]) -> set[str]:
     return result
 
 
-def _intent_source_ids(intents: list[dict[str, Any]]) -> set[str]:
-    return {
-        source_id
-        for intent in intents
-        for source_id in intent.get("sourceIds", [])
-        if isinstance(source_id, str)
-    }
+def _real_source_primary_ids(intents: list[dict[str, Any]]) -> set[str]:
+    result: set[str] = set()
+    for intent in intents:
+        if intent.get("presentationClass") != "source-document":
+            continue
+        primary = intent.get("primary")
+        if not isinstance(primary, dict) or primary.get("sourceKind") == "existing-asset":
+            continue
+        result.update(item for item in intent.get("sourceIds", []) if isinstance(item, str))
+    return result
 
 
 def _intraday_financial_source_ids(render: dict[str, Any]) -> set[str]:
@@ -79,17 +82,17 @@ def validate_visual_evidence_coverage(
         if isinstance(source, dict) and isinstance(source.get("sourceId"), str)
     }
     evidence_sources = _evidence_beat_source_ids(render)
-    intent_sources = _intent_source_ids(intents)
+    real_source_primary_ids = _real_source_primary_ids(intents)
 
     source_document_required = {
         source_id
         for source_id in evidence_sources
         if source_id in sources and _is_source_document_worthy(sources[source_id])
     }
-    missing_source_documents = sorted(source_document_required - intent_sources)
+    missing_source_documents = sorted(source_document_required - real_source_primary_ids)
     if missing_source_documents:
         raise VisualEvidenceCoverageError(
-            "E_VISUAL_SOURCE_DOCUMENT_UNCOVERED: Evidence/Verify Beat uses real source evidence but no Visual Source Intent covers "
+            "E_VISUAL_SOURCE_DOCUMENT_UNCOVERED: Evidence/Verify Beat uses real source evidence but no source-document Intent with a real-source Primary covers "
             + ", ".join(missing_source_documents)
         )
 
