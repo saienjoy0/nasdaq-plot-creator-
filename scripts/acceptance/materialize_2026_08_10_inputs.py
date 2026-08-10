@@ -333,6 +333,13 @@ def patch_story_plan(root: Path, dossier: dict) -> None:
 def patch_story_script(root: Path) -> None:
     path = root / 'working/2026-08-10/story-engine/templates/story_script.template.json'
     doc = json.loads(path.read_text(encoding='utf-8'))
+    for scene in doc['scenes']:
+        for claim in scene['causal_claims']:
+            if claim['claim_id'] == 'claim-05':
+                claim['confidence'] = 'medium'
+    doc['retained_counterevidence_ids'] = sorted(
+        set(doc.get('retained_counterevidence_ids', [])) | {'E-010', 'E-011', 'E-012'}
+    )
     scene8 = next(scene for scene in doc['scenes'] if scene['scene_id'] == 'scene-08')
     scene8['evidence_ids'] = ['E-003', 'E-004', 'E-008', 'E-010', 'E-011', 'E-012', 'E-009']
     scene8['narration'] = SCENE8_CHUNK1 + SCENE8_CHUNK2
