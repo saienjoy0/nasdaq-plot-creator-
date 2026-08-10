@@ -5,10 +5,16 @@ Story Engine passes remain internal to editorial production. The public Daily
 Production state machine advances directly from ``causal_dossier_valid`` to
 ``episode_package_final`` only when one hash-bound Story Engine v1.1 acceptance,
 the final episode package, projection report, and Pre-TTS Visual Gate report pass.
+
+A factual/causal Critical finding from 04 may supersede the current attempt through
+``restart-research``. This does not regress public state: the old attempt is archived
+and invalidated, then a fresh request/state is initialized from the exact same daily
+source and pinned Renderer.
 """
 
 from __future__ import annotations
 
+import argparse
 import importlib.util
 import sys
 from pathlib import Path
@@ -298,9 +304,52 @@ def load_hardened_daily_module():
     )
 
 
+def _restart_research_main(daily_module: Any, argv: list[str]) -> int:
+    retry_module = _load_module(
+        "restart_causal_research_hardened",
+        ROOT / "scripts/restart_causal_research.py",
+    )
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--workspace", type=Path, default=Path.cwd())
+    sub = parser.add_subparsers(dest="command", required=True)
+    restart = sub.add_parser("restart-research")
+    restart.add_argument("--episode-date", required=True)
+    restart.add_argument("--retry-request", required=True, type=Path)
+    args = parser.parse_args(argv)
+    try:
+        result = retry_module.restart(
+            daily_module=daily_module,
+            workspace=args.workspace.resolve(),
+            date=args.episode_date,
+            retry_request_path=args.retry_request,
+            retry_schema_path=(
+                ROOT
+                / "skills/nasdaq-cafe-daily-production/contracts/research_retry_request.schema.json"
+            ),
+            creative_review_schema_path=(
+                ROOT
+                / "skills/nasdaq-cafe-entertainment-critic/contracts/creative_review.schema.json"
+            ),
+        )
+        code = 0
+    except (retry_module.ResearchRetryError, daily_module.DailyProductionError) as exc:
+        message = getattr(exc, "message", str(exc))
+        result = {
+            "status": "fail",
+            "error_code": daily_module.ERROR_CODES["inquisition"],
+            "errors": [message],
+        }
+        code = 1
+    sys.stdout.buffer.write(daily_module.canonical_json(result))
+    return code
+
+
 def main(argv: list[str] | None = None) -> int:
     module = load_hardened_daily_module()
-    return module.main(argv)
+    raw = list(sys.argv[1:] if argv is None else argv)
+    if "restart-research" in raw:
+        return _restart_research_main(module, raw)
+    return module.main(raw)
 
 
 if __name__ == "__main__":
