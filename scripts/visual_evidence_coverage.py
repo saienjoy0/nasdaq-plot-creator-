@@ -32,13 +32,14 @@ def _is_verified_intraday_source(source: dict[str, Any]) -> bool:
     return any(token in text for token in ("1分足", "分足", "intraday", "minute-close", "minute series"))
 
 
-def _referenced_source_ids(render: dict[str, Any]) -> set[str]:
+def _evidence_beat_source_ids(render: dict[str, Any]) -> set[str]:
     result: set[str] = set()
     for scene in render.get("scenes", []):
         if scene.get("sceneNumber") == 9 or str(scene.get("sceneRole", "")).startswith("closing"):
             continue
-        result.update(item for item in scene.get("evidenceSourceIds", []) if isinstance(item, str))
         for beat in scene.get("visualBeats", []):
+            if beat.get("primaryFunction") not in {"Evidence", "Verify"}:
+                continue
             result.update(item for item in beat.get("evidenceSourceIds", []) if isinstance(item, str))
     return result
 
@@ -77,30 +78,30 @@ def validate_visual_evidence_coverage(
         for source in render.get("sources", [])
         if isinstance(source, dict) and isinstance(source.get("sourceId"), str)
     }
-    referenced = _referenced_source_ids(render)
+    evidence_sources = _evidence_beat_source_ids(render)
     intent_sources = _intent_source_ids(intents)
 
     source_document_required = {
         source_id
-        for source_id in referenced
+        for source_id in evidence_sources
         if source_id in sources and _is_source_document_worthy(sources[source_id])
     }
     missing_source_documents = sorted(source_document_required - intent_sources)
     if missing_source_documents:
         raise VisualEvidenceCoverageError(
-            "E_VISUAL_SOURCE_DOCUMENT_UNCOVERED: real source evidence is referenced but no Visual Source Intent covers "
+            "E_VISUAL_SOURCE_DOCUMENT_UNCOVERED: Evidence/Verify Beat uses real source evidence but no Visual Source Intent covers "
             + ", ".join(missing_source_documents)
         )
 
     intraday_required = {
         source_id
-        for source_id in referenced
+        for source_id in evidence_sources
         if source_id in sources and _is_verified_intraday_source(sources[source_id])
     }
     intraday_covered = _intraday_financial_source_ids(render)
     missing_intraday = sorted(intraday_required - intraday_covered)
     if missing_intraday:
         raise VisualEvidenceCoverageError(
-            "E_FINANCIAL_VISUAL_INTRADAY_UNCOVERED: verified intraday evidence must use event-reaction-timeline/verified-intraday-series for "
+            "E_FINANCIAL_VISUAL_INTRADAY_UNCOVERED: verified intraday evidence in an Evidence/Verify Beat must use event-reaction-timeline/verified-intraday-series for "
             + ", ".join(missing_intraday)
         )
