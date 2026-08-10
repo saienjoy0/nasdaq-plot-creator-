@@ -64,7 +64,7 @@ jobs:
             --episode-date $DATE \
             --market-date 2026-08-07 \
             --timezone Asia/Tokyo \
-            --information-cutoff 2026-08-10T12:52:00+09:00 \
+            --information-cutoff 2026-08-10T12:15:00+09:00 \
             --daily-source-package daily-inputs/$DATE/daily_source_package_$DATE.md \
             --memory-query-plan working/$DATE/memory_query_plan.json \
             --memory-context working/$DATE/memory_context_$DATE.md \
