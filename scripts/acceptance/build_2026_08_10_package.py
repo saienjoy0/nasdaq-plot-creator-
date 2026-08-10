@@ -40,6 +40,7 @@ def main()->int:
     render_path=root/'render-specs'/date/'render_spec.json'
     public_path=episodes/f'episode_package_public_{date}.md'
     bindings=work/'financial_visual_bindings.json'
+    subprocess.run([sys.executable,'scripts/acceptance/correct_2026_08_10_render.py'],check=True)
     mat=renderer_sources.materialize(root=root,date=date,render_path=render_path,public_package_path=public_path,bindings_path=bindings)
     render=mat['render']
     visual=visual_source_projection.prepare_visual_sources(root=root,date=date,final_contract_path=mat['final_contract_path'],render=render)
