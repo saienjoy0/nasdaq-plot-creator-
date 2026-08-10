@@ -18,6 +18,8 @@ ALLOWED_EXPECTED_BASIS = {
 }
 TRANSIENT_SCREEN_STATES = {"EntityFocus", "MainWithEntity", "PictureBook", "News"}
 NUMBER_MODES = {"number-comparison", "stock-comparison"}
+CARD_KEYS = {"cardId", "role", "title", "lines"}
+CARD_LINE_KEYS = {"label", "value", "tone"}
 REACTION_VARIANT_PRECISION = {
     "verified-series": "verified-intraday-series",
     "reported-sequence": "reported-sequence",
@@ -197,6 +199,46 @@ def _materialize_expected_actual_gap(
     )
 
 
+def _normalize_renderer_cards(scene: dict[str, Any]) -> None:
+    """Drop producer-only card metadata before strict Renderer 2.4 validation.
+
+    Producer cards may carry convenience fields such as label/text/sourceId that are
+    useful while authoring but are not part of the Renderer 2.4 card contract. This
+    projection is deliberately lossless for all renderer-visible card content and
+    does not synthesize or reinterpret editorial text.
+    """
+    cards = scene.get("cards", [])
+    if not isinstance(cards, list):
+        raise ProjectionError(f"{scene.get('sceneId')}: cards must be an array")
+    normalized: list[dict[str, Any]] = []
+    for card_index, card in enumerate(cards):
+        if not isinstance(card, dict):
+            raise ProjectionError(
+                f"{scene.get('sceneId')}.cards[{card_index}]: card must be an object"
+            )
+        lines = card.get("lines")
+        if not isinstance(lines, list):
+            raise ProjectionError(
+                f"{scene.get('sceneId')}.cards[{card_index}]: lines must be an array"
+            )
+        normalized_lines: list[dict[str, Any]] = []
+        for line_index, line in enumerate(lines):
+            if not isinstance(line, dict):
+                raise ProjectionError(
+                    f"{scene.get('sceneId')}.cards[{card_index}].lines[{line_index}]: "
+                    "line must be an object"
+                )
+            normalized_lines.append(
+                {key: copy.deepcopy(value) for key, value in line.items() if key in CARD_LINE_KEYS}
+            )
+        normalized_card = {
+            key: copy.deepcopy(value) for key, value in card.items() if key in CARD_KEYS
+        }
+        normalized_card["lines"] = normalized_lines
+        normalized.append(normalized_card)
+    scene["cards"] = normalized
+
+
 def _reaction_bindings(path: Path, episode_date: str) -> dict[str, dict[str, Any]]:
     document = load_json(path, "reaction timeline bindings")
     if document.get("contractVersion") != "1.0.0":
@@ -326,6 +368,7 @@ def canonicalize_render_spec(
             reaction_bindings,
             used_reaction_bindings,
         )
+        _normalize_renderer_cards(scene)
         beats = scene.get("visualBeats", [])
         for beat_index, beat in enumerate(beats):
             next_beat = beats[beat_index + 1] if beat_index + 1 < len(beats) else None
