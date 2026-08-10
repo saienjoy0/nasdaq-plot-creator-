@@ -6,8 +6,9 @@ TEST ONLY. Scene 2 Beat 2 compares a payroll revision (people) with NASDAQ retur
 numeric matrix. Scene 3 intentionally uses Expected/Actual/Gap on Beat 1 and a numeric
 comparison on Beat 2; once Beat 2 is bound to stable number objects, its legacy source
 card must not survive because an expected-actual-gap scene must contain exactly the
-three projected role cards. Scene 7 Beat 2 is a one-card synthesis/bridge, so it must
-remain a text-focus Beat rather than claiming a numeric matrix that has no number data.
+three projected role cards. Scene 7 Beat 2 is a one-card synthesis of a broad tailwind
+and stock-specific dispersion, so it uses the evidence grammar on a two-lane surface
+without inventing numeric matrix inputs.
 """
 
 from __future__ import annotations
@@ -290,16 +291,16 @@ def _sync_scene7(render: dict[str, Any], bindings: dict[str, Any]) -> dict[str, 
 
     beat2["contentType"] = "text-focus"
     beat2["visualMode"] = "text-focus"
-    beat2["visualTemplate"] = "text-focus"
-    beat2["templateVariant"] = "default"
+    beat2["visualTemplate"] = "tailwind-headwind"
+    beat2["templateVariant"] = "two-lane"
     config = beat2.get("templateConfig")
     if not isinstance(config, dict):
         raise Scene3AuthoringError("Scene 7 Beat 2 templateConfig missing")
-    config["variant"] = "default"
+    config["variant"] = "two-lane"
     grammar = beat2.get("visualGrammar")
     if not isinstance(grammar, dict):
         raise Scene3AuthoringError("Scene 7 Beat 2 visualGrammar missing")
-    grammar["grammarId"] = "bridge-text"
+    grammar["grammarId"] = "evidence"
     grammar["transitionRole"] = "continuation"
 
     overrides = bindings.get("beat_overrides")
@@ -310,9 +311,9 @@ def _sync_scene7(render: dict[str, Any], bindings: dict[str, Any]) -> dict[str, 
         {
             "contentType": "text-focus",
             "visualMode": "text-focus",
-            "visualTemplate": "text-focus",
-            "templateVariant": "default",
-            "visualGrammarId": "bridge-text",
+            "visualTemplate": "tailwind-headwind",
+            "templateVariant": "two-lane",
+            "visualGrammarId": "evidence",
             "transitionRole": "continuation",
         }
     )
