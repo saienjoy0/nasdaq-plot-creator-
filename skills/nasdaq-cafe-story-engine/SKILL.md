@@ -1,7 +1,7 @@
 ---
 name: nasdaq-cafe-story-engine
-version: 1.2.0
-description: Turn a validated causal dossier into a reviewed 9-Scene episode package by chaining viewer understanding without changing market causality.
+version: 1.3.0
+description: Turn a validated causal dossier into a reviewed 9-Scene episode package by chaining viewer understanding without changing market causality, then hand the reviewed story to explicit Visual Evidence Planning.
 ---
 
 # Unified Story Engine
@@ -10,8 +10,12 @@ Run after `causal_dossier_valid` and before `episode_package_final`.
 
 Story Discovery, Understanding Progression, Authoring, Editorial Critic, Targeted Rewrite, Causal Diff and Re-review are internal Story Engine passes. They are not public Daily Production states.
 
+After Pass G succeeds, the reviewed story must pass through the separate **Visual Evidence Planning handoff** defined below before `episode_package_final` is registered. Visual Evidence Planning is not a new Story Engine meaning pass and may not change the reviewed market story.
+
 ```text
 causal_dossier_valid
+→ Story Engine A–G
+→ Visual Evidence Planning handoff
 → episode_package_final
 ```
 
@@ -250,6 +254,74 @@ If a Critical issue remains, block and return to the owning stage.
 
 ---
 
+# Required handoff — Visual Evidence Planning
+
+This handoff happens **after Pass G and before `episode_package_final`**. It is outside Story Engine A–G and cannot reopen lead selection, causality, chronology, Expected / Actual / Gap, confidence, counterevidence, narration meaning, or Scene roles.
+
+Its only question is:
+
+> For each already-authored Visual Beat, what medium best communicates the reviewed meaning without inventing a new claim?
+
+For each Visual Beat, consider:
+
+```text
+real source evidence
+financial visual
+real-world photo
+social post
+generated illustration
+existing asset
+```
+
+Prefer original evidence when the viewer needs to see the evidence itself. Prefer Financial Visual when the job is to understand numbers, comparison, Gap, transmission, or verified price timing. A social post is preferred only when the post itself is materially part of the story.
+
+## Mandatory planning artifact
+
+Every production attempt must author:
+
+```text
+working/YYYY-MM-DD/visual_source_intents.json
+```
+
+Even when no external or day-specific Visual Source is useful, create the explicit empty document:
+
+```json
+{
+  "contractVersion": "1.0.0",
+  "episodeDate": "YYYY-MM-DD",
+  "intents": []
+}
+```
+
+Therefore:
+
+```text
+missing intent document ≠ not required
+explicit empty intents = planning completed, no Visual Source required
+```
+
+A missing intent document is `E_VISUAL_SOURCE_PLANNING_MISSING` and blocks production.
+
+## Intent safety
+
+When an intent is authored:
+
+- target an existing Scene / Visual Beat only;
+- use only evidence/source IDs already present in the reviewed production source registry;
+- use exact locators, never a generic search query;
+- state a purpose that mirrors existing reviewed meaning;
+- define Primary and Approved Fallback before acquisition/generation;
+- keep rights status explicit;
+- do not add a fact, causal edge, price attribution, confidence strengthening, or NASDAQ-wide promotion;
+- do not change narration just to justify an image;
+- do not use a social screenshot or source page merely to satisfy a visual quota.
+
+If the Visual Evidence planner discovers that the reviewed story itself lacks required factual support, return to Causal Research / 02 instead of repairing the story through visuals.
+
+The exact-locator resolver and renderer remain mechanical. They may resolve, verify, project and render the selected medium, but they may not decide what the story means.
+
+---
+
 # External Independent Critic policy
 
 The normal 04 editorial review above is mandatory.
@@ -409,6 +481,7 @@ Scene 1–2 are not sacred. Rewrite only Scenes that fail the same Critic criter
 - Understanding Progression scene checks
 - material counterevidence guard
 - fixed Scene order / Scene 9 guard
+- Visual Evidence Planning intent-document presence gate
 - optional external Critic policy tests
 - v1.1 strict external attestation tests
 - final episode projection / production package validation
