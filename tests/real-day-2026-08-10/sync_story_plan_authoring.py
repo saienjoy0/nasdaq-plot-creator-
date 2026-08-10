@@ -192,10 +192,6 @@ def sync(*, repo_root: Path) -> dict[str, Any]:
         }
     )
 
-    # Scene 9 may only assemble exact display text already introduced in Scenes 1-8.
-    # Introduce the already-approved medium-confidence lead label in Scene 8, while
-    # preserving the causal boundary as the second line. The verified minute move is
-    # still shown explicitly inside the Scene 8 Beat viewer text.
     scene8_override = scene_overrides.setdefault("scene-08", {})
     scene8_override["supportingTexts"] = [
         "主因候補：利上げ観測後退",
@@ -206,9 +202,6 @@ def sync(*, repo_root: Path) -> dict[str, Any]:
     if not isinstance(scenes, list) or len(scenes) != 9:
         raise StoryAuthoringSyncError("render authoring must contain nine scenes")
 
-    # Scene 3 Beat 1 expands its source card into Expected/Actual/Gap cards during the
-    # Renderer 2.4 projection. Bind Beat 2 to stable number objects now so it does not
-    # retain a dangling reference to the sibling source card after that expansion.
     scene3_render = scenes[2]
     if scene3_render.get("sceneId") != "scene-03":
         raise StoryAuthoringSyncError("render Scene 3 identity drift")
@@ -231,12 +224,13 @@ def sync(*, repo_root: Path) -> dict[str, Any]:
     if not isinstance(numbers3, list):
         raise StoryAuthoringSyncError("render Scene 3 numbers must be an array")
     stable_number_ids = ["scene-03-number-compare-001", "scene-03-number-compare-002"]
+    stable_number_id_set = set(stable_number_ids)
     numbers3[:] = [
         item
         for item in numbers3
         if not (
             isinstance(item, dict)
-            and item.get("numberId") in set(stable_number_ids)
+            and item.get("numberId") in stable_number_id_set
         )
     ]
     for number_id, line in zip(stable_number_ids, compare_lines, strict=True):
@@ -268,9 +262,87 @@ def sync(*, repo_root: Path) -> dict[str, Any]:
     beat3_2["contentType"] = "number-comparison"
     beat3_2["visualMode"] = "number-comparison"
 
+    # Normalize Scene 4 producer-only card fields into the strict Renderer 2.4 card
+    # shape. Keep the approved employment Gap on Beat 1 and the rate path on Beat 2.
+    scene4_render = scenes[3]
+    if scene4_render.get("sceneId") != "scene-04":
+        raise StoryAuthoringSyncError("render Scene 4 identity drift")
+    cards4 = {
+        item.get("cardId"): item
+        for item in scene4_render.get("cards", [])
+        if isinstance(item, dict) and isinstance(item.get("cardId"), str)
+    }
+    card4_1 = cards4.get("scene-04-card-001")
+    card4_2 = cards4.get("scene-04-card-002")
+    if not isinstance(card4_1, dict) or not isinstance(card4_2, dict):
+        raise StoryAuthoringSyncError("render Scene 4 approved cards are missing")
+    card4_1.clear()
+    card4_1.update(
+        {
+            "cardId": "scene-04-card-001",
+            "role": None,
+            "title": "Expected / Actual / Gap",
+            "lines": [
+                {"label": "Expected", "tone": "neutral", "value": "+8万人"},
+                {"label": "Actual", "tone": "neutral", "value": "-2.3万人"},
+                {"label": "Gap", "tone": "neutral", "value": "-10.3万人"},
+            ],
+        }
+    )
+    card4_2.clear()
+    card4_2.update(
+        {
+            "cardId": "scene-04-card-002",
+            "role": None,
+            "title": "利上げ確率の変化",
+            "lines": [
+                {"label": "8月7日", "tone": "neutral", "value": "約44%"},
+                {"label": "前日", "tone": "neutral", "value": "55%"},
+                {"label": "1週間前", "tone": "neutral", "value": "67%"},
+            ],
+        }
+    )
+
+    # Scene 8 must carry the verified wave-2 facts in strict card form. Rebuild the
+    # two cards rather than leaving legacy label/text/sourceId producer fields behind.
     scene8_render = scenes[7]
     if scene8_render.get("sceneId") != "scene-08":
         raise StoryAuthoringSyncError("render Scene 8 identity drift")
+    cards8 = {
+        item.get("cardId"): item
+        for item in scene8_render.get("cards", [])
+        if isinstance(item, dict) and isinstance(item.get("cardId"), str)
+    }
+    card8_1 = cards8.get("scene-08-card-001")
+    card8_2 = cards8.get("scene-08-card-002")
+    if not isinstance(card8_1, dict) or not isinstance(card8_2, dict):
+        raise StoryAuthoringSyncError("render Scene 8 approved cards are missing")
+    card8_1.clear()
+    card8_1.update(
+        {
+            "cardId": "scene-08-card-001",
+            "role": None,
+            "title": "8:30 ETの実分足",
+            "lines": [
+                {"label": "QQQ", "tone": "neutral", "value": "719.16 → 720.23"},
+                {"label": "SOXX", "tone": "neutral", "value": "541.06 → 542.40"},
+                {"label": "NVDA", "tone": "neutral", "value": "219.95 → 220.31"},
+            ],
+        }
+    )
+    card8_2.clear()
+    card8_2.update(
+        {
+            "cardId": "scene-08-card-002",
+            "role": None,
+            "title": "境界",
+            "lines": [
+                {"label": "因果", "tone": "neutral", "value": "1分足は因果証明ではない"},
+                {"label": "MCHP", "tone": "neutral", "value": "79.58 → 79.56"},
+            ],
+        }
+    )
+
     beats8 = scene8_render.get("visualBeats")
     if not isinstance(beats8, list):
         raise StoryAuthoringSyncError("render Scene 8 visualBeats missing")
@@ -324,10 +396,12 @@ def sync(*, repo_root: Path) -> dict[str, Any]:
                 "visualMode": scene3_compare["visualMode"],
                 "objectIds": stable_number_ids,
             },
+            "scene-04-cards": [card4_1["title"], card4_2["title"]],
             "scene-08": {
                 "supportingTexts": scene8_override["supportingTexts"],
                 "beat-001-objectIds": beat8_1["objectIds"],
                 "beat-002-dataBasis": config8_2["dataBasis"],
+                "cardTitles": [card8_1["title"], card8_2["title"]],
             },
         },
         "story_plan_template_sha256": plan_digest,
