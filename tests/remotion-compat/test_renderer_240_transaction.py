@@ -92,6 +92,131 @@ class Renderer240TransactionTests(unittest.TestCase):
         with self.assertRaises(compat.CompatibilityFinalizationError):
             compat._validate_referential_integrity(damaged)
 
+    def test_expected_gap_projection_preserves_unrelated_followup_cards(self):
+        scene = {
+            "sceneId": "scene-test",
+            "cards": [
+                {
+                    "cardId": "source-gap-card",
+                    "title": "Expected / Actual / Gap",
+                    "lines": [
+                        {"label": "Expected", "value": "+80k", "tone": "neutral"},
+                        {"label": "Actual", "value": "-23k", "tone": "negative"},
+                        {"label": "Gap", "value": "-103k", "tone": "negative"},
+                    ],
+                },
+                {
+                    "cardId": "followup-card",
+                    "title": "Follow-up evidence",
+                    "lines": [{"label": "Boundary", "value": "kept", "tone": "neutral"}],
+                },
+            ],
+            "visualEvents": [
+                {
+                    "eventId": "event-001",
+                    "action": "show",
+                    "targetId": "source-gap-card",
+                },
+                {
+                    "eventId": "event-002",
+                    "action": "show",
+                    "targetId": "followup-card",
+                },
+            ],
+        }
+        beat = {"beatId": "scene-test-beat-001", "objectIds": ["source-gap-card"]}
+        used_event_ids = {"event-001", "event-002"}
+
+        projection._materialize_expected_actual_gap(scene, beat, used_event_ids)
+
+        card_ids = [item["cardId"] for item in scene["cards"]]
+        self.assertEqual(
+            [
+                "scene-test-card-expected",
+                "scene-test-card-actual",
+                "scene-test-card-gap",
+                "followup-card",
+            ],
+            card_ids,
+        )
+        self.assertEqual(
+            ["scene-test-card-expected", "scene-test-card-actual", "scene-test-card-gap"],
+            beat["objectIds"],
+        )
+        event_targets = [item.get("targetId") for item in scene["visualEvents"]]
+        self.assertIn("followup-card", event_targets)
+        self.assertIn("scene-test-card-expected", event_targets)
+        self.assertIn("scene-test-card-actual", event_targets)
+        self.assertIn("scene-test-card-gap", event_targets)
+        self.assertNotIn("source-gap-card", event_targets)
+
+    def test_prune_unselected_cards_removes_only_unreachable_card_and_event(self):
+        scene = {
+            "sceneId": "scene-test",
+            "cards": [
+                {"cardId": "selected-card", "role": None, "title": "Selected", "lines": []},
+                {"cardId": "stale-card", "role": None, "title": "Stale", "lines": []},
+            ],
+            "visualBeats": [
+                {"beatId": "scene-test-beat-001", "objectIds": ["selected-card", "number-001"]}
+            ],
+            "visualEvents": [
+                {"eventId": "event-001", "action": "show", "targetId": "selected-card"},
+                {"eventId": "event-002", "action": "show", "targetId": "stale-card"},
+                {"eventId": "event-003", "action": "highlight", "targetId": "number-001"},
+            ],
+        }
+
+        projection._prune_unselected_cards(scene)
+
+        self.assertEqual(["selected-card"], [item["cardId"] for item in scene["cards"]])
+        self.assertEqual(
+            ["selected-card", "number-001"],
+            [item.get("targetId") for item in scene["visualEvents"]],
+        )
+
+    def test_renderer_card_projection_drops_legacy_producer_only_fields(self):
+        scene = {
+            "sceneId": "scene-test",
+            "cards": [
+                {
+                    "cardId": "card-001",
+                    "role": None,
+                    "title": "Verified timing",
+                    "label": "producer-only label",
+                    "text": "producer-only text",
+                    "sourceId": "source-001",
+                    "lines": [
+                        {
+                            "label": "QQQ",
+                            "value": "719.16 → 720.23",
+                            "tone": "neutral",
+                            "sourceId": "source-001",
+                            "note": "producer-only note",
+                        }
+                    ],
+                }
+            ],
+        }
+
+        projection._normalize_renderer_cards(scene)
+
+        self.assertEqual(
+            {
+                "cardId": "card-001",
+                "role": None,
+                "title": "Verified timing",
+                "lines": [
+                    {
+                        "label": "QQQ",
+                        "value": "719.16 → 720.23",
+                        "tone": "neutral",
+                    }
+                ],
+            },
+            scene["cards"][0],
+        )
+
     def test_snapshot_restore_is_byte_exact_and_removes_new_files(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

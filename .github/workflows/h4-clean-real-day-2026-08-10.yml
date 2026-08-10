@@ -1,0 +1,308 @@
+name: H4 Clean Real-Day 2026-08-10
+
+on:
+  pull_request:
+    paths:
+      - "tests/real-day-2026-08-10/**"
+      - "tests/fixtures/real-day-2026-08-10/**"
+      - "scripts/assemble_approved_daily_episode.py"
+      - "scripts/pre_tts_visual_gate.py"
+      - "scripts/finalize_renderer_package_compat.py"
+      - "scripts/financial_visual_cross_artifact.py"
+      - "scripts/restart_causal_research.py"
+      - "scripts/run_daily_production_hardened.py"
+      - "skills/nasdaq-cafe-daily-production/contracts/research_retry_request.schema.json"
+      - ".github/workflows/h4-clean-real-day-2026-08-10.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  clean-real-day:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      DATE: 2026-08-10
+      ACCEPTANCE_FIXTURE_COMMIT: b986888660aa8efd64428aa8119200965351c047
+      RENDERER_COMMIT: 36440cbe84331d020d4fe808d5c2fcbcac20833c
+      RENDERER_CONTRACT_VERSION: 2.4.0
+      NASDAQ_CAFE_RENDERER_ROOT: ${{ github.workspace }}/.renderer
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout immutable 2026-08-10 base acceptance fixture
+        uses: actions/checkout@v4
+        with:
+          repository: saienjoy0/nasdaq-plot-creator-
+          ref: ${{ env.ACCEPTANCE_FIXTURE_COMMIT }}
+          path: .acceptance-fixture
+          persist-credentials: false
+
+      - name: Checkout pinned Remotion renderer
+        uses: actions/checkout@v4
+        with:
+          repository: saienjoy0/saienjoy0-nasdaq-cafe-remotion
+          ref: ${{ env.RENDERER_COMMIT }}
+          path: .renderer
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: .renderer/package-lock.json
+
+      - name: Install validation dependencies
+        run: |
+          python -m pip install --disable-pip-version-check jsonschema pytest pillow
+          npm ci --prefix .renderer
+
+      - name: Compile H0-H4 production path
+        run: |
+          python -m py_compile \
+            scripts/assemble_approved_daily_episode.py \
+            scripts/pre_tts_visual_gate.py \
+            scripts/finalize_renderer_package_compat.py \
+            scripts/financial_visual_cross_artifact.py \
+            scripts/restart_causal_research.py \
+            scripts/run_daily_production_hardened.py \
+            tests/real-day-2026-08-10/materialize_fixture.py \
+            tests/real-day-2026-08-10/restore_immutable_intake.py \
+            tests/real-day-2026-08-10/sync_story_plan_authoring.py \
+            tests/real-day-2026-08-10/sync_scene3_renderer_authoring.py \
+            tests/real-day-2026-08-10/sync_public_timing_authoring.py
+
+      - name: Run H0-H3-H1 focused regressions
+        run: |
+          python -m pytest -q \
+            tests/story-engine-integration/test_pre_tts_visual_gate.py \
+            tests/remotion-compat/test_renderer_240_transaction.py \
+            tests/daily-production-hardening/test_research_retry.py
+
+      - name: Materialize immutable base plus verified successful wave 2 authoring fixture
+        run: |
+          mkdir -p acceptance-inputs/$DATE verification/$DATE
+          cp .acceptance-fixture/acceptance-inputs/$DATE/part-*.b64 acceptance-inputs/$DATE/
+          python tests/real-day-2026-08-10/materialize_fixture.py \
+            --repo-root . \
+            --acceptance-source .acceptance-fixture \
+            --output verification/$DATE/h4_fixture_materialization.json
+          python tests/real-day-2026-08-10/restore_immutable_intake.py \
+            --repo-root . \
+            --acceptance-source .acceptance-fixture \
+            --output verification/$DATE/h4_immutable_intake_restore.json
+          python tests/real-day-2026-08-10/sync_story_plan_authoring.py \
+            --repo-root . \
+            --output verification/$DATE/h4_story_plan_authoring_sync.json
+          python tests/real-day-2026-08-10/sync_scene3_renderer_authoring.py \
+            --repo-root . \
+            --output verification/$DATE/h4_scene3_renderer_authoring_sync.json
+          python tests/real-day-2026-08-10/sync_public_timing_authoring.py \
+            --repo-root . \
+            --output verification/$DATE/h4_public_timing_authoring_sync.json
+
+      - name: Verify immutable base intake and successful wave-2 lineage
+        run: |
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          date='2026-08-10'
+          manifest=Path(f'research/{date}/research_input_manifest.json')
+          actual=hashlib.sha256(manifest.read_bytes()).hexdigest()
+          expected='76fd1cbfeb90597e5d26121b9769a5730c46faca0ae74335ecf7404f2d6ecf14'
+          if actual != expected:
+              raise SystemExit(f'research manifest drift: {actual}')
+          result=json.loads(Path(f'research/{date}/research_acquisition_result_w02.json').read_text(encoding='utf-8'))
+          if result.get('status') != 'success':
+              raise SystemExit('wave 2 result is not success')
+          rows=result.get('results', [])
+          counts={row['requestId']:row.get('recordCount') for row in rows}
+          for rid in ('RA-W2-001','RA-W2-002','RA-W2-003','RA-W2-004'):
+              if counts.get(rid) != 1000:
+                  raise SystemExit(f'{rid} record count drift: {counts.get(rid)}')
+          if counts.get('RA-W2-005') != 1:
+              raise SystemExit('Microchip IR success evidence missing')
+          print('PASS immutable intake + successful wave 2')
+          PY
+          python scripts/research_evidence_supplement.py validate \
+            research/$DATE/research_evidence_supplement_manifest.json
+
+      - name: Validate corrected Causal Research with successful supplement
+        run: |
+          python skills/nasdaq-cafe-causal-research/validators/validate_causal_research_with_supplement.py \
+            research/$DATE/causal_research_dossier_$DATE.json \
+            --research-input-manifest research/$DATE/research_input_manifest.json \
+            --memory-retrieval-report working/$DATE/memory_retrieval_report_$DATE.json \
+            --research-evidence-supplement-manifest research/$DATE/research_evidence_supplement_manifest.json \
+            --repo-root "$GITHUB_WORKSPACE" \
+            --json-output verification/$DATE/causal_dossier_validation.json
+
+      - name: Materialize Story Engine and project explicit authored visuals
+        run: |
+          python scripts/story-engine/materialize_story_engine.py \
+            --date $DATE --repo-root "$GITHUB_WORKSPACE"
+          python scripts/story-engine/project_story_script_to_production.py \
+            --story-script working/$DATE/story-engine/story_script.json \
+            --creative-review working/$DATE/story-engine/creative_review.json \
+            --render-spec render-specs/$DATE/render_spec.json \
+            --episode-package-public episodes/$DATE/episode_package_public_$DATE.md \
+            --bindings working/$DATE/story-engine/story_production_bindings.json \
+            --report working/$DATE/story-engine/story_projection_report.json
+
+      - name: Run completed Pre-TTS Visual Gate before final package assembly
+        run: |
+          python scripts/pre_tts_visual_gate.py \
+            --render-spec render-specs/$DATE/render_spec.json \
+            --story-bindings working/$DATE/story-engine/story_production_bindings.json \
+            --output verification/$DATE/pre_tts_visual_gate.json
+
+      - name: Assemble approved episode generically with no date-specific production corrector
+        run: |
+          python scripts/assemble_approved_daily_episode.py \
+            --date $DATE \
+            --repo-root "$GITHUB_WORKSPACE" \
+            --output verification/$DATE/approved_episode_assembly.json
+
+      - name: Validate Episode Memory hardening
+        run: |
+          python skills/nasdaq-cafe-episode-package-memory/validators/validate_episode_package_memory_hardening.py \
+            --repo-root "$GITHUB_WORKSPACE" \
+            --episode-package episodes/$DATE/episode_package_$DATE.md \
+            --output verification/$DATE/episode_memory_validation.json
+
+      - name: Initialize authoritative Daily Production state
+        run: |
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" init \
+            --episode-date $DATE \
+            --daily-source-package daily-inputs/$DATE/daily_source_package_$DATE.md \
+            --requested-scope preview \
+            --renderer-commit $RENDERER_COMMIT \
+            --renderer-contract-version $RENDERER_CONTRACT_VERSION
+
+      - name: Advance only public lifecycle states
+        run: |
+          STORY=working/$DATE/story-engine
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" advance \
+            --episode-date $DATE --state research_inputs_bound \
+            --evidence research/$DATE/research_input_manifest.json research/$DATE/research_evidence_supplement_manifest.json
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" advance \
+            --episode-date $DATE --state causal_dossier_valid \
+            --evidence research/$DATE/causal_research_dossier_$DATE.json verification/$DATE/causal_dossier_validation.json
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" advance \
+            --episode-date $DATE --state episode_package_final \
+            --evidence episodes/$DATE/episode_package_$DATE.md $STORY/story_engine_acceptance.json $STORY/story_projection_report.json verification/$DATE/pre_tts_visual_gate.json
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" advance \
+            --episode-date $DATE --state memory_usage_valid \
+            --evidence verification/$DATE/episode_memory_validation.json
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" advance \
+            --episode-date $DATE --state assets_resolved \
+            --evidence working/$DATE/visual_source_intents.json verification/$DATE/asset_resolution_log.json verification/$DATE/image_generation_log.json
+
+      - name: Build Renderer 2.4 production package without compatibility copy hack
+        run: |
+          hack="cp contracts/financial_visual_compatibility_2_4.json"
+          hack="$hack contracts/financial_visual_compatibility.json"
+          if grep -R -F "$hack" \
+            tests/real-day-2026-08-10 \
+            scripts/assemble_approved_daily_episode.py \
+            .github/workflows/h4-clean-real-day-2026-08-10.yml; then
+            echo 'H4 must not depend on compatibility copy hack' >&2
+            exit 1
+          fi
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" build-production \
+            --episode-date $DATE \
+            --episode-package episodes/$DATE/episode_package_$DATE.md
+
+      - name: Build immutable Renderer handoff
+        run: |
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" build-handoff \
+            --episode-date $DATE \
+            --bundle-root h4-bundles \
+            --plot-commit "${{ github.event.pull_request.head.sha || github.sha }}" \
+            | tee verification/$DATE/h4_handoff_build.json
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" status \
+            --episode-date $DATE | tee verification/$DATE/h4_control_plane_status.json
+
+      - name: Assert verified timing propagated through Research Story Package and Render
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          date='2026-08-10'
+          paths=[
+              Path(f'research/{date}/causal_research_dossier_{date}.json'),
+              Path(f'working/{date}/story-engine/story_plan.json'),
+              Path(f'working/{date}/story-engine/story_script.json'),
+              Path(f'episodes/{date}/episode_package_{date}.md'),
+              Path(f'render-specs/{date}/render_spec.json'),
+          ]
+          stale=[
+              '分足未取得',
+              '8:30 ET直後の分足は未確認',
+              '発表直後から方向が出たかは未確認',
+              '対象日のminute dataは取得できませんでした',
+          ]
+          required=['719.16','720.23','541.06','542.40','219.95','220.31','79.58','79.56']
+          for p in paths:
+              text=p.read_text(encoding='utf-8')
+              hits=[token for token in stale if token in text]
+              if hits:
+                  raise SystemExit(f'{p}: stale unavailable lineage remains: {hits}')
+          dossier=paths[0].read_text(encoding='utf-8')
+          script=paths[2].read_text(encoding='utf-8')
+          package=paths[3].read_text(encoding='utf-8')
+          render=paths[4].read_text(encoding='utf-8')
+          combined='\n'.join((dossier,script,package,render))
+          missing=[token for token in required if token not in combined]
+          if missing:
+              raise SystemExit(f'verified minute values missing from final lineage: {missing}')
+          if '1分足' not in combined or ('因果' not in combined and '原因' not in combined):
+              raise SystemExit('timing-evidence causal boundary is missing')
+          if 'MCHP' not in combined or 'ほぼ横ばい' not in combined:
+              raise SystemExit('MCHP contrary timing evidence was lost')
+          q4=json.loads(paths[0].read_text(encoding='utf-8'))
+          q4row=next(item for item in q4['research_questions'] if item['id']=='Q-04')
+          if q4row['status'] != 'answered':
+              raise SystemExit('Q-04 did not stay answered')
+          result=json.loads(Path(f'research/{date}/research_acquisition_result_w02.json').read_text(encoding='utf-8'))
+          if result['status'] != 'success':
+              raise SystemExit('wave 2 success did not survive the full pipeline')
+          print('PASS successful timing lineage propagated end-to-end')
+          PY
+
+      - name: Assert no date-specific production corrector is invoked
+        run: |
+          corrector="correct_2026_08_10"
+          corrector="${corrector}_render.py"
+          builder="build_2026_08_10"
+          builder="${builder}_package.py"
+          for forbidden in "$corrector" "$builder"; do
+            if grep -R -F "$forbidden" \
+              .github/workflows/h4-clean-real-day-2026-08-10.yml \
+              scripts/assemble_approved_daily_episode.py; then
+              echo "H4 normal production path contains forbidden date-specific helper: $forbidden" >&2
+              exit 1
+            fi
+          done
+
+      - name: Upload H4 clean regression artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: h4-clean-real-day-2026-08-10
+          path: |
+            tests/fixtures/real-day-2026-08-10/collector_wave2_success_receipt.json
+            daily-inputs/2026-08-10/
+            research/2026-08-10/
+            working/2026-08-10/
+            episodes/2026-08-10/
+            render-specs/2026-08-10/
+            verification/2026-08-10/
+            h4-bundles/2026-08-10/
+          if-no-files-found: warn
+          retention-days: 14
