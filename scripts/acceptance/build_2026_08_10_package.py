@@ -50,10 +50,20 @@ def sync_story_plan_template(root:Path,date:str)->None:
     }
     selected['counterevidence_ids']=sorted(set(selected.get('counterevidence_ids',[])) | material_counter_ids)
 
+    loop2=next((item for item in plan.get('open_loops',[]) if item.get('id')=='loop-02'),None)
+    if loop2 is None:
+        raise SystemExit('story plan loop-02 missing before materialization')
+    loop2['promised_evidence_ids']=sorted(set(loop2.get('promised_evidence_ids',[])) | {'E-008','E-010','E-011','E-012'})
+    loop2['resolution']='Microchip・原油・決算が増幅し、AMD/Alphabet逆行とMCHPの発表分ほぼ横ばいを残す複合相場として境界を引く。1分足は時系列整合の確認に使い、因果の単独証明には使わない。'
+
     dossier_sha=sha(dossier_path)
     if isinstance(plan.get('causal_dossier'),dict):
         plan['causal_dossier']['path']=f'research/{date}/causal_research_dossier_{date}.json'
         plan['causal_dossier']['sha256']=dossier_sha
+
+    serialized=json.dumps(plan,ensure_ascii=False,sort_keys=True)
+    if '分足欠損' in serialized:
+        raise SystemExit('stale minute-gap wording remains in story plan template')
 
     template_path.write_text(dump(plan)+'\n',encoding='utf-8')
     print(json.dumps({
