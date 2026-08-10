@@ -1,0 +1,80 @@
+{
+  "contract_version": "1.0.0",
+  "episode_date": "2026-08-10",
+  "market_date": "2026-08-07",
+  "collector_repository": "saienjoy0/nasdaq-cafe-news-collector",
+  "collector_run_id": 31357986916,
+  "artifact_name": "nasdaq-cafe-followup-2026-08-10-w02",
+  "request_sha256": "9626f06b10627a63ee90e1440c5d53bd28d311fa03e33e5d4ed6ffa12043ad86",
+  "result_sha256": "3645ad75e058db2b18da48e4ae63914eb9e949418da814950cf67348c6fb8b51",
+  "status": "success",
+  "acquisition_status": "success",
+  "series": [
+    {
+      "request_id": "RA-W2-001",
+      "symbol": "QQQ.US",
+      "record_count": 1000,
+      "collector_sha256": "c5ae14c0f2e0d3ca69f1230017235148c5f25cabadbb3b9045cb0d5313746ad3",
+      "precision": "verified-intraday-series",
+      "price_basis": "minute-close",
+      "timezone": "UTC",
+      "provider_surface": "kline-history-fallback",
+      "release_window": [
+        {"timestamp": "2026-08-07T12:29:00Z", "close": 719.16},
+        {"timestamp": "2026-08-07T12:30:00Z", "close": 720.23},
+        {"timestamp": "2026-08-07T12:31:00Z", "close": 720.531}
+      ]
+    },
+    {
+      "request_id": "RA-W2-002",
+      "symbol": "SOXX.US",
+      "record_count": 1000,
+      "collector_sha256": "e77af6c459a882a91bd9213bbececf928f157090d27c91eca7c40d0d265fe193",
+      "precision": "verified-intraday-series",
+      "price_basis": "minute-close",
+      "timezone": "UTC",
+      "provider_surface": "kline-history-fallback",
+      "release_window": [
+        {"timestamp": "2026-08-07T12:29:00Z", "close": 541.06},
+        {"timestamp": "2026-08-07T12:30:00Z", "close": 542.4},
+        {"timestamp": "2026-08-07T12:31:00Z", "close": 544.2}
+      ]
+    },
+    {
+      "request_id": "RA-W2-003",
+      "symbol": "MCHP.US",
+      "record_count": 1000,
+      "collector_sha256": "8f7af78647e60f82e2fd3b1380b02b56c157984a49d8d28568e5e33efd624b7d",
+      "precision": "verified-intraday-series",
+      "price_basis": "minute-close",
+      "timezone": "UTC",
+      "provider_surface": "kline-history-fallback",
+      "release_window": [
+        {"timestamp": "2026-08-07T12:29:00Z", "close": 79.58},
+        {"timestamp": "2026-08-07T12:30:00Z", "close": 79.56},
+        {"timestamp": "2026-08-07T12:31:00Z", "close": 79.7}
+      ]
+    },
+    {
+      "request_id": "RA-W2-004",
+      "symbol": "NVDA.US",
+      "record_count": 1000,
+      "collector_sha256": "162c79e750c86e2df38f84305c46d40d684d9db00d762bab78c515d020dd27ed",
+      "precision": "verified-intraday-series",
+      "price_basis": "minute-close",
+      "timezone": "UTC",
+      "provider_surface": "kline-history-fallback",
+      "release_window": [
+        {"timestamp": "2026-08-07T12:29:00Z", "close": 219.95},
+        {"timestamp": "2026-08-07T12:30:00Z", "close": 220.31},
+        {"timestamp": "2026-08-07T12:31:00Z", "close": 220.5}
+      ]
+    }
+  ],
+  "source_archive": {
+    "request_id": "RA-W2-005",
+    "collector_sha256": "d3f39df43016cd0e50d3e3ae4663362cee2018564e562fee646811985de661f3",
+    "status": "success"
+  },
+  "causal_use_policy": "minute-close timing evidence only; never sufficient by itself to prove causality"
+}
