@@ -1,0 +1,44 @@
+{
+  "contract_version": "1.0.0",
+  "episode_date": "2026-08-10",
+  "lead_candidates": [
+    "July US employment shock and rate-expectation channel",
+    "Microchip earnings as semiconductor amplification",
+    "AMD divergence as counterevidence"
+  ],
+  "entities": [
+    {"raw":"BLS","canonical":"U.S. Bureau of Labor Statistics","entity_id":null,"resolution":"unresolved"},
+    {"raw":"MCHP","canonical":"Microchip Technology","entity_id":"microchip-technology","resolution":"exact"},
+    {"raw":"AMD","canonical":"Advanced Micro Devices","entity_id":"amd","resolution":"exact"},
+    {"raw":"NVDA","canonical":"NVIDIA","entity_id":"nvidia","resolution":"exact"}
+  ],
+  "topics": [
+    "employment surprise",
+    "rate expectations",
+    "NASDAQ valuation channel",
+    "semiconductor breadth",
+    "earnings amplification",
+    "company-vs-index divergence"
+  ],
+  "technologies": ["AI compute", "semiconductors"],
+  "policies": ["Federal Reserve rate expectations"],
+  "indicators": ["nonfarm payrolls", "Treasury yields", "NASDAQ Composite", "SOXX"],
+  "relations": [
+    {"source":"employment surprise","relation":"changes","target":"rate expectations"},
+    {"source":"rate expectations","relation":"affects","target":"NASDAQ valuation"},
+    {"source":"Microchip earnings","relation":"may amplify","target":"semiconductor breadth"},
+    {"source":"AMD divergence","relation":"tests","target":"simple semiconductor earnings narrative"}
+  ],
+  "time_window": {"from":"2026-06-01","to":"2026-08-10"},
+  "comparison_questions": [
+    "Have prior episodes separated macro rate relief from company-specific chip catalysts?",
+    "Have prior episodes treated a lagging focal stock as counterevidence against a sector-wide explanation?"
+  ],
+  "limits": {
+    "max_threads": 3,
+    "max_claims": 4,
+    "max_episodes": 2,
+    "max_lessons": 2,
+    "max_characters": 10000
+  }
+}
