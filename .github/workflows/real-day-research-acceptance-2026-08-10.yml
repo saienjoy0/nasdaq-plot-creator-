@@ -141,6 +141,7 @@ jobs:
             episodes/2026-08-10/
             render-specs/2026-08-10/
             working/2026-08-10/
+            research/2026-08-10/
           if-no-files-found: warn
           retention-days: 14
 
