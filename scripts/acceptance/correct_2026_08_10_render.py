@@ -2,7 +2,7 @@
 from __future__ import annotations
 import hashlib, json
 from pathlib import Path
-EXPECTED_SHA256='d4866b61e532bc90b3464457113c42cee1cfa8a5fbd782051d8e6d7208f9479e'
+EXPECTED_SHA256='780a16de03b76819a73c91e12fe7498e47568d28e856022ffb5dd78f554cd10f'
 
 def main()->int:
     path=Path('render-specs/2026-08-10/render_spec.json')
@@ -28,9 +28,9 @@ def main()->int:
     # viewerTexts instead of reviving an object that no longer exists.
     scene3_followup['objectIds']=[]
 
-    # Keep bridge-text bounded to the two genuine transitional Beats. The two
-    # analytical Beats switch template and grammar together using existing
-    # renderer templates that do not create a new Financial Visual binding.
+    # Keep bridge-text bounded to the two genuine transitional Beats. Scene 2
+    # and Scene 3 are both evidence displays, so switch template + grammar
+    # together to the non-financial Data-state evidence-boundary template.
     # Narration, numbers, evidence ids, cues, and causal claims remain unchanged.
     for scene in scenes:
         for beat in scene.get('visualBeats',[]):
@@ -38,15 +38,9 @@ def main()->int:
             grammar=beat.get('visualGrammar',{})
             beat_id=beat.get('visualBeatId')
             if template=='text-focus':
-                if beat_id=='scene-02-beat-002':
+                if beat_id in {'scene-02-beat-002','scene-03-beat-002'}:
                     beat['visualTemplate']='evidence-boundary'
                     beat['templateConfig']['variant']='confirmed-vs-unconfirmed'
-                    grammar['grammarId']='evidence'
-                elif beat_id=='scene-03-beat-002':
-                    beat['visualTemplate']='news-media'
-                    beat['templateConfig']['variant']='default'
-                    beat['screenState']='News'
-                    beat['visualMode']='news-media'
                     grammar['grammarId']='evidence'
                 else:
                     grammar['grammarId']='bridge-text'
