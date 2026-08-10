@@ -1,0 +1,84 @@
+name: Inspect Render Shell 2026-08-10
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/inspect-render-shell-2026-08-10.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Summarize validated 2026-08-06 render shell
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          src = Path('render-specs/2026-08-06/render_spec.json')
+          spec = json.loads(src.read_text(encoding='utf-8'))
+          out = {
+            'rootKeys': sorted(spec.keys()),
+            'schemaVersion': spec.get('schemaVersion'),
+            'voiceProfileId': spec.get('voiceProfileId'),
+            'scenes': [],
+          }
+          for scene in spec.get('scenes', []):
+            s = {
+              'sceneNumber': scene.get('sceneNumber'),
+              'sceneId': scene.get('sceneId'),
+              'keys': sorted(scene.keys()),
+              'title': scene.get('title'),
+              'narrationChunks': [],
+              'visualBeats': [],
+            }
+            for chunk in scene.get('narrationChunks', []):
+              s['narrationChunks'].append({
+                'id': chunk.get('id'),
+                'keys': sorted(chunk.keys()),
+                'speechText': chunk.get('speechText'),
+                'captionText': chunk.get('captionText'),
+              })
+            for beat in scene.get('visualBeats', []):
+              b = {
+                'id': beat.get('id'),
+                'keys': sorted(beat.keys()),
+                'screenState': beat.get('screenState'),
+                'visualMode': beat.get('visualMode'),
+                'visualTemplate': beat.get('visualTemplate'),
+                'templateVariant': beat.get('templateVariant'),
+                'viewerTexts': beat.get('viewerTexts'),
+                'objectIds': beat.get('objectIds'),
+                'sourceIds': beat.get('sourceIds'),
+                'objects': [],
+              }
+              for obj in beat.get('objects', []):
+                b['objects'].append({
+                  'id': obj.get('id'),
+                  'type': obj.get('type'),
+                  'keys': sorted(obj.keys()),
+                  'label': obj.get('label'),
+                  'value': obj.get('value'),
+                  'text': obj.get('text'),
+                  'title': obj.get('title'),
+                  'subtitle': obj.get('subtitle'),
+                  'assetId': obj.get('assetId'),
+                })
+              s['visualBeats'].append(b)
+            out['scenes'].append(s)
+          Path('build').mkdir(exist_ok=True)
+          Path('build/render_shell_summary.json').write_text(
+            json.dumps(out, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          print(json.dumps(out, ensure_ascii=False, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: render-shell-summary-2026-08-10
+          path: build/render_shell_summary.json
+          if-no-files-found: error
