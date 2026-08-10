@@ -26,12 +26,51 @@ def normalize_scene_headings(text:str)->str:
         text=re.sub(rf'(?m)^##\s+B{n}\.\s+Scene\s+{n}(?=｜|\|)', f'## Scene {n}', text)
     return text
 
+def sync_story_plan_template(root:Path,date:str)->None:
+    dossier_path=root/'research'/date/f'causal_research_dossier_{date}.json'
+    template_path=root/'working'/date/'story-engine'/'templates'/'story_plan.template.json'
+    dossier=json.loads(dossier_path.read_text(encoding='utf-8'))
+    plan=json.loads(template_path.read_text(encoding='utf-8'))
+
+    contradictions={item['id']:item for item in dossier.get('contradictions',[])}
+    contradiction_id=plan.get('central_contradiction_id')
+    contradiction=contradictions.get(contradiction_id)
+    if contradiction is None:
+        raise SystemExit(f'story plan central contradiction missing from dossier: {contradiction_id}')
+    plan['central_contradiction']=contradiction['statement']
+
+    selected=next((item for item in plan.get('angle_candidates',[]) if item.get('id')==plan.get('selected_angle_id')),None)
+    if selected is None:
+        raise SystemExit('story plan selected angle is missing before materialization')
+    material_counter_ids={
+        evidence_id
+        for item in dossier.get('contrary_evidence',[])
+        if item.get('effect_on_confidence')=='material'
+        for evidence_id in item.get('evidence_ids',[])
+    }
+    selected['counterevidence_ids']=sorted(set(selected.get('counterevidence_ids',[])) | material_counter_ids)
+
+    dossier_sha=sha(dossier_path)
+    if isinstance(plan.get('causal_dossier'),dict):
+        plan['causal_dossier']['path']=f'research/{date}/causal_research_dossier_{date}.json'
+        plan['causal_dossier']['sha256']=dossier_sha
+
+    template_path.write_text(dump(plan)+'\n',encoding='utf-8')
+    print(json.dumps({
+        'status':'pass',
+        'storyPlanTemplateSync':str(template_path),
+        'centralContradictionId':contradiction_id,
+        'materialCounterevidenceIds':sorted(material_counter_ids),
+        'causalDossierSha256':dossier_sha,
+    },ensure_ascii=False,indent=2))
+
 def main()->int:
     root=ROOT; date=DATE
     work=root/'working'/date; story=work/'story-engine'; research=root/'research'/date; episodes=root/'episodes'/date
     verification=root/'verification'/date
     for p in (work,story,research,episodes,verification): p.mkdir(parents=True,exist_ok=True)
 
+    sync_story_plan_template(root,date)
     subprocess.run([sys.executable,'scripts/story-engine/materialize_story_engine.py','--date',date,'--repo-root',str(root)],check=True)
 
     dossier=research/f'causal_research_dossier_{date}.json'
