@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Authoritative daily control-plane entrypoint with hardened dependencies."""
+"""Authoritative daily control-plane entrypoint with hardened dependencies.
+
+Story Engine passes remain internal to editorial production. The public Daily
+Production state machine advances directly from ``causal_dossier_valid`` to
+``episode_package_final`` only when one hash-bound Story Engine v1.1
+acceptance, the final episode package, and the projection report all pass.
+"""
 
 from __future__ import annotations
 
@@ -10,7 +16,7 @@ from types import SimpleNamespace
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
-STORY_STATES = ["story_plan_valid", "script_draft_ready", "creative_review_passed"]
+LEGACY_STORY_STATES = {"story_plan_valid", "script_draft_ready", "creative_review_passed"}
 
 
 class DailyHardeningError(RuntimeError):
@@ -27,95 +33,106 @@ def _load_module(name: str, path: Path):
     return module
 
 
-def _install_story_states(daily_module: Any) -> None:
+def _install_story_v11_gate(daily_module: Any) -> None:
+    """Keep Story Engine passes internal and guard the single public final gate."""
     raw_states = getattr(daily_module, "STATES", None)
-    if raw_states is None:
+    original = getattr(daily_module, "add_transition", None)
+    if raw_states is None or not callable(original):
         return
-    states = list(raw_states)
-    if all(state in states for state in STORY_STATES):
-        return
+
+    daily_module.STATES = [
+        state for state in list(raw_states) if state not in LEGACY_STORY_STATES
+    ]
     try:
-        insert_at = states.index("causal_dossier_valid") + 1
+        causal_index = daily_module.STATES.index("causal_dossier_valid")
+        final_index = daily_module.STATES.index("episode_package_final")
     except ValueError as exc:
-        raise DailyHardeningError("base daily state machine lacks causal_dossier_valid") from exc
-    states[insert_at:insert_at] = STORY_STATES
-    daily_module.STATES = states
+        raise DailyHardeningError(
+            "base daily state machine lacks causal_dossier_valid/episode_package_final"
+        ) from exc
+    if final_index != causal_index + 1:
+        raise DailyHardeningError(
+            "Story Engine internal passes must not appear as public Daily Production states"
+        )
 
+    acceptance_validator = _load_module(
+        "story_engine_acceptance_v1_1_hardened_gate",
+        ROOT / "scripts/story-engine/validate_story_engine_acceptance_v1_1.py",
+    )
 
-def _validate_acceptance(daily_module: Any, *, workspace: Path, date: str, evidence_paths: list[Path], artifact_key: str) -> None:
-    workspace = Path(workspace).resolve()
-    resolved = [daily_module.safe_path(workspace, path, f"{artifact_key} evidence") for path in evidence_paths]
-    acceptance_paths = [path for path in resolved if path.name == "story_engine_acceptance.json"]
-    if len(acceptance_paths) != 1:
-        raise daily_module.DailyProductionError(
-            daily_module.ERROR_CODES["stale"],
-            f"{artifact_key} transition requires exactly one story_engine_acceptance.json",
-        )
-    acceptance = daily_module.load_json(acceptance_paths[0], "Story Engine acceptance")
-    if acceptance.get("episode_date") != date or acceptance.get("status") != "pass":
-        raise daily_module.DailyProductionError(
-            daily_module.ERROR_CODES["stale"],
-            "Story Engine acceptance must be PASS for the same episode date",
-        )
-    artifacts = acceptance.get("artifacts", {})
-    item = artifacts.get(artifact_key)
-    if not isinstance(item, dict):
-        raise daily_module.DailyProductionError(
-            daily_module.ERROR_CODES["stale"],
-            f"Story Engine acceptance omits artifact {artifact_key}",
-        )
-    artifact_path = daily_module.safe_path(workspace, item.get("path", ""), f"Story Engine {artifact_key}")
-    if daily_module.sha256_file(artifact_path) != item.get("sha256"):
-        raise daily_module.DailyProductionError(
-            daily_module.ERROR_CODES["stale"],
-            f"Story Engine acceptance SHA mismatch for {artifact_key}",
-        )
-    if artifact_path not in resolved:
-        raise daily_module.DailyProductionError(
-            daily_module.ERROR_CODES["stale"],
-            f"{artifact_key} transition evidence must include {item.get('path')}",
-        )
-    critic = acceptance.get("critic", {})
-    if artifact_key == "creative_review":
-        if critic.get("verdict") != "pass" or int(critic.get("score", 0)) < 25:
+    def guarded_add_transition(
+        *,
+        workspace: Path,
+        date: str,
+        new_state: str,
+        evidence_paths: list[Path],
+        allow_multi_step: bool = False,
+    ):
+        if new_state in LEGACY_STORY_STATES:
             raise daily_module.DailyProductionError(
                 daily_module.ERROR_CODES["stale"],
-                "creative_review_passed requires final critic PASS with score >=25",
+                f"{new_state} is an internal Story Engine pass and is not a Daily Production state",
             )
 
+        if new_state == "episode_package_final":
+            root = Path(workspace).resolve()
+            resolved = [
+                daily_module.safe_path(root, path, "episode final evidence")
+                for path in evidence_paths
+            ]
+            acceptance_paths = [
+                path for path in resolved if path.name == "story_engine_acceptance.json"
+            ]
+            package_paths = [
+                path
+                for path in resolved
+                if path.name.startswith("episode_package_") and path.suffix == ".md"
+            ]
+            projection_paths = [
+                path for path in resolved if path.name == "story_projection_report.json"
+            ]
 
-def _install_story_transition_guard(daily_module: Any) -> None:
-    original = getattr(daily_module, "add_transition", None)
-    if not callable(original):
-        return
-
-    def guarded_add_transition(*, workspace: Path, date: str, new_state: str, evidence_paths: list[Path], allow_multi_step: bool = False):
-        artifact_by_state = {
-            "story_plan_valid": "story_plan",
-            "script_draft_ready": "story_script",
-            "creative_review_passed": "creative_review",
-        }
-        artifact_key = artifact_by_state.get(new_state)
-        if artifact_key:
-            _validate_acceptance(
-                daily_module,
-                workspace=Path(workspace),
-                date=str(date),
-                evidence_paths=list(evidence_paths),
-                artifact_key=artifact_key,
-            )
-        elif new_state == "episode_package_final":
-            resolved = [daily_module.safe_path(Path(workspace), path, "episode final evidence") for path in evidence_paths]
-            if not any(path.name == "story_engine_acceptance.json" for path in resolved):
+            if len(acceptance_paths) != 1:
                 raise daily_module.DailyProductionError(
                     daily_module.ERROR_CODES["stale"],
-                    "episode_package_final requires Story Engine acceptance evidence",
+                    "episode_package_final requires exactly one Story Engine v1.1 acceptance",
                 )
-            if not any(path.name.startswith("episode_package_") and path.suffix == ".md" for path in resolved):
+            if len(package_paths) != 1:
                 raise daily_module.DailyProductionError(
                     daily_module.ERROR_CODES["episode"],
-                    "episode_package_final requires the final episode package",
+                    "episode_package_final requires exactly one final episode package",
                 )
+            if len(projection_paths) != 1:
+                raise daily_module.DailyProductionError(
+                    daily_module.ERROR_CODES["package"],
+                    "episode_package_final requires exactly one story_projection_report.json",
+                )
+
+            result = acceptance_validator.validate_acceptance(
+                acceptance_paths[0],
+                repo_root=root,
+                require_production=True,
+                allow_uncertified_production=True,
+            )
+            if result["status"] != "pass":
+                messages = "; ".join(
+                    item.get("message", "Story Engine acceptance failed")
+                    for item in result.get("errors", [])
+                )
+                raise daily_module.DailyProductionError(
+                    daily_module.ERROR_CODES["inquisition"],
+                    f"Story Engine v1.1 production gate failed: {messages}",
+                )
+
+            projection = daily_module.load_json(
+                projection_paths[0], "Story Engine projection report"
+            )
+            if projection.get("episode_date") != date or projection.get("status") != "pass":
+                raise daily_module.DailyProductionError(
+                    daily_module.ERROR_CODES["package"],
+                    "Story Engine projection report must be PASS for the same episode date",
+                )
+
         return original(
             workspace=workspace,
             date=date,
@@ -157,19 +174,23 @@ def _rebind_handoff_preflight_evidence(
     preflight = daily_module.load_json(preflight_path, "handoff-updated preflight")
     hardening = preflight.get("episode_memory_hardening")
     required = {
-        "pre_build": "pass", "public_artifacts": "pass", "handoff_recheck": "pass",
+        "pre_build": "pass",
+        "public_artifacts": "pass",
+        "handoff_recheck": "pass",
     }
     if not isinstance(hardening, dict) or any(
         hardening.get(key) != expected for key, expected in required.items()
     ):
         return False
     evidence["sha256"] = actual_sha
-    state.setdefault("evidence_rebindings", []).append({
-        "path": relative,
-        "previous_sha256": declared_sha,
-        "sha256": actual_sha,
-        "reason": "handoff_recheck_persisted",
-    })
+    state.setdefault("evidence_rebindings", []).append(
+        {
+            "path": relative,
+            "previous_sha256": declared_sha,
+            "sha256": actual_sha,
+            "reason": "handoff_recheck_persisted",
+        }
+    )
     daily_module.write_atomic(state_path, state)
     return True
 
@@ -218,14 +239,14 @@ def patch_daily_module(
         raise DailyHardeningError(
             f"hardened daily dependencies are incomplete: {', '.join(missing)}"
         )
+
     daily_module.final_builder = SimpleNamespace(build=required["final"])
     daily_module.handoff_builder = SimpleNamespace(build_handoff=required["handoff"])
     daily_module.acceptance_runner = SimpleNamespace(
         validate_acceptance=required["acceptance"],
         write_report=required["writer"],
     )
-    _install_story_states(daily_module)
-    _install_story_transition_guard(daily_module)
+    _install_story_v11_gate(daily_module)
     _install_handoff_retry(daily_module)
     return daily_module
 
