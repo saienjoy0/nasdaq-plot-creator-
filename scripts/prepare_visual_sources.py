@@ -11,7 +11,9 @@ closed.
 
 Visual Evidence Planning is explicit. A missing intent document means the
 planning step was skipped and is a production error. An existing intent
-document with an empty ``intents`` array is the only valid not-required state.
+document with an empty ``intents`` array is only valid when the evidence-first
+quality gate confirms that no approved original evidence or verified intraday
+series materially requires a real visual surface.
 """
 
 from __future__ import annotations
@@ -25,11 +27,20 @@ from pathlib import Path
 import materialize_renderer_sources
 import resolve_visual_sources
 import select_visual_sources
+import visual_evidence_quality_gate
 import visual_source_contract
 
 
 class PrepareVisualSourceError(ValueError):
     pass
+
+
+def _write_quality_report(path: Path, report: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -44,6 +55,8 @@ def main(argv: list[str] | None = None) -> int:
     verification = root / "verification" / date
     intents_path = work / "visual_source_intents.json"
     selection_path = work / "visual_source_selection.json"
+    render_path = root / "render-specs" / date / "render_spec.json"
+    quality_path = verification / "visual_evidence_quality_gate.json"
 
     if not intents_path.is_file():
         print(
@@ -63,7 +76,29 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         visual_sources = visual_source_contract.load_intent_document(intents_path, date)
-    except (OSError, json.JSONDecodeError, visual_source_contract.VisualSourceContractError) as exc:
+        render = visual_evidence_quality_gate.load_json(render_path, "render spec")
+        quality = visual_evidence_quality_gate.validate_visual_evidence(
+            render=render,
+            intents_doc={
+                "contractVersion": "1.0.0",
+                "episodeDate": date,
+                "intents": visual_sources["intents"],
+            },
+        )
+        _write_quality_report(quality_path, quality)
+        if quality["status"] != "PASS":
+            raise visual_evidence_quality_gate.VisualEvidenceQualityError(
+                "\n".join(
+                    f"{item['code']} {item['path']}: {item['message']}"
+                    for item in quality["violations"]
+                )
+            )
+    except (
+        OSError,
+        json.JSONDecodeError,
+        visual_source_contract.VisualSourceContractError,
+        visual_evidence_quality_gate.VisualEvidenceQualityError,
+    ) as exc:
         print(
             json.dumps(
                 {"status": "FAIL", "errors": str(exc).splitlines()},
@@ -80,8 +115,9 @@ def main(argv: list[str] | None = None) -> int:
                 {
                     "status": "not-required",
                     "episodeDate": date,
-                    "reason": "visual evidence planning explicitly completed with zero intents",
+                    "reason": "visual evidence planning explicitly completed with zero intents and evidence-first quality gate passed",
                     "intentDocument": str(intents_path),
+                    "qualityGate": str(quality_path),
                 },
                 ensure_ascii=False,
                 indent=2,
@@ -109,7 +145,7 @@ def main(argv: list[str] | None = None) -> int:
         renderer = materialize_renderer_sources.materialize(
             root=root,
             date=date,
-            render_path=root / "render-specs" / date / "render_spec.json",
+            render_path=render_path,
             public_package_path=root / "episodes" / date / f"episode_package_public_{date}.md",
             bindings_path=work / "financial_visual_bindings.json",
         )
@@ -150,6 +186,7 @@ def main(argv: list[str] | None = None) -> int:
             "assetResolutionRaw": str(raw_resolution),
             "assetResolutionLog": str(audit_output),
             "selectedProjection": str(selected_output),
+            "qualityGate": str(quality_path),
         }
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
