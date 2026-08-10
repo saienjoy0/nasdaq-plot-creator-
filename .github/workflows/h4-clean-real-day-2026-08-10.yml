@@ -53,7 +53,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "24"
+          node-version: 24
           cache: npm
           cache-dependency-path: .renderer/package-lock.json
 
@@ -74,7 +74,8 @@ jobs:
             tests/real-day-2026-08-10/materialize_fixture.py \
             tests/real-day-2026-08-10/restore_immutable_intake.py \
             tests/real-day-2026-08-10/sync_story_plan_authoring.py \
-            tests/real-day-2026-08-10/sync_scene3_renderer_authoring.py
+            tests/real-day-2026-08-10/sync_scene3_renderer_authoring.py \
+            tests/real-day-2026-08-10/sync_public_timing_authoring.py
 
       - name: Run H0-H3-H1 focused regressions
         run: |
@@ -101,6 +102,9 @@ jobs:
           python tests/real-day-2026-08-10/sync_scene3_renderer_authoring.py \
             --repo-root . \
             --output verification/$DATE/h4_scene3_renderer_authoring_sync.json
+          python tests/real-day-2026-08-10/sync_public_timing_authoring.py \
+            --repo-root . \
+            --output verification/$DATE/h4_public_timing_authoring_sync.json
 
       - name: Verify immutable base intake and successful wave-2 lineage
         run: |
