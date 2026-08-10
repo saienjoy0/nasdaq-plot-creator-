@@ -2,9 +2,9 @@
 """Synchronize stale public/render timing prose for the frozen H4 fixture.
 
 TEST ONLY. The immutable base fixture predates the successful wave-2 minute evidence.
-Scene 8 authoring is already corrected elsewhere; this helper updates the stale
-summary, publishing, production-note, and render metadata that would otherwise
-reintroduce the old `minute data unavailable` conclusion downstream.
+This helper updates only prose/metadata whose factual premise changed after verified
+minute evidence arrived. It does not change the selected story, causal confidence,
+review scores, or scene narration.
 """
 
 from __future__ import annotations
@@ -44,8 +44,11 @@ NEW_DESCRIPTION = (
     "売買を勧めるものではありません。"
 )
 NEW_SCENE1_UNCERTAINTY = "8:30 ETの初動は後段で確認するが、1分足だけでは因果は証明できない"
-NEW_SHORTENED_REASON = (
-    "雇用統計、金利観測、半導体増幅、反対材料、8:30 ETの初動まで9シーンで完結できるため。"
+NEW_SHORTENED_REASON = "雇用統計、金利観測、半導体増幅、反対材料、8:30 ETの初動まで9シーンで完結できるため。"
+NEW_REVIEW_REQUIRED = "Scene 8で8:30 ETの実分足を明示し、初動の時系列整合と因果証明を分ける。"
+NEW_REVIEW_APPLIED = (
+    "成功したwave 2の検証済み1分足をScene 8へ反映し、QQQ・SOXX・NVIDIAの上向きとMCHPのほぼ横ばいを示したうえで、"
+    "1分足だけでは因果を証明しない境界を残した。"
 )
 
 PUBLIC_REPLACEMENTS: dict[str, str] = {
@@ -84,7 +87,7 @@ STALE_MARKERS = (
 )
 
 
-def _load_json(path: Path) -> dict[str, Any]:
+def load_json(path: Path) -> dict[str, Any]:
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -94,7 +97,7 @@ def _load_json(path: Path) -> dict[str, Any]:
     return value
 
 
-def _write_json(path: Path, value: dict[str, Any]) -> str:
+def write_json(path: Path, value: dict[str, Any]) -> str:
     text = json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     temp = path.with_name(f".{path.name}.h4-timing.tmp")
     temp.write_text(text, encoding="utf-8")
@@ -102,41 +105,50 @@ def _write_json(path: Path, value: dict[str, Any]) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def _sync_public(path: Path) -> tuple[str, int]:
+def sync_public(path: Path) -> tuple[str, int]:
     try:
         text = path.read_text(encoding="utf-8")
     except OSError as exc:
         raise PublicTimingAuthoringError(f"cannot read {path}: {exc}") from exc
-
     applied = 0
     for old, new in PUBLIC_REPLACEMENTS.items():
         if old not in text:
             raise PublicTimingAuthoringError(f"expected stale public-package text missing: {old}")
         text = text.replace(old, new, 1)
         applied += 1
-
     leftovers = [marker for marker in STALE_MARKERS if marker in text]
     if leftovers:
         raise PublicTimingAuthoringError(f"stale public minute-unavailable semantics remain: {leftovers}")
-
     temp = path.with_name(f".{path.name}.h4-timing.tmp")
     temp.write_text(text, encoding="utf-8")
     temp.replace(path)
     return hashlib.sha256(text.encode("utf-8")).hexdigest(), applied
 
 
-def _sync_render(path: Path) -> str:
-    render = _load_json(path)
+def replace_review_line(items: Any, old: str, new: str, label: str) -> None:
+    if not isinstance(items, list):
+        raise PublicTimingAuthoringError(f"render review {label} must be an array")
+    matches = [index for index, item in enumerate(items) if item == old]
+    if matches != [1]:
+        raise PublicTimingAuthoringError(
+            f"render review {label} stale line drift: expected index 1, got {matches}"
+        )
+    items[1] = new
+
+
+def sync_render(path: Path) -> str:
+    render = load_json(path)
     if render.get("episode", {}).get("targetDate") != DATE:
         raise PublicTimingAuthoringError("render targetDate drift")
 
     editorial = render.get("editorial")
     episode = render.get("episode")
     publishing = render.get("publishing")
+    review = render.get("review")
     scenes = render.get("scenes")
     sources = render.get("sources")
-    if not isinstance(editorial, dict) or not isinstance(episode, dict) or not isinstance(publishing, dict):
-        raise PublicTimingAuthoringError("render editorial/episode/publishing contract drift")
+    if not all(isinstance(item, dict) for item in (editorial, episode, publishing, review)):
+        raise PublicTimingAuthoringError("render editorial/episode/publishing/review contract drift")
     if not isinstance(scenes, list) or len(scenes) != 9 or not isinstance(sources, list):
         raise PublicTimingAuthoringError("render scenes/sources contract drift")
 
@@ -165,24 +177,35 @@ def _sync_render(path: Path) -> str:
     source5 = source_by_id.get("source-005")
     if not isinstance(source1, dict) or not isinstance(source5, dict):
         raise PublicTimingAuthoringError("render source-001/source-005 missing")
-    source1["usedFor"] = [
-        "Nasdaq Composite、SOXX、MCHP、NVDA、AMD、Alphabet、Microsoftの終値と騰落率"
-    ]
+    source1["usedFor"] = ["Nasdaq Composite、SOXX、MCHP、NVDA、AMD、Alphabet、Microsoftの終値と騰落率"]
     source5["usedFor"] = ["QQQ、SOXX、MCHP、NVDAの検証済み1分足と8:30 ET初動比較"]
+
+    replace_review_line(
+        review.get("requiredChanges"),
+        "Scene 8で分足未取得を明示し、8:30 ET直後の価格反応を断定しない。",
+        NEW_REVIEW_REQUIRED,
+        "requiredChanges",
+    )
+    replace_review_line(
+        review.get("changesApplied"),
+        "2 wave後も分足未取得であることをScene 8へ残し、official-time-plus-closeだけを採用した。",
+        NEW_REVIEW_APPLIED,
+        "changesApplied",
+    )
 
     serialized = json.dumps(render, ensure_ascii=False, sort_keys=True)
     leftovers = [marker for marker in STALE_MARKERS if marker in serialized]
     if leftovers:
         raise PublicTimingAuthoringError(f"stale render minute-unavailable semantics remain: {leftovers}")
-    return _write_json(path, render)
+    return write_json(path, render)
 
 
 def sync(*, repo_root: Path) -> dict[str, Any]:
     root = repo_root.resolve()
     public_path = root / f"episodes/{DATE}/episode_package_public_{DATE}.md"
     render_path = root / f"render-specs/{DATE}/render_spec.json"
-    public_digest, replacement_count = _sync_public(public_path)
-    render_digest = _sync_render(render_path)
+    public_digest, replacement_count = sync_public(public_path)
+    render_digest = sync_render(render_path)
     return {
         "status": "pass",
         "episode_date": DATE,
@@ -203,7 +226,6 @@ def main() -> int:
     except PublicTimingAuthoringError as exc:
         print(json.dumps({"status": "fail", "errors": [str(exc)]}, ensure_ascii=False, indent=2))
         return 2
-
     text = json.dumps(result, ensure_ascii=False, indent=2) + "\n"
     if args.output:
         output = args.output
