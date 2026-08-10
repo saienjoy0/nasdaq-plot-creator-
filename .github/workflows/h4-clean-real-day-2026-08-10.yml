@@ -71,7 +71,8 @@ jobs:
             scripts/financial_visual_cross_artifact.py \
             scripts/restart_causal_research.py \
             scripts/run_daily_production_hardened.py \
-            tests/real-day-2026-08-10/materialize_fixture.py
+            tests/real-day-2026-08-10/materialize_fixture.py \
+            tests/real-day-2026-08-10/restore_immutable_intake.py
 
       - name: Run H0-H3-H1 focused regressions
         run: |
@@ -88,6 +89,10 @@ jobs:
             --repo-root . \
             --acceptance-source .acceptance-fixture \
             --output verification/$DATE/h4_fixture_materialization.json
+          python tests/real-day-2026-08-10/restore_immutable_intake.py \
+            --repo-root . \
+            --acceptance-source .acceptance-fixture \
+            --output verification/$DATE/h4_immutable_intake_restore.json
 
       - name: Verify immutable base intake and successful wave-2 lineage
         run: |
@@ -270,6 +275,7 @@ jobs:
           name: h4-clean-real-day-2026-08-10
           path: |
             tests/fixtures/real-day-2026-08-10/collector_wave2_success_receipt.json
+            daily-inputs/2026-08-10/
             research/2026-08-10/
             working/2026-08-10/
             episodes/2026-08-10/
