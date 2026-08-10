@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
-"""Dry-run the approved Story visual overrides against the existing Visual Grammar contract.
+"""Dry-run approved Story visual overrides against the existing Visual Grammar contract.
 
 This is the Pre-TTS structural gate described by the Visual Grammar master design.
 It composes the already-authored Story production bindings with the current render
 shell in memory, validates Semantic Grammar plus the mirrored Renderer compatibility
 registry, and writes only a validation report. It never selects or repairs a Template,
 changes narration, or mutates the input render spec.
+
+The Plot repository intentionally does not create a second schema authority for the
+Renderer compatibility mirror. The mirror is validated fail-closed here by its fixed
+contract version and required entry fields; the pinned Renderer remains the strict
+owner of Template Variant allow-lists and final render-schema validation.
 """
 
 from __future__ import annotations
@@ -70,11 +75,63 @@ def _compatibility_map(registry: dict[str, Any]) -> dict[str, dict[str, Any]]:
     templates = registry.get("templates")
     if not isinstance(templates, list) or not templates:
         raise PreTTSVisualGateError("renderer compatibility templates must be a non-empty array")
+    required = {
+        "visualTemplateId",
+        "allowedGrammarIds",
+        "appearanceClass",
+        "dominantSurface",
+        "stageShell",
+        "motionLanguage",
+    }
     result: dict[str, dict[str, Any]] = {}
-    for item in templates:
-        if not isinstance(item, dict) or not isinstance(item.get("visualTemplateId"), str):
-            raise PreTTSVisualGateError("renderer compatibility template entry is invalid")
-        template_id = item["visualTemplateId"]
+    for index, item in enumerate(templates):
+        if not isinstance(item, dict):
+            raise PreTTSVisualGateError(
+                f"renderer compatibility templates[{index}] must be an object"
+            )
+        missing = sorted(required - set(item))
+        if missing:
+            raise PreTTSVisualGateError(
+                f"renderer compatibility templates[{index}] missing fields: {missing}"
+            )
+        template_id = item.get("visualTemplateId")
+        allowed = item.get("allowedGrammarIds")
+        if not isinstance(template_id, str) or not template_id:
+            raise PreTTSVisualGateError(
+                f"renderer compatibility templates[{index}].visualTemplateId is invalid"
+            )
+        if not isinstance(allowed, list) or not allowed or not all(
+            isinstance(value, str) and value for value in allowed
+        ):
+            raise PreTTSVisualGateError(
+                f"renderer compatibility {template_id}.allowedGrammarIds is invalid"
+            )
+        for field in ("appearanceClass", "dominantSurface", "stageShell", "motionLanguage"):
+            if not isinstance(item.get(field), str) or not item[field]:
+                raise PreTTSVisualGateError(
+                    f"renderer compatibility {template_id}.{field} is invalid"
+                )
+        overrides = item.get("variantOverrides", [])
+        if not isinstance(overrides, list):
+            raise PreTTSVisualGateError(
+                f"renderer compatibility {template_id}.variantOverrides must be an array"
+            )
+        for override_index, override in enumerate(overrides):
+            if not isinstance(override, dict):
+                raise PreTTSVisualGateError(
+                    f"renderer compatibility {template_id}.variantOverrides[{override_index}] must be an object"
+                )
+            for field in (
+                "variant",
+                "appearanceClass",
+                "dominantSurface",
+                "stageShell",
+                "motionLanguage",
+            ):
+                if not isinstance(override.get(field), str) or not override[field]:
+                    raise PreTTSVisualGateError(
+                        f"renderer compatibility {template_id}.variantOverrides[{override_index}].{field} is invalid"
+                    )
         if template_id in result:
             raise PreTTSVisualGateError(f"duplicate Visual Template ID: {template_id}")
         result[template_id] = item
@@ -106,7 +163,9 @@ def _sidecar_from_render(render: dict[str, Any], episode_date: str) -> dict[str,
                 raise PreTTSVisualGateError(
                     f"scene-{scene_index:02d}/{visual_beat_id}: visualGrammar missing"
                 )
-            beats.append({"visualBeatId": visual_beat_id, "visualGrammar": copy.deepcopy(grammar)})
+            beats.append(
+                {"visualBeatId": visual_beat_id, "visualGrammar": copy.deepcopy(grammar)}
+            )
         scenes.append({"sceneId": scene.get("sceneId"), "visualBeats": beats})
     return {
         "episodeDate": episode_date,
@@ -152,9 +211,24 @@ def _validate_renderer_compatibility(
                     f"grammar {grammar!r} is not allowed for Visual Template {template!r}; allowed={allowed}",
                 )
             config = beat.get("templateConfig")
-            variant = config.get("variant") if isinstance(config, dict) else beat.get("templateVariant")
-            appearance, surface = _appearance(entry, variant if isinstance(variant, str) else None)
-            measured.append((scene_index, beat_index, str(grammar), appearance, surface, str(beat.get("visualGrammar", {}).get("transitionRole"))))
+            variant = (
+                config.get("variant")
+                if isinstance(config, dict)
+                else beat.get("templateVariant")
+            )
+            appearance, surface = _appearance(
+                entry, variant if isinstance(variant, str) else None
+            )
+            measured.append(
+                (
+                    scene_index,
+                    beat_index,
+                    str(grammar),
+                    appearance,
+                    surface,
+                    str(beat.get("visualGrammar", {}).get("transitionRole")),
+                )
+            )
 
     scene_1_8 = [row for row in measured if row[0] <= 7]
     front = [row for row in scene_1_8 if row[0] <= 3]
@@ -214,7 +288,11 @@ def _validate_renderer_compatibility(
                     path,
                     f"same Dominant Surface {surface!r} may not run for 4 consecutive Beats",
                 )
-            if transition == "major-shift" and previous[3] == appearance and previous[4] == surface:
+            if (
+                transition == "major-shift"
+                and previous[3] == appearance
+                and previous[4] == surface
+            ):
                 _append_violation(
                     report,
                     "VG_MAJOR_SHIFT_NOT_PHYSICAL",
@@ -231,14 +309,15 @@ def validate_pre_tts(
     semantics: dict[str, Any],
     semantics_schema: dict[str, Any],
     compatibility_registry: dict[str, Any],
-    compatibility_schema: dict[str, Any],
     report_schema: dict[str, Any],
 ) -> dict[str, Any]:
     episode_date = story_bindings.get("episode_date")
     if not isinstance(episode_date, str) or not episode_date:
         raise PreTTSVisualGateError("Story production bindings episode_date is required")
     if story_bindings.get("contract_version") != "1.0.0":
-        raise PreTTSVisualGateError("Story production bindings contract_version must be 1.0.0")
+        raise PreTTSVisualGateError(
+            "Story production bindings contract_version must be 1.0.0"
+        )
     render_date = render.get("episode", {}).get("id")
     if render_date != episode_date:
         raise PreTTSVisualGateError(
@@ -246,11 +325,8 @@ def validate_pre_tts(
         )
 
     semantics_errors = _schema_errors(semantics, semantics_schema, "semantics")
-    compatibility_errors = _schema_errors(
-        compatibility_registry, compatibility_schema, "renderer compatibility"
-    )
-    if semantics_errors or compatibility_errors:
-        raise PreTTSVisualGateError("\n".join(semantics_errors + compatibility_errors))
+    if semantics_errors:
+        raise PreTTSVisualGateError("\n".join(semantics_errors))
     visual_grammar_contract.validate_registry(semantics, semantics_schema)
     compatibility = _compatibility_map(compatibility_registry)
 
@@ -273,7 +349,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--render-spec", type=Path, required=True)
     parser.add_argument("--story-bindings", type=Path, required=True)
     parser.add_argument(
-        "--semantics", type=Path, default=Path("contracts/visual_grammar_semantics.json")
+        "--semantics",
+        type=Path,
+        default=Path("contracts/visual_grammar_semantics.json"),
     )
     parser.add_argument(
         "--semantics-schema",
@@ -284,11 +362,6 @@ def main(argv: list[str] | None = None) -> int:
         "--renderer-compatibility",
         type=Path,
         default=Path("contracts/visual_grammar_renderer_compatibility.json"),
-    )
-    parser.add_argument(
-        "--renderer-compatibility-schema",
-        type=Path,
-        default=Path("contracts/visual_grammar_renderer_compatibility.schema.json"),
     )
     parser.add_argument(
         "--report-schema",
@@ -302,17 +375,23 @@ def main(argv: list[str] | None = None) -> int:
             render=load_json(args.render_spec, "render spec"),
             story_bindings=load_json(args.story_bindings, "Story production bindings"),
             semantics=load_json(args.semantics, "Visual Grammar semantics"),
-            semantics_schema=load_json(args.semantics_schema, "Visual Grammar semantics schema"),
+            semantics_schema=load_json(
+                args.semantics_schema, "Visual Grammar semantics schema"
+            ),
             compatibility_registry=load_json(
                 args.renderer_compatibility, "Renderer compatibility registry"
-            ),
-            compatibility_schema=load_json(
-                args.renderer_compatibility_schema, "Renderer compatibility schema"
             ),
             report_schema=load_json(args.report_schema, "structural report schema"),
         )
     except (PreTTSVisualGateError, visual_grammar_contract.VisualGrammarError) as exc:
-        print(json.dumps({"status": "FAIL", "errors": str(exc).splitlines()}, ensure_ascii=False, indent=2), file=sys.stderr)
+        print(
+            json.dumps(
+                {"status": "FAIL", "errors": str(exc).splitlines()},
+                ensure_ascii=False,
+                indent=2,
+            ),
+            file=sys.stderr,
+        )
         return 2
     rendered = json.dumps(report, ensure_ascii=False, indent=2) + "\n"
     if args.output:
