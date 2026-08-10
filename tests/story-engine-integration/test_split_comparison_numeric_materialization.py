@@ -55,3 +55,21 @@ def test_mixed_metric_conversion_reuses_numbers_and_existing_numeric_labels():
     assert beat["visualGrammarId"] == "evidence"
     assert beat["templateConfig"]["laneLabels"] == ["Q2売上", "AMD"]
     assert beat["viewerTexts"] == ["Q2売上｜115.4億ドル", "AMD｜-7.04%"]
+
+
+def test_explicit_two_lane_story_binding_infers_renderer_lane_labels():
+    beat = {
+        "beatId": "scene-01-beat-002",
+        "visualTemplate": "tailwind-headwind",
+        "contentType": "tailwind-headwind",
+        "templateVariant": "two-lane",
+        "viewerTexts": ["数字｜良かった", "株価｜AMD -7.04%"],
+        "templateConfig": {"variant": "two-lane", "laneLabels": []},
+    }
+
+    remotion_template_data._normalize_tailwind_headwind_template(beat)
+
+    assert beat["templateConfig"]["laneLabels"] == ["数字", "株価"]
+    assert beat["templateConfig"]["variant"] == "two-lane"
+    assert beat["templateVariant"] == "two-lane"
+    assert beat["viewerTexts"] == ["数字｜良かった", "株価｜AMD -7.04%"]
