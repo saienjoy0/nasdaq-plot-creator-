@@ -14,6 +14,7 @@ from typing import Any
 import resolve_visual_sources
 import select_visual_sources
 import verify_visual_source_ab
+import visual_evidence_coverage
 import visual_source_contract
 
 
@@ -248,6 +249,13 @@ def prepare_visual_sources(
     )
     contract = load_json(final_contract_path, "Final Episode Contract")
     intents = (contract.get("visualSources") or {}).get("intents", [])
+    try:
+        visual_evidence_coverage.validate_visual_evidence_coverage(
+            render=render,
+            intents=intents,
+        )
+    except visual_evidence_coverage.VisualEvidenceCoverageError as exc:
+        raise VisualSourceProjectionError(str(exc)) from exc
     if not intents:
         return {
             "selected_path": "not-required",
