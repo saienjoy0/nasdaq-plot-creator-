@@ -198,6 +198,7 @@ def test_resolve_select_and_project_generated_local_image(tmp_path: Path) -> Non
                         "visualBeatId": "vb-02-01",
                         "startChunkId": "scene-02-chunk-001",
                         "endChunkId": "scene-02-chunk-001",
+                        "evidenceSourceIds": ["source-001"],
                         "assetPlacementIds": [],
                         "assetState": "not-required",
                     }
