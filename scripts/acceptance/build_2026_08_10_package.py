@@ -74,6 +74,31 @@ def sync_story_plan_template(root:Path,date:str)->None:
         'causalDossierSha256':dossier_sha,
     },ensure_ascii=False,indent=2))
 
+def sync_story_script_template(root:Path,date:str)->None:
+    template_path=root/'working'/date/'story-engine'/'templates'/'story_script.template.json'
+    script=json.loads(template_path.read_text(encoding='utf-8'))
+    script['unresolved_points']=[
+        {
+            'evidence_ids':['E-008','E-010','E-011','E-012'],
+            'statement':'8:30 ETの初動は確認済みだが、1分足だけで雇用統計が初動の原因と証明できない。',
+        },
+        {
+            'evidence_ids':['E-009'],
+            'statement':'雇用、原油・金利、企業決算それぞれの厳密な寄与度は分離できない。',
+        },
+    ]
+    serialized=json.dumps(script,ensure_ascii=False,sort_keys=True)
+    stale_terms=['分足反応は未確認','分足未取得','分足欠損']
+    found=[term for term in stale_terms if term in serialized]
+    if found:
+        raise SystemExit(f'stale minute state remains in story script template: {found}')
+    template_path.write_text(dump(script)+'\n',encoding='utf-8')
+    print(json.dumps({
+        'status':'pass',
+        'storyScriptTemplateSync':str(template_path),
+        'unresolvedPointCount':len(script['unresolved_points']),
+    },ensure_ascii=False,indent=2))
+
 def main()->int:
     root=ROOT; date=DATE
     work=root/'working'/date; story=work/'story-engine'; research=root/'research'/date; episodes=root/'episodes'/date
@@ -81,6 +106,7 @@ def main()->int:
     for p in (work,story,research,episodes,verification): p.mkdir(parents=True,exist_ok=True)
 
     sync_story_plan_template(root,date)
+    sync_story_script_template(root,date)
     subprocess.run([sys.executable,'scripts/story-engine/materialize_story_engine.py','--date',date,'--repo-root',str(root)],check=True)
 
     dossier=research/f'causal_research_dossier_{date}.json'
