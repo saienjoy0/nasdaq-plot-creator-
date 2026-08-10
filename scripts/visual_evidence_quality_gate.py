@@ -13,8 +13,10 @@ appropriate visual path when one is materially required:
 - a Visual Source intent must target a Beat that already cites at least one of the
   same approved source IDs.
 
-The planner remains editorially responsible for choosing the exact Primary and
-Approved Fallback. This module only blocks silent downgrade to ``not-required``.
+The strict rules apply only to intent documents explicitly authored with
+``qualityPolicy: evidence-first-v1``. This prevents a new presentation policy from
+retroactively invalidating previously approved historical packages while keeping
+new evidence-first productions fail-closed.
 """
 
 from __future__ import annotations
@@ -29,6 +31,7 @@ class VisualEvidenceQualityError(ValueError):
     pass
 
 
+QUALITY_POLICY = "evidence-first-v1"
 ORIGINAL_SOURCE_TYPES = {"official", "company", "social", "social-post"}
 ANCHOR_FUNCTIONS = {"Anchor", "Evidence"}
 EARNINGS_MARKERS = (
@@ -224,16 +227,44 @@ def _beat_has_verified_series(scene: dict[str, Any], beat: dict[str, Any]) -> bo
     return True
 
 
+def _base_report(
+    *, render: dict[str, Any], intents: list[dict[str, Any]], source_count: int, policy_mode: str
+) -> dict[str, Any]:
+    return {
+        "contractVersion": "1.0.0",
+        "episodeDate": (render.get("episode") or {}).get("id")
+        if isinstance(render.get("episode"), dict)
+        else render.get("episodeDate"),
+        "status": "PASS",
+        "policyMode": policy_mode,
+        "intentCount": len(intents),
+        "sourceCount": source_count,
+        "violations": [],
+    }
+
+
 def validate_visual_evidence(
     *, render: dict[str, Any], intents_doc: dict[str, Any]
 ) -> dict[str, Any]:
     intents = _intent_rows(intents_doc)
-    intent_by_source = _intent_source_map(intents)
     sources = {
         sid: source
         for source in _source_rows(render)
         if (sid := _source_id(source)) is not None
     }
+
+    # Historical packages predate this policy. They remain valid and are not
+    # silently reinterpreted under a stricter visual contract. New authoring
+    # explicitly opts in and is then fail-closed below.
+    if intents_doc.get("qualityPolicy") != QUALITY_POLICY:
+        return _base_report(
+            render=render,
+            intents=intents,
+            source_count=len(sources),
+            policy_mode="legacy",
+        )
+
+    intent_by_source = _intent_source_map(intents)
     beats = list(_iter_beats(render))
     violations: list[dict[str, Any]] = []
 
@@ -327,6 +358,7 @@ def validate_visual_evidence(
         if isinstance(render.get("episode"), dict)
         else render.get("episodeDate"),
         "status": status,
+        "policyMode": QUALITY_POLICY,
         "intentCount": len(intents),
         "sourceCount": len(sources),
         "violations": violations,
@@ -359,7 +391,13 @@ def main(argv: list[str] | None = None) -> int:
         )
         code = 0 if report["status"] == "PASS" else 2
     except (VisualEvidenceQualityError, OSError, json.JSONDecodeError) as exc:
-        report = {"contractVersion": "1.0.0", "status": "FAIL", "violations": [{"code": "VE_GATE_ERROR", "path": "$", "message": str(exc)}]}
+        report = {
+            "contractVersion": "1.0.0",
+            "status": "FAIL",
+            "violations": [
+                {"code": "VE_GATE_ERROR", "path": "$", "message": str(exc)}
+            ],
+        }
         code = 2
     text = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     if args.output:
