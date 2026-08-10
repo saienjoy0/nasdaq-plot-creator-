@@ -172,8 +172,7 @@ def _materialize_expected_actual_gap(
 
     # Only the cards explicitly consumed by this Expected/Actual/Gap Beat are
     # projection inputs. Other cards may belong to later Beats in the same Scene and
-    # must remain addressable. Replacing the entire Scene card collection caused
-    # valid follow-up Beat objectIds and show events to become dangling references.
+    # must remain addressable until all Beat projections have completed.
     removed_card_ids = set(referenced_ids)
     primary_old_card_id = referenced_ids[0]
     projected_cards: list[dict[str, Any]] = []
@@ -199,14 +198,59 @@ def _materialize_expected_actual_gap(
     )
 
 
-def _normalize_renderer_cards(scene: dict[str, Any]) -> None:
-    """Drop producer-only card metadata before strict Renderer 2.4 validation.
+def _prune_unselected_cards(scene: dict[str, Any]) -> None:
+    """Remove producer cards no longer selected by any projected Visual Beat.
 
-    Producer cards may carry convenience fields such as label/text/sourceId that are
-    useful while authoring but are not part of the Renderer 2.4 card contract. This
-    projection is deliberately lossless for all renderer-visible card content and
-    does not synthesize or reinterpret editorial text.
+    A producer card can become obsolete when a later Beat is projected from a card
+    into Renderer-native numbers. Keeping that card is not only invisible; for modes
+    such as expected-actual-gap it also violates the strict scene-level Renderer data
+    contract. Events targeting the pruned card are equally unreachable and are
+    removed with it.
     """
+    selected_ids = {
+        object_id
+        for beat in scene.get("visualBeats", [])
+        if isinstance(beat, dict)
+        for object_id in beat.get("objectIds", [])
+        if isinstance(object_id, str)
+    }
+    cards = scene.get("cards", [])
+    if not isinstance(cards, list):
+        raise ProjectionError(f"{scene.get('sceneId')}: cards must be an array")
+    pruned_ids = {
+        card.get("cardId")
+        for card in cards
+        if isinstance(card, dict)
+        and isinstance(card.get("cardId"), str)
+        and card["cardId"] not in selected_ids
+    }
+    if not pruned_ids:
+        return
+    scene["cards"] = [
+        card
+        for card in cards
+        if not (
+            isinstance(card, dict)
+            and isinstance(card.get("cardId"), str)
+            and card["cardId"] in pruned_ids
+        )
+    ]
+    events = scene.get("visualEvents", [])
+    if not isinstance(events, list):
+        raise ProjectionError(f"{scene.get('sceneId')}: visualEvents must be an array")
+    scene["visualEvents"] = [
+        event
+        for event in events
+        if not (
+            isinstance(event, dict)
+            and isinstance(event.get("targetId"), str)
+            and event["targetId"] in pruned_ids
+        )
+    ]
+
+
+def _normalize_renderer_cards(scene: dict[str, Any]) -> None:
+    """Drop producer-only card metadata before strict Renderer 2.4 validation."""
     cards = scene.get("cards", [])
     if not isinstance(cards, list):
         raise ProjectionError(f"{scene.get('sceneId')}: cards must be an array")
@@ -368,6 +412,7 @@ def canonicalize_render_spec(
             reaction_bindings,
             used_reaction_bindings,
         )
+        _prune_unselected_cards(scene)
         _normalize_renderer_cards(scene)
         beats = scene.get("visualBeats", [])
         for beat_index, beat in enumerate(beats):
