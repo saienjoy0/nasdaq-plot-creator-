@@ -1,0 +1,44 @@
+{
+  "baseResearchInputManifestSha256": "76fd1cbfeb90597e5d26121b9769a5730c46faca0ae74335ecf7404f2d6ecf14",
+  "contractVersion": "1.0.0",
+  "episodeDate": "2026-08-10",
+  "requests": [
+    {
+      "parameters": {"date": "2026-08-07", "resolution": "1m", "session": "all", "symbol": "QQQ.US"},
+      "reason": "Check QQQ chronology around the 08:30 ET Employment Situation release and the regular-session open.",
+      "requestId": "RA-001",
+      "requiredness": "material",
+      "type": "market_intraday"
+    },
+    {
+      "parameters": {"date": "2026-08-07", "resolution": "1m", "session": "all", "symbol": "SOXX.US"},
+      "reason": "Check SOXX chronology and whether semiconductor strength moved with or beyond the broad macro reaction.",
+      "requestId": "RA-002",
+      "requiredness": "material",
+      "type": "market_intraday"
+    },
+    {
+      "parameters": {"date": "2026-08-07", "resolution": "1m", "session": "all", "symbol": "MCHP.US"},
+      "reason": "Separate Microchip's company-specific post-earnings move from the broad market response.",
+      "requestId": "RA-003",
+      "requiredness": "supporting",
+      "type": "market_intraday"
+    },
+    {
+      "parameters": {"date": "2026-08-07", "resolution": "1m", "session": "all", "symbol": "NVDA.US"},
+      "reason": "Use NVIDIA as a large AI/semiconductor comparator for the same event window.",
+      "requestId": "RA-004",
+      "requiredness": "supporting",
+      "type": "market_intraday"
+    },
+    {
+      "parameters": {"title": "BLS Employment Situation — July 2026", "url": "https://www.bls.gov/news.release/empsit.nr0.htm"},
+      "reason": "Bind the official BLS July 2026 Employment Situation release as primary evidence for Actual and the 08:30 ET event.",
+      "requestId": "RA-005",
+      "requiredness": "material",
+      "type": "exact_url_archive"
+    }
+  ],
+  "researchPurpose": "Validate the 2026-08-07 employment/rate-expectation timing as the broad NASDAQ lead candidate, test semiconductor amplification, and preserve company-specific divergence as counterevidence.",
+  "wave": 1
+}
