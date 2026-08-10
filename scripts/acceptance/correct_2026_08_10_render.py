@@ -1,58 +1,150 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import hashlib, json
+
+import hashlib
+import json
 from pathlib import Path
-EXPECTED_SHA256='780a16de03b76819a73c91e12fe7498e47568d28e856022ffb5dd78f554cd10f'
 
-def main()->int:
-    path=Path('render-specs/2026-08-10/render_spec.json')
-    doc=json.loads(path.read_text(encoding='utf-8'))
-    if doc.get('episode',{}).get('targetDate')!='2026-08-10': raise SystemExit('render targetDate drift')
-    scenes=doc.get('scenes',[])
-    if len(scenes)!=9: raise SystemExit('render scene count drift')
+SCENE8_CHUNK1 = (
+    '最後に、時系列まで確認します。8時30分ETの発表の1分前から発表分へ、NASDAQの代理として見るQQQは'
+    '719.16から720.23、SOXXは541.06から542.40、NVIDIAは219.95から220.31へ上向きました。'
+    'だから、弱い雇用から利上げ観測後退、そしてテック買いという市場解釈は、引けだけでなく発表時刻の初動とも整合します。'
+    'ただし、1分足は原因そのものを証明しません。MCHPは同じ1分で79.58から79.56とほぼ横ばいでした。'
+    'Microchipの大幅高は会社固有材料を別の増幅要因として分ける方が自然です。'
+)
+SCENE8_CHUNK2 = (
+    '僕の結論は中程度の確信で、雇用下振れから利上げリスク低下が主役候補。'
+    'Microchip好決算と原油・利回り低下が増幅要因。成長不安と個別の下落銘柄が反対材料です。'
+    '悪材料が消えた夜ではなく、どの採点表が優先されたかが変わった夜でした。'
+)
 
-    expected_scopes={2:('macro','nasdaq'),3:('macro','nasdaq'),5:('global','multiple')}
-    for scene_number,(old,new) in expected_scopes.items():
-        scene=scenes[scene_number-1]
-        if scene.get('sceneNumber')!=scene_number: raise SystemExit(f'Scene {scene_number} numbering drift')
-        if scene.get('causalScope') not in (old,new): raise SystemExit(f'Scene {scene_number} causalScope drift: {scene.get("causalScope")}')
-        scene['causalScope']=new
 
-    scene3_followup=scenes[2]['visualBeats'][1]
-    if scene3_followup.get('visualBeatId')!='scene-03-beat-002' or scene3_followup.get('visualMode')!='text-focus':
-        raise SystemExit('unexpected Scene 3 follow-up Beat shape')
-    if scene3_followup.get('objectIds') not in (['scene-03-card-002'],[]):
+def cue_start(text: str, size: int = 42) -> str:
+    return text[:size]
+
+
+def cue_end(text: str, size: int = 48) -> str:
+    return text[-size:]
+
+
+def main() -> int:
+    path = Path('render-specs/2026-08-10/render_spec.json')
+    doc = json.loads(path.read_text(encoding='utf-8'))
+    if doc.get('episode', {}).get('targetDate') != '2026-08-10':
+        raise SystemExit('render targetDate drift')
+    scenes = doc.get('scenes', [])
+    if len(scenes) != 9:
+        raise SystemExit('render scene count drift')
+
+    expected_scopes = {2: ('macro', 'nasdaq'), 3: ('macro', 'nasdaq'), 5: ('global', 'multiple')}
+    for scene_number, (old, new) in expected_scopes.items():
+        scene = scenes[scene_number - 1]
+        if scene.get('sceneNumber') != scene_number:
+            raise SystemExit(f'Scene {scene_number} numbering drift')
+        if scene.get('causalScope') not in (old, new):
+            raise SystemExit(f'Scene {scene_number} causalScope drift: {scene.get("causalScope")}')
+        scene['causalScope'] = new
+
+    scene3_followup = scenes[2]['visualBeats'][1]
+    beat_id = scene3_followup.get('visualBeatId') or scene3_followup.get('beatId')
+    if beat_id not in {'scene-03-beat-002', 'vb-03-02'} or scene3_followup.get('visualMode') != 'text-focus':
+        raise SystemExit(f'unexpected Scene 3 follow-up Beat shape: {beat_id!r}')
+    if scene3_followup.get('objectIds') not in (['scene-03-card-002'], []):
         raise SystemExit(f'Scene 3 follow-up objectIds drift: {scene3_followup.get("objectIds")}')
-    # The renderer-source materializer intentionally removes this redundant
-    # card. Keep the evidence Beat static and use its already-authored
-    # viewerTexts instead of reviving an object that no longer exists.
-    scene3_followup['objectIds']=[]
+    scene3_followup['objectIds'] = []
 
-    # Keep bridge-text bounded to the two genuine transitional Beats. Scene 2
-    # and Scene 3 are both evidence displays, so switch template + grammar
-    # together to the non-financial Data-state evidence-boundary template.
-    # Narration, numbers, evidence ids, cues, and causal claims remain unchanged.
     for scene in scenes:
-        for beat in scene.get('visualBeats',[]):
-            template=beat.get('visualTemplate')
-            grammar=beat.get('visualGrammar',{})
-            beat_id=beat.get('visualBeatId')
-            if template=='text-focus':
-                if beat_id in {'scene-02-beat-002','scene-03-beat-002'}:
-                    beat['visualTemplate']='evidence-boundary'
-                    beat['templateConfig']['variant']='confirmed-vs-unconfirmed'
-                    grammar['grammarId']='evidence'
+        for beat in scene.get('visualBeats', []):
+            template = beat.get('visualTemplate')
+            grammar = beat.get('visualGrammar', {})
+            current_id = beat.get('visualBeatId') or beat.get('beatId')
+            if template == 'text-focus':
+                if current_id in {'scene-02-beat-002', 'scene-03-beat-002', 'vb-02-02', 'vb-03-02'}:
+                    beat['visualTemplate'] = 'evidence-boundary'
+                    beat.setdefault('templateConfig', {})['variant'] = 'confirmed-vs-unconfirmed'
+                    if isinstance(grammar, dict):
+                        grammar['grammarId'] = 'evidence'
+                    if 'visualGrammarId' in beat:
+                        beat['visualGrammarId'] = 'evidence'
                 else:
-                    grammar['grammarId']='bridge-text'
-            elif template=='expected-actual-gap-flow':
-                grammar['grammarId']='gap'
-            elif template=='market-pulse-grid':
-                grammar['grammarId']='evidence'
+                    if isinstance(grammar, dict):
+                        grammar['grammarId'] = 'bridge-text'
+            elif template == 'expected-actual-gap-flow':
+                if isinstance(grammar, dict):
+                    grammar['grammarId'] = 'gap'
+            elif template == 'market-pulse-grid':
+                if isinstance(grammar, dict):
+                    grammar['grammarId'] = 'evidence'
 
-    text=json.dumps(doc,ensure_ascii=False,indent=2,sort_keys=True)+'\n'
-    actual=hashlib.sha256(text.encode('utf-8')).hexdigest()
-    if actual!=EXPECTED_SHA256: raise SystemExit(f'corrected render SHA mismatch: {actual}')
-    path.write_text(text,encoding='utf-8')
-    print(f'PASS corrected render {actual}')
+    scene8 = scenes[7]
+    if scene8.get('sceneNumber') != 8:
+        raise SystemExit('Scene 8 numbering drift')
+    chunks = scene8.get('narrationChunks', [])
+    if len(chunks) != 2:
+        raise SystemExit(f'expected two Scene 8 narration chunks, got {len(chunks)}')
+    for chunk, text in zip(chunks, (SCENE8_CHUNK1, SCENE8_CHUNK2)):
+        chunk['speechText'] = text
+        chunk['captionText'] = text
+
+    scene8['purpose'] = '発表時刻の初動を確認しつつ、1分足を因果証明へ拡大しない結論の境界を示す'
+    scene8['performanceIntent'] = '時系列の確認は明確に、因果の限界は一段落として切り分ける'
+    scene8['uncertainty'] = 'QQQ・SOXX・NVIDIAの初動は発表時刻と整合するが、1分足だけでは因果や寄与度を証明しない。MCHPは同じ発表分ではほぼ横ばい。'
+    scene8['supportingTexts'] = ['初動：QQQ / SOXX / NVDA ↑', 'MCHP：発表分ほぼ横ばい', '1分足 ≠ 因果証明']
+    scene8['sourceLabel'] = 'BLS / Reuters / 検証済み1分足'
+    scene8['timelineBasis'] = 'BLS 8:30 ET発表・主要報道・Longbridge 1分Kline'
+
+    cards = {card.get('cardId'): card for card in scene8.get('cards', [])}
+    card1 = cards.get('scene-08-card-001')
+    card2 = cards.get('scene-08-card-002')
+    if not card1 or not card2:
+        raise SystemExit('Scene 8 expected verification cards are missing')
+    card1['title'] = '発表時刻の初動'
+    card1['lines'] = [
+        {'label': 'QQQ', 'tone': 'neutral', 'value': '719.16 → 720.23'},
+        {'label': 'SOXX', 'tone': 'neutral', 'value': '541.06 → 542.40'},
+        {'label': 'MCHP', 'tone': 'neutral', 'value': '79.58 → 79.56'},
+    ]
+    card2['title'] = '言わないこと'
+    card2['lines'] = [
+        {'label': '1', 'tone': 'neutral', 'value': '1分足だけで因果確定'},
+        {'label': '2', 'tone': 'neutral', 'value': 'MCHPも同時反応した'},
+    ]
+
+    beats = scene8.get('visualBeats', [])
+    if len(beats) != 2:
+        raise SystemExit(f'expected two Scene 8 visual beats, got {len(beats)}')
+    beat1, beat2 = beats
+    beat1['changeCue'] = 'QQQ 719.16 → 720.23'
+    beat1['primaryElement'] = '発表時刻の1分足初動'
+    beat1['screenQuestion'] = '8:30 ETの発表分で何が動いたか'
+    beat1['viewerTexts'] = ['QQQ 719.16→720.23', 'SOXX 541.06→542.40', 'MCHP 79.58→79.56']
+    beat1.setdefault('templateConfig', {})['dataBasis'] = 'Longbridge verified 1m Kline history / minute-close'
+    beat1['narrationStartCue'] = cue_start(SCENE8_CHUNK1)
+    beat1['narrationEndCue'] = cue_end(SCENE8_CHUNK1)
+
+    beat2['changeCue'] = '1分足 ≠ 因果証明'
+    beat2['primaryElement'] = '時系列整合と因果の境界'
+    beat2['screenQuestion'] = '確認した初動をどこまで因果へ使えるか'
+    beat2['viewerTexts'] = ['1分足だけで因果確定しない', 'MCHPは同じ分でほぼ横ばい']
+    beat2.setdefault('templateConfig', {})['dataBasis'] = '1分足の時系列整合 + 反対材料'
+    beat2['narrationStartCue'] = cue_start(SCENE8_CHUNK2)
+    beat2['narrationEndCue'] = cue_end(SCENE8_CHUNK2)
+
+    for source in doc.get('sources', []):
+        if source.get('sourceId') == 'source-005':
+            source['title'] = 'Research Acquisition Result Wave 2 — verified 1-minute series'
+            source['usedFor'] = ['QQQ・SOXX・MCHP・NVDAの2026-08-07検証済み1分足と発表時刻の初動確認']
+            source['narrationAttribution'] = '検証済み追加取得結果'
+            break
+    else:
+        raise SystemExit('source-005 missing')
+
+    text = json.dumps(doc, ensure_ascii=False, indent=2, sort_keys=True) + '\n'
+    actual = hashlib.sha256(text.encode('utf-8')).hexdigest()
+    path.write_text(text, encoding='utf-8')
+    print(f'PASS corrected render with verified wave2 timing {actual}')
     return 0
-if __name__=='__main__': raise SystemExit(main())
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
