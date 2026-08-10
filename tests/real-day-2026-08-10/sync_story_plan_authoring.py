@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Synchronize frozen H4 Story authoring with the corrected causal dossier.
+"""Synchronize frozen H4 Story/Visual authoring with the corrected causal dossier.
 
 TEST ONLY. This is part of fixture authoring, not Daily Production. The successful
 wave-2 evidence changes the dossier contradiction wording and adds material timing
 counterevidence. Story Engine requires the selected plan and script to preserve those
-boundaries exactly. This helper derives the required values from the dossier instead
-of hard-coding a second editorial truth.
+boundaries exactly. The same corrected authoring must also choose physically distinct
+Visual Templates before H2, rather than repairing the render after production starts.
 """
 
 from __future__ import annotations
@@ -47,13 +47,17 @@ def sync(*, repo_root: Path) -> dict[str, Any]:
     plan_path = root / f"working/{DATE}/story-engine/templates/story_plan.template.json"
     script_path = root / f"working/{DATE}/story-engine/templates/story_script.template.json"
     review_path = root / f"working/{DATE}/story-engine/templates/creative_review.template.json"
+    bindings_path = root / f"working/{DATE}/story-engine/story_production_bindings.json"
     dossier = load_json(dossier_path)
     plan = load_json(plan_path)
     script = load_json(script_path)
     review = load_json(review_path)
+    bindings = load_json(bindings_path)
 
     if any(item.get("episode_date") != DATE for item in (dossier, plan, script, review)):
         raise StoryAuthoringSyncError("episode date drift")
+    if bindings.get("episode_date") != DATE or bindings.get("contract_version") != "1.0.0":
+        raise StoryAuthoringSyncError("story production bindings contract/date drift")
 
     contradiction_id = plan.get("central_contradiction_id")
     contradiction = next(
@@ -134,15 +138,55 @@ def sync(*, repo_root: Path) -> dict[str, Any]:
         raise StoryAuthoringSyncError("selected angle confidence is invalid")
     claim_05["confidence"] = selected_confidence
 
+    # The corrected authored package is reviewed as the current H4 authoring pass.
+    # Creative Review v1.1 permits at most two rounds; old diagnostic round=4 must
+    # not leak into the new canonical authoring snapshot.
     try:
         review_round = int(review.get("round", 1))
     except (TypeError, ValueError) as exc:
         raise StoryAuthoringSyncError("creative review round is invalid") from exc
     review["round"] = min(max(review_round, 1), 2)
 
+    beat_overrides = bindings.get("beat_overrides")
+    if not isinstance(beat_overrides, dict):
+        raise StoryAuthoringSyncError("story production beat_overrides must be an object")
+
+    # Scene 1 ends with an open Hero and the base Scene 2 also starts with a Hero.
+    # Three open-hero beats in a row violate the existing Visual Grammar. Use a
+    # metric board for the two confirmed BLS facts; the data and narration are unchanged.
+    scene2 = beat_overrides.setdefault("scene-02-beat-001", {})
+    scene2.update(
+        {
+            "contentType": "number-comparison",
+            "visualMode": "number-comparison",
+            "visualTemplate": "metric-comparison-board",
+            "templateVariant": "default",
+            "visualGrammarId": "evidence",
+            "transitionRole": "major-shift",
+        }
+    )
+
+    # Scene 3 is explicitly Expected / Actual / Gap. The old fixture used another
+    # matrix immediately after Scene 2's matrix while declaring major-shift. Restore
+    # the authored gap-flow template so the semantic and physical transition agree.
+    scene3 = beat_overrides.get("scene-03-beat-001")
+    if not isinstance(scene3, dict):
+        raise StoryAuthoringSyncError("scene-03-beat-001 authored override is missing")
+    scene3.update(
+        {
+            "contentType": "expected-actual-gap",
+            "visualMode": "expected-actual-gap",
+            "visualTemplate": "expected-actual-gap-flow",
+            "templateVariant": "default",
+            "visualGrammarId": "gap",
+            "transitionRole": "major-shift",
+        }
+    )
+
     plan_digest = write_json(plan_path, plan)
     script_digest = write_json(script_path, script)
     review_digest = write_json(review_path, review)
+    bindings_digest = write_json(bindings_path, bindings)
     return {
         "status": "pass",
         "episode_date": DATE,
@@ -154,9 +198,22 @@ def sync(*, repo_root: Path) -> dict[str, Any]:
         "script_retained_counterevidence_ids": script["retained_counterevidence_ids"],
         "claim_05_confidence": claim_05["confidence"],
         "creative_review_round": review["round"],
+        "visual_authoring": {
+            "scene-02-beat-001": {
+                "visualTemplate": scene2["visualTemplate"],
+                "visualGrammarId": scene2["visualGrammarId"],
+                "transitionRole": scene2["transitionRole"],
+            },
+            "scene-03-beat-001": {
+                "visualTemplate": scene3["visualTemplate"],
+                "visualGrammarId": scene3["visualGrammarId"],
+                "transitionRole": scene3["transitionRole"],
+            },
+        },
         "story_plan_template_sha256": plan_digest,
         "story_script_template_sha256": script_digest,
         "creative_review_template_sha256": review_digest,
+        "story_production_bindings_sha256": bindings_digest,
     }
 
 
