@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nasdaq-cafe.local/contracts/research_evidence_supplement_manifest.schema.json",
+  "title": "NASDAQ Cafe Research Evidence Supplement Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contractVersion", "episodeDate", "baseResearchInputManifest", "waves"],
+  "properties": {
+    "contractVersion": {"const": "1.0.0"},
+    "episodeDate": {"type": "string", "format": "date"},
+    "baseResearchInputManifest": {"$ref": "#/$defs/fileRef"},
+    "waves": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 2,
+      "items": {"$ref": "#/$defs/wave"}
+    }
+  },
+  "$defs": {
+    "fileRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "evidenceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requestId", "path", "sha256"],
+      "properties": {
+        "requestId": {"type": "string", "minLength": 1},
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "wave": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["wave", "request", "result", "evidenceFiles"],
+      "properties": {
+        "wave": {"type": "integer", "minimum": 1, "maximum": 2},
+        "request": {"$ref": "#/$defs/fileRef"},
+        "result": {"$ref": "#/$defs/fileRef"},
+        "collectorRunId": {"type": "integer", "minimum": 1},
+        "evidenceFiles": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/evidenceRef"}
+        }
+      }
+    }
+  }
+}

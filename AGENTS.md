@@ -4,7 +4,7 @@
 
 This repository is the editorial research, long-term memory, and script-contract workspace for 朝のNASDAQカフェ.
 
-It does not render video and it does not delegate editorial judgment to GitHub Actions, Codex, Remotion, external research frameworks, or the memory layer.
+It does not render video and it does not delegate editorial judgment to GitHub Actions, Codex, Remotion, external research frameworks, the Collector, or the memory layer.
 
 ## Source-of-truth order
 
@@ -30,6 +30,9 @@ daily_source_package
 → selective editorial-memory retrieval
 → deterministic retrieval replay
 → research input manifest
+→ causal research
+→ optional bounded Research Acquisition Bridge
+→ research evidence supplement lineage when acquisition is used
 → causal research dossier with memory revalidation
 → editorial decision under 02
 → fox narration under 01
@@ -50,6 +53,10 @@ daily_source_package
 Never skip the causal research dossier when the daily input contains more than a simple confirmed single-cause event.
 
 The research input manifest is an immutable intake record for the current production attempt. It freezes the daily package, memory query plan, memory context, retrieval report, their episode date, and their SHA-256 values. The builder and dossier validator must replay deterministic retrieval and verify that Query Plan, Context, and Report are one result. It does not choose the lead or certify any remembered claim as current truth.
+
+Targeted acquisition never rewrites the research input manifest. When Causal Research identifies a material evidence gap, ChatGPT may author at most two bounded acquisition waves for explicit read-only market data or exact-URL archive retrieval. The Collector executes those requests mechanically. It does not choose the lead, Expected / Actual / Gap, related entities, causal scope, or story meaning.
+
+Any acquired file used as current dossier evidence must be copied into `research/YYYY-MM-DD/evidence/` and bound through the append-only `research_evidence_supplement_manifest.json`. The unified causal validator must verify the base manifest, request/result SHA lineage, copied evidence SHA, dossier input provenance, and acquired-evidence references. Missing or unavailable follow-up evidence remains unresolved rather than being invented.
 
 ## Editorial-memory behavior
 
@@ -82,6 +89,10 @@ The fox may refer to a previous episode only when a corresponding daily/thread/c
 - Treat the daily package as a starting set of evidence, not as a finished explanation.
 - Generate multiple research perspectives before drafting.
 - Ask follow-up questions from newly discovered evidence.
+- Use the Research Acquisition Bridge only for a material evidence gap, never merely to collect more links or visual素材.
+- Use one acquisition wave by default; allow a second only when wave-1 evidence materially changes the necessary test; never use a third wave.
+- Keep dynamic symbol choice and comparison-set choice in ChatGPT/Causal Research, not in the Collector.
+- Treat minute/intraday series as timing evidence; timing alone does not prove causal attribution.
 - Search historical context, company relationships, supply chain, macro transmission, timeline, and counter-hypotheses.
 - Attach a source, evidence class, timestamp, and confidence to every material causal edge.
 - Separate fact, reported interpretation, grounded inference, and unknown.
@@ -115,12 +126,19 @@ validate_episode_package_memory.py
 
 Do not use the base Daily Production, Final Production, Renderer Handoff, or Real-Day Acceptance scripts as production entrypoints.
 
+Before advancing `causal_dossier_valid`, use the unified causal validator when acquired research evidence is present:
+
+```text
+validate_causal_research_with_supplement.py
+```
+
 The guarded chain must prove:
 
 - Scene 1–9 exactly once and in order;
 - one integrated 04 result;
 - canonical Memory Annex and Final Production Source Annex ordering;
 - PR #8 and PR #6 replay PASS;
+- acquired research evidence is SHA-bound when used;
 - no MEMREF or memory internal metadata in public artifacts;
 - persisted hardening PASS in `official_execution_preflight.json`;
 - the immutable handoff bundle retains the hardened preflight;
@@ -144,8 +162,10 @@ Do not import trading recommendations, target prices, autonomous portfolio decis
 
 The causal research skill produces evidence, explicit memory revalidation results, and candidate explanations. It does not make the final editorial decision and does not write the final narration.
 
+The Research Acquisition Bridge provides additional source material only. A successful Collector result is not itself a causal conclusion, and unavailable acquisition is not repaired by inference.
+
 The memory skill retrieves past context and promotes approved conclusions. It does not certify current truth and does not change 01–04.
 
-The research input manifest and dossier validator provide structural, lineage, path, and provenance safety. A passing validator does not prove that the market interpretation is correct.
+The research input manifest, optional supplement manifest, and dossier validators provide structural, lineage, path, and provenance safety. A passing validator does not prove that the market interpretation is correct.
 
 The final decision remains governed by 02, then converted by 01 and 03, then reviewed by 04.
