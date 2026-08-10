@@ -197,8 +197,12 @@ jobs:
 
       - name: Build Renderer 2.4 production package without compatibility copy hack
         run: |
-          if grep -R "cp contracts/financial_visual_compatibility_2_4.json contracts/financial_visual_compatibility.json" \
-            tests/real-day-2026-08-10 .github/workflows/h4-clean-real-day-2026-08-10.yml; then
+          hack="cp contracts/financial_visual_compatibility_2_4.json"
+          hack="$hack contracts/financial_visual_compatibility.json"
+          if grep -R -F "$hack" \
+            tests/real-day-2026-08-10 \
+            scripts/assemble_approved_daily_episode.py \
+            .github/workflows/h4-clean-real-day-2026-08-10.yml; then
             echo 'H4 must not depend on compatibility copy hack' >&2
             exit 1
           fi
@@ -265,12 +269,18 @@ jobs:
 
       - name: Assert no date-specific production corrector is invoked
         run: |
-          if grep -R "correct_2026_08_10_render.py\|build_2026_08_10_package.py" \
-            .github/workflows/h4-clean-real-day-2026-08-10.yml \
-            scripts/assemble_approved_daily_episode.py; then
-            echo 'H4 normal production path contains a date-specific corrector' >&2
-            exit 1
-          fi
+          corrector="correct_2026_08_10"
+          corrector="${corrector}_render.py"
+          builder="build_2026_08_10"
+          builder="${builder}_package.py"
+          for forbidden in "$corrector" "$builder"; do
+            if grep -R -F "$forbidden" \
+              .github/workflows/h4-clean-real-day-2026-08-10.yml \
+              scripts/assemble_approved_daily_episode.py; then
+              echo "H4 normal production path contains forbidden date-specific helper: $forbidden" >&2
+              exit 1
+            fi
+          done
 
       - name: Upload H4 clean regression artifacts
         if: always()
