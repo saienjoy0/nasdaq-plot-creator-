@@ -1,0 +1,54 @@
+{
+  "contractVersion": "1.0.0",
+  "episodeDate": "2026-08-10",
+  "requestSha256": "fc2b05931af2a8f24129459d0e1dbc86bfe46c62bb9622baf05d4db7c0b0b366",
+  "results": [
+    {
+      "outputPath": null,
+      "provider": "Longbridge",
+      "reason": "Longbridge CLI / plugin unavailable. SDK credentials not provided yet. Detail: Longbridge CLI intraday JSON root must be an array.",
+      "recordCount": 0,
+      "requestId": "RA-001",
+      "sha256": null,
+      "status": "unavailable"
+    },
+    {
+      "outputPath": null,
+      "provider": "Longbridge",
+      "reason": "Longbridge CLI / plugin unavailable. SDK credentials not provided yet. Detail: Longbridge CLI intraday JSON root must be an array.",
+      "recordCount": 0,
+      "requestId": "RA-002",
+      "sha256": null,
+      "status": "unavailable"
+    },
+    {
+      "outputPath": null,
+      "provider": "Longbridge",
+      "reason": "Longbridge CLI / plugin unavailable. SDK credentials not provided yet. Detail: Longbridge CLI intraday JSON root must be an array.",
+      "recordCount": 0,
+      "requestId": "RA-003",
+      "sha256": null,
+      "status": "unavailable"
+    },
+    {
+      "outputPath": null,
+      "provider": "Longbridge",
+      "reason": "Longbridge CLI / plugin unavailable. SDK credentials not provided yet. Detail: Longbridge CLI intraday JSON root must be an array.",
+      "recordCount": 0,
+      "requestId": "RA-004",
+      "sha256": null,
+      "status": "unavailable"
+    },
+    {
+      "outputPath": null,
+      "provider": "Raw Archive",
+      "reason": "HTTP 403",
+      "recordCount": 0,
+      "requestId": "RA-005",
+      "sha256": null,
+      "status": "unavailable"
+    }
+  ],
+  "status": "unavailable",
+  "wave": 1
+}
