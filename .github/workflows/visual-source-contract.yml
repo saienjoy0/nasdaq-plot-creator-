@@ -8,6 +8,7 @@ on:
       - "scripts/resolve_visual_sources.py"
       - "scripts/select_visual_sources.py"
       - "scripts/visual_source_projection.py"
+      - "scripts/visual_evidence_coverage.py"
       - "scripts/materialize_daily_episode.py"
       - "tests/visual-source/**"
       - ".github/workflows/visual-source-contract.yml"
@@ -36,6 +37,7 @@ jobs:
             scripts/visual_source_contract.py \
             scripts/resolve_visual_sources.py \
             scripts/select_visual_sources.py \
+            scripts/visual_evidence_coverage.py \
             scripts/visual_source_projection.py \
             scripts/materialize_daily_episode.py
       - name: Run Visual Source tests
