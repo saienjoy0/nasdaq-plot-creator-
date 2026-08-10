@@ -4,156 +4,173 @@ on:
   pull_request:
     paths:
       - ".github/workflows/real-day-research-acceptance-2026-08-10.yml"
+      - "scripts/acceptance/build_2026_08_10_package.py"
+      - "scripts/acceptance/materialize_2026_08_10_inputs.py"
+      - "acceptance-inputs/2026-08-10/**"
       - "daily-inputs/2026-08-10/**"
-      - "working/2026-08-10/memory_query_plan.json"
       - "research/2026-08-10/**"
+      - "working/2026-08-10/**"
+      - "episodes/2026-08-10/**"
+      - "render-specs/2026-08-10/**"
 
 permissions:
   contents: read
 
 jobs:
-  research-intake:
+  production:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 45
+    env:
+      DATE: 2026-08-10
+      RENDERER_COMMIT: 36440cbe84331d020d4fe808d5c2fcbcac20833c
+      RENDERER_CONTRACT_VERSION: 2.4.0
+      NASDAQ_CAFE_RENDERER_ROOT: ${{ github.workspace }}/.renderer
+      PLOT_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Checkout pinned renderer
+        uses: actions/checkout@v4
+        with:
+          repository: saienjoy0/saienjoy0-nasdaq-cafe-remotion
+          ref: ${{ env.RENDERER_COMMIT }}
+          path: .renderer
+          persist-credentials: false
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Install deterministic validation dependencies
-        run: python -m pip install --disable-pip-version-check jsonschema pytest
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: .renderer/package-lock.json
 
-      - name: Run editorial memory retrieval
+      - name: Install validation dependencies
         run: |
-          mkdir -p working/2026-08-10 research/2026-08-10
+          python -m pip install --disable-pip-version-check jsonschema pytest
+          npm ci --prefix .renderer
+
+      - name: Materialize SHA-bound 2026-08-10 authored inputs
+        run: python scripts/acceptance/materialize_2026_08_10_inputs.py
+
+      - name: Reproduce immutable research intake
+        run: |
           python scripts/editorial_memory_retrieval.py \
-            --query-plan working/2026-08-10/memory_query_plan.json \
-            --context-output working/2026-08-10/memory_context_2026-08-10.md \
-            --report-output working/2026-08-10/memory_retrieval_report_2026-08-10.json
-
-      - name: Freeze research input manifest
-        run: |
+            --query-plan working/$DATE/memory_query_plan.json \
+            --context-output working/$DATE/memory_context_$DATE.md \
+            --report-output working/$DATE/memory_retrieval_report_$DATE.json
           python scripts/build_research_input_manifest.py \
-            --episode-date 2026-08-10 \
+            --episode-date $DATE \
             --market-date 2026-08-07 \
             --timezone Asia/Tokyo \
-            --information-cutoff 2026-08-10T12:15:00+09:00 \
-            --daily-source-package daily-inputs/2026-08-10/daily_source_package_2026-08-10.md \
-            --memory-query-plan working/2026-08-10/memory_query_plan.json \
-            --memory-context working/2026-08-10/memory_context_2026-08-10.md \
-            --memory-retrieval-report working/2026-08-10/memory_retrieval_report_2026-08-10.json \
-            --output research/2026-08-10/research_input_manifest.json \
+            --information-cutoff 2026-08-10T12:52:00+09:00 \
+            --daily-source-package daily-inputs/$DATE/daily_source_package_$DATE.md \
+            --memory-query-plan working/$DATE/memory_query_plan.json \
+            --memory-context working/$DATE/memory_context_$DATE.md \
+            --memory-retrieval-report working/$DATE/memory_retrieval_report_$DATE.json \
+            --output research/$DATE/research_input_manifest.json \
             --repo-root "$GITHUB_WORKSPACE"
-
-      - name: Record intake acceptance
-        run: |
           python - <<'PY'
-          import hashlib, json
+          import hashlib
           from pathlib import Path
-          manifest = Path('research/2026-08-10/research_input_manifest.json')
-          value = json.loads(manifest.read_text(encoding='utf-8'))
-          if value['validation']['status'] != 'pass':
-              raise SystemExit('research input manifest did not pass')
-          digest = hashlib.sha256(manifest.read_bytes()).hexdigest()
-          expected = '76fd1cbfeb90597e5d26121b9769a5730c46faca0ae74335ecf7404f2d6ecf14'
-          if digest != expected:
-              raise SystemExit(f'base manifest SHA changed: {digest} != {expected}')
-          Path('working/2026-08-10/base_manifest_sha.txt').write_text(digest + '\n', encoding='utf-8')
-          report = {
-              'status': 'pass',
-              'episodeDate': '2026-08-10',
-              'marketDateUsed': '2026-08-07',
-              'collectorDeclaredMarketDate': '2026-08-09',
-              'collectorMarketDateIssue': 'detected-sunday-mismatch',
-              'researchInputManifestSha256': digest,
-          }
-          Path('working/2026-08-10/research_intake_acceptance.json').write_text(
-              json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + '\n',
-              encoding='utf-8'
-          )
-          print(json.dumps(report, indent=2))
+          p=Path('research/2026-08-10/research_input_manifest.json')
+          actual=hashlib.sha256(p.read_bytes()).hexdigest()
+          expected='76fd1cbfeb90597e5d26121b9769a5730c46faca0ae74335ecf7404f2d6ecf14'
+          if actual != expected: raise SystemExit(f'research manifest drift: {actual}')
+          print('PASS research manifest', actual)
           PY
 
-      - name: Validate canonical wave 1 bytes
+      - name: Validate both acquisition waves and causal dossier
         run: |
-          python - <<'PY'
-          import hashlib, json
-          from pathlib import Path
+          mkdir -p verification/$DATE
+          python scripts/research_evidence_supplement.py validate research/$DATE/research_evidence_supplement_manifest.json
+          python skills/nasdaq-cafe-causal-research/validators/validate_causal_research_with_supplement.py \
+            research/$DATE/causal_research_dossier_$DATE.json \
+            --research-input-manifest research/$DATE/research_input_manifest.json \
+            --memory-retrieval-report working/$DATE/memory_retrieval_report_$DATE.json \
+            --research-evidence-supplement-manifest research/$DATE/research_evidence_supplement_manifest.json \
+            --repo-root "$GITHUB_WORKSPACE" \
+            --json-output verification/$DATE/causal_dossier_validation.json
 
-          request = Path('research/2026-08-10/research_acquisition_request_w01.json')
-          result = Path('research/2026-08-10/research_acquisition_result_w01.json')
-          request_sha = hashlib.sha256(request.read_bytes()).hexdigest()
-          result_sha = hashlib.sha256(result.read_bytes()).hexdigest()
-          expected_request = 'fc2b05931af2a8f24129459d0e1dbc86bfe46c62bb9622baf05d4db7c0b0b366'
-          expected_result = 'b08f45d6692f379eb87962d6c8421b318a5f2818ca48c2a9ab1503e8d93b067e'
-          if request_sha != expected_request:
-              raise SystemExit(f'wave 1 request SHA mismatch: {request_sha}')
-          if result_sha != expected_result:
-              raise SystemExit(f'wave 1 result SHA mismatch: {result_sha}')
-          value = json.loads(result.read_text(encoding='utf-8'))
-          if value.get('status') != 'unavailable':
-              raise SystemExit('wave 1 is expected to preserve the real unavailable result')
-          if any(item.get('status') == 'success' for item in value.get('results', [])):
-              raise SystemExit('wave 1 unexpectedly contains successful evidence')
-          print('PASS canonical wave 1', request_sha, result_sha)
-          PY
-
-      - name: Append and validate wave 1 supplement lineage
+      - name: Initialize authoritative daily control plane
         run: |
-          python scripts/research_evidence_supplement.py append \
-            --manifest research/2026-08-10/research_evidence_supplement_manifest.json \
-            --episode-date 2026-08-10 \
-            --base-research-input-manifest research/2026-08-10/research_input_manifest.json \
-            --wave 1 \
-            --request research/2026-08-10/research_acquisition_request_w01.json \
-            --result research/2026-08-10/research_acquisition_result_w01.json \
-            --collector-run-id 31352456756
-          python scripts/research_evidence_supplement.py validate \
-            research/2026-08-10/research_evidence_supplement_manifest.json
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" init \
+            --episode-date $DATE \
+            --daily-source-package daily-inputs/$DATE/daily_source_package_$DATE.md \
+            --requested-scope preview \
+            --renderer-commit $RENDERER_COMMIT \
+            --renderer-contract-version $RENDERER_CONTRACT_VERSION
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" advance \
+            --episode-date $DATE --state research_inputs_bound \
+            --evidence research/$DATE/research_input_manifest.json research/$DATE/research_evidence_supplement_manifest.json
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" advance \
+            --episode-date $DATE --state causal_dossier_valid \
+            --evidence research/$DATE/causal_research_dossier_$DATE.json verification/$DATE/causal_dossier_validation.json
 
-      - name: Record wave 1 acceptance
+      - name: Materialize Story Engine, Visual Evidence, and final episode package
+        run: python scripts/acceptance/build_2026_08_10_package.py
+
+      - name: Advance Story Engine states
+        run: |
+          A=working/$DATE/story-engine/story_engine_acceptance.json
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" advance --episode-date $DATE --state story_plan_valid --evidence "$A" working/$DATE/story-engine/story_plan.json
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" advance --episode-date $DATE --state script_draft_ready --evidence "$A" working/$DATE/story-engine/story_script.json
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" advance --episode-date $DATE --state creative_review_passed --evidence "$A" working/$DATE/story-engine/creative_review.json
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" advance --episode-date $DATE --state episode_package_final --evidence "$A" episodes/$DATE/episode_package_$DATE.md
+
+      - name: Validate episode memory and resolve explicit no-image path
+        run: |
+          python skills/nasdaq-cafe-episode-package-memory/validators/validate_episode_package_memory_hardening.py \
+            --repo-root "$GITHUB_WORKSPACE" \
+            --episode-package episodes/$DATE/episode_package_$DATE.md \
+            --output verification/$DATE/episode_memory_validation.json
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" advance \
+            --episode-date $DATE --state memory_usage_valid \
+            --evidence verification/$DATE/episode_memory_validation.json
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" advance \
+            --episode-date $DATE --state assets_resolved \
+            --evidence working/$DATE/visual_source_intents.json verification/$DATE/asset_resolution_log.json verification/$DATE/image_generation_log.json
+
+      - name: Build formally validated production package
+        run: |
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" build-production \
+            --episode-date $DATE --episode-package episodes/$DATE/episode_package_$DATE.md
+
+      - name: Build immutable renderer handoff
+        run: |
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" build-handoff \
+            --episode-date $DATE --bundle-root handoff-bundles --plot-commit "$PLOT_HEAD_SHA" | tee verification/$DATE/handoff_build.json
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" status --episode-date $DATE | tee verification/$DATE/control_plane_status.json
+
+      - name: Verify no stale 2026-08-06 editorial tokens remain
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
-          supplement = json.loads(Path('research/2026-08-10/research_evidence_supplement_manifest.json').read_text(encoding='utf-8'))
-          if len(supplement.get('waves', [])) != 1:
-              raise SystemExit('expected exactly one recorded wave')
-          wave = supplement['waves'][0]
-          if wave.get('wave') != 1 or wave.get('evidenceFiles') != []:
-              raise SystemExit('unavailable wave must be recorded with zero evidence files')
-          report = {
-              'status': 'pass',
-              'wave': 1,
-              'collectorRunId': 31352456756,
-              'acquisitionStatus': 'unavailable',
-              'evidenceFileCount': 0,
-              'lineageValidated': True,
-              'nextAction': 'collector parser fix must merge before a live wave 2 retry on main',
-          }
-          Path('working/2026-08-10/wave1_lineage_acceptance.json').write_text(
-              json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + '\n',
-              encoding='utf-8'
-          )
-          print(json.dumps(report, indent=2))
+          paths=[Path('episodes/2026-08-10/episode_package_2026-08-10.md'),Path('render-specs/2026-08-10/render_spec.json')]
+          forbidden=['SpaceX','Vera Rubin','115.4億ドル','125.2億ドル','130億ドル','AMD -7.04%','NASDAQ -0.83%','SOXX -2.12%','Alphabet -4.03%']
+          for p in paths:
+            text=p.read_text(encoding='utf-8')
+            hits=[x for x in forbidden if x in text]
+            if hits: raise SystemExit(f'{p}: stale tokens {hits}')
+          spec=json.loads(paths[1].read_text(encoding='utf-8'))
+          if spec['episode']['targetDate']!='2026-08-10': raise SystemExit('targetDate drift')
+          if len(spec['scenes'])!=9: raise SystemExit('scene count drift')
+          print('PASS stale-token and date checks')
           PY
 
-      - name: Upload research intake artifact
+      - name: Upload validated production package
         uses: actions/upload-artifact@v4
         with:
-          name: nasdaq-cafe-research-intake-2026-08-10
+          name: nasdaq-cafe-production-2026-08-10
           path: |
-            daily-inputs/2026-08-10/daily_source_package_2026-08-10.md
-            working/2026-08-10/memory_query_plan.json
-            working/2026-08-10/memory_context_2026-08-10.md
-            working/2026-08-10/memory_retrieval_report_2026-08-10.json
-            working/2026-08-10/base_manifest_sha.txt
-            working/2026-08-10/research_intake_acceptance.json
-            working/2026-08-10/wave1_lineage_acceptance.json
-            research/2026-08-10/research_input_manifest.json
-            research/2026-08-10/research_acquisition_request_w01.json
-            research/2026-08-10/research_acquisition_result_w01.json
-            research/2026-08-10/research_evidence_supplement_manifest.json
+            episodes/2026-08-10/
+            render-specs/2026-08-10/
+            working/2026-08-10/
+            research/2026-08-10/
+            verification/2026-08-10/
+            handoff-bundles/2026-08-10/
           if-no-files-found: error
+          retention-days: 14
