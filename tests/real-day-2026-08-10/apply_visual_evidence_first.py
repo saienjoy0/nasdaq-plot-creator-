@@ -224,15 +224,14 @@ def apply(root: Path) -> dict[str, Any]:
     receipt = load(receipt_path)
     scenes = scene_map(render)
 
-    # Visual variety that carries no new factual claim.
     replace_scene_background(scenes[4], "background_scene_fed")
     replace_scene_background(scenes[6], "background_scene_semiconductor")
-
-    # Actual measured reaction, not a card paraphrase.
     patch_verified_series(scenes[8], receipt)
 
     scene2_beat = beat_id(scenes[2]["visualBeats"][0])
-    scene6_beat = beat_id(scenes[6]["visualBeats"][0])
+    # The second Scene 6 Beat already cites source-004 in the approved authoring;
+    # attach the IR screenshot there rather than inventing a new evidence binding.
+    scene6_beat = beat_id(scenes[6]["visualBeats"][1])
     intents = {
         "contractVersion": "1.0.0",
         "episodeDate": DATE,
@@ -267,7 +266,7 @@ def apply(root: Path) -> dict[str, Any]:
                 scene_id="scene-06",
                 target_beat_id=scene6_beat,
                 source_id="source-004",
-                purpose="Show the actual Microchip Q1 FY27 IR release while the approved narration states its results and guidance.",
+                purpose="Show the actual Microchip Q1 FY27 IR release before the approved semiconductor close comparison.",
                 primary=visual_candidate(
                     candidate_id="vsp-20260810-microchip-primary",
                     asset_id="daily-microchip-q1-fy27-ir",
