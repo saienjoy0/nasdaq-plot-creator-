@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Finalize mixed Scene 2/3 Renderer authoring for the frozen H4 fixture.
+"""Finalize mixed Scene 2/3/7 Renderer authoring for the frozen H4 fixture.
 
 TEST ONLY. Scene 2 Beat 2 compares a payroll revision (people) with NASDAQ return
 (percent), so it must stay a card-based evidence boundary rather than a shared-axis
 numeric matrix. Scene 3 intentionally uses Expected/Actual/Gap on Beat 1 and a numeric
 comparison on Beat 2; once Beat 2 is bound to stable number objects, its legacy source
 card must not survive because an expected-actual-gap scene must contain exactly the
-three projected role cards.
+three projected role cards. Scene 7 Beat 2 is a one-card synthesis/bridge, so it must
+remain a text-focus Beat rather than claiming a numeric matrix that has no number data.
 """
 
 from __future__ import annotations
@@ -22,6 +23,7 @@ DATE = "2026-08-10"
 SCENE2_CARD_ID = "scene-02-card-002"
 SCENE3_CARD_ID = "scene-03-card-002"
 SCENE3_NUMBER_IDS = ["scene-03-number-compare-001", "scene-03-number-compare-002"]
+SCENE7_CARD_ID = "scene-07-card-002"
 
 
 class Scene3AuthoringError(ValueError):
@@ -84,7 +86,6 @@ def _sync_scene2(render: dict[str, Any], bindings: dict[str, Any]) -> dict[str, 
             "Scene 2 Beat 2 no longer represents the mixed-unit payroll/NASDAQ comparison"
         )
 
-    # The renderer-native representation is a card boundary, not numeric axes.
     beat2["objectIds"] = [SCENE2_CARD_ID]
     for field, value in {
         "contentType": "text-focus",
@@ -118,7 +119,6 @@ def _sync_scene2(render: dict[str, Any], bindings: dict[str, Any]) -> dict[str, 
         }
     )
 
-    # Remove any stale test-only numeric materialization from prior fixture revisions.
     stale_number_ids = {"scene-02-number-compare-001", "scene-02-number-compare-002"}
     numbers = scene.get("numbers")
     if not isinstance(numbers, list):
@@ -249,6 +249,82 @@ def _sync_scene3(render: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _sync_scene7(render: dict[str, Any], bindings: dict[str, Any]) -> dict[str, Any]:
+    scene = render["scenes"][6]
+    if scene.get("sceneId") != "scene-07":
+        raise Scene3AuthoringError("Scene 7 identity drift")
+
+    beats = scene.get("visualBeats")
+    if not isinstance(beats, list):
+        raise Scene3AuthoringError("Scene 7 visualBeats missing")
+    beat2 = next(
+        (
+            item
+            for item in beats
+            if isinstance(item, dict)
+            and item.get("beatId") in {"vb-07-02", "scene-07-beat-002"}
+        ),
+        None,
+    )
+    if beat2 is None:
+        raise Scene3AuthoringError("Scene 7 Beat 2 missing")
+    if beat2.get("objectIds") != [SCENE7_CARD_ID]:
+        raise Scene3AuthoringError("Scene 7 Beat 2 card binding drift")
+
+    cards = {
+        item.get("cardId"): item
+        for item in scene.get("cards", [])
+        if isinstance(item, dict) and isinstance(item.get("cardId"), str)
+    }
+    card = cards.get(SCENE7_CARD_ID)
+    if not isinstance(card, dict):
+        raise Scene3AuthoringError("Scene 7 synthesis card missing")
+    values = [
+        line.get("value")
+        for line in card.get("lines", [])
+        if isinstance(line, dict) and isinstance(line.get("value"), str)
+    ]
+    expected_values = ["広い金利追い風", "個別材料で差", "Microsoft +0.03%"]
+    if values[:3] != expected_values:
+        raise Scene3AuthoringError(f"Scene 7 synthesis card text drift: {values[:3]}")
+
+    beat2["contentType"] = "text-focus"
+    beat2["visualMode"] = "text-focus"
+    beat2["visualTemplate"] = "text-focus"
+    beat2["templateVariant"] = "default"
+    config = beat2.get("templateConfig")
+    if not isinstance(config, dict):
+        raise Scene3AuthoringError("Scene 7 Beat 2 templateConfig missing")
+    config["variant"] = "default"
+    grammar = beat2.get("visualGrammar")
+    if not isinstance(grammar, dict):
+        raise Scene3AuthoringError("Scene 7 Beat 2 visualGrammar missing")
+    grammar["grammarId"] = "bridge-text"
+    grammar["transitionRole"] = "continuation"
+
+    overrides = bindings.get("beat_overrides")
+    if not isinstance(overrides, dict):
+        raise Scene3AuthoringError("story production beat_overrides must be an object")
+    override = overrides.setdefault("scene-07-beat-002", {})
+    override.update(
+        {
+            "contentType": "text-focus",
+            "visualMode": "text-focus",
+            "visualTemplate": "text-focus",
+            "templateVariant": "default",
+            "visualGrammarId": "bridge-text",
+            "transitionRole": "continuation",
+        }
+    )
+
+    return {
+        "beat_2_object_ids": beat2["objectIds"],
+        "visual_template": beat2["visualTemplate"],
+        "visual_grammar_id": grammar["grammarId"],
+        "visible_values": values[:3],
+    }
+
+
 def sync(*, repo_root: Path) -> dict[str, Any]:
     root = repo_root.resolve()
     render_path = root / f"render-specs/{DATE}/render_spec.json"
@@ -266,6 +342,7 @@ def sync(*, repo_root: Path) -> dict[str, Any]:
 
     scene2_result = _sync_scene2(render, bindings)
     scene3_result = _sync_scene3(render)
+    scene7_result = _sync_scene7(render, bindings)
     render_digest = write_json(render_path, render)
     bindings_digest = write_json(bindings_path, bindings)
     return {
@@ -275,6 +352,7 @@ def sync(*, repo_root: Path) -> dict[str, Any]:
         "story_production_bindings_sha256": bindings_digest,
         "scene_2": scene2_result,
         "scene_3": scene3_result,
+        "scene_7": scene7_result,
     }
 
 
