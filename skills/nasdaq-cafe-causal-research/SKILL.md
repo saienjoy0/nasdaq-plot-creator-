@@ -1,7 +1,7 @@
 ---
 name: nasdaq-cafe-causal-research
-description: Build an evidence-grounded causal research dossier from a daily NASDAQ source package before editorial selection and script writing.
-version: 0.2.0
+description: Build an evidence-grounded causal research dossier from a daily NASDAQ source package before editorial selection and script writing, with bounded targeted acquisition when material evidence is missing.
+version: 0.3.0
 ---
 
 # NASDAQ Cafe Causal Research
@@ -21,6 +21,7 @@ This skill does **not**:
 - overwrite 01–04
 - treat remembered claims as current evidence
 - allow memory retrieval to decide market causality
+- allow the Collector to choose a lead, causal explanation, Expected value, or comparison set
 
 ## Inputs
 
@@ -42,10 +43,13 @@ Optional:
 - historical source packages
 - entity/relation index
 - minute or intraday data
+- `research/YYYY-MM-DD/research_evidence_supplement_manifest.json` when targeted acquisition is used
 
 Missing inputs must not be invented. Record them as missing or unknown.
 
 The research input manifest must bind the daily package, query plan, memory context, and retrieval report to the same episode date and their SHA-256 values. The builder and dossier validator both replay deterministic retrieval and compare the generated Context and Report byte-for-byte. Do not proceed with a mismatched, stale, external, or path-traversing input.
+
+The original research input manifest is immutable for the production attempt. Targeted follow-up evidence must never rewrite or silently replace it. Additional evidence is append-only and must be bound through `research_evidence_supplement_manifest.json` before it is treated as current evidence.
 
 ## Outputs
 
@@ -55,6 +59,13 @@ Required:
 - `research/causal_research_dossier_YYYY-MM-DD.json`
 - memory revalidation results for every selected non-core memory
 - validator result
+
+Conditional when targeted acquisition is used:
+
+- `research/YYYY-MM-DD/research_acquisition_request_w01.json`
+- optional `research/YYYY-MM-DD/research_acquisition_request_w02.json`
+- matching Collector result artifacts
+- `research/YYYY-MM-DD/research_evidence_supplement_manifest.json`
 
 The dossier is an editorial research artifact, not public narration.
 
@@ -158,6 +169,107 @@ Recommended research roles:
 
 Researchers return evidence items and memory revalidation findings, not polished narrative.
 
+### Stage 3.5 — Research Acquisition Bridge
+
+Use targeted acquisition only when the existing research has identified a **material evidence gap** that prevents or materially weakens a required check.
+
+Valid reasons include:
+
+- event/price timing is too coarse to test chronology;
+- the relevant company or comparator is outside the broad fixed market list;
+- the strongest alternative hypothesis requires a related-stock/index comparison;
+- the original official/reported source has been identified by exact URL but is not yet in the Raw Archive;
+- direct company evidence needed for Expected / Actual / Gap is missing;
+- counterevidence cannot be tested without a bounded additional market series.
+
+Do **not** request follow-up collection merely because:
+
+- more information would be interesting;
+- the episode needs more visuals;
+- another copy of the same claim exists;
+- the provisional lead needs rhetorical reinforcement;
+- a social screenshot or image would make the video more varied.
+
+The Research Author decides the exact requests. The Collector executes them mechanically and may not choose the lead, causal hypothesis, Expected / Actual / Gap, related entities, or causal scope.
+
+#### Supported v1 request classes
+
+```text
+market_intraday
+market_quote
+exact_url_archive
+```
+
+For market requests, the author may specify fixed-list or fixed-list-external US symbols such as `PLTR.US`, `MU.US`, `ARM.US`, `ORCL.US`, `QQQ.US`, or `SOXX.US` when relevant. Dynamic symbol choice remains an editorial research decision, not a Collector inference.
+
+#### Wave policy
+
+Normal case:
+
+```text
+wave 1
+```
+
+A second wave is allowed only when wave-1 evidence materially changes the research direction or exposes a new necessary test.
+
+Hard limit:
+
+```text
+maximum 2 waves
+```
+
+A third wave is forbidden. After wave 2, unresolved evidence remains `unresolved`, `reason_unknown`, `intraday_unavailable`, or Expected remains `unconfirmed` as appropriate.
+
+#### Lineage policy
+
+The base `research_input_manifest.json` is never modified to absorb acquired evidence.
+
+Each successful acquired evidence file that enters the dossier must be copied into the Plot workspace and bound through:
+
+```text
+research/YYYY-MM-DD/research_evidence_supplement_manifest.json
+```
+
+The supplement must bind:
+
+- exact base research input manifest path/SHA;
+- wave number;
+- acquisition request path/SHA;
+- Collector result path/SHA;
+- Collector run ID when known;
+- every successful copied evidence file path/SHA;
+- request ID → evidence file mapping.
+
+Use:
+
+```text
+python scripts/research_evidence_supplement.py append ...
+python scripts/research_evidence_supplement.py validate ...
+```
+
+before acquired evidence is registered as an `E-###` dossier item.
+
+A stale, tampered, path-escaping, unbound, duplicate-wave, wave-3, or request/result-mismatched supplement is invalid current evidence.
+
+#### Minute-data meaning boundary
+
+Verified minute data can establish or weaken **timing statements**, for example:
+
+```text
+the move started before the announcement
+the stock moved after the announcement
+the sector moved in the same interval
+```
+
+Minute data alone does not establish:
+
+```text
+this announcement caused the move
+this company event caused the NASDAQ move
+```
+
+Causal attribution still requires the full 02 checks, alternatives, related assets, and source evidence.
+
 ### Stage 4 — Evidence normalization
 
 Every material evidence item must record:
@@ -177,6 +289,8 @@ Every material evidence item must record:
 Unreadable pages and headline-only material cannot support final causal claims.
 
 Paths under `editorial-memory/`, memory IDs, memory-context files, and retrieval reports are not current evidence. They must never be assigned `E-###` merely to satisfy the contract.
+
+Acquired evidence is current evidence only when its exact bytes are declared by a valid research evidence supplement manifest. The Collector result or request by itself is provenance, not a substitute for the evidence file.
 
 Every Evidence ID referenced from research questions, Expected / Actual, timeline, causal edges, alternative hypotheses, contrary evidence, or memory revalidation must exist in the dossier.
 
@@ -284,6 +398,8 @@ Classify factors as:
 - offsetting factor
 - unresolved factor
 
+If Stage 8 reveals a genuinely new material evidence gap that could not have been known before wave 1, a second and final acquisition wave may be used. Otherwise do not reopen collection.
+
 ### Stage 9 — Research compression
 
 Compress specialist findings before editorial synthesis.
@@ -332,16 +448,17 @@ The editor must not copy a remembered claim into narration unless its revalidati
 Research can stop when all of the following are true:
 
 - the leading contradiction is explicit
-- the main causal path has evidence for every material edge
+- the main causal path has evidence for every material edge or the missing edge is explicitly unresolved
 - Expected is sourced or explicitly unconfirmed
 - event and price timing are checked to the available resolution
 - at least one credible alternative explanation has been tested
 - important contrary evidence is retained
 - the lead can be separated from a NASDAQ-wide cause when necessary
 - every selected non-core memory has a revalidation result
-- additional searches are returning mostly duplicate or non-causal information
+- any acquired evidence used by the dossier is supplement-manifest bound
+- additional searches are returning mostly duplicate or non-causal information, or the two-wave ceiling has been reached
 
-Do not stop simply because a predetermined number of links was collected.
+Do not stop simply because a predetermined number of links was collected. Do not continue simply because the Collector can fetch more data.
 
 ## Failure modes
 
@@ -353,13 +470,23 @@ Return an incomplete dossier rather than inventing content when:
 - related assets do not support the proposed transmission
 - multiple explanations remain equally plausible
 - a remembered claim cannot be revalidated with current evidence
-- input hashes, retrieval replay, or episode dates do not match
+- input hashes, retrieval replay, supplement lineage, or episode dates do not match
+- the two-wave acquisition ceiling is reached without resolving a material question
 
 `reason_unknown`, `unresolved`, and `not_used` are acceptable editorial outcomes.
 
 ## Validation
 
 Run the v0.2 dossier validator before handing off to 02.
+
+When targeted acquisition was used, also require a PASS from:
+
+```text
+python scripts/research_evidence_supplement.py validate \
+  research/YYYY-MM-DD/research_evidence_supplement_manifest.json
+```
+
+before any acquired file may appear as current dossier evidence.
 
 A dossier fails validation when it lacks or violates:
 
@@ -379,5 +506,6 @@ A dossier fails validation when it lacks or violates:
 - complete Evidence ID referential integrity
 - prohibition on memory-only Expected or NASDAQ-wide causal edges
 - prohibition on invalidated/resolved memory as a current premise
+- valid append-only supplement lineage for every acquired evidence file used by the dossier
 
-Passing validation means the research artifact is structurally complete and memory provenance is controlled. It does not prove that the market interpretation is true.
+Passing validation means the research artifact is structurally complete and memory/additional-evidence provenance is controlled. It does not prove that the market interpretation is true.
