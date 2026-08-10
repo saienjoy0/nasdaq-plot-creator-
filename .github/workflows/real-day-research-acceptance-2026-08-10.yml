@@ -55,31 +55,21 @@ jobs:
       - name: Materialize SHA-bound 2026-08-10 authored inputs
         run: python scripts/acceptance/materialize_2026_08_10_inputs.py
 
-      - name: Reproduce immutable research intake
+      - name: Verify frozen immutable research intake
         run: |
-          python scripts/editorial_memory_retrieval.py \
-            --query-plan working/$DATE/memory_query_plan.json \
-            --context-output working/$DATE/memory_context_$DATE.md \
-            --report-output working/$DATE/memory_retrieval_report_$DATE.json
-          python scripts/build_research_input_manifest.py \
-            --episode-date $DATE \
-            --market-date 2026-08-07 \
-            --timezone Asia/Tokyo \
-            --information-cutoff 2026-08-10T12:52:00+09:00 \
-            --daily-source-package daily-inputs/$DATE/daily_source_package_$DATE.md \
-            --memory-query-plan working/$DATE/memory_query_plan.json \
-            --memory-context working/$DATE/memory_context_$DATE.md \
-            --memory-retrieval-report working/$DATE/memory_retrieval_report_$DATE.json \
-            --output research/$DATE/research_input_manifest.json \
-            --repo-root "$GITHUB_WORKSPACE"
           python - <<'PY'
           import hashlib
           from pathlib import Path
-          p=Path('research/2026-08-10/research_input_manifest.json')
-          actual=hashlib.sha256(p.read_bytes()).hexdigest()
-          expected='76fd1cbfeb90597e5d26121b9769a5730c46faca0ae74335ecf7404f2d6ecf14'
-          if actual != expected: raise SystemExit(f'research manifest drift: {actual}')
-          print('PASS research manifest', actual)
+          expected={
+            'research/2026-08-10/research_input_manifest.json':'76fd1cbfeb90597e5d26121b9769a5730c46faca0ae74335ecf7404f2d6ecf14',
+            'working/2026-08-10/memory_query_plan.json':'3810722311d8ba2d7dddcda16425c0fdc8058b8690ea7984cf65d011007c5010',
+            'working/2026-08-10/memory_context_2026-08-10.md':'2baa55abf833d436244e09370a7e95e8c1c3065952474cab9309aaf6e5b3298a',
+            'working/2026-08-10/memory_retrieval_report_2026-08-10.json':'0be51bc4231dfd6705f8ead53dda904bee6a1ea3b03373e0d046a70b377ab744',
+          }
+          for name,want in expected.items():
+            p=Path(name); got=hashlib.sha256(p.read_bytes()).hexdigest()
+            if got!=want: raise SystemExit(f'frozen intake drift {name}: {got} != {want}')
+            print('PASS',name,got)
           PY
 
       - name: Validate both acquisition waves and causal dossier
