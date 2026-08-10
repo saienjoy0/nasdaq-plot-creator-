@@ -97,7 +97,7 @@ def _integrate_financial_visuals(
             ),
             diversity_report_path=None,
             compatibility_matrix_path=(
-                output_root / "contracts/financial_visual_compatibility.json"
+                output_root / "contracts/financial_visual_compatibility_2_4.json"
             ),
         )
     finally:
