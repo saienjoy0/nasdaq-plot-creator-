@@ -167,14 +167,31 @@ def _materialize_expected_actual_gap(
                 ],
             }
         )
-    old_card_ids = set(cards)
+
+    # Only the cards explicitly consumed by this Expected/Actual/Gap Beat are
+    # projection inputs. Other cards may belong to later Beats in the same Scene and
+    # must remain addressable. Replacing the entire Scene card collection caused
+    # valid follow-up Beat objectIds and show events to become dangling references.
+    removed_card_ids = set(referenced_ids)
     primary_old_card_id = referenced_ids[0]
-    scene["cards"] = generated_cards
+    projected_cards: list[dict[str, Any]] = []
+    inserted = False
+    for item in scene.get("cards", []):
+        card_id = item.get("cardId") if isinstance(item, dict) else None
+        if card_id in removed_card_ids:
+            if not inserted:
+                projected_cards.extend(generated_cards)
+                inserted = True
+            continue
+        projected_cards.append(item)
+    if not inserted:
+        projected_cards.extend(generated_cards)
+    scene["cards"] = projected_cards
     beat["objectIds"] = generated_ids
     _rewrite_expected_gap_events(
         scene,
         primary_old_card_id=primary_old_card_id,
-        removed_card_ids=old_card_ids,
+        removed_card_ids=removed_card_ids,
         generated_ids=generated_ids,
         used_event_ids=used_event_ids,
     )
