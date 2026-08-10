@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import base64, hashlib, io, zipfile
+import base64, hashlib, io, json, zipfile
 from pathlib import Path
 PAYLOAD_SHA256='b1d9ed94c50843c3b75c6d35e2d25f177a5669c9768e52afd6ef68706badab5d'
+CORRECTED_SUPPLEMENT_SHA256='151f5e124cdd7fda2b17e909387b63ce7b4465f4b7dddbbc205dbd98af5d7270'
 PART_SHA256={
  'part-01.b64':'509e05dc694585aaabc12675228074009ca7791d7b76281c118d20fe396c9a75',
  'part-02.b64':'377a99ae4888f2cb10dba3f075781817015c34a4d3ce216d06ce9f543c6e46cb',
@@ -29,6 +30,30 @@ def canonical_part_bytes(path:Path)->bytes:
         raise SystemExit(f'part-08 canonical repair failed: {repaired_sha}')
     return repaired_raw
 
+def correct_supplement(root:Path)->None:
+    path=root/'research/2026-08-10/research_evidence_supplement_manifest.json'
+    doc=json.loads(path.read_text(encoding='utf-8'))
+    waves=doc.get('waves')
+    if not isinstance(waves,list) or len(waves)!=2 or waves[1].get('wave')!=2:
+        raise SystemExit('unexpected wave-2 supplement shape')
+    files=waves[1].get('evidenceFiles')
+    if not isinstance(files,list) or len(files)!=1:
+        raise SystemExit('unexpected wave-2 evidenceFiles shape')
+    item=files[0]
+    if item.get('path')!='research/2026-08-10/evidence/RA-W2-005_exact_url_archive.json':
+        raise SystemExit('unexpected wave-2 evidence path')
+    if item.get('sha256')!='53d8d5717cff293a652c3fcba0145a98ded7de21a87ed3db546d933b7819bc06':
+        raise SystemExit('unexpected wave-2 evidence SHA')
+    if item.get('requestId') not in (None,'RA-W2-005'):
+        raise SystemExit('unexpected wave-2 requestId before correction')
+    item['requestId']='RA-W2-005'
+    text=json.dumps(doc,ensure_ascii=False,indent=2,sort_keys=True)+'\n'
+    actual=hashlib.sha256(text.encode('utf-8')).hexdigest()
+    if actual!=CORRECTED_SUPPLEMENT_SHA256:
+        raise SystemExit(f'corrected supplement SHA mismatch: {actual}')
+    path.write_text(text,encoding='utf-8')
+    print(f'PASS corrected supplement {actual}')
+
 def main():
     root=Path.cwd().resolve()
     parts=sorted((root/'acceptance-inputs/2026-08-10').glob('part-*.b64'))
@@ -52,5 +77,6 @@ def main():
             if target == root or root not in target.parents: raise SystemExit(f'unsafe payload path: {info.filename}')
             target.parent.mkdir(parents=True,exist_ok=True)
             target.write_bytes(z.read(info.filename))
+    correct_supplement(root)
     print(f'PASS materialized {len(infos)} acceptance inputs payload={PAYLOAD_SHA256}')
 if __name__=='__main__': main()
