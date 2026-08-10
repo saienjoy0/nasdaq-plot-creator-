@@ -36,16 +36,29 @@ def base_render(source: dict, beat: dict | None = None) -> dict:
     }
 
 
-def test_official_source_requires_visual_source_intent() -> None:
-    module = load_module()
-    render = base_render({
+def official_source() -> dict:
+    return {
         "sourceId": "source-002",
         "sourceType": "official",
         "title": "Employment Situation",
         "publisher": "BLS",
         "reference": "https://www.bls.gov/news.release/empsit.nr0.htm",
         "usedFor": ["employment actual"],
-    })
+    }
+
+
+def real_source_intent() -> dict:
+    return {
+        "intentId": "vsi-001",
+        "presentationClass": "source-document",
+        "sourceIds": ["source-002"],
+        "primary": {"sourceKind": "official-url"},
+    }
+
+
+def test_official_source_requires_visual_source_intent() -> None:
+    module = load_module()
+    render = base_render(official_source())
     try:
         module.validate_visual_evidence_coverage(render=render, intents=[])
     except module.VisualEvidenceCoverageError as exc:
@@ -55,19 +68,24 @@ def test_official_source_requires_visual_source_intent() -> None:
         raise AssertionError("official source evidence must not silently become not-required")
 
 
-def test_official_source_is_covered_by_existing_intent_contract() -> None:
+def test_existing_asset_primary_does_not_count_as_real_source_coverage() -> None:
     module = load_module()
-    render = base_render({
-        "sourceId": "source-002",
-        "sourceType": "official",
-        "title": "Employment Situation",
-        "publisher": "BLS",
-        "reference": "https://www.bls.gov/news.release/empsit.nr0.htm",
-        "usedFor": ["employment actual"],
-    })
+    render = base_render(official_source())
+    intent = real_source_intent()
+    intent["primary"] = {"sourceKind": "existing-asset"}
+    try:
+        module.validate_visual_evidence_coverage(render=render, intents=[intent])
+    except module.VisualEvidenceCoverageError as exc:
+        assert "E_VISUAL_SOURCE_DOCUMENT_UNCOVERED" in str(exc)
+    else:
+        raise AssertionError("an existing card must not masquerade as original source evidence")
+
+
+def test_official_source_is_covered_by_real_source_primary() -> None:
+    module = load_module()
     module.validate_visual_evidence_coverage(
-        render=render,
-        intents=[{"intentId": "vsi-001", "sourceIds": ["source-002"]}],
+        render=base_render(official_source()),
+        intents=[real_source_intent()],
     )
 
 
@@ -92,14 +110,7 @@ def test_day_specific_company_evidence_requires_visual_source_intent() -> None:
 
 def test_non_evidence_beat_does_not_create_a_source_quota() -> None:
     module = load_module()
-    source = {
-        "sourceId": "source-002",
-        "sourceType": "official",
-        "title": "Employment Situation",
-        "publisher": "BLS",
-        "reference": "https://www.bls.gov/news.release/empsit.nr0.htm",
-        "usedFor": ["context"],
-    }
+    source = official_source()
     beat = {
         "beatId": "vb-02-01",
         "primaryFunction": "Explain",
@@ -172,14 +183,7 @@ def test_verified_intraday_existing_series_visual_is_enough() -> None:
 
 def test_closing_only_source_references_do_not_force_visuals() -> None:
     module = load_module()
-    source = {
-        "sourceId": "source-002",
-        "sourceType": "official",
-        "title": "Employment Situation",
-        "publisher": "BLS",
-        "reference": "https://www.bls.gov/news.release/empsit.nr0.htm",
-        "usedFor": ["recap only"],
-    }
+    source = official_source()
     render = {
         "sources": [source],
         "scenes": [{
