@@ -1,0 +1,2 @@
+H4 fixture refresh after verified successful Collector wave 2 overlay.
+This marker has no production semantics and exists only to trigger the acceptance lab workflow.
