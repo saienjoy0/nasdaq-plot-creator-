@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
 """Backward-compatible alias for the authoritative hardened Daily Production entrypoint.
 
-Unified Story Engine v1.1 gating is now integrated directly into
+Unified Story Engine v1.1 gating is integrated directly into
 ``run_daily_production_hardened.py``. This file remains only for callers that still use
 the historical v1.1 entrypoint name; it must not install a second state-machine layer.
+
+The authoritative gate validates Story Engine acceptance with
+``require_production=True`` and ``allow_uncertified_production=True``. Those policy
+choices live in the hardened entrypoint; they are documented here so legacy tooling
+that audits the historical alias can verify that the optional external-Critic policy did
+not silently change.
 """
 from __future__ import annotations
 
