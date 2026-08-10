@@ -107,8 +107,13 @@ def _use_mixed_metric_template(
         raise TemplateDataError(
             f"{beat.get('beatId')}: numeric templateConfig missing"
         )
+    normalized_labels = [item.strip() for item in lane_labels]
     config["variant"] = "two-lane"
-    config["laneLabels"] = [item.strip() for item in lane_labels]
+    config["laneLabels"] = normalized_labels
+    beat["viewerTexts"] = [
+        f"{label}｜{number['value']}"
+        for label, number in zip(normalized_labels, numbers, strict=True)
+    ]
 
 
 def _materialize_numeric_template(scene: dict[str, Any], beat: dict[str, Any]) -> None:
