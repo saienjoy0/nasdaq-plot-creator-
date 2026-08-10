@@ -8,6 +8,10 @@ both candidates, validates an explicit selection, and freezes the selected
 asset projection. The later daily materializer rechecks the Final Contract SHA
 before consuming the selected projection, so any Story/contract drift fails
 closed.
+
+Visual Evidence Planning is explicit. A missing intent document means the
+planning step was skipped and is a production error. An existing intent
+document with an empty ``intents`` array is the only valid not-required state.
 """
 
 from __future__ import annotations
@@ -42,17 +46,63 @@ def main(argv: list[str] | None = None) -> int:
     selection_path = work / "visual_source_selection.json"
 
     if not intents_path.is_file():
-        print(json.dumps({
-            "status": "not-required",
-            "episodeDate": date,
-            "reason": "visual_source_intents.json is absent",
-        }, ensure_ascii=False, indent=2))
+        print(
+            json.dumps(
+                {
+                    "status": "FAIL",
+                    "errors": [
+                        "E_VISUAL_SOURCE_PLANNING_MISSING: visual_source_intents.json is required even when no Visual Source is needed"
+                    ],
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+            file=sys.stderr,
+        )
+        return 2
+
+    try:
+        visual_sources = visual_source_contract.load_intent_document(intents_path, date)
+    except (OSError, json.JSONDecodeError, visual_source_contract.VisualSourceContractError) as exc:
+        print(
+            json.dumps(
+                {"status": "FAIL", "errors": str(exc).splitlines()},
+                ensure_ascii=False,
+                indent=2,
+            ),
+            file=sys.stderr,
+        )
+        return 2
+
+    if not visual_sources["intents"]:
+        print(
+            json.dumps(
+                {
+                    "status": "not-required",
+                    "episodeDate": date,
+                    "reason": "visual evidence planning explicitly completed with zero intents",
+                    "intentDocument": str(intents_path),
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
         return 0
+
     if not selection_path.is_file():
-        print(json.dumps({
-            "status": "FAIL",
-            "errors": ["E_VISUAL_SOURCE_SELECTED_PATH_INVALID: visual_source_selection.json is required"],
-        }, ensure_ascii=False, indent=2), file=sys.stderr)
+        print(
+            json.dumps(
+                {
+                    "status": "FAIL",
+                    "errors": [
+                        "E_VISUAL_SOURCE_SELECTED_PATH_INVALID: visual_source_selection.json is required for non-empty Visual Source intents"
+                    ],
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+            file=sys.stderr,
+        )
         return 2
 
     try:
@@ -112,10 +162,14 @@ def main(argv: list[str] | None = None) -> int:
         resolve_visual_sources.VisualSourceResolutionError,
         select_visual_sources.VisualSourceSelectionError,
     ) as exc:
-        print(json.dumps({
-            "status": "FAIL",
-            "errors": str(exc).splitlines(),
-        }, ensure_ascii=False, indent=2), file=sys.stderr)
+        print(
+            json.dumps(
+                {"status": "FAIL", "errors": str(exc).splitlines()},
+                ensure_ascii=False,
+                indent=2,
+            ),
+            file=sys.stderr,
+        )
         return 2
 
 
