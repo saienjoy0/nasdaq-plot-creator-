@@ -2,7 +2,7 @@
 from __future__ import annotations
 import hashlib, json
 from pathlib import Path
-EXPECTED_SHA256='30296d444ed8919396c4e473001a6cdc8f7ee0e7fe74f68f779a470382aba0e1'
+EXPECTED_SHA256='f3ddc935f98ced45aea63709247834c021a1da55ec11b87ad2d64fa2162568ad'
 
 def main()->int:
     path=Path('render-specs/2026-08-10/render_spec.json')
@@ -23,14 +23,13 @@ def main()->int:
         raise SystemExit('unexpected Scene 3 follow-up Beat shape')
     if scene3_followup.get('objectIds') not in (['scene-03-card-002'],[]):
         raise SystemExit(f'Scene 3 follow-up objectIds drift: {scene3_followup.get("objectIds")}')
-    # source-receipt is allowed to carry one existing evidence card; restore the
-    # already-authored card rather than inventing any new object or text.
     scene3_followup['objectIds']=['scene-03-card-002']
 
-    # Keep bridge-text bounded to the two genuine transitional Beats. Renderer
-    # 2.4 only allows bridge-text with text-focus, so the two analytical Beats
-    # must switch template and grammar together. Existing cards, narration,
-    # numbers, evidence ids, cues, and causal claims remain unchanged.
+    # Keep bridge-text bounded to the two genuine transitional Beats. The two
+    # analytical Beats switch template and grammar together using existing
+    # renderer templates that do not create a new Financial Visual binding.
+    # Existing cards, narration, numbers, evidence ids, cues, and causal claims
+    # remain unchanged.
     for scene in scenes:
         for beat in scene.get('visualBeats',[]):
             template=beat.get('visualTemplate')
@@ -42,8 +41,10 @@ def main()->int:
                     beat['templateConfig']['variant']='confirmed-vs-unconfirmed'
                     grammar['grammarId']='evidence'
                 elif beat_id=='scene-03-beat-002':
-                    beat['visualTemplate']='source-receipt'
+                    beat['visualTemplate']='news-media'
                     beat['templateConfig']['variant']='default'
+                    beat['screenState']='News'
+                    beat['visualMode']='news-media'
                     grammar['grammarId']='evidence'
                 else:
                     grammar['grammarId']='bridge-text'
