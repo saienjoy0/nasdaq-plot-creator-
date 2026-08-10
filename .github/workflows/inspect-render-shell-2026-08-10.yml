@@ -72,6 +72,7 @@ jobs:
             build/render_shell_summary.json
             render-specs/2026-08-06/render_spec.json
             episodes/2026-08-06/episode_package_public_2026-08-06.md
+            episodes/2026-08-06/episode_package_2026-08-06.md
             working/2026-08-06/financial_visual_bindings.json
             working/2026-08-06/terminal_assembly_bindings.json
             working/2026-08-06/story-engine/story_production_bindings.json
