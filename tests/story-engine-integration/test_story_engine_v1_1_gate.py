@@ -95,10 +95,15 @@ class UnifiedDailyGateTests(unittest.TestCase):
         final = daily.STATES.index("episode_package_final")
         self.assertEqual(causal + 1, final)
 
-    def test_daily_wrapper_explicitly_uses_uncertified_optional_policy(self):
-        source = (ROOT / "scripts/run_daily_production_story_engine_v1_1.py").read_text(encoding="utf-8")
+    def test_authoritative_hardened_wrapper_uses_uncertified_optional_policy(self):
+        source = (ROOT / "scripts/run_daily_production_hardened.py").read_text(encoding="utf-8")
         self.assertIn("require_production=True", source)
         self.assertIn("allow_uncertified_production=True", source)
+
+    def test_v11_alias_does_not_install_a_second_story_gate(self):
+        source = (ROOT / "scripts/run_daily_production_story_engine_v1_1.py").read_text(encoding="utf-8")
+        self.assertNotIn("LEGACY_STORY_STATES", source)
+        self.assertIn("load_hardened_daily_module", source)
 
     def test_v11_rejects_legacy_internal_state_transition(self):
         wrapper = load_module(
