@@ -142,9 +142,6 @@ def sync(*, repo_root: Path) -> dict[str, Any]:
         raise StoryAuthoringSyncError("selected angle confidence is invalid")
     claim_05["confidence"] = selected_confidence
 
-    # The corrected authored package is reviewed as the current H4 authoring pass.
-    # Creative Review v1.1 permits at most two rounds; old diagnostic round=4 must
-    # not leak into the new canonical authoring snapshot.
     try:
         review_round = int(review.get("round", 1))
     except (TypeError, ValueError) as exc:
@@ -158,9 +155,6 @@ def sync(*, repo_root: Path) -> dict[str, Any]:
     if not isinstance(scene_overrides, dict):
         raise StoryAuthoringSyncError("story production scene_overrides must be an object")
 
-    # Scene 1 ends with an open Hero and the base Scene 2 also starts with a Hero.
-    # Three open-hero beats in a row violate the existing Visual Grammar. Use a
-    # metric board for the two confirmed BLS facts; the data and narration are unchanged.
     scene2 = beat_overrides.setdefault("scene-02-beat-001", {})
     scene2.update(
         {
@@ -173,9 +167,6 @@ def sync(*, repo_root: Path) -> dict[str, Any]:
         }
     )
 
-    # Scene 3 is explicitly Expected / Actual / Gap. The old fixture used another
-    # matrix immediately after Scene 2's matrix while declaring major-shift. Restore
-    # the authored gap-flow template so the semantic and physical transition agree.
     scene3 = beat_overrides.get("scene-03-beat-001")
     if not isinstance(scene3, dict):
         raise StoryAuthoringSyncError("scene-03-beat-001 authored override is missing")
@@ -190,13 +181,13 @@ def sync(*, repo_root: Path) -> dict[str, Any]:
         }
     )
 
-    # Successful wave 2 also invalidates the old Scene 8 visual copy saying the
-    # release-minute data was still unconfirmed. Bind the scene to copy that already
-    # exists in the approved public package, so Renderer/package cross-artifact checks
-    # compare the same authored claim rather than a stale diagnostic string.
+    # Scene 9 may only assemble exact display text already introduced in Scenes 1-8.
+    # Introduce the already-approved medium-confidence lead label in Scene 8, while
+    # preserving the causal boundary as the second line. The verified minute move is
+    # still shown explicitly inside the Scene 8 Beat viewer text.
     scene8_override = scene_overrides.setdefault("scene-08", {})
     scene8_override["supportingTexts"] = [
-        "8:30 ET初動は確認済み",
+        "主因候補：利上げ観測後退",
         "ただし因果証明ではない",
     ]
 
