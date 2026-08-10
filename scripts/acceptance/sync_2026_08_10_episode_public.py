@@ -89,10 +89,6 @@ def main() -> int:
         raise SystemExit('render Scene 8 shape drift')
     scene8 = scenes[7]
 
-    # Scene 9 terminal assembly intentionally reuses this already-introduced
-    # Scene 8 label. Keep that stable contract while appending the newly
-    # verified minute-data boundary texts. This does not alter narration or
-    # causal confidence; it restores the approved cross-scene reuse binding.
     existing_support = list(scene8.get('supportingTexts', []))
     scene8['supportingTexts'] = [TERMINAL_REUSE_LABEL] + [
         value for value in existing_support if value != TERMINAL_REUSE_LABEL
@@ -121,6 +117,8 @@ def main() -> int:
             '- Timeline：BLS 8:30 ETの公式発表時刻、検証済み1分足初動、引けの終値を分けて使用。1分足だけで因果は確定しない。',
         '- 実装時に変更禁止：雇用悪化そのものと利上げ観測後退の分離、Microchipを増幅要因へ限定、AMD/Alphabet逆行、2 wave後も分足未取得という留保。':
             '- 実装時に変更禁止：雇用悪化そのものと利上げ観測後退の分離、Microchipを増幅要因へ限定、AMD/Alphabet逆行、1分足は因果証明ではないこと、MCHPは同じ発表分でほぼ横ばいという反対材料。',
+        '- source-001｜朝のNASDAQカフェ source collector / Longbridge｜NASDAQ Cafe Source Pack 2026-08-10｜daily-inputs/2026-08-10/daily_source_package_2026-08-10.md｜用途：Nasdaq Composite、SOXX、MCHP、NVDA、AMD、Alphabet、Microsoftの終値と騰落率 / 分足取得制約':
+            '- source-001｜朝のNASDAQカフェ source collector / Longbridge｜NASDAQ Cafe Source Pack 2026-08-10｜daily-inputs/2026-08-10/daily_source_package_2026-08-10.md｜用途：Nasdaq Composite、SOXX、MCHP、NVDA、AMD、Alphabet、Microsoftの終値と騰落率',
         '- source-005｜NASDAQ Cafe Collector / Longbridge｜Research Acquisition Result Wave 2｜research/2026-08-10/research_acquisition_result_w02.json｜用途：QQQ、SOXX、MCHP、NVDAのhistorical minute data未取得':
             '- source-005｜NASDAQ Cafe Collector / Longbridge｜Research Acquisition Result Wave 2 — verified 1-minute series｜research/2026-08-10/research_acquisition_result_w02.json｜用途：QQQ、SOXX、MCHP、NVDAの2026-08-07検証済み1分足と8:30 ET初動確認',
         '- 必須修正と反映結果：Scene 4で雇用悪化と利上げ観測後退を分離。Scene 8で分足未取得を明示し、8:30 ET直後の値動きを断定しない。':
@@ -137,6 +135,9 @@ def main() -> int:
         '分足未取得',
         '未取得の分足',
         '分足欠損',
+        '分足反応は未確認',
+        '分足取得制約',
+        '2回の追加取得でも得られず',
     )
     found_stale = [value for value in stale if value in text]
     if found_stale:
