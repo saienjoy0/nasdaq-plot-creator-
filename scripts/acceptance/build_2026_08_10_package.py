@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import hashlib, json, re, subprocess, sys
+import hashlib, json, re, subprocess, sys, traceback
 from pathlib import Path
 
 ROOT = Path.cwd().resolve()
@@ -32,7 +32,6 @@ def main()->int:
     verification=root/'verification'/date
     for p in (work,story,research,episodes,verification): p.mkdir(parents=True,exist_ok=True)
 
-    # Story Engine deterministic materialization from authored templates + dossier.
     subprocess.run([sys.executable,'scripts/story-engine/materialize_story_engine.py','--date',date,'--repo-root',str(root)],check=True)
 
     dossier=research/f'causal_research_dossier_{date}.json'
@@ -46,7 +45,6 @@ def main()->int:
     visual=visual_source_projection.prepare_visual_sources(root=root,date=date,final_contract_path=mat['final_contract_path'],render=render)
     financial_projection.materialize(root=root,date=date)
 
-    # Deterministic no-op asset resolution evidence for explicit not-required planning.
     resolution={
       'contract_version':'1.0.0','episode_date':date,'status':'resolved','selected_path':visual['selected_path'],
       'unresolved_count':0,'routes':visual['routes'],'note':'Visual Evidence Planning completed; no day-specific visual source required.'
@@ -102,4 +100,12 @@ def main()->int:
     out=episodes/f'episode_package_{date}.md'; out.write_text(final,encoding='utf-8')
     print(json.dumps({'status':'pass','episodePackage':str(out),'sha256':sha(out),'renderIntermediate':sha(render_path),'assetCount':len(asset_catalog)},ensure_ascii=False,indent=2))
     return 0
-if __name__=='__main__': raise SystemExit(main())
+
+if __name__=='__main__':
+    try:
+        raise SystemExit(main())
+    except BaseException:
+        diagnostic=ROOT/'verification'/DATE/'package_build.log'
+        diagnostic.parent.mkdir(parents=True,exist_ok=True)
+        diagnostic.write_text(traceback.format_exc(),encoding='utf-8')
+        raise
