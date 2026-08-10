@@ -102,6 +102,7 @@ jobs:
               root / f"working/{date}/memory_query_plan.json",
               root / f"working/{date}/financial_visual_bindings.json",
               root / f"working/{date}/terminal_assembly_bindings.json",
+              root / f"working/{date}/visual_source_intents.json",
               root / f"working/{date}/story-engine/templates/story_plan.template.json",
               root / f"working/{date}/story-engine/templates/story_script.template.json",
               root / f"working/{date}/story-engine/templates/creative_review.template.json",
@@ -129,6 +130,7 @@ jobs:
               root / f"working/{date}/memory_query_plan.json",
               root / f"working/{date}/financial_visual_bindings.json",
               root / f"working/{date}/terminal_assembly_bindings.json",
+              root / f"working/{date}/visual_source_intents.json",
               root / f"working/{date}/story-engine/templates/story_plan.template.json",
               root / f"working/{date}/story-engine/templates/story_script.template.json",
               root / f"working/{date}/story-engine/templates/creative_review.template.json",
@@ -156,15 +158,23 @@ jobs:
           episode = spec.get("episode", {})
           if episode.get("id") != date or episode.get("targetDate") != date:
               raise SystemExit("render spec date mismatch")
+
           intent_path = root / f"working/{date}/visual_source_intents.json"
-          if intent_path.is_file():
-              selection_path = root / f"working/{date}/visual_source_selection.json"
+          intent = json.loads(intent_path.read_text(encoding="utf-8"))
+          if intent.get("contractVersion") != "1.0.0" or intent.get("episodeDate") != date:
+              raise SystemExit("Visual Source intent contract/date mismatch")
+          intents = intent.get("intents")
+          if not isinstance(intents, list):
+              raise SystemExit("Visual Source intents must be an array")
+          selection_path = root / f"working/{date}/visual_source_selection.json"
+          if intents:
               if not selection_path.is_file():
-                  raise SystemExit("visual_source_selection.json is required when Visual Source intents exist")
-              for path in (intent_path, selection_path):
-                  value = json.loads(path.read_text(encoding="utf-8"))
-                  if not isinstance(value, dict) or value.get("episodeDate") != date:
-                      raise SystemExit(f"Visual Source input date mismatch: {path.relative_to(root)}")
+                  raise SystemExit("visual_source_selection.json is required when Visual Source intents are non-empty")
+              selection = json.loads(selection_path.read_text(encoding="utf-8"))
+              if not isinstance(selection, dict) or selection.get("episodeDate") != date:
+                  raise SystemExit("Visual Source selection date mismatch")
+          elif selection_path.is_file():
+              raise SystemExit("visual_source_selection.json must not remain when Visual Source intents are explicitly empty")
           print("direct daily inputs verified")
           PY
 
@@ -204,14 +214,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -s "working/$EPISODE_DATE/visual_source_intents.json" ]]; then
-            python scripts/prepare_visual_sources.py \
-              --date "$EPISODE_DATE" \
-              --repo-root . \
-              | tee "verification/$EPISODE_DATE/visual-source-prepare.log"
-          else
-            echo "Visual Source not required for $EPISODE_DATE"
-          fi
+          mkdir -p "verification/$EPISODE_DATE"
+          python scripts/prepare_visual_sources.py \
+            --date "$EPISODE_DATE" \
+            --repo-root . \
+            | tee "verification/$EPISODE_DATE/visual-source-prepare.log"
 
       - name: Materialize lineage-bound episode package
         shell: bash
@@ -271,12 +278,13 @@ jobs:
             --plot-commit "${{ github.event.pull_request.head.sha || github.sha }}" \
             2>&1 | tee "verification/$EPISODE_DATE/build-handoff.log"
 
-      - name: Record immutable Visual Source baseline when source upgrade is inactive
+      - name: Record immutable Visual Source baseline when no Visual Source intent is active
         id: baseline
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -s "working/$EPISODE_DATE/visual_source_intents.json" ]]; then
+          INTENT_COUNT="$(python -c 'import json,sys; print(len(json.load(open(sys.argv[1], encoding="utf-8"))["intents"]))' "working/$EPISODE_DATE/visual_source_intents.json")"
+          if [[ "$INTENT_COUNT" != "0" ]]; then
             echo "Visual Source active; preimplementation baseline recording skipped"
             exit 0
           fi
@@ -294,7 +302,7 @@ jobs:
           echo "bundle_id=$BUNDLE_ID" >> "$GITHUB_OUTPUT"
           echo "manifest_sha256=$MANIFEST_SHA" >> "$GITHUB_OUTPUT"
           {
-            echo "### Visual Source preimplementation baseline"
+            echo "### Visual Source explicit not-required baseline"
             echo "- Episode: \`$EPISODE_DATE\`"
             echo "- Renderer: \`$RENDERER_COMMIT\` / \`$RENDERER_CONTRACT_VERSION\`"
             echo "- Handoff bundle ID: \`$BUNDLE_ID\`"
