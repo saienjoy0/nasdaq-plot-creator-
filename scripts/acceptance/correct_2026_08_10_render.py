@@ -2,7 +2,7 @@
 from __future__ import annotations
 import hashlib, json
 from pathlib import Path
-EXPECTED_SHA256='2fcd9087a83faa9e4ef99a823d2ca8aa2fcfd0553aa4cc57d868435b574ed572'
+EXPECTED_SHA256='f3d05b6cc48adc8c3c3f8c684d7f9bfbd84595c383fb5163374803ded56104d9'
 
 def main()->int:
     path=Path('render-specs/2026-08-10/render_spec.json')
@@ -22,6 +22,16 @@ def main()->int:
         if scene.get('sceneNumber')!=scene_number: raise SystemExit(f'Scene {scene_number} numbering drift')
         if scene.get('causalScope') not in (old,new): raise SystemExit(f'Scene {scene_number} causalScope drift: {scene.get("causalScope")}')
         scene['causalScope']=new
+    # Remotion 2.4 expands the first Expected/Actual/Gap source card into
+    # generated cards and removes the original Scene-3 cards. Beat 2 is a
+    # text-focus state whose viewerTexts already carry the approved wording,
+    # so it must not retain a stale reference to the removed second card.
+    scene3_followup=scenes[2]['visualBeats'][1]
+    if scene3_followup.get('visualBeatId')!='vb-03-02' or scene3_followup.get('visualMode')!='text-focus':
+        raise SystemExit('unexpected Scene 3 follow-up Beat shape')
+    if scene3_followup.get('objectIds') not in (['scene-03-card-002'],[]):
+        raise SystemExit(f'Scene 3 follow-up objectIds drift: {scene3_followup.get("objectIds")}')
+    scene3_followup['objectIds']=[]
     text=json.dumps(doc,ensure_ascii=False,indent=2,sort_keys=True)+'\n'
     actual=hashlib.sha256(text.encode('utf-8')).hexdigest()
     if actual!=EXPECTED_SHA256: raise SystemExit(f'corrected render SHA mismatch: {actual}')
