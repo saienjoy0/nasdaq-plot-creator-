@@ -11,10 +11,11 @@
     "scene-01-beat-002":{
       "screenQuestion":"数字は良かったのに、なぜAMDは売られた？",
       "primaryElement":"好決算と株価下落の矛盾",
-      "viewerTexts":["数字は良かった","それでもAMD -7.04%"],
-      "changeCue":"数字は良かった",
-      "visualTemplate":"source-receipt",
-      "contentType":"source-receipt"
+      "viewerTexts":["数字｜良かった","株価｜AMD -7.04%"],
+      "changeCue":"数字｜良かった",
+      "visualTemplate":"tailwind-headwind",
+      "templateVariant":"two-lane",
+      "contentType":"tailwind-headwind"
     },
     "scene-07-beat-001":{
       "visualTemplate":"event-reaction-timeline",
