@@ -150,6 +150,51 @@ def main() -> int:
         raise SystemExit('publishing block missing')
     publishing['description'] = PUBLISHING_DESCRIPTION
 
+    editorial = doc.get('editorial')
+    if not isinstance(editorial, dict):
+        raise SystemExit('editorial block missing')
+    editorial['counterEvidence'] = [
+        '雇用減は景気減速リスクでもある。',
+        'AMD -1.21%、Alphabet -0.96%でテック全面高ではない。',
+        '原油・利回り低下と好決算も同日に存在した。',
+        '8:30 ETの1分足はQQQ・SOXX・NVIDIAで上向いたが、1分足だけでは因果や寄与度を証明しない。MCHPは同じ発表分でほぼ横ばい。',
+    ]
+    editorial['offsettingFactors'] = [
+        '雇用減そのものが示す成長不安',
+        'AMD -1.21%',
+        'Alphabet -0.96%',
+        'MCHPは8:30 ET発表分ほぼ横ばい',
+        '1分足だけで因果証明しない',
+    ]
+    editorial['storySpine'] = (
+        '雇用予想+8万人→実際-2.3万人→利上げ観測後退→8:30 ETにQQQ・SOXX・NVIDIAが上向き→'
+        '大型テックへの金利逆風緩和→Microchip好決算と原油・利回り低下が増幅→NASDAQ +1.30%、'
+        'ただし1分足は因果証明ではなく個別差を残す。'
+    )
+    editorial['timelineBasis'] = (
+        'BLSの8:30 ET公式発表、Reutersの利上げ観測報道、Longbridgeの検証済み1分Kline、'
+        '8月7日通常取引終値。1分足は発表時刻との整合確認に使い、因果の単独証明には使わない。'
+    )
+
+    review = doc.get('review')
+    if not isinstance(review, dict):
+        raise SystemExit('review block missing')
+    review['changesApplied'] = [
+        '『悪い雇用だから株高』ではなく『追加利上げリスク低下』と明示した。',
+        'Scene 8に検証済み1分足の初動を反映し、1分足だけでは因果を証明しない境界とMCHPの個別差を残した。',
+        'MicrochipをNASDAQ主因ではなく半導体増幅要因へ限定した。',
+    ]
+    review['requiredChanges'] = [
+        'Scene 4で弱い雇用そのものと利上げ観測後退を分離する。',
+        'Scene 8で検証済み1分足の初動を示し、1分足だけで因果を断定せず、MCHPの個別差を反対材料として残す。',
+    ]
+
+    serialized = json.dumps(doc, ensure_ascii=False, sort_keys=True)
+    stale_terms = ['分足未取得', '分足は未取得', '分足欠損', '8:30 ET直後分足は取得できない']
+    found_stale = [term for term in stale_terms if term in serialized]
+    if found_stale:
+        raise SystemExit(f'stale wave2 failure metadata remains in render: {found_stale}')
+
     text = json.dumps(doc, ensure_ascii=False, indent=2, sort_keys=True) + '\n'
     actual = hashlib.sha256(text.encode('utf-8')).hexdigest()
     path.write_text(text, encoding='utf-8')
