@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Synchronize frozen H4 Story Plan authoring with the corrected causal dossier.
+"""Synchronize frozen H4 Story authoring with the corrected causal dossier.
 
 TEST ONLY. This is part of fixture authoring, not Daily Production. The successful
 wave-2 evidence changes the dossier contradiction wording and adds material timing
-counterevidence. Story Plan v1.2 requires the selected plan to preserve both exactly.
-This helper derives those required values from the dossier instead of hard-coding a
-second editorial truth.
+counterevidence. Story Engine requires the selected plan and script to preserve those
+boundaries exactly. This helper derives the required values from the dossier instead
+of hard-coding a second editorial truth.
 """
 
 from __future__ import annotations
@@ -45,10 +45,14 @@ def sync(*, repo_root: Path) -> dict[str, Any]:
     root = repo_root.resolve()
     dossier_path = root / f"research/{DATE}/causal_research_dossier_{DATE}.json"
     plan_path = root / f"working/{DATE}/story-engine/templates/story_plan.template.json"
+    script_path = root / f"working/{DATE}/story-engine/templates/story_script.template.json"
+    review_path = root / f"working/{DATE}/story-engine/templates/creative_review.template.json"
     dossier = load_json(dossier_path)
     plan = load_json(plan_path)
+    script = load_json(script_path)
+    review = load_json(review_path)
 
-    if dossier.get("episode_date") != DATE or plan.get("episode_date") != DATE:
+    if any(item.get("episode_date") != DATE for item in (dossier, plan, script, review)):
         raise StoryAuthoringSyncError("episode date drift")
 
     contradiction_id = plan.get("central_contradiction_id")
@@ -106,7 +110,39 @@ def sync(*, repo_root: Path) -> dict[str, Any]:
             f"selected angle counterevidence references unknown dossier evidence: {unknown}"
         )
 
-    digest = write_json(plan_path, plan)
+    retained = script.get("retained_counterevidence_ids")
+    if not isinstance(retained, list):
+        raise StoryAuthoringSyncError("story script retained_counterevidence_ids must be an array")
+    script["retained_counterevidence_ids"] = sorted(
+        {item for item in retained if isinstance(item, str) and item} | material_counter_ids
+    )
+
+    claim_05 = next(
+        (
+            claim
+            for scene in script.get("scenes", [])
+            if isinstance(scene, dict)
+            for claim in scene.get("causal_claims", [])
+            if isinstance(claim, dict) and claim.get("claim_id") == "claim-05"
+        ),
+        None,
+    )
+    if claim_05 is None:
+        raise StoryAuthoringSyncError("claim-05 missing from story script")
+    selected_confidence = selected.get("confidence")
+    if selected_confidence not in {"low", "medium", "high"}:
+        raise StoryAuthoringSyncError("selected angle confidence is invalid")
+    claim_05["confidence"] = selected_confidence
+
+    try:
+        review_round = int(review.get("round", 1))
+    except (TypeError, ValueError) as exc:
+        raise StoryAuthoringSyncError("creative review round is invalid") from exc
+    review["round"] = min(max(review_round, 1), 2)
+
+    plan_digest = write_json(plan_path, plan)
+    script_digest = write_json(script_path, script)
+    review_digest = write_json(review_path, review)
     return {
         "status": "pass",
         "episode_date": DATE,
@@ -115,7 +151,12 @@ def sync(*, repo_root: Path) -> dict[str, Any]:
         "selected_angle_id": selected_id,
         "material_counterevidence_ids": sorted(material_counter_ids),
         "selected_counterevidence_ids": selected["counterevidence_ids"],
-        "story_plan_template_sha256": digest,
+        "script_retained_counterevidence_ids": script["retained_counterevidence_ids"],
+        "claim_05_confidence": claim_05["confidence"],
+        "creative_review_round": review["round"],
+        "story_plan_template_sha256": plan_digest,
+        "story_script_template_sha256": script_digest,
+        "creative_review_template_sha256": review_digest,
     }
 
 
