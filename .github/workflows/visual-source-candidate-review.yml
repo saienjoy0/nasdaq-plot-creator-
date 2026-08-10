@@ -33,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Validate requested date and committed intent
+      - name: Validate requested date and explicit Visual Evidence plan
         id: guard
         shell: bash
         run: |
@@ -42,12 +42,34 @@ jobs:
             echo "::error::episode_date must be YYYY-MM-DD"
             exit 1
           }
-          if [[ ! -s "working/$EPISODE_DATE/visual_source_intents.json" ]]; then
+          intent_path="working/$EPISODE_DATE/visual_source_intents.json"
+          if [[ ! -s "$intent_path" ]]; then
+            echo "::error::E_VISUAL_SOURCE_PLANNING_MISSING: $intent_path is required even when no Visual Source is needed"
+            exit 1
+          fi
+          intent_count="$(python - "$intent_path" "$EPISODE_DATE" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+          path = Path(sys.argv[1])
+          date = sys.argv[2]
+          doc = json.loads(path.read_text(encoding="utf-8"))
+          if doc.get("contractVersion") != "1.0.0":
+              raise SystemExit("Visual Source contractVersion must be 1.0.0")
+          if doc.get("episodeDate") != date:
+              raise SystemExit("Visual Source intent episodeDate mismatch")
+          intents = doc.get("intents")
+          if not isinstance(intents, list):
+              raise SystemExit("Visual Source intents must be an array")
+          print(len(intents))
+          PY
+          )"
+          if [[ "$intent_count" == "0" ]]; then
             echo "active=false" >> "$GITHUB_OUTPUT"
             {
               echo "### Visual Source candidate review"
               echo "- Episode: \`$EPISODE_DATE\`"
-              echo "- Status: not-required (no committed Visual Source intents)"
+              echo "- Status: not-required (explicit Visual Evidence plan has zero intents)"
             } >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi

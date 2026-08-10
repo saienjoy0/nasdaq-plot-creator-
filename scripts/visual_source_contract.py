@@ -5,6 +5,10 @@ The intent file is authored upstream with the final editorial package. This
 module performs only structural/semantic checks and copies the approved intent
 into the Final Episode Contract. It does not search, fetch, choose Primary vs
 Fallback, or change narration/causality/Visual Grammar.
+
+Visual Evidence Planning is explicit: a missing intent document is an error.
+An existing document with ``intents: []`` is the only valid no-Visual-Source
+result.
 """
 
 from __future__ import annotations
@@ -45,7 +49,9 @@ def empty_visual_sources() -> dict[str, Any]:
 
 def load_intent_document(path: Path | None, episode_date: str) -> dict[str, Any]:
     if path is None or not path.is_file():
-        return empty_visual_sources()
+        raise VisualSourceContractError(
+            "E_VISUAL_SOURCE_PLANNING_MISSING: visual_source_intents.json is required even when no Visual Source is needed"
+        )
     value = load_json(path, "Visual Source intent")
     if value.get("contractVersion") != "1.0.0":
         raise VisualSourceContractError("Visual Source contractVersion must be 1.0.0")
