@@ -2,7 +2,7 @@
 from __future__ import annotations
 import hashlib, json
 from pathlib import Path
-EXPECTED_SHA256='f3a98dd5c42357eafd5391cece2c982a7032b004da4361c45e7e76187e3243f7'
+EXPECTED_SHA256='30296d444ed8919396c4e473001a6cdc8f7ee0e7fe74f68f779a470382aba0e1'
 
 def main()->int:
     path=Path('render-specs/2026-08-10/render_spec.json')
@@ -23,13 +23,14 @@ def main()->int:
         raise SystemExit('unexpected Scene 3 follow-up Beat shape')
     if scene3_followup.get('objectIds') not in (['scene-03-card-002'],[]):
         raise SystemExit(f'Scene 3 follow-up objectIds drift: {scene3_followup.get("objectIds")}')
-    scene3_followup['objectIds']=[]
+    # source-receipt is allowed to carry one existing evidence card; restore the
+    # already-authored card rather than inventing any new object or text.
+    scene3_followup['objectIds']=['scene-03-card-002']
 
-    # Pin templates to Renderer 2.4 grammar vocabulary, but keep bridge-text
-    # bounded to two true transitional beats. Scene 2's second beat is an
-    # explicit comparison (revisions vs NASDAQ close), while Scene 3's second
-    # beat is evidence explaining that the two -10.3万 figures mean different
-    # things. No narration, facts, timing, or causal claim changes here.
+    # Keep bridge-text bounded to the two genuine transitional Beats. Renderer
+    # 2.4 only allows bridge-text with text-focus, so the two analytical Beats
+    # must switch template and grammar together. Existing cards, narration,
+    # numbers, evidence ids, cues, and causal claims remain unchanged.
     for scene in scenes:
         for beat in scene.get('visualBeats',[]):
             template=beat.get('visualTemplate')
@@ -37,8 +38,12 @@ def main()->int:
             beat_id=beat.get('visualBeatId')
             if template=='text-focus':
                 if beat_id=='scene-02-beat-002':
-                    grammar['grammarId']='comparison'
+                    beat['visualTemplate']='evidence-boundary'
+                    beat['templateConfig']['variant']='confirmed-vs-unconfirmed'
+                    grammar['grammarId']='evidence'
                 elif beat_id=='scene-03-beat-002':
+                    beat['visualTemplate']='source-receipt'
+                    beat['templateConfig']['variant']='default'
                     grammar['grammarId']='evidence'
                 else:
                     grammar['grammarId']='bridge-text'
