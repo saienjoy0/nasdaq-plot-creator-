@@ -2,7 +2,7 @@
 from __future__ import annotations
 import hashlib, json
 from pathlib import Path
-EXPECTED_SHA256='f3ddc935f98ced45aea63709247834c021a1da55ec11b87ad2d64fa2162568ad'
+EXPECTED_SHA256='d4866b61e532bc90b3464457113c42cee1cfa8a5fbd782051d8e6d7208f9479e'
 
 def main()->int:
     path=Path('render-specs/2026-08-10/render_spec.json')
@@ -23,13 +23,15 @@ def main()->int:
         raise SystemExit('unexpected Scene 3 follow-up Beat shape')
     if scene3_followup.get('objectIds') not in (['scene-03-card-002'],[]):
         raise SystemExit(f'Scene 3 follow-up objectIds drift: {scene3_followup.get("objectIds")}')
-    scene3_followup['objectIds']=['scene-03-card-002']
+    # The renderer-source materializer intentionally removes this redundant
+    # card. Keep the evidence Beat static and use its already-authored
+    # viewerTexts instead of reviving an object that no longer exists.
+    scene3_followup['objectIds']=[]
 
     # Keep bridge-text bounded to the two genuine transitional Beats. The two
     # analytical Beats switch template and grammar together using existing
     # renderer templates that do not create a new Financial Visual binding.
-    # Existing cards, narration, numbers, evidence ids, cues, and causal claims
-    # remain unchanged.
+    # Narration, numbers, evidence ids, cues, and causal claims remain unchanged.
     for scene in scenes:
         for beat in scene.get('visualBeats',[]):
             template=beat.get('visualTemplate')
