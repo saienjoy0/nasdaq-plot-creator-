@@ -40,37 +40,25 @@ jobs:
             }
             for chunk in scene.get('narrationChunks', []):
               s['narrationChunks'].append({
-                'id': chunk.get('id'),
+                'chunkId': chunk.get('chunkId'),
                 'keys': sorted(chunk.keys()),
                 'speechText': chunk.get('speechText'),
                 'captionText': chunk.get('captionText'),
               })
             for beat in scene.get('visualBeats', []):
-              b = {
-                'id': beat.get('id'),
+              s['visualBeats'].append({
+                'beatId': beat.get('beatId'),
+                'visualBeatId': beat.get('visualBeatId'),
                 'keys': sorted(beat.keys()),
                 'screenState': beat.get('screenState'),
                 'visualMode': beat.get('visualMode'),
                 'visualTemplate': beat.get('visualTemplate'),
-                'templateVariant': beat.get('templateVariant'),
+                'templateConfig': beat.get('templateConfig'),
                 'viewerTexts': beat.get('viewerTexts'),
                 'objectIds': beat.get('objectIds'),
-                'sourceIds': beat.get('sourceIds'),
-                'objects': [],
-              }
-              for obj in beat.get('objects', []):
-                b['objects'].append({
-                  'id': obj.get('id'),
-                  'type': obj.get('type'),
-                  'keys': sorted(obj.keys()),
-                  'label': obj.get('label'),
-                  'value': obj.get('value'),
-                  'text': obj.get('text'),
-                  'title': obj.get('title'),
-                  'subtitle': obj.get('subtitle'),
-                  'assetId': obj.get('assetId'),
-                })
-              s['visualBeats'].append(b)
+                'evidenceSourceIds': beat.get('evidenceSourceIds'),
+                'entity': beat.get('entity'),
+              })
             out['scenes'].append(s)
           Path('build').mkdir(exist_ok=True)
           Path('build/render_shell_summary.json').write_text(
@@ -80,5 +68,11 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: render-shell-summary-2026-08-10
-          path: build/render_shell_summary.json
+          path: |
+            build/render_shell_summary.json
+            render-specs/2026-08-06/render_spec.json
+            episodes/2026-08-06/episode_package_public_2026-08-06.md
+            working/2026-08-06/financial_visual_bindings.json
+            working/2026-08-06/terminal_assembly_bindings.json
+            working/2026-08-06/story-engine/story_production_bindings.json
           if-no-files-found: error
