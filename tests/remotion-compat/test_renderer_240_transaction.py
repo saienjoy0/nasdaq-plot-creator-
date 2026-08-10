@@ -150,6 +150,31 @@ class Renderer240TransactionTests(unittest.TestCase):
         self.assertIn("scene-test-card-gap", event_targets)
         self.assertNotIn("source-gap-card", event_targets)
 
+    def test_prune_unselected_cards_removes_only_unreachable_card_and_event(self):
+        scene = {
+            "sceneId": "scene-test",
+            "cards": [
+                {"cardId": "selected-card", "role": None, "title": "Selected", "lines": []},
+                {"cardId": "stale-card", "role": None, "title": "Stale", "lines": []},
+            ],
+            "visualBeats": [
+                {"beatId": "scene-test-beat-001", "objectIds": ["selected-card", "number-001"]}
+            ],
+            "visualEvents": [
+                {"eventId": "event-001", "action": "show", "targetId": "selected-card"},
+                {"eventId": "event-002", "action": "show", "targetId": "stale-card"},
+                {"eventId": "event-003", "action": "highlight", "targetId": "number-001"},
+            ],
+        }
+
+        projection._prune_unselected_cards(scene)
+
+        self.assertEqual(["selected-card"], [item["cardId"] for item in scene["cards"]])
+        self.assertEqual(
+            ["selected-card", "number-001"],
+            [item.get("targetId") for item in scene["visualEvents"]],
+        )
+
     def test_renderer_card_projection_drops_legacy_producer_only_fields(self):
         scene = {
             "sceneId": "scene-test",
