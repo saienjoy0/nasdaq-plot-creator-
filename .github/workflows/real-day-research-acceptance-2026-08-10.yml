@@ -125,8 +125,24 @@ jobs:
 
       - name: Build formally validated production package
         run: |
+          set -o pipefail
+          mkdir -p verification/$DATE
           python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" build-production \
-            --episode-date $DATE --episode-package episodes/$DATE/episode_package_$DATE.md
+            --episode-date $DATE --episode-package episodes/$DATE/episode_package_$DATE.md \
+            2>&1 | tee verification/$DATE/build_production.log
+
+      - name: Upload build-production diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nasdaq-cafe-production-diagnostics-2026-08-10
+          path: |
+            verification/2026-08-10/
+            episodes/2026-08-10/
+            render-specs/2026-08-10/
+            working/2026-08-10/
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Build immutable renderer handoff
         run: |
