@@ -48,16 +48,20 @@ def sync(*, repo_root: Path) -> dict[str, Any]:
     script_path = root / f"working/{DATE}/story-engine/templates/story_script.template.json"
     review_path = root / f"working/{DATE}/story-engine/templates/creative_review.template.json"
     bindings_path = root / f"working/{DATE}/story-engine/story_production_bindings.json"
+    render_path = root / f"render-specs/{DATE}/render_spec.json"
     dossier = load_json(dossier_path)
     plan = load_json(plan_path)
     script = load_json(script_path)
     review = load_json(review_path)
     bindings = load_json(bindings_path)
+    render = load_json(render_path)
 
     if any(item.get("episode_date") != DATE for item in (dossier, plan, script, review)):
         raise StoryAuthoringSyncError("episode date drift")
     if bindings.get("episode_date") != DATE or bindings.get("contract_version") != "1.0.0":
         raise StoryAuthoringSyncError("story production bindings contract/date drift")
+    if render.get("episode", {}).get("targetDate") != DATE:
+        raise StoryAuthoringSyncError("render authoring targetDate drift")
 
     contradiction_id = plan.get("central_contradiction_id")
     contradiction = next(
@@ -150,6 +154,9 @@ def sync(*, repo_root: Path) -> dict[str, Any]:
     beat_overrides = bindings.get("beat_overrides")
     if not isinstance(beat_overrides, dict):
         raise StoryAuthoringSyncError("story production beat_overrides must be an object")
+    scene_overrides = bindings.get("scene_overrides")
+    if not isinstance(scene_overrides, dict):
+        raise StoryAuthoringSyncError("story production scene_overrides must be an object")
 
     # Scene 1 ends with an open Hero and the base Scene 2 also starts with a Hero.
     # Three open-hero beats in a row violate the existing Visual Grammar. Use a
@@ -183,10 +190,41 @@ def sync(*, repo_root: Path) -> dict[str, Any]:
         }
     )
 
+    # Successful wave 2 also invalidates the old Scene 8 visual copy saying the
+    # release-minute data was still unconfirmed. Bind the scene to copy that already
+    # exists in the approved public package, so Renderer/package cross-artifact checks
+    # compare the same authored claim rather than a stale diagnostic string.
+    scene8_override = scene_overrides.setdefault("scene-08", {})
+    scene8_override["supportingTexts"] = [
+        "8:30 ET初動は確認済み",
+        "ただし因果証明ではない",
+    ]
+
+    scenes = render.get("scenes")
+    if not isinstance(scenes, list) or len(scenes) != 9:
+        raise StoryAuthoringSyncError("render authoring must contain nine scenes")
+    scene8_render = scenes[7]
+    if scene8_render.get("sceneId") != "scene-08":
+        raise StoryAuthoringSyncError("render Scene 8 identity drift")
+    beats8 = scene8_render.get("visualBeats")
+    if not isinstance(beats8, list):
+        raise StoryAuthoringSyncError("render Scene 8 visualBeats missing")
+    beat8_2 = next(
+        (item for item in beats8 if isinstance(item, dict) and item.get("beatId") == "scene-08-beat-002"),
+        None,
+    )
+    if beat8_2 is None:
+        raise StoryAuthoringSyncError("render scene-08-beat-002 missing")
+    config8_2 = beat8_2.get("templateConfig")
+    if not isinstance(config8_2, dict):
+        raise StoryAuthoringSyncError("render scene-08-beat-002 templateConfig missing")
+    config8_2["dataBasis"] = "検証済み1分足の時系列整合 + 反対材料"
+
     plan_digest = write_json(plan_path, plan)
     script_digest = write_json(script_path, script)
     review_digest = write_json(review_path, review)
     bindings_digest = write_json(bindings_path, bindings)
+    render_digest = write_json(render_path, render)
     return {
         "status": "pass",
         "episode_date": DATE,
@@ -209,11 +247,16 @@ def sync(*, repo_root: Path) -> dict[str, Any]:
                 "visualGrammarId": scene3["visualGrammarId"],
                 "transitionRole": scene3["transitionRole"],
             },
+            "scene-08": {
+                "supportingTexts": scene8_override["supportingTexts"],
+                "beat-002-dataBasis": config8_2["dataBasis"],
+            },
         },
         "story_plan_template_sha256": plan_digest,
         "story_script_template_sha256": script_digest,
         "creative_review_template_sha256": review_digest,
         "story_production_bindings_sha256": bindings_digest,
+        "render_authoring_sha256": render_digest,
     }
 
 
