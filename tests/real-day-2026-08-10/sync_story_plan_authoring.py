@@ -200,12 +200,19 @@ def sync(*, repo_root: Path) -> dict[str, Any]:
     beats8 = scene8_render.get("visualBeats")
     if not isinstance(beats8, list):
         raise StoryAuthoringSyncError("render Scene 8 visualBeats missing")
+    beat8_1 = next(
+        (item for item in beats8 if isinstance(item, dict) and item.get("beatId") in {"vb-08-01", "scene-08-beat-001"}),
+        None,
+    )
+    if beat8_1 is None:
+        raise StoryAuthoringSyncError("render scene-08 beat 1 missing")
+    beat8_1["objectIds"] = ["scene-08-card-001"]
     beat8_2 = next(
-        (item for item in beats8 if isinstance(item, dict) and item.get("beatId") == "scene-08-beat-002"),
+        (item for item in beats8 if isinstance(item, dict) and item.get("beatId") in {"vb-08-02", "scene-08-beat-002"}),
         None,
     )
     if beat8_2 is None:
-        raise StoryAuthoringSyncError("render scene-08-beat-002 missing")
+        raise StoryAuthoringSyncError("render scene-08 beat 2 missing")
     config8_2 = beat8_2.get("templateConfig")
     if not isinstance(config8_2, dict):
         raise StoryAuthoringSyncError("render scene-08-beat-002 templateConfig missing")
@@ -240,6 +247,7 @@ def sync(*, repo_root: Path) -> dict[str, Any]:
             },
             "scene-08": {
                 "supportingTexts": scene8_override["supportingTexts"],
+                "beat-001-objectIds": beat8_1["objectIds"],
                 "beat-002-dataBasis": config8_2["dataBasis"],
             },
         },
