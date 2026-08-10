@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import importlib.util
 import json
 import sys
@@ -23,28 +22,25 @@ def load_module(name: str, path: Path):
     return module
 
 
-def sha(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
 class StoryEngineDailyStateTests(unittest.TestCase):
-    def test_hardened_daily_inserts_story_states_in_order(self):
-        hardened = load_module("daily_hardened_integration", ROOT / "scripts/run_daily_production_hardened.py")
+    def test_hardened_daily_keeps_story_passes_internal(self):
+        hardened = load_module(
+            "daily_hardened_integration",
+            ROOT / "scripts/run_daily_production_hardened.py",
+        )
         daily = hardened.load_hardened_daily_module()
         states = daily.STATES
-        chain = [
-            "causal_dossier_valid",
-            "story_plan_valid",
-            "script_draft_ready",
-            "creative_review_passed",
-            "episode_package_final",
-        ]
-        positions = [states.index(value) for value in chain]
-        self.assertEqual(positions, sorted(positions))
-        self.assertEqual(positions, list(range(positions[0], positions[0] + len(chain))))
+        for internal in ("story_plan_valid", "script_draft_ready", "creative_review_passed"):
+            self.assertNotIn(internal, states)
+        causal = states.index("causal_dossier_valid")
+        final = states.index("episode_package_final")
+        self.assertEqual(causal + 1, final)
 
-    def test_story_transition_requires_hash_bound_acceptance(self):
-        hardened = load_module("daily_hardened_acceptance", ROOT / "scripts/run_daily_production_hardened.py")
+    def test_episode_package_final_requires_story_acceptance_package_and_projection(self):
+        hardened = load_module(
+            "daily_hardened_acceptance",
+            ROOT / "scripts/run_daily_production_hardened.py",
+        )
         daily = hardened.load_hardened_daily_module()
         date = "2026-08-06"
         with tempfile.TemporaryDirectory() as temp:
@@ -61,42 +57,55 @@ class StoryEngineDailyStateTests(unittest.TestCase):
             )
             evidence = root / "evidence.json"
             evidence.write_text("{}", encoding="utf-8")
-            daily.add_transition(workspace=root, date=date, new_state="research_inputs_bound", evidence_paths=[evidence])
-            daily.add_transition(workspace=root, date=date, new_state="causal_dossier_valid", evidence_paths=[evidence])
-
-            story_dir = root / "working" / date / "story-engine"
-            story_dir.mkdir(parents=True, exist_ok=True)
-            plan = story_dir / "story_plan.json"
-            plan.write_text("{}", encoding="utf-8")
-            acceptance = story_dir / "story_engine_acceptance.json"
-            acceptance.write_text(json.dumps({
-                "episode_date": date,
-                "status": "pass",
-                "artifacts": {"story_plan": {"path": plan.relative_to(root).as_posix(), "sha256": sha(plan)}},
-                "critic": {"verdict": "pass", "score": 27},
-            }), encoding="utf-8")
-
-            with self.assertRaises(daily.DailyProductionError):
-                daily.add_transition(workspace=root, date=date, new_state="story_plan_valid", evidence_paths=[plan])
-            result = daily.add_transition(
+            daily.add_transition(
                 workspace=root,
                 date=date,
-                new_state="story_plan_valid",
-                evidence_paths=[plan, acceptance],
+                new_state="research_inputs_bound",
+                evidence_paths=[evidence],
             )
-            self.assertEqual("story_plan_valid", result["current_state"])
+            daily.add_transition(
+                workspace=root,
+                date=date,
+                new_state="causal_dossier_valid",
+                evidence_paths=[evidence],
+            )
+
+            package = root / "episodes" / date / f"episode_package_{date}.md"
+            package.parent.mkdir(parents=True)
+            package.write_text("package", encoding="utf-8")
+            with self.assertRaises(daily.DailyProductionError):
+                daily.add_transition(
+                    workspace=root,
+                    date=date,
+                    new_state="episode_package_final",
+                    evidence_paths=[package],
+                )
+
+            with self.assertRaises(daily.DailyProductionError):
+                daily.add_transition(
+                    workspace=root,
+                    date=date,
+                    new_state="story_plan_valid",
+                    evidence_paths=[evidence],
+                )
 
 
 class ProjectionTests(unittest.TestCase):
     def test_sentence_segmentation_preserves_exact_text(self):
-        projection = load_module("story_projection", ROOT / "scripts/story-engine/project_story_script_to_production.py")
+        projection = load_module(
+            "story_projection",
+            ROOT / "scripts/story-engine/project_story_script_to_production.py",
+        )
         text = "一文目です。二文目です。三文目です。"
         parts = projection.segment(text, 2)
         self.assertEqual(text, "".join(parts))
         self.assertEqual(2, len(parts))
 
     def test_explicit_visual_override_updates_only_declared_fields(self):
-        projection = load_module("story_projection_override", ROOT / "scripts/story-engine/project_story_script_to_production.py")
+        projection = load_module(
+            "story_projection_override",
+            ROOT / "scripts/story-engine/project_story_script_to_production.py",
+        )
         render = {"scenes": [{
             "sceneId": "scene-01",
             "headline": "old",

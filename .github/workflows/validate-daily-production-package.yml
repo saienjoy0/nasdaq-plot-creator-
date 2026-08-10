@@ -35,6 +35,7 @@ on:
       - "scripts/build_renderer_handoff_hardened.py"
       - "scripts/record_visual_source_baseline.py"
       - "scripts/run_daily_production_hardened.py"
+      - "scripts/run_daily_production_story_engine_v1_1.py"
       - "tests/daily-production-hardening/**"
       - "tests/story-engine-integration/**"
       - "tests/remotion-compat/**"
@@ -208,7 +209,8 @@ jobs:
             scripts/build_final_production_package_hardened.py \
             scripts/build_renderer_handoff_240.py \
             scripts/record_visual_source_baseline.py \
-            scripts/run_daily_production_hardened.py
+            scripts/run_daily_production_hardened.py \
+            scripts/run_daily_production_story_engine_v1_1.py
 
       - name: Prepare explicit Visual Source candidates and selection
         shell: bash
@@ -245,9 +247,6 @@ jobs:
           ACCEPT="$STORY/story_engine_acceptance.json"
           python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state research_inputs_bound --evidence "research/$EPISODE_DATE/research_input_manifest.json"
           python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state causal_dossier_valid --evidence "research/$EPISODE_DATE/causal_research_dossier_$EPISODE_DATE.json" "research/$EPISODE_DATE/causal_dossier_validation.json"
-          python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state story_plan_valid --evidence "$STORY/story_plan.json" "$ACCEPT"
-          python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state script_draft_ready --evidence "$STORY/story_script.json" "$ACCEPT"
-          python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state creative_review_passed --evidence "$STORY/creative_review.json" "$ACCEPT"
           python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state episode_package_final --evidence "episodes/$EPISODE_DATE/episode_package_$EPISODE_DATE.md" "$ACCEPT" "$STORY/story_projection_report.json"
           python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state memory_usage_valid --evidence "research/$EPISODE_DATE/causal_dossier_validation.json"
           python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state assets_resolved --evidence "verification/$EPISODE_DATE/asset_resolution_log.json" "verification/$EPISODE_DATE/image_generation_log.json"
