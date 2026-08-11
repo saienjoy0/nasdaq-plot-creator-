@@ -46,14 +46,16 @@ jobs:
           python -m py_compile skills/nasdaq-cafe-story-plan/validators/validate_story_plan.py
           python -m py_compile scripts/story-engine/validate_story_engine_bundle.py
           python -m py_compile tests/story-engine/fixtures/2026-08-10-interest/materialize_revised_interest_fixture.py
+          python -m py_compile tests/story-engine/fixtures/2026-08-10-interest/materialize_revised_interest_fixture_v2.py
           python -m py_compile tests/story-engine/run_2026_08_10_interest_regression.py
+          python -m py_compile tests/story-engine/run_2026_08_10_interest_regression_v2.py
       - name: Run Story Plan and Story Engine regression tests
         run: |
           python -m pytest -q tests/story-plan tests/story-engine
           python -m pytest -q tests/story-engine-integration/test_openai_critic_interest_policy.py
       - name: Run real historical H4 versus revised Interest A-B
         run: |
-          python tests/story-engine/run_2026_08_10_interest_regression.py \
+          python tests/story-engine/run_2026_08_10_interest_regression_v2.py \
             --repo-root "$GITHUB_WORKSPACE" \
             --acceptance-source "$GITHUB_WORKSPACE/.acceptance-fixture" \
             --output "$GITHUB_WORKSPACE/verification/2026-08-10/story_interest_regression.json"
