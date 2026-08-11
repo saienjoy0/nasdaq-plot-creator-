@@ -442,7 +442,7 @@ def base_scene8_beat(index: int, evidence_source_ids: list[str]) -> dict[str, An
     transition = "major-shift" if index == 1 else "continuation"
     return {
         "beatId": f"scene-08-beat-{index:03d}",
-        "visualBeatId": f"vb-08-{index:02d}",
+        "visualBeatId": f"scene-08-beat-{index:03d}",
         "startChunkId": f"scene-08-chunk-{index:03d}",
         "endChunkId": f"scene-08-chunk-{index:03d}",
         "narrationStartCue": "placeholder",
