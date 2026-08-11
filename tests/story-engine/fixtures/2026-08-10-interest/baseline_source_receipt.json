@@ -1,29 +1,31 @@
 {
-  "contract_version": "1.0.0",
+  "contract_version": "1.1.0",
   "episode_date": "2026-08-10",
+  "reproduction": {
+    "acceptance_fixture_commit": "b986888660aa8efd64428aa8119200965351c047",
+    "materializer": "tests/real-day-2026-08-10/materialize_fixture.py",
+    "story_engine_materializer": "scripts/story-engine/materialize_story_engine.py",
+    "policy": "regenerate the historical H4 baseline from the immutable acceptance fixture, then require the generated core files to match the recorded SHA-256 values below"
+  },
   "files": {
     "causal_dossier": {
-      "artifact_path": "research/2026-08-10/causal_research_dossier_2026-08-10.json",
+      "generated_path": "research/2026-08-10/causal_research_dossier_2026-08-10.json",
       "bytes": 27731,
-      "fixture_path": "tests/story-engine/fixtures/2026-08-10-interest/baseline/causal_dossier.json",
       "sha256": "d4ddd1277376865dae1f8d534e4844b2967cf31667e19fce4b78a5bbb04e6533"
     },
     "creative_review": {
-      "artifact_path": "working/2026-08-10/story-engine/creative_review.json",
+      "generated_path": "working/2026-08-10/story-engine/creative_review.json",
       "bytes": 2697,
-      "fixture_path": "tests/story-engine/fixtures/2026-08-10-interest/baseline/creative_review.json",
       "sha256": "4e24377f9568297be73ff4ef94237dc54496552173f47018ea66fd4e484b108d"
     },
     "story_plan": {
-      "artifact_path": "working/2026-08-10/story-engine/story_plan.json",
+      "generated_path": "working/2026-08-10/story-engine/story_plan.json",
       "bytes": 13174,
-      "fixture_path": "tests/story-engine/fixtures/2026-08-10-interest/baseline/story_plan.json",
       "sha256": "4da26c26e2fbc845e0ca59715b054eec6356fc1c1a7856a46631da359f6ea872"
     },
     "story_script": {
-      "artifact_path": "working/2026-08-10/story-engine/story_script.json",
+      "generated_path": "working/2026-08-10/story-engine/story_script.json",
       "bytes": 11564,
-      "fixture_path": "tests/story-engine/fixtures/2026-08-10-interest/baseline/story_script.json",
       "sha256": "6c53d9810528391e3d0306036b42b5cbe3e0b76d7eac8a97a0c130bb384c8c61"
     }
   },
