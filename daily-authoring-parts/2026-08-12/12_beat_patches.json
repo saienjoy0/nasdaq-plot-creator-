@@ -1,0 +1,46 @@
+{
+  "beatPatches": [
+    {
+      "sceneNumber": 2,
+      "beatNumber": 2,
+      "set": {
+        "visualTemplate": "split-comparison",
+        "grammarId": "comparison",
+        "visualMode": "stock-comparison",
+        "screenQuestion": "原油とNASDAQは同じ夜にどう動いたか",
+        "primaryElement": "Brent上昇とNASDAQ下落",
+        "viewerTexts": [
+          "Brent +1.4%",
+          "NASDAQ -0.60%"
+        ],
+        "screenState": "Chart",
+        "transitionRole": "major-shift",
+        "variant": "two-lane",
+        "comparisonBasis": "2026-08-11 regular session",
+        "metrics": [
+          {
+            "label": "Brent",
+            "value": "+1.4%",
+            "numericValue": 1.4,
+            "precision": 1,
+            "unit": "%",
+            "tone": "positive",
+            "comparison": "2026-08-11 regular session"
+          },
+          {
+            "label": "NASDAQ",
+            "value": "-0.60%",
+            "numericValue": -0.6,
+            "precision": 2,
+            "unit": "%",
+            "tone": "negative",
+            "comparison": "2026-08-11 regular session"
+          }
+        ],
+        "evidenceSourceIds": [
+          "source-003"
+        ]
+      }
+    }
+  ]
+}

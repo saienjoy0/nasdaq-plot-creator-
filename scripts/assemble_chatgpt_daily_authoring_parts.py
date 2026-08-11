@@ -2,10 +2,10 @@
 """Assemble split ChatGPT-authored JSON fragments into one daily authoring file.
 
 Fragments are editorially complete inputs created by ChatGPT. This script only performs
-a deterministic deep merge, binds the exact daily-source file SHA required by lineage,
-exposes already-approved review scores under legacy field names, and activates exact
-Renderer 2.4 compatibility aliases for the subsequent deterministic materializer.
-It makes no market or creative decisions.
+a deterministic deep merge, applies explicit ChatGPT-authored Beat patches, binds the
+exact daily-source SHA required by lineage, exposes approved review scores under legacy
+field names, and activates exact Renderer 2.4 compatibility aliases. It makes no market
+or creative decisions of its own.
 """
 from __future__ import annotations
 
@@ -69,14 +69,44 @@ def activate_renderer_240_financial_scope(root: Path) -> None:
         raise SystemExit("cannot activate Renderer 2.4 financial template scope")
 
 
-def normalize_renderer_visual_modes(value: dict[str, Any]) -> int:
-    """Apply template-implied visual-mode aliases without changing authored content.
+def apply_explicit_beat_patches(value: dict[str, Any]) -> int:
+    """Apply patches authored in daily input; no inference or fallback is allowed."""
+    patches = value.pop("beatPatches", [])
+    if not isinstance(patches, list):
+        raise SystemExit("beatPatches must be an array")
+    scenes = value.get("scenes")
+    if not isinstance(scenes, list):
+        raise SystemExit("assembled authoring scenes must be an array")
+    applied = 0
+    seen: set[tuple[int, int]] = set()
+    for row in patches:
+        if not isinstance(row, dict):
+            raise SystemExit("beatPatches entries must be objects")
+        scene_number = row.get("sceneNumber")
+        beat_number = row.get("beatNumber")
+        fields = row.get("set")
+        if not isinstance(scene_number, int) or not 1 <= scene_number <= len(scenes):
+            raise SystemExit(f"beat patch sceneNumber invalid: {scene_number}")
+        scene = scenes[scene_number - 1]
+        beats = scene.get("beats") if isinstance(scene, dict) else None
+        if not isinstance(beats, list) or not isinstance(beat_number, int) or not 1 <= beat_number <= len(beats):
+            raise SystemExit(f"beat patch beatNumber invalid: scene={scene_number} beat={beat_number}")
+        if not isinstance(fields, dict) or not fields:
+            raise SystemExit("beat patch set must be a non-empty object")
+        key = (scene_number, beat_number)
+        if key in seen:
+            raise SystemExit(f"duplicate beat patch target: scene={scene_number} beat={beat_number}")
+        seen.add(key)
+        target = beats[beat_number - 1]
+        if not isinstance(target, dict):
+            raise SystemExit(f"beat patch target is not an object: scene={scene_number} beat={beat_number}")
+        target.update(fields)
+        applied += 1
+    return applied
 
-    Renderer projection treats `number-comparison`/`stock-comparison` as data-shape
-    instructions before it looks at the template. A source-receipt nested in a numeric
-    Scene must therefore explicitly use the media mode instead of inheriting the Scene
-    mode. This is a deterministic template compatibility mapping, not a visual choice.
-    """
+
+def normalize_renderer_visual_modes(value: dict[str, Any]) -> int:
+    """Apply template-implied mode aliases only where Renderer projection requires them."""
     changed = 0
     scenes = value.get("scenes")
     if not isinstance(scenes, list):
@@ -114,6 +144,7 @@ def main() -> int:
         value = merge(value, piece)
     if value.get("episodeDate") != args.date:
         raise SystemExit("assembled authoring episodeDate mismatch")
+    patch_count = apply_explicit_beat_patches(value)
     review = value.get("review")
     if isinstance(review, dict) and "scores" not in review:
         story_scores = review.get("storyScores")
@@ -127,8 +158,8 @@ def main() -> int:
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(
-        f"ASSEMBLED {len(parts)} authoring parts -> {output}; "
-        f"daily_sha256={daily_sha}; renderer_financial_scope=2.4; "
+        f"ASSEMBLED {len(parts)} authoring parts -> {output}; daily_sha256={daily_sha}; "
+        f"beat_patches={patch_count}; renderer_financial_scope=2.4; "
         f"source_receipt_mode_aliases={mode_aliases}"
     )
     return 0
