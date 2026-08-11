@@ -26,6 +26,14 @@
         "contract_version": {"type": "string", "minLength": 1}
       }
     },
+    "visual_director": {
+      "type": "object", "additionalProperties": false,
+      "required": ["required", "contract_version"],
+      "properties": {
+        "required": {"const": true},
+        "contract_version": {"const": "1.0.0"}
+      }
+    },
     "approvals": {
       "type": "object", "additionalProperties": false,
       "required": ["preview_requested", "final_requested", "memory_promotion_requested"],
