@@ -1,6 +1,6 @@
 ---
 name: nasdaq-cafe-story-engine
-version: 1.3.1
+version: 1.3.2
 description: Turn a validated causal dossier into a reviewed 9-Scene episode package by chaining viewer understanding without changing market causality, then hand the reviewed story to explicit Visual Evidence Planning.
 ---
 
@@ -25,9 +25,13 @@ causal_dossier_valid
 
 > **結論を遅らせるのではなく、結論を進化させる。**
 
+> **面白さは、Evidenceによって視聴者の説明モデルが有意味に更新される量で作る。**
+
 Do not retain viewers by hiding a known answer. Give a real payoff, then let that new understanding make the next comparison, test, boundary, counterevidence, implication or verification valuable.
 
 The opening may give the direction and a provisional answer. The late section must still change, branch, narrow, reveal mechanism, or materially test that answer. A repeated answer plus extra examples or disclaimers is not progression.
+
+Information Gain is a semantic editorial concept, not a numeric formula. New facts are valuable when they change, narrow, branch, test, or clarify the viewer's explanatory model enough to make the next Scene more valuable. Evidence count, question count, text length, or dramatic wording may not stand in for this judgment.
 
 The strict layer is market meaning. The flexible layer is spoken delivery.
 
@@ -74,6 +78,8 @@ For reason_unknown, explain uncertainty rather than inventing a cause.
 
 Choose an angle for explanatory value, not for theatrical reversals. The same evidence can support a compelling causal chain, comparison, branch, boundary, mechanism reveal, or reason-unknown story without a fake surprise.
 
+When several angles are causally valid, prefer the one that can create multiple distinct Evidence-backed model updates across Scenes 1–8 rather than one reveal surrounded by factual filler. Do not choose a weaker causal angle merely because it looks more surprising.
+
 ## Pass B — Understanding Progression / Story Plan v1.2
 
 Keep 03's formal Scene 1–9 roles unchanged.
@@ -107,6 +113,63 @@ verification
 ```
 
 A new number or another supporting headline does not automatically count as progress. The viewer's explanatory model must actually move.
+
+### Honest Information Gap
+
+The opening may state the provisional driver and a concrete unresolved mismatch without immediately reciting every later numeric receipt.
+
+Allowed:
+
+```text
+金利がまず鍵です。
+ただ、半導体を全部この説明に入れると、一銘柄だけ発表時刻と値動きが合いません。
+```
+
+This gives early value plus a real reason to inspect the evidence.
+
+Forbidden:
+
+```text
+答えは分かっているけれど後半まで隠します。
+```
+
+Information Gap may organize disclosure. It may not hide evidence required to make the provisional statement truthful, manufacture ignorance, or distort chronology.
+
+### Internal Understanding Gain classification
+
+Before narration, classify the main gain of each Scene internally. This is a planning aid and is not yet a required Story Plan JSON field.
+
+```text
+support
+narrow
+branch
+disproof
+mechanism_reveal
+verification
+uncertainty_reduction
+synthesis
+```
+
+- `support`: strengthens an already-understood model without materially changing it
+- `narrow`: limits scope, confidence, or applicability
+- `branch`: separates one apparent explanation into multiple engines
+- `disproof`: rejects a plausible simple explanation
+- `mechanism_reveal`: shows how the effect travels
+- `verification`: tests the provisional model against timing, price, peers, or direct observation
+- `uncertainty_reduction`: makes remaining uncertainty more specific
+- `synthesis`: combines prior updates into the final interpretation
+
+`support` is valid but usually low Information Gain. A required support Scene can remain short. Do not relabel support as a stronger gain type to make the arc look better.
+
+### Payoff-drought planning check
+
+Inspect Scenes 1–8 before authoring. If two or more consecutive Scenes mainly accumulate facts or support without materially moving the explanatory model:
+- preserve every fixed formal role,
+- keep mandatory facts and Evidence bindings,
+- plan those support-heavy Scenes concisely,
+- bring the next truthful comparison, test, boundary, or model update forward within chronology-compatible Scene roles when possible.
+
+Do not invent a surprise to fill a drought. A short low-gain Scene is preferable to fake drama.
 
 ### Evidence-backed Understanding Upgrade
 
@@ -229,6 +292,30 @@ The fox is a guide, not a teacher or outside announcer.
 
 The fox should sound like a guide updating an explanation with the viewer, not a narrator reading the already-completed audit trail. Do not invent a personal past belief such as 「僕も最初は〜と思った」 unless that experience is actually recorded.
 
+### ABT / fact-stacking compression
+
+Use And / But / Therefore as a diagnostic, not a mandatory sentence template.
+
+If adjacent Scenes mainly read as:
+
+```text
+fact
+AND fact
+AND another fact
+```
+
+while the explanatory model stays the same, compress the spoken surface so the next real contrast or implication becomes visible sooner.
+
+When supported by the frozen Evidence, a useful pattern is:
+
+```text
+known fact
+BUT mismatch / boundary
+THEREFORE updated interpretation
+```
+
+Do not invent a `BUT`, remove a required formal Scene, omit Expected / Actual / Gap, or strengthen the `THEREFORE` beyond the Story Plan. Low-gain support Scenes may simply be short.
+
 After the factual draft, run exactly one surface-only Spoken Delivery Pass.
 
 Allowed surface changes:
@@ -240,6 +327,7 @@ Allowed surface changes:
 - explicit vs implicit question
 - short analogy
 - punctuation / pause
+- compression of repeated factual setup when all guarded meaning remains present
 
 Forbidden changes:
 - Claim ID
@@ -312,6 +400,28 @@ If no material understanding is lost, issue `NO_LATE_PAYOFF`.
 
 Do not penalize an episode merely because it lacks a theatrical reversal. A real branch, boundary, mechanism reveal, price test, or reason-unknown payoff is enough.
 
+### Interest-quality diagnostics
+
+Run these after the hard gates and before numeric scoring. They detect scripts that are causally safe but still feel like evidence receipts or lectures.
+
+#### `FACT_STACKING`
+
+Adjacent Scenes mainly add facts or support while the explanatory model remains effectively unchanged.
+
+#### `LOW_INFORMATION_GAIN`
+
+Ask what the viewer can explain differently after this Scene. If the answer is only that the same hypothesis now has one more supporting fact, the Scene may be low gain. `support` is valid; issue this finding when runtime/emphasis is disproportionate to the gain.
+
+#### `PAYOFF_DROUGHT`
+
+A multi-Scene stretch goes too long without a meaningful model update, useful narrowing, direct test, mechanism reveal, or consequential counterevidence. Do not judge this by a fixed number of seconds or words.
+
+#### `WEAK_SURPRISE`
+
+The nominated Understanding Upgrade technically exists but has little explanatory consequence. Ask whether removing it would materially change the final model. Surprise means a meaningful model update, not a theatrical twist.
+
+These four diagnostics may be `minor` when localized and safely compressible, or `major` when they materially damage progression. If the same defect actually means there is no real Understanding Upgrade or late payoff, use the stronger hard finding instead.
+
 ### Scenes 1–7 Progression Check
 
 Check:
@@ -353,6 +463,10 @@ NO_LATE_PAYOFF
 OPENING_PROMISE_NOT_RECOVERED
 ENDING_NOT_BOOKENDED
 NO_NEW_EVIDENCE_OR_MEANING
+FACT_STACKING
+LOW_INFORMATION_GAIN
+PAYOFF_DROUGHT
+WEAK_SURPRISE
 FOX_VOICE_ABSENT
 ABSTRACT_EDITORIAL_LANGUAGE
 ```
@@ -386,6 +500,10 @@ Scene 9 cannot be patched.
 
 For surface failures, prefer a surface-only fix first.
 
+For `FACT_STACKING`, `LOW_INFORMATION_GAIN`, or `PAYOFF_DROUGHT`, first compress repeated setup, improve connectors, or move already-supported content within compatible Scene roles. Do not change frozen meaning merely to increase pace.
+
+For `WEAK_SURPRISE`, first ask whether existing Evidence can play a more explanatory comparison/test/boundary role. Do not invent a turn.
+
 For `NO_UNDERSTANDING_UPGRADE` or `NO_LATE_PAYOFF`, do not invent new evidence or causal claims. Reuse already-supported Evidence in a better explanatory role, move compatible explanation blocks, or shorten the episode. If the evidence itself is insufficient, return upstream.
 
 ## Pass F — Causality Preservation
@@ -405,7 +523,7 @@ Reject any rewrite that causes:
 Maximum two review/rewrite rounds.
 If a Critical issue remains, block and return to the owning stage.
 
-A final PASS requires the hard narrative gates and the normal 04 score threshold. Numerical score never overrides the hard gates.
+A final PASS requires the hard narrative gates and the normal 04 score threshold. Numerical score never overrides the hard gates. Major interest-quality findings also block PASS through the normal major-finding rule; localized minor interest findings may remain when they do not invalidate the episode.
 
 ---
 
@@ -629,6 +747,36 @@ Scene 1–2 are not sacred. Rewrite only Scenes that fail the same Critic criter
 
 ---
 
+# 2026-08-10 interest regression requirement
+
+Use 2026-08-10 as the benchmark for "correct but potentially lecture-like" episodes.
+
+Frozen market meaning:
+
+```text
+weak payroll miss
+→ rate-hike expectations fall
+→ macro support for tech
+```
+
+must remain provisional, not final synthesis.
+
+Required interest progression:
+
+1. contradiction + provisional rate explanation
+2. payroll weakness becomes materially concrete
+3. index/sector strength rejects a simple risk-off reading
+4. Expected / Actual / Gap + rate-hike path reveal the macro mechanism
+5. oil/yield context remains concise support
+6. QQQ/SOXX/NVDA 8:30 response vs MCHP non-response creates the highest-gain branch/verification
+7. MCHP earnings define the company-specific engine while AMD/Alphabet limit blanket-tech generalization
+8. synthesis: different causal engines aligned in the same index direction; one-minute alignment remains chronology evidence, not causal proof
+9. fixed close
+
+The Engine must be able to issue `FACT_STACKING`, `LOW_INFORMATION_GAIN`, `PAYOFF_DROUGHT`, or `WEAK_SURPRISE` when the facts are preserved but the explanatory progress is too weak. These findings may never be resolved by inventing causality or withholding truth.
+
+---
+
 # Required validations
 
 - Story Plan v1.2 validator
@@ -636,6 +784,8 @@ Scene 1–2 are not sacred. Rewrite only Scenes that fail the same Critic criter
 - Understanding Progression scene checks
 - Evidence-backed Understanding Upgrade structural guards
 - Scene 4 → Scene 8 understanding delta guard
+- Information Gain interest-quality diagnostics in 04
+- 2026-08-10 interest benchmark regression
 - material counterevidence guard
 - fixed Scene order / Scene 9 guard
 - 04 hard narrative gates before scoring
