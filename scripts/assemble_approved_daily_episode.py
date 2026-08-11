@@ -346,6 +346,9 @@ def assemble(
         final_contract_path=materialized["final_contract_path"],
         render=render,
     )
+    # Visual Source projection mutates the authoritative render in memory with the
+    # selected placements. Persist that exact render before H3/H4 reads render_spec.json.
+    write_atomic(render_path, dump(render) + "\n")
     story_annex = _story_annex(root, date)
     memory_annex = _memory_annex(
         root,
