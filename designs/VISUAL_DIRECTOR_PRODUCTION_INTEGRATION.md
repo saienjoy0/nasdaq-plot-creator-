@@ -16,7 +16,9 @@ strict post-Story render
 ```
 
 New `production_request.json` files bind Visual Director contract `1.0.0` as
-required. If the plan does not exist, production deliberately stops with
+required. The two immutable acceptance renderer commits that predate the
+Visual Director core remain an explicit migration allowlist; every other
+renderer commit requires the binding. If the plan does not exist, production deliberately stops with
 `E_VISUAL_DIRECTION_PLAN_REQUIRED` after persisting the exact input and catalog.
 No default candidate is chosen. Re-running against the same pinned renderer and
 strict input recompiles only after the plan's catalog SHA and candidate IDs pass.
