@@ -5,7 +5,7 @@ TEST / ACCEPTANCE ONLY. This script does not infer causality or rewrite narratio
 It takes the already-approved 2026-08-10 story and changes only the visual authoring
 needed to prove the production path can show the evidence the story already cites:
 
-- BLS July Employment Situation as an actual official-page Visual Source;
+- BLS July Employment Situation as an actual official PDF page Visual Source;
 - Microchip Q1 FY27 IR release as an actual company-page Visual Source;
 - QQQ 08:29 / 08:30 / 08:31 ET verified minute closes as a real series;
 - reusable Fed / semiconductor backgrounds for visual variety without adding claims.
@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any
 
 DATE = "2026-08-10"
-BLS_URL = "https://www.bls.gov/news.release/empsit.nr0.htm"
+BLS_URL = "https://www.bls.gov/news.release/pdf/empsit.pdf"
 MICROCHIP_URL = (
     "https://ir.microchip.com/news-events/press-releases/detail/1409/"
     "microchip-technology-announces-financial-results-for-first-quarter-of-fiscal-year-2027"
@@ -251,14 +251,14 @@ def apply(root: Path) -> dict[str, Any]:
                 scene_id="scene-02",
                 target_beat_id=scene2_beat,
                 source_id="source-002",
-                purpose="Show the actual BLS July Employment Situation page before abstracting the numbers.",
+                purpose="Show page 1 of the actual BLS July 2026 Employment Situation PDF before abstracting the numbers.",
                 primary=visual_candidate(
                     candidate_id="vsp-20260810-bls-primary",
                     asset_id="daily-bls-employment-july-2026",
                     source_kind="official-url",
                     locator={"url": BLS_URL},
-                    capture_method="webpage-screenshot",
-                    capture_spec={"viewport": {"width": 1440, "height": 900}},
+                    capture_method="pdf-page-render",
+                    capture_spec={"pageNumber": 1},
                     rights_status="cleared",
                 ),
                 fallback=visual_candidate(
