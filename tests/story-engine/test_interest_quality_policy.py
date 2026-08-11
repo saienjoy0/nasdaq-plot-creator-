@@ -176,25 +176,40 @@ def test_major_interest_finding_blocks_pass_without_becoming_a_hard_finding():
     assert any("review verdict must be conditional" in error for error in errors)
 
 
-def test_2026_08_10_interest_benchmark_keeps_support_short_and_scene6_high_gain():
-    benchmark = json.loads(
-        read("tests/story-engine/fixtures/2026-08-10-interest/interest_benchmark.json")
-    )
+def test_2026_08_10_interest_benchmark_uses_real_h4_and_scene6_minute_branch():
+    fixture_root = "tests/story-engine/fixtures/2026-08-10-interest"
+    benchmark = json.loads(read(f"{fixture_root}/interest_benchmark.json"))
+    receipt = json.loads(read(f"{fixture_root}/baseline_source_receipt.json"))
+    invariants = json.loads(read(f"{fixture_root}/editorial_invariants.json"))
     profile = {row["scene_id"]: row for row in benchmark["scene_gain_profile"]}
 
     assert benchmark["episode_date"] == "2026-08-10"
+    assert receipt["source"]["workflow_run_id"] == 31382440383
+    assert receipt["source"]["artifact_id"] == 9060389935
+    assert receipt["source"]["artifact_sha256"] == "696a65ec8ef837860d3a41c8feae65ead5a08c9625881190bab4c9dc02b02705"
+    assert receipt["reproduction"]["acceptance_fixture_commit"] == "b986888660aa8efd64428aa8119200965351c047"
+    assert receipt["files"]["causal_dossier"]["sha256"] == invariants["causal_dossier_sha256"]
+
+    assert benchmark["historical_h4"]["score"] == 29
+    assert benchmark["historical_h4"]["verdict"] == "pass"
+    assert benchmark["historical_h4"]["findings"] == []
+    assert "NO_LATE_PAYOFF" not in benchmark["historical_h4"]["semantic_interest_reassessment_targets"]
+
     assert profile["scene-05"]["primary_gain"] == "support"
     assert profile["scene-05"]["strength"] == "low"
-
     assert profile["scene-06"]["primary_gain"] == "branch"
     assert "verification" in profile["scene-06"]["secondary_gains"]
     assert profile["scene-06"]["strength"] == "very_high"
     assert set(profile["scene-06"]["required_evidence_ids"]) == {
-        "E-003",
-        "E-004",
-        "E-007",
+        "E-008",
+        "E-010",
+        "E-011",
+        "E-012",
     }
+    assert set(profile["scene-07"]["required_evidence_ids"]) == {"E-005", "E-006", "E-007"}
 
-    assert "NO_LATE_PAYOFF" in benchmark["old_frontloaded_expected_findings"]
     assert set(benchmark["interest_findings"]) == INTEREST_FINDINGS
     assert "NO_LATE_PAYOFF" in benchmark["revised_expected_hard_findings_absent"]
+    assert set(benchmark["revised_expected_major_interest_findings_absent"]) == INTEREST_FINDINGS
+    assert Path(ROOT / "tests/story-engine/run_2026_08_10_interest_regression.py").is_file()
+    assert Path(ROOT / f"{fixture_root}/materialize_revised_interest_fixture.py").is_file()
