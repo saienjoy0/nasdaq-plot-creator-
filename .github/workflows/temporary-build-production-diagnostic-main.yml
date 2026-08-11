@@ -1,0 +1,59 @@
+name: Temporary Build Production Diagnostic Main
+
+on:
+  push:
+    branches: [main]
+    paths: [".github/temporary-build-production-diagnostic-main.json"]
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      DATE: 2026-08-10
+      SOURCE_RUN_ID: "31451704351"
+      SOURCE_ARTIFACT: h4-clean-real-day-2026-08-10
+      NASDAQ_CAFE_RENDERER_ROOT: ${{ github.workspace }}/.renderer
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/measured-visual-diversity-2026-08-10
+          persist-credentials: false
+          clean: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.SOURCE_ARTIFACT }}
+          path: .diagnostic-input
+          run-id: ${{ env.SOURCE_RUN_ID }}
+          github-token: ${{ github.token }}
+      - run: cp -a .diagnostic-input/. .
+      - uses: actions/checkout@v6
+        with:
+          repository: saienjoy0/saienjoy0-nasdaq-cafe-remotion
+          ref: 0aaaf77eb2fd54e3e1b5eb4db05410dcaf71b673
+          path: .renderer
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --disable-pip-version-check jsonschema
+      - name: Capture exact error
+        shell: bash
+        run: |
+          set +e
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" build-production \
+            --episode-date "$DATE" --episode-package "episodes/$DATE/episode_package_$DATE.md" \
+            > /tmp/out 2> /tmp/err
+          rc=$?
+          set -e
+          TEXT="$( { echo "exit_code=$rc"; echo '--- stdout ---'; tail -n 50 /tmp/out; echo '--- stderr ---'; tail -n 100 /tmp/err; } )"
+          TITLE="TEMP BUILD PRODUCTION DIAGNOSTIC 2026-08-10"
+          BODY="Temporary diagnostic.\n\n\`\`\`text\n${TEXT}\n\`\`\`"
+          gh issue create --title "$TITLE" --body "$BODY"
+          test "$rc" -ne 0
