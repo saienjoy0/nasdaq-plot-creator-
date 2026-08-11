@@ -157,6 +157,7 @@ def test_real_20260810_receipt_becomes_fallback_plus_real_ir_and_verified_series
     assert result["selectedPath"] == "fallback"
     assert result["approvedFallbackEvidence"] == ["source-002"]
     assert result["realEvidence"] == ["source-004"]
+    assert result["reusableBackgrounds"] == []
     assert [item["close"] for item in result["verifiedSeries"]["points"]] == [
         719.16,
         720.23,
@@ -178,10 +179,13 @@ def test_real_20260810_receipt_becomes_fallback_plus_real_ir_and_verified_series
     }
     assert [values[item] for item in series_ids] == [719.16, 720.23, 720.531]
 
-    scene4 = next(scene for scene in render["scenes"] if scene["sceneNumber"] == 4)
-    scene6 = next(scene for scene in render["scenes"] if scene["sceneNumber"] == 6)
-    assert scene4["assetPlacements"][0]["assetId"] == "background_scene_fed"
-    assert scene6["assetPlacements"][0]["assetId"] == "background_scene_semiconductor"
+    # Renderer 2.4 requires exactly one fixed full-Scene mainBackground. Evidence
+    # diversity must be added as main-stage media/plots rather than replacing it.
+    for number in (4, 6):
+        target = next(scene for scene in render["scenes"] if scene["sceneNumber"] == number)
+        backgrounds = [item for item in target["assetPlacements"] if item.get("role") == "background"]
+        assert len(backgrounds) == 1
+        assert backgrounds[0]["assetId"] == "mainBackground"
 
     intents_doc = json.loads(
         (tmp_path / "working/2026-08-10/visual_source_intents.json").read_text(encoding="utf-8")
