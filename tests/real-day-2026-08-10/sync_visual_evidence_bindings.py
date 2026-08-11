@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
-"""Synchronize the 2026-08-10 evidence-first Visual Beat into Story bindings.
+"""Synchronize 2026-08-10 evidence-first visual authoring into Story bindings.
 
-Acceptance-only helper. It changes no narration or causal meaning. The purpose is to
-make Pre-TTS validation, Story auxiliary bindings, Renderer 2.4 canonicalization, and
-the public episode package see the same explicitly authored Scene 8 verified series.
+Acceptance-only helper. It changes no narration or causal meaning. It keeps the
+approved Story, Pre-TTS validation, Renderer 2.4 finalization, and public package on
+the same explicitly authored visual contract.
 
-The Story projection intentionally keeps spoken narration and visible caption text as
-separate fields. The final package validator requires every visible render string to
-remain auditable in the package, so this helper also records the already-derived
-caption strings in a machine-only annex. It never rewrites the spoken narration.
+Two narrow corrections are made:
+- Scene 5 Beat 1 is qualitative supporting-factor analysis, so it is authored as
+  nonnumeric ``tailwind-headwind / causal`` instead of pretending to be numeric
+  evidence.
+- Scene 8 carries the verified QQQ minute series with an explicit reaction binding.
+
+The helper also records already-derived display captions in a machine-only annex;
+spoken narration is never rewritten.
 """
 
 from __future__ import annotations
@@ -44,7 +48,7 @@ def canonical_visual_beat_id(value: str) -> str:
     match = re.fullmatch(r"scene-(0[1-9])-beat-([0-9]{3})", value)
     if match:
         return f"vb-{match.group(1)}-{int(match.group(2)):02d}"
-    raise SystemExit(f"unsupported Scene 8 Visual Beat ID alias: {value}")
+    raise SystemExit(f"unsupported Visual Beat ID alias: {value}")
 
 
 def sync_caption_projection(render: dict[str, Any], package_path: Path) -> int:
@@ -96,12 +100,65 @@ def sync_caption_projection(render: dict[str, Any], package_path: Path) -> int:
     return len(captions)
 
 
-def apply(root: Path) -> dict[str, Any]:
-    render_path = root / f"render-specs/{DATE}/render_spec.json"
-    bindings_path = root / f"working/{DATE}/story-engine/story_production_bindings.json"
-    package_path = root / f"episodes/{DATE}/episode_package_public_{DATE}.md"
-    render = load(render_path)
-    bindings = load(bindings_path)
+def patch_scene5_support_forces(render: dict[str, Any], overrides: dict[str, Any]) -> str:
+    scene5 = next(
+        scene for scene in render.get("scenes", []) if scene.get("sceneNumber") == 5
+    )
+    beat = scene5["visualBeats"][0]
+    beat_id = beat.get("beatId")
+    if not isinstance(beat_id, str) or not beat_id:
+        raise SystemExit("Scene 5 Beat 1 beatId missing")
+    object_ids = beat.get("objectIds")
+    if not isinstance(object_ids, list) or len(object_ids) != 1:
+        raise SystemExit("Scene 5 Beat 1 must keep its single approved support-factor card")
+    if scene5.get("numbers"):
+        # Do not invent or coerce numbers to satisfy a numeric evidence template.
+        selected_numbers = {
+            item.get("numberId")
+            for item in scene5.get("numbers", [])
+            if isinstance(item, dict)
+        }.intersection(object_ids)
+        if selected_numbers:
+            raise SystemExit("Scene 5 support-force Beat unexpectedly selects numeric objects")
+
+    beat["visualTemplate"] = "tailwind-headwind"
+    beat["templateVariant"] = "two-lane"
+    beat["contentType"] = "supporting-forces"
+    beat["visualMode"] = "conclusion-card"
+    beat["screenState"] = "Data"
+    config = beat.get("templateConfig")
+    if not isinstance(config, dict):
+        raise SystemExit("Scene 5 Beat 1 templateConfig missing")
+    config["variant"] = "two-lane"
+    config["comparisonBasis"] = "NASDAQへの主因候補と同日に存在した増幅要因"
+    config["dataBasis"] = "Reuters 2026-08-07 market reporting"
+    config["laneLabels"] = ["追い風", "留保"]
+    grammar = beat.get("visualGrammar")
+    if not isinstance(grammar, dict):
+        raise SystemExit("Scene 5 Beat 1 visualGrammar missing")
+    grammar["grammarId"] = "causal"
+    beat["visualGrammarId"] = "causal"
+
+    override = overrides.setdefault(beat_id, {})
+    override.update(
+        {
+            "screenQuestion": beat["screenQuestion"],
+            "primaryElement": beat["primaryElement"],
+            "viewerTexts": beat["viewerTexts"],
+            "changeCue": beat["changeCue"],
+            "contentType": "supporting-forces",
+            "visualTemplate": "tailwind-headwind",
+            "visualMode": "conclusion-card",
+            "screenState": "Data",
+            "templateVariant": "two-lane",
+            "visualGrammarId": "causal",
+            "transitionRole": grammar["transitionRole"],
+        }
+    )
+    return beat_id
+
+
+def patch_scene8_verified_series(render: dict[str, Any], overrides: dict[str, Any]) -> tuple[str, str, list[str]]:
     scene8 = next(
         scene for scene in render.get("scenes", []) if scene.get("sceneNumber") == 8
     )
@@ -121,14 +178,11 @@ def apply(root: Path) -> dict[str, Any]:
     object_ids = beat.get("objectIds")
     if not isinstance(object_ids, list) or len(object_ids) < 3:
         raise SystemExit("Scene 8 verified series objectIds missing")
-    event_order = reaction.get("eventOrderIds")
-    series_ids = reaction.get("seriesObjectIds")
-    if event_order != object_ids or series_ids != object_ids:
+    if reaction.get("eventOrderIds") != object_ids or reaction.get("seriesObjectIds") != object_ids:
         raise SystemExit("Scene 8 reaction order must match authored objectIds")
     if reaction.get("precision") != "verified-intraday-series":
         raise SystemExit("Scene 8 reaction precision is not verified-intraday-series")
 
-    overrides = bindings.setdefault("beat_overrides", {})
     override = overrides.setdefault(beat_id, {})
     override.update(
         {
@@ -158,17 +212,35 @@ def apply(root: Path) -> dict[str, Any]:
             },
         }
     )
+    return beat_id, visual_beat_id, list(object_ids)
+
+
+def apply(root: Path) -> dict[str, Any]:
+    render_path = root / f"render-specs/{DATE}/render_spec.json"
+    bindings_path = root / f"working/{DATE}/story-engine/story_production_bindings.json"
+    package_path = root / f"episodes/{DATE}/episode_package_public_{DATE}.md"
+    render = load(render_path)
+    bindings = load(bindings_path)
+    overrides = bindings.setdefault("beat_overrides", {})
+
+    scene5_beat_id = patch_scene5_support_forces(render, overrides)
+    beat_id, visual_beat_id, object_ids = patch_scene8_verified_series(render, overrides)
+
+    write(render_path, render)
     write(bindings_path, bindings)
     caption_count = sync_caption_projection(render, package_path)
     return {
         "status": "pass",
         "episodeDate": DATE,
+        "scene5BeatId": scene5_beat_id,
+        "scene5VisualTemplate": "tailwind-headwind",
+        "scene5VisualGrammarId": "causal",
         "beatId": beat_id,
         "visualBeatId": visual_beat_id,
         "visualTemplate": "event-reaction-timeline",
         "templateVariant": "verified-series",
         "precision": "verified-intraday-series",
-        "seriesObjectIds": list(object_ids),
+        "seriesObjectIds": object_ids,
         "visualGrammarId": "reaction",
         "captionProjectionCount": caption_count,
         "narrationChanged": False,
