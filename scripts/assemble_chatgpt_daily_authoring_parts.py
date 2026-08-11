@@ -2,12 +2,14 @@
 """Assemble split ChatGPT-authored JSON fragments into one daily authoring file.
 
 Fragments are editorially complete inputs created by ChatGPT. This script only performs
-a deterministic deep merge: dictionaries merge recursively, lists concatenate, and
-scalar duplicates must be byte-equivalent. It makes no market or creative decisions.
+a deterministic deep merge, binds the exact daily-source file SHA required by lineage,
+and exposes already-approved review scores under legacy field names. It makes no market
+or creative decisions.
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -24,6 +26,30 @@ def merge(left: Any, right: Any, path: str = "$") -> Any:
     if left == right:
         return left
     raise ValueError(f"conflicting scalar at {path}: {left!r} != {right!r}")
+
+
+def bind_daily_source_lineage(value: dict[str, Any], root: Path, date: str) -> str:
+    daily_rel = f"daily-inputs/{date}/daily_source_package_{date}.md"
+    daily_path = root / daily_rel
+    if not daily_path.is_file():
+        raise SystemExit(f"daily source package missing: {daily_path}")
+    daily_sha = hashlib.sha256(daily_path.read_bytes()).hexdigest()
+    dossier = value.get("causalDossier")
+    if not isinstance(dossier, dict):
+        raise SystemExit("causalDossier is required")
+    provenance = dossier.get("input_provenance")
+    if not isinstance(provenance, list):
+        raise SystemExit("causalDossier.input_provenance is required")
+    matches = [
+        item for item in provenance
+        if isinstance(item, dict)
+        and item.get("role") == "daily_input"
+        and item.get("path_or_reference") == daily_rel
+    ]
+    if len(matches) != 1:
+        raise SystemExit(f"expected exactly one daily_input provenance row for {daily_rel}; found={len(matches)}")
+    matches[0]["version_or_hash"] = daily_sha
+    return daily_sha
 
 
 def main() -> int:
@@ -50,10 +76,11 @@ def main() -> int:
         if not isinstance(story_scores, dict):
             raise SystemExit("review.storyScores is required")
         review["scores"] = dict(story_scores)
+    daily_sha = bind_daily_source_lineage(value, root, args.date)
     output = root / "daily-authoring" / f"{args.date}.json"
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(f"ASSEMBLED {len(parts)} authoring parts -> {output}")
+    print(f"ASSEMBLED {len(parts)} authoring parts -> {output}; daily_sha256={daily_sha}")
     return 0
 
 
