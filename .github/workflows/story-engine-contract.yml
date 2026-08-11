@@ -27,8 +27,11 @@ permissions: {contents: read}
 jobs:
   test:
     if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+      (github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner) ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.user.login == github.repository_owner &&
+       github.actor == github.repository_owner)
     runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 15
     steps:
@@ -38,4 +41,4 @@ jobs:
       - run: python -m pip install jsonschema pytest openai
       - run: python tests/story-engine/test_story_engine.py
       - run: python tests/story-engine/test_committed_valid_fixtures.py
-      - run: pytest -q tests/story-plan/test_story_plan.py tests/story-plan/test_story_plan_migration.py tests/story-engine/test_story_engine_2026_08_06_fixture.py tests/story-engine/test_understanding_progression_review.py tests/story-engine-integration/test_optional_external_critic_policy.py tests/story-engine-integration/test_display_text.py tests/story-engine-integration/test_openai_critic_adapter.py
+      - run: pytest -q tests/story-plan/test_story_plan.py tests/story-plan/test_story_plan_migration.py tests/story-plan/test_story_plan_2026_08_10_regression.py tests/story-engine/test_story_engine_2026_08_06_fixture.py tests/story-engine/test_understanding_progression_review.py tests/story-engine-integration/test_optional_external_critic_policy.py tests/story-engine-integration/test_display_text.py tests/story-engine-integration/test_openai_critic_adapter.py
