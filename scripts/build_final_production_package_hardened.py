@@ -47,6 +47,10 @@ def _real_renderer_finalizer(*, output_root: Path, date: str, renderer_root: Pat
         "renderer_package_finalizer_compat",
         ROOT / "scripts/finalize_renderer_package_compat.py",
     )
+    intraday = _load_module(
+        "renderer_intraday_series_attachment",
+        ROOT / "scripts/remotion_intraday_series.py",
+    )
     render_spec_path = output_root / "render-specs" / date / "render_spec.json"
     runtime_registry = module.base._build_validation_runtime_asset_registry(
         output_root=output_root,
@@ -56,11 +60,44 @@ def _real_renderer_finalizer(*, output_root: Path, date: str, renderer_root: Pat
     previous_registry = os.environ.get("NASDAQ_CAFE_RUNTIME_ASSET_REGISTRY")
     if runtime_registry is not None:
         os.environ["NASDAQ_CAFE_RUNTIME_ASSET_REGISTRY"] = str(runtime_registry)
+
+    # Keep the legacy canonical projection untouched. The production-only hardened
+    # entry point decorates its existing call so explicitly bound full minute data is
+    # attached immediately after projection and therefore before referential checks,
+    # the pinned Renderer validator, and all persisted preflight hashes.
+    original_canonicalize = module.remotion_240_projection.canonicalize_render_spec
+    attachment_result: dict[str, Any] = {}
+
+    def canonicalize_with_bound_intraday(
+        render: dict[str, Any],
+        *,
+        episode_date: str,
+        reaction_bindings_path: Path,
+    ) -> None:
+        original_canonicalize(
+            render,
+            episode_date=episode_date,
+            reaction_bindings_path=reaction_bindings_path,
+        )
+        result = intraday.attach_bound_intraday_series(
+            render,
+            output_root=output_root,
+            episode_date=episode_date,
+            reaction_bindings_path=reaction_bindings_path,
+        )
+        attachment_result.clear()
+        attachment_result.update(result)
+
+    module.remotion_240_projection.canonicalize_render_spec = canonicalize_with_bound_intraday
     try:
-        return module.finalize(
+        finalized = module.finalize(
             output_root=output_root, date=date, renderer_root=renderer_root
         )
+        if attachment_result:
+            finalized["intradaySeriesAttachment"] = dict(attachment_result)
+        return finalized
     finally:
+        module.remotion_240_projection.canonicalize_render_spec = original_canonicalize
         if previous_registry is None:
             os.environ.pop("NASDAQ_CAFE_RUNTIME_ASSET_REGISTRY", None)
         else:
@@ -137,6 +174,9 @@ def _merge_finalizer_result(result: dict[str, Any], finalized: dict[str, Any]) -
     result["renderer_finalization"] = {
         "status": "pass", "renderer_validation": "pass",
     }
+    intraday_attachment = finalized.get("intradaySeriesAttachment")
+    if isinstance(intraday_attachment, dict):
+        result["intraday_series_attachment"] = intraday_attachment
 
 def build_hardened(
     package: Path,
