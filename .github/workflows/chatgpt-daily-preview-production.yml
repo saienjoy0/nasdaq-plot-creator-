@@ -31,7 +31,7 @@ jobs:
           EPISODE_DATE="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["episodeDate"])' "$REQUEST")"
           CONFIRMATION="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["confirmation"])' "$REQUEST")"
           test "$CONFIRMATION" = "PREVIEW"
-          test -f "daily-authoring/$EPISODE_DATE.json"
+          test -d "daily-authoring-parts/$EPISODE_DATE"
           test -f "daily-inputs/$EPISODE_DATE/daily_source_package_$EPISODE_DATE.md"
           echo "EPISODE_DATE=$EPISODE_DATE" >> "$GITHUB_ENV"
           echo "REQUEST_PATH=$REQUEST" >> "$GITHUB_ENV"
@@ -61,6 +61,7 @@ jobs:
 
       - name: Expand approved ChatGPT authoring
         run: |
+          python scripts/assemble_chatgpt_daily_authoring_parts.py --date "$EPISODE_DATE" --repo-root .
           python scripts/materialize_chatgpt_daily_authoring.py --date "$EPISODE_DATE" --repo-root .
           python scripts/fixup_chatgpt_daily_materialization.py --date "$EPISODE_DATE" --repo-root .
 
