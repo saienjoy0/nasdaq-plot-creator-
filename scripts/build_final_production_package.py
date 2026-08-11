@@ -112,10 +112,9 @@ def collect_public_strings(render_spec: dict[str, Any]) -> list[tuple[str, str]]
         for c_index, chunk in enumerate(scene.get("narrationChunks", [])):
             if not isinstance(chunk, dict):
                 continue
-            for key in ("speechText", "captionText"):
-                value = chunk.get(key)
-                if isinstance(value, str) and value.strip():
-                    values.append((f"{scene_id}.narrationChunks[{c_index}].{key}", value))
+            value = chunk.get("speechText")
+            if isinstance(value, str) and value.strip():
+                values.append((f"{scene_id}.narrationChunks[{c_index}].speechText", value))
         for b_index, beat in enumerate(scene.get("visualBeats", [])):
             if not isinstance(beat, dict):
                 continue
