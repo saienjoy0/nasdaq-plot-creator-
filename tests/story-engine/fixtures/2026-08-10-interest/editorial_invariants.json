@@ -1,0 +1,37 @@
+{
+  "causal_dossier_sha256": "d4ddd1277376865dae1f8d534e4844b2967cf31667e19fce4b78a5bbb04e6533",
+  "central_contradiction_id": "CON-01",
+  "chronology": {
+    "minute_event_id": "T-04",
+    "minute_evidence_ids": ["E-008", "E-010", "E-011", "E-012"],
+    "minute_window": "2026-08-07 08:29-08:31 ET",
+    "release_event_id": "T-01",
+    "release_time": "2026-08-07 08:30 ET"
+  },
+  "comparison_policy": {
+    "full_story_engine_rerun": "claim IDs may change; dossier SHA, chronology, confidence ceiling, causal scope ceiling, material counterevidence and required meaning must remain invariant",
+    "surface_only_rewrite": "claim IDs and guarded claim metadata must remain identical"
+  },
+  "contract_version": "1.0.0",
+  "episode_date": "2026-08-10",
+  "expected_actual_gap": {
+    "actual": "-2.3万人",
+    "evidence_id": "E-003",
+    "expected": "+8万人",
+    "gap": "-10.3万人"
+  },
+  "material_counterevidence_ids": ["E-002", "E-007", "E-008", "E-010", "E-011", "E-012"],
+  "primary_route": {
+    "confidence": "medium",
+    "meaning_tokens": ["雇用", "利上げ", "NASDAQ"],
+    "required_evidence_ids": ["E-002", "E-003", "E-004"],
+    "scope_ceiling": "nasdaq_support"
+  },
+  "required_meaning": {
+    "blanket_tech_rally_is_rejected": true,
+    "company_direct_material_must_not_be_promoted_to_nasdaq_primary": true,
+    "mchp_has_company_specific_earnings_engine": true,
+    "mchp_is_not_same_immediate_macro_reaction": true,
+    "minute_data_is_not_standalone_causal_proof": true
+  }
+}
