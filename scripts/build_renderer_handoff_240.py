@@ -22,6 +22,12 @@ EXTRA_ROLES = {
     "renderer_validation_report": "verification/{date}/renderer_validation_report.json",
 }
 
+VISUAL_DIRECTOR_ROLES = {
+    "visual_candidate_catalog": "working/{date}/visual_candidate_catalog.json",
+    "visual_direction_plan": "working/{date}/visual_direction_plan.json",
+    "visual_direction_compile_report": "verification/{date}/visual_direction_compile_report.json",
+}
+
 class RendererHandoff240Error(ValueError):
     pass
 
@@ -69,9 +75,20 @@ def _validate_renderer_evidence(
     *, source_root: Path, date: str, renderer_commit: str,
     renderer_contract_version: str,
 ) -> dict[str, Path]:
+    role_paths = dict(EXTRA_ROLES)
+    request = load_json(
+        safe_file(
+            source_root,
+            f"working/{date}/production_request.json",
+            "production request",
+        ),
+        "production request",
+    )
+    if request.get("visual_director") is not None:
+        role_paths.update(VISUAL_DIRECTOR_ROLES)
     extras = {
         role: safe_file(source_root, template.format(date=date), role)
-        for role, template in EXTRA_ROLES.items()
+        for role, template in role_paths.items()
     }
     render_spec = safe_file(
         source_root, f"render-specs/{date}/render_spec.json", "render_spec"
@@ -107,6 +124,24 @@ def _validate_renderer_evidence(
         extras["renderer_validation_report"]
     ):
         raise RendererHandoff240Error("preflight renderer report SHA mismatch")
+    if "visual_direction_compile_report" in extras:
+        direction = load_json(
+            extras["visual_direction_compile_report"],
+            "Visual Direction compile report",
+        )
+        if direction.get("semanticDiff") != "PASS":
+            raise RendererHandoff240Error(
+                "Visual Direction Protected Semantic Diff must PASS"
+            )
+        expected_direction_sha = preflight.get("artifacts", {}).get(
+            "visual_direction_compile_report"
+        )
+        if expected_direction_sha != sha256_file(
+            extras["visual_direction_compile_report"]
+        ):
+            raise RendererHandoff240Error(
+                "preflight Visual Direction report SHA mismatch"
+            )
     return extras
 
 def _extend_bundle(
