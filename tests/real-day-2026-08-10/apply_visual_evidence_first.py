@@ -256,6 +256,41 @@ def patch_scene1_evidence_boundary(scene: dict[str, Any], overrides: dict[str, A
 def patch_scene4_scorecard_analogy(scene: dict[str, Any], overrides: dict[str, Any]) -> None:
     beat = scene["visualBeats"][1]
     key = authoring_beat_id(beat, 4, 2)
+    node_ids = [
+        "scene-04-scorecard-node-001",
+        "scene-04-scorecard-node-002",
+        "scene-04-scorecard-node-003",
+    ]
+    arrow_ids = [
+        "scene-04-scorecard-arrow-001",
+        "scene-04-scorecard-arrow-002",
+    ]
+    reserved = set(node_ids + arrow_ids)
+    scene["nodes"] = [
+        item for item in scene.get("nodes", [])
+        if isinstance(item, dict) and item.get("nodeId") not in reserved
+    ] + [
+        {"nodeId": node_ids[0], "label": "景気の採点表：赤点"},
+        {"nodeId": node_ids[1], "label": "金利の採点表：利上げリスク↓"},
+        {"nodeId": node_ids[2], "label": "大型テック：逆風が和らぐ"},
+    ]
+    scene["arrows"] = [
+        item for item in scene.get("arrows", [])
+        if isinstance(item, dict) and item.get("arrowId") not in reserved
+    ] + [
+        {
+            "arrowId": arrow_ids[0],
+            "fromNodeId": node_ids[0],
+            "toNodeId": node_ids[1],
+            "label": "読み替え",
+        },
+        {
+            "arrowId": arrow_ids[1],
+            "fromNodeId": node_ids[1],
+            "toNodeId": node_ids[2],
+            "label": "金利経路",
+        },
+    ]
     beat.update(
         {
             "contentType": "analogy-steps",
@@ -271,7 +306,7 @@ def patch_scene4_scorecard_analogy(scene: dict[str, Any], overrides: dict[str, A
                 "大型テック：逆風が和らぐ",
             ],
             "changeCue": "景気の採点表 → 金利の採点表",
-            "objectIds": [],
+            "objectIds": [node_ids[0], node_ids[1], arrow_ids[0], node_ids[2], arrow_ids[1]],
             "sequencePolicy": "explicit",
         }
     )
@@ -285,8 +320,8 @@ def patch_scene4_scorecard_analogy(scene: dict[str, Any], overrides: dict[str, A
             "comparisonBasis": "同じ雇用下振れを景気と金利の2つの採点表で読む",
             "dataBasis": "Reuters market interpretation",
             "laneLabels": [],
-            "nodeOrder": [],
-            "outcomeNodeId": None,
+            "nodeOrder": node_ids,
+            "outcomeNodeId": node_ids[-1],
         }
     )
     set_grammar(beat, "analogy")
@@ -649,11 +684,11 @@ def patch_scene8_measured_diversity(
     beat4 = base_scene8_beat(4, evidence_ids)
     beat4.update(
         {
-            "contentType": "verification-matrix",
-            "visualTemplate": "verification-matrix",
-            "visualMode": "verification",
+            "contentType": "evidence-boundary",
+            "visualTemplate": "evidence-boundary",
+            "visualMode": "text-focus",
             "screenState": "Data",
-            "templateVariant": "strengthen-vs-weaken",
+            "templateVariant": "confirmed-vs-unconfirmed",
             "screenQuestion": "結論を弱める材料まで残すと？",
             "primaryElement": "反対材料を残した最終境界",
             "viewerTexts": [
@@ -663,16 +698,16 @@ def patch_scene8_measured_diversity(
             ],
             "changeCue": "反対材料：成長不安・個別下落",
             "objectIds": ["scene-08-card-004"],
-            "visualGrammarId": "verification",
+            "visualGrammarId": "evidence",
             "visualGrammar": {
                 "contractVersion": "1.0.0",
-                "grammarId": "verification",
+                "grammarId": "evidence",
                 "transitionRole": "continuation",
                 "returnTargetBeatId": None,
             },
             "templateConfig": {
-                "variant": "strengthen-vs-weaken",
-                "comparisonBasis": "中心仮説を強める/弱める材料",
+                "variant": "confirmed-vs-unconfirmed",
+                "comparisonBasis": "中心仮説と残る反対材料の境界",
                 "dataBasis": "approved causal dossier",
                 "laneLabels": ["強める", "弱める"],
                 "nodeOrder": [],
