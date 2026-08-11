@@ -40,6 +40,10 @@ class Tests(unittest.TestCase):
     self.assertEqual(code,cm.exception.code)
   def test_01_init_created(self):
     r=self.h.init();self.assertEqual("created",r["status"]);self.assertEqual("intake_ready",r["current_state"])
+    q=json.loads(daily.request_path(self.h.root,DATE).read_text());self.assertEqual({"required":True,"contract_version":"1.0.0"},q["visual_director"])
+  def test_01b_pre_visual_director_fixture_stays_legacy(self):
+    commit=next(iter(daily.PRE_VISUAL_DIRECTOR_RENDERER_COMMITS));self.h.init(renderer_commit=commit)
+    q=json.loads(daily.request_path(self.h.root,DATE).read_text());self.assertNotIn("visual_director",q)
   def test_02_init_identical_noop(self):
     self.h.init();r=self.h.init();self.assertEqual("noop",r["status"])
   def test_03_date_filename_mismatch(self):

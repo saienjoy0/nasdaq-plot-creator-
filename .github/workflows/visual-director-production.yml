@@ -1,0 +1,64 @@
+name: Visual Director Production Integration
+
+on:
+  pull_request:
+    paths:
+      - "scripts/visual_director_bridge.py"
+      - "scripts/finalize_renderer_package_compat.py"
+      - "scripts/build_final_production_package_hardened.py"
+      - "scripts/build_renderer_handoff_240.py"
+      - "scripts/run_daily_production.py"
+      - "skills/nasdaq-cafe-daily-production/contracts/production_request.schema.json"
+      - "tests/remotion-compat/test_visual_director_bridge.py"
+      - "tests/remotion-compat/run_visual_director_cross_repo.py"
+      - ".github/workflows/visual-director-production.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/visual_director_bridge.py"
+      - "scripts/finalize_renderer_package_compat.py"
+      - "scripts/build_renderer_handoff_240.py"
+      - "tests/remotion-compat/**visual_director*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Checkout Remotion Visual Director
+        uses: actions/checkout@v4
+        with:
+          repository: saienjoy0/saienjoy0-nasdaq-cafe-remotion
+          ref: main
+          path: .renderer
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: .renderer/package-lock.json
+      - name: Install deterministic dependencies
+        run: |
+          python -m pip install --disable-pip-version-check pytest
+          npm ci --prefix .renderer
+      - name: Compile integration modules
+        run: |
+          python -m py_compile \
+            scripts/visual_director_bridge.py \
+            scripts/finalize_renderer_package_compat.py \
+            scripts/build_final_production_package_hardened.py \
+            scripts/build_renderer_handoff_240.py \
+            tests/remotion-compat/run_visual_director_cross_repo.py
+      - name: Run bridge unit tests
+        env:
+          PYTHONPATH: scripts
+        run: python -m pytest -q tests/remotion-compat/test_visual_director_bridge.py
+      - name: Run 2026-08-10 Golden cross-repository acceptance
+        run: python tests/remotion-compat/run_visual_director_cross_repo.py --renderer-root .renderer

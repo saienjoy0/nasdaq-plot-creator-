@@ -177,6 +177,9 @@ def _merge_finalizer_result(result: dict[str, Any], finalized: dict[str, Any]) -
     intraday_attachment = finalized.get("intradaySeriesAttachment")
     if isinstance(intraday_attachment, dict):
         result["intraday_series_attachment"] = intraday_attachment
+    visual_direction = finalized.get("visualDirection")
+    if isinstance(visual_direction, dict):
+        result["visual_direction"] = visual_direction
 
 def build_hardened(
     package: Path,

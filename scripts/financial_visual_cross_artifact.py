@@ -372,7 +372,7 @@ def verify_spoken_script(render_spec: dict[str, Any], spoken: str) -> None:
 def verify_asset_manifest(asset_manifest: dict[str, Any], date: str) -> None:
     if asset_manifest.get("episode_date") != date:
         raise CrossArtifactError("asset manifest episode date mismatch")
-    if asset_manifest.get("selected_path") not in {"primary", "fallback", "not-required"}:
+    if asset_manifest.get("selected_path") not in {"primary", "fallback", "mixed", "not-required"}:
         raise CrossArtifactError("asset manifest selected path is unresolved")
     ids = [item.get("asset_id") for item in asset_manifest.get("assets", [])]
     if len(ids) != len(set(ids)):

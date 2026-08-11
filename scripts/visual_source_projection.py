@@ -310,7 +310,7 @@ def prepare_visual_sources(
     if selected.get("finalEpisodeContractSha256") != sha256_file(final_contract_path):
         raise VisualSourceProjectionError("Visual Source selected assets Final Episode Contract SHA mismatch")
     global_path = selected.get("selectedPath")
-    if global_path not in {"primary", "fallback"}:
+    if global_path not in {"primary", "fallback", "mixed"}:
         raise VisualSourceProjectionError("E_VISUAL_SOURCE_SELECTED_PATH_INVALID")
     selected_assets = selected.get("selectedAssets")
     if not isinstance(selected_assets, list) or len(selected_assets) != len(intents):
@@ -327,9 +327,12 @@ def prepare_visual_sources(
             raise VisualSourceProjectionError(f"invalid selected Visual Source intentId: {intent_id}")
         seen_intents.add(intent_id)
         intent = intent_map[intent_id]
-        if item.get("selectedPath") != global_path:
-            raise VisualSourceProjectionError(f"{intent_id}: selectedPath disagrees with global path")
-        candidate = intent[global_path]
+        intent_path = item.get("selectedPath")
+        if intent_path not in {"primary", "fallback"}:
+            raise VisualSourceProjectionError(f"{intent_id}: selectedPath is invalid")
+        if global_path != "mixed" and intent_path != global_path:
+            raise VisualSourceProjectionError(f"{intent_id}: selectedPath disagrees with summary path")
+        candidate = intent[intent_path]
         if item.get("assetId") != candidate["assetId"]:
             raise VisualSourceProjectionError(f"{intent_id}: selected assetId mismatch")
         scene_id = intent["target"]["sceneId"]
@@ -380,7 +383,7 @@ def prepare_visual_sources(
         routes.append(
             {
                 "beat_id": beat_id,
-                "selected_path": global_path,
+                "selected_path": intent_path,
                 "selected_asset_id": candidate["assetId"],
                 "primary_asset_id": intent["primary"]["assetId"],
                 "fallback_asset_id": intent["fallback"]["assetId"],

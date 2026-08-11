@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import copy
 import importlib.util
 import json
 from pathlib import Path
 
+import pytest
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -271,3 +273,166 @@ def test_user_review_required_cannot_enter_production(tmp_path: Path) -> None:
         assert "E_VISUAL_SOURCE_RIGHTS_UNRESOLVED" in str(exc)
     else:
         raise AssertionError("user-review-required asset must not enter production")
+
+
+def test_selection_is_frozen_per_intent(tmp_path: Path) -> None:
+    date = "2026-08-06"
+    contract = minimal_contract(tmp_path)
+    intents = intent_document(
+        existing_candidate("vsp-proof-primary", "company_amd"),
+        existing_candidate("vsp-proof-fallback", "company_nvda"),
+    )["intents"]
+    second = copy.deepcopy(intents[0])
+    second["intentId"] = "vsi-scene-03-proof"
+    second["target"] = {"sceneId": "scene-03", "visualBeatId": "vb-03-01"}
+    second["placement"]["placementId"] = "vs-proof-secondary"
+    second["primary"] = existing_candidate("vsp-secondary-primary", "company_meta")
+    second["fallback"] = existing_candidate("vsp-secondary-fallback", "company_msft")
+    intents.append(second)
+    contract["visualSources"] = {"contractVersion": "1.0.0", "intents": intents}
+    contract_path = tmp_path / "contract.json"
+    write_json(contract_path, contract)
+    raw = {
+        "contractVersion": "1.0.0",
+        "episodeDate": date,
+        "finalEpisodeContractSha256": selection_module.sha256_file(contract_path),
+        "status": "resolved",
+        "results": [
+            {
+                "intentId": "vsi-scene-02-proof",
+                "path": "primary",
+                "status": "ready",
+                "rightsStatus": "cleared",
+            },
+            {
+                "intentId": "vsi-scene-03-proof",
+                "path": "fallback",
+                "status": "ready",
+                "rightsStatus": "cleared",
+            },
+        ],
+    }
+    raw_path = tmp_path / "raw.json"
+    write_json(raw_path, raw)
+    selection_path = tmp_path / "selection.json"
+    write_json(
+        selection_path,
+        {
+            "contractVersion": "1.0.0",
+            "episodeDate": date,
+            "selections": [
+                {"intentId": "vsi-scene-02-proof", "selectedPath": "primary"},
+                {"intentId": "vsi-scene-03-proof", "selectedPath": "fallback"},
+            ],
+        },
+    )
+    selected = selection_module.select(
+        contract_path=contract_path,
+        resolution_path=raw_path,
+        selection_path=selection_path,
+        selected_output=tmp_path / "selected.json",
+        audit_output=tmp_path / "audit.json",
+    )
+    assert selected["selectedPath"] == "mixed"
+    assert {
+        item["intentId"]: item["selectedPath"] for item in selected["selectedAssets"]
+    } == {
+        "vsi-scene-02-proof": "primary",
+        "vsi-scene-03-proof": "fallback",
+    }
+
+
+def test_projection_applies_each_intent_route(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    date = "2026-08-06"
+    primary = existing_candidate("vsp-proof-primary", "company_amd")
+    fallback = existing_candidate("vsp-proof-fallback", "company_nvda")
+    intents = intent_document(primary, fallback)["intents"]
+    second = copy.deepcopy(intents[0])
+    second["intentId"] = "vsi-scene-03-proof"
+    second["target"] = {"sceneId": "scene-03", "visualBeatId": "vb-03-01"}
+    second["placement"]["placementId"] = "vs-proof-secondary"
+    second["primary"] = existing_candidate("vsp-secondary-primary", "company_meta")
+    second["fallback"] = existing_candidate("vsp-secondary-fallback", "company_msft")
+    intents.append(second)
+    contract = minimal_contract(tmp_path)
+    contract["visualSources"] = {"contractVersion": "1.0.0", "intents": intents}
+    contract_path = tmp_path / f"working/{date}/final_episode_contract.json"
+    write_json(contract_path, contract)
+    intents_path = tmp_path / f"working/{date}/visual_source_intents.json"
+    write_json(
+        intents_path,
+        {"contractVersion": "1.0.0", "episodeDate": date, "intents": intents},
+    )
+    selected_path = tmp_path / f"working/{date}/visual_source_selected_assets.json"
+    selected_assets = []
+    for intent, route in zip(intents, ("primary", "fallback"), strict=True):
+        candidate = intent[route]
+        selected_assets.append(
+            {
+                "intentId": intent["intentId"],
+                "sceneId": intent["target"]["sceneId"],
+                "visualBeatId": intent["target"]["visualBeatId"],
+                "selectedPath": route,
+                "assetId": candidate["assetId"],
+                "sourceKind": candidate["sourceKind"],
+                "placement": intent["placement"],
+            }
+        )
+    write_json(
+        selected_path,
+        {
+            "contractVersion": "1.0.0",
+            "episodeDate": date,
+            "finalEpisodeContractSha256": selection_module.sha256_file(contract_path),
+            "selectedPath": "mixed",
+            "selectedAssets": selected_assets,
+        },
+    )
+    monkeypatch.setattr(projection_module, "_run_evidence_quality_gate", lambda **_: None)
+    monkeypatch.setattr(
+        projection_module.visual_source_contract,
+        "attach_visual_sources",
+        lambda **_: None,
+    )
+    monkeypatch.setattr(
+        projection_module,
+        "_rebind_selection_to_final_contract",
+        lambda **_: selected_path,
+    )
+    monkeypatch.setattr(projection_module, "_run_ab_gate", lambda **_: None)
+    render = {
+        "schemaVersion": "2.4.0",
+        "episode": {"targetDate": date},
+        "scenes": [
+            {
+                "sceneId": f"scene-{number:02d}",
+                "visualBeats": [
+                    {
+                        "beatId": f"vb-{number:02d}-01",
+                        "startChunkId": f"scene-{number:02d}-chunk-001",
+                        "endChunkId": f"scene-{number:02d}-chunk-001",
+                        "assetPlacementIds": [],
+                        "assetState": "not-required",
+                    }
+                ],
+                "assetPlacements": [],
+            }
+            for number in (2, 3)
+        ],
+    }
+    projection = projection_module.prepare_visual_sources(
+        root=tmp_path,
+        date=date,
+        final_contract_path=contract_path,
+        render=render,
+    )
+    assert projection["selected_path"] == "mixed"
+    assert [route["selected_path"] for route in projection["routes"]] == [
+        "primary",
+        "fallback",
+    ]
+    assert [
+        scene["assetPlacements"][0]["assetId"] for scene in render["scenes"]
+    ] == ["company_amd", "company_msft"]

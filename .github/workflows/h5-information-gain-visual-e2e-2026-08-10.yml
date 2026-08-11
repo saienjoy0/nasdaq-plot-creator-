@@ -1,0 +1,330 @@
+name: H5 Information Gain Visual E2E 2026-08-10
+
+on:
+  pull_request:
+    paths:
+      - "tests/real-day-2026-08-10/apply_information_gain_visual_evidence.py"
+      - "tests/real-day-2026-08-10/**"
+      - "tests/story-engine/fixtures/2026-08-10-interest/**"
+      - "tests/story-engine/run_2026_08_10_interest_regression.py"
+      - "scripts/story-engine/**"
+      - "scripts/visual_evidence_quality_gate.py"
+      - "scripts/pre_tts_visual_gate.py"
+      - "scripts/prepare_visual_sources.py"
+      - "scripts/assemble_approved_daily_episode.py"
+      - "scripts/run_daily_production_hardened.py"
+      - ".github/workflows/h5-information-gain-visual-e2e-2026-08-10.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  h5-information-gain-visual-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      DATE: 2026-08-10
+      ACCEPTANCE_FIXTURE_COMMIT: b986888660aa8efd64428aa8119200965351c047
+      RENDERER_COMMIT: 0aaaf77eb2fd54e3e1b5eb4db05410dcaf71b673
+      RENDERER_CONTRACT_VERSION: 2.4.0
+      NASDAQ_CAFE_RENDERER_ROOT: ${{ github.workspace }}/.renderer
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout immutable H4 acceptance fixture
+        uses: actions/checkout@v4
+        with:
+          repository: saienjoy0/nasdaq-plot-creator-
+          ref: ${{ env.ACCEPTANCE_FIXTURE_COMMIT }}
+          path: .acceptance-fixture
+          persist-credentials: false
+
+      - name: Checkout pinned Remotion renderer
+        uses: actions/checkout@v4
+        with:
+          repository: saienjoy0/saienjoy0-nasdaq-cafe-remotion
+          ref: ${{ env.RENDERER_COMMIT }}
+          path: .renderer
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: .renderer/package-lock.json
+
+      - name: Install H5 validation dependencies
+        run: |
+          python -m pip install --disable-pip-version-check jsonschema pytest pillow playwright==1.61.0
+          python -m playwright install --with-deps chromium
+          npm ci --prefix .renderer
+
+      - name: Compile H5 path
+        run: |
+          python -m py_compile \
+            tests/story-engine/run_2026_08_10_interest_regression.py \
+            tests/story-engine/fixtures/2026-08-10-interest/materialize_revised_interest_fixture.py \
+            tests/real-day-2026-08-10/apply_information_gain_visual_evidence.py \
+            tests/real-day-2026-08-10/patch_information_gain_scene8_cards.py \
+            tests/real-day-2026-08-10/apply_visual_evidence_first.py \
+            tests/real-day-2026-08-10/sync_visual_evidence_bindings.py \
+            scripts/story-engine/materialize_story_engine.py \
+            scripts/story-engine/project_story_script_to_production.py \
+            scripts/visual_evidence_quality_gate.py \
+            scripts/pre_tts_visual_gate.py \
+            scripts/prepare_visual_sources.py \
+            scripts/assemble_approved_daily_episode.py \
+            scripts/run_daily_production_hardened.py
+
+      - name: Run focused regressions
+        run: |
+          python -m pytest -q \
+            tests/story-engine/test_interest_quality_policy.py \
+            tests/visual-source/test_visual_evidence_20260810_acceptance.py \
+            tests/story-engine-integration/test_pre_tts_visual_gate.py \
+            tests/remotion-compat/test_renderer_240_transaction.py
+
+      - name: Reproduce historical H4 then materialize revised Information Gain Story
+        run: |
+          mkdir -p verification/$DATE
+          python tests/story-engine/run_2026_08_10_interest_regression.py \
+            --repo-root "$GITHUB_WORKSPACE" \
+            --acceptance-source "$GITHUB_WORKSPACE/.acceptance-fixture" \
+            --output verification/$DATE/h5_story_interest_regression.json
+
+      - name: Restore immutable intake only
+        run: |
+          python tests/real-day-2026-08-10/restore_immutable_intake.py \
+            --repo-root . \
+            --acceptance-source .acceptance-fixture \
+            --output verification/$DATE/h5_immutable_intake_restore.json
+
+      - name: Verify frozen dossier and wave-2 lineage
+        run: |
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          date='2026-08-10'
+          dossier=Path(f'research/{date}/causal_research_dossier_{date}.json')
+          expected='d4ddd1277376865dae1f8d534e4844b2967cf31667e19fce4b78a5bbb04e6533'
+          actual=hashlib.sha256(dossier.read_bytes()).hexdigest()
+          if actual != expected:
+              raise SystemExit(f'causal dossier drift: {actual}')
+          result=json.loads(Path(f'research/{date}/research_acquisition_result_w02.json').read_text(encoding='utf-8'))
+          if result.get('status') != 'success':
+              raise SystemExit('wave 2 is not successful')
+          counts={row['requestId']:row.get('recordCount') for row in result.get('results', [])}
+          for rid in ('RA-W2-001','RA-W2-002','RA-W2-003','RA-W2-004'):
+              if counts.get(rid) != 1000:
+                  raise SystemExit(f'{rid} record count drift: {counts.get(rid)}')
+          if counts.get('RA-W2-005') != 1:
+              raise SystemExit('Microchip IR success evidence missing')
+          print('PASS frozen dossier + wave 2')
+          PY
+          python scripts/research_evidence_supplement.py validate \
+            research/$DATE/research_evidence_supplement_manifest.json
+          python skills/nasdaq-cafe-causal-research/validators/validate_causal_research_with_supplement.py \
+            research/$DATE/causal_research_dossier_$DATE.json \
+            --research-input-manifest research/$DATE/research_input_manifest.json \
+            --memory-retrieval-report working/$DATE/memory_retrieval_report_$DATE.json \
+            --research-evidence-supplement-manifest research/$DATE/research_evidence_supplement_manifest.json \
+            --repo-root "$GITHUB_WORKSPACE" \
+            --json-output verification/$DATE/causal_dossier_validation.json
+
+      - name: Project revised Story into production shell
+        run: |
+          python scripts/story-engine/project_story_script_to_production.py \
+            --story-script working/$DATE/story-engine/story_script.json \
+            --creative-review working/$DATE/story-engine/creative_review.json \
+            --render-spec render-specs/$DATE/render_spec.json \
+            --episode-package-public episodes/$DATE/episode_package_public_$DATE.md \
+            --bindings working/$DATE/story-engine/story_production_bindings.json \
+            --report working/$DATE/story-engine/story_projection_report.json
+
+      - name: Author H5 real evidence in revised Story order
+        run: |
+          python tests/real-day-2026-08-10/apply_information_gain_visual_evidence.py \
+            --repo-root "$GITHUB_WORKSPACE" \
+            --output verification/$DATE/h5_visual_evidence_authoring.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('working/2026-08-10/financial_visual_bindings.json')
+          value=json.loads(p.read_text(encoding='utf-8'))
+          rows=value.get('bindings')
+          if not isinstance(rows,list):
+              raise SystemExit('financial bindings array missing')
+          removed=[row for row in rows if row.get('sourceBeatId')=='scene-06-beat-002']
+          if len(removed)!=1:
+              raise SystemExit(f'expected exactly one stale Scene 6 financial binding, found {len(removed)}')
+          value['bindings']=[row for row in rows if row.get('sourceBeatId')!='scene-06-beat-002']
+          p.write_text(json.dumps(value,ensure_ascii=False,indent=2,sort_keys=True)+'\n',encoding='utf-8')
+          print('PASS removed stale financial binding scene-06-beat-002')
+          PY
+          python tests/real-day-2026-08-10/patch_information_gain_scene8_cards.py \
+            --repo-root "$GITHUB_WORKSPACE" \
+            --output verification/$DATE/h5_scene8_renderer_cards.json
+          python scripts/story-engine/project_story_script_to_production.py \
+            --story-script working/$DATE/story-engine/story_script.json \
+            --creative-review working/$DATE/story-engine/creative_review.json \
+            --render-spec render-specs/$DATE/render_spec.json \
+            --episode-package-public episodes/$DATE/episode_package_public_$DATE.md \
+            --bindings working/$DATE/story-engine/story_production_bindings.json \
+            --report working/$DATE/story-engine/story_projection_report.json
+          python scripts/visual_evidence_quality_gate.py \
+            --render-spec render-specs/$DATE/render_spec.json \
+            --intents working/$DATE/visual_source_intents.json \
+            --output verification/$DATE/visual_evidence_quality_gate.json
+
+      - name: Run Pre-TTS Visual Gate
+        run: |
+          python scripts/pre_tts_visual_gate.py \
+            --render-spec render-specs/$DATE/render_spec.json \
+            --story-bindings working/$DATE/story-engine/story_production_bindings.json \
+            --output verification/$DATE/pre_tts_visual_gate.json
+
+      - name: Resolve Visual Source candidates
+        run: |
+          python scripts/prepare_visual_sources.py \
+            --date $DATE \
+            --repo-root "$GITHUB_WORKSPACE"
+
+      - name: Assemble approved H5 episode
+        run: |
+          python scripts/assemble_approved_daily_episode.py \
+            --date $DATE \
+            --repo-root "$GITHUB_WORKSPACE" \
+            --output verification/$DATE/approved_episode_assembly.json
+
+      - name: Assert H5 Story-to-Visual mapping after assembly
+        run: |
+          python - <<'PY'
+          import json, math
+          from pathlib import Path
+          date='2026-08-10'
+          render=json.loads(Path(f'render-specs/{date}/render_spec.json').read_text(encoding='utf-8'))
+          scenes={scene['sceneNumber']:scene for scene in render['scenes']}
+          s6=scenes[6]
+          series=s6['visualBeats'][0]
+          compare=s6['visualBeats'][1]
+          if series['visualTemplate'] != 'event-reaction-timeline':
+              raise SystemExit('Scene 6 Beat 1 lost verified series')
+          rt=series['templateConfig']['reactionTimeline']
+          if rt['precision'] != 'verified-intraday-series':
+              raise SystemExit('Scene 6 Beat 1 precision drift')
+          number_map={item['numberId']:item.get('numericValue') for item in s6.get('numbers', [])}
+          values=[number_map[item] for item in rt['seriesObjectIds']]
+          if values != [719.16,720.23,720.531]:
+              raise SystemExit(f'QQQ release window drift: {values}')
+          if compare['visualTemplate'] != 'index-return-bars' or compare['visualGrammar']['grammarId'] != 'reaction':
+              raise SystemExit('Scene 6 Beat 2 is not reaction comparison')
+          release={item['label']:item['numericValue'] for item in s6['numbers'] if item['numberId'] in compare['objectIds']}
+          expected={'QQQ':0.1487846932532566,'SOXX':0.24766199682106915,'NVIDIA':0.1636735621732166,'MCHP':-0.025131942699163634}
+          for key,target in expected.items():
+              if key not in release or not math.isclose(release[key],target,rel_tol=0,abs_tol=1e-6):
+                  raise SystemExit(f'Scene 6 release return drift {key}: {release.get(key)}')
+          s7=scenes[7]
+          if s7['visualBeats'][0]['visualTemplate'] != 'news-media':
+              raise SystemExit('Scene 7 Beat 1 must be Microchip real IR')
+          if s7['visualBeats'][1]['visualTemplate'] != 'diverging-stock-bars':
+              raise SystemExit('Scene 7 Beat 2 must be daily divergence')
+          daily={item['label']:item['numericValue'] for item in s7['numbers'] if item['numberId'] in s7['visualBeats'][1]['objectIds']}
+          if daily != {'MCHP':13.89,'AMD':-1.21,'Alphabet':-0.96,'Microsoft':0.03}:
+              raise SystemExit(f'Scene 7 daily divergence drift: {daily}')
+          s8=scenes[8]
+          if [b['visualTemplate'] for b in s8['visualBeats'][:2]] != ['verification-matrix','verification-checklist']:
+              raise SystemExit('Scene 8 must integrate already-seen evidence')
+          if any(b['visualGrammar']['grammarId'] != 'verification' for b in s8['visualBeats'][:2]):
+              raise SystemExit('Scene 8 grammar drift')
+          if [len(b.get('objectIds',[])) for b in s8['visualBeats'][:2]] != [4,4]:
+              raise SystemExit('Scene 8 verification cards missing')
+          card_ids={card['cardId'] for card in s8.get('cards',[])}
+          for beat in s8['visualBeats'][:2]:
+              if not set(beat['objectIds']).issubset(card_ids):
+                  raise SystemExit('Scene 8 verification Beat references missing cards')
+          selected=json.loads(Path(f'working/{date}/visual_source_selected_assets.json').read_text(encoding='utf-8'))
+          if selected.get('selectedPath') != 'fallback':
+              raise SystemExit(f"expected approved fallback route, got {selected.get('selectedPath')!r}")
+          rows={item['intentId']:item for item in selected.get('selectedAssets', [])}
+          if rows.get('vsi-20260810-bls-employment',{}).get('assetId') != 'background_scene_news':
+              raise SystemExit('BLS fallback asset drift')
+          if rows.get('vsi-20260810-microchip-ir',{}).get('assetId') != 'daily-microchip-q1-fy27-ir-secondary':
+              raise SystemExit('Microchip real IR fallback-route asset drift')
+          story=json.loads(Path(f'working/{date}/story-engine/story_script.json').read_text(encoding='utf-8'))
+          render_narration={scene['sceneId']:''.join(chunk['speechText'] for chunk in scene['narrationChunks']) for scene in render['scenes']}
+          for row in story['scenes']:
+              if render_narration[row['scene_id']] != row['narration']:
+                  raise SystemExit(f"narration mismatch: {row['scene_id']}")
+          print('PASS H5 Story -> Visual Evidence -> assembled render')
+          PY
+
+      - name: Validate Episode Memory hardening
+        run: |
+          python skills/nasdaq-cafe-episode-package-memory/validators/validate_episode_package_memory_hardening.py \
+            --repo-root "$GITHUB_WORKSPACE" \
+            --episode-package episodes/$DATE/episode_package_$DATE.md \
+            --output verification/$DATE/episode_memory_validation.json
+
+      - name: Advance Daily Production through assets resolved
+        run: |
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" init \
+            --episode-date $DATE \
+            --daily-source-package daily-inputs/$DATE/daily_source_package_$DATE.md \
+            --requested-scope preview \
+            --renderer-commit $RENDERER_COMMIT \
+            --renderer-contract-version $RENDERER_CONTRACT_VERSION
+          STORY=working/$DATE/story-engine
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" advance \
+            --episode-date $DATE --state research_inputs_bound \
+            --evidence research/$DATE/research_input_manifest.json research/$DATE/research_evidence_supplement_manifest.json
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" advance \
+            --episode-date $DATE --state causal_dossier_valid \
+            --evidence research/$DATE/causal_research_dossier_$DATE.json verification/$DATE/causal_dossier_validation.json
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" advance \
+            --episode-date $DATE --state episode_package_final \
+            --evidence episodes/$DATE/episode_package_$DATE.md $STORY/story_engine_acceptance.json $STORY/story_projection_report.json verification/$DATE/pre_tts_visual_gate.json
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" advance \
+            --episode-date $DATE --state memory_usage_valid \
+            --evidence verification/$DATE/episode_memory_validation.json
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" advance \
+            --episode-date $DATE --state assets_resolved \
+            --evidence working/$DATE/visual_source_intents.json verification/$DATE/asset_resolution_log.json verification/$DATE/image_generation_log.json
+
+      - name: Build Renderer 2.4 production package
+        run: |
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" build-production \
+            --episode-date $DATE \
+            --episode-package episodes/$DATE/episode_package_$DATE.md
+
+      - name: Build immutable H5 renderer handoff
+        run: |
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" build-handoff \
+            --episode-date $DATE \
+            --bundle-root h5-bundles \
+            --plot-commit "${{ github.event.pull_request.head.sha || github.sha }}" \
+            | tee verification/$DATE/h5_handoff_build.json
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" status \
+            --episode-date $DATE | tee verification/$DATE/h5_control_plane_status.json
+
+      - name: Upload H5 acceptance artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: h5-information-gain-visual-e2e-2026-08-10
+          path: |
+            tests/fixtures/real-day-2026-08-10/collector_wave2_success_receipt.json
+            daily-inputs/2026-08-10/
+            daily-assets/2026-08-10/
+            research/2026-08-10/
+            working/2026-08-10/
+            episodes/2026-08-10/
+            render-specs/2026-08-10/
+            verification/2026-08-10/
+            h5-bundles/2026-08-10/
+          if-no-files-found: warn
+          retention-days: 14

@@ -2,9 +2,10 @@
 """Freeze explicit Visual Source selection after candidate resolution.
 
 Selection is a user/ChatGPT-authored decision. This script never chooses a
-route; it validates the requested global Primary/Fallback path, rights state,
-and resolution evidence, then emits the selected asset projection consumed by
-Final Production.
+route; it validates the requested Primary/Fallback path for every intent,
+rights state, and resolution evidence, then emits the selected asset projection
+consumed by Final Production. The legacy episode-wide selectedPath remains
+accepted when every intent intentionally uses one route.
 """
 
 from __future__ import annotations
@@ -12,7 +13,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -41,6 +41,41 @@ def write_atomic(path: Path, value: dict[str, Any]) -> None:
     tmp = path.with_name(f".{path.name}.visual-source.tmp")
     tmp.write_text(text, encoding="utf-8")
     tmp.replace(path)
+
+
+def _selection_routes(
+    selection: dict[str, Any], intents: list[dict[str, Any]]
+) -> dict[str, str]:
+    intent_ids = [item["intentId"] for item in intents]
+    explicit = selection.get("selections")
+    if explicit is None:
+        selected_path = selection.get("selectedPath")
+        if selected_path not in {"primary", "fallback"}:
+            raise VisualSourceSelectionError("E_VISUAL_SOURCE_SELECTED_PATH_INVALID")
+        return {intent_id: selected_path for intent_id in intent_ids}
+    if not isinstance(explicit, list):
+        raise VisualSourceSelectionError("selection selections must be an array")
+    routes: dict[str, str] = {}
+    for item in explicit:
+        if not isinstance(item, dict):
+            raise VisualSourceSelectionError("selection routes must be objects")
+        intent_id = item.get("intentId")
+        selected_path = item.get("selectedPath")
+        if intent_id not in intent_ids or intent_id in routes:
+            raise VisualSourceSelectionError(
+                f"E_VISUAL_SOURCE_SELECTED_PATH_INVALID: invalid intentId {intent_id}"
+            )
+        if selected_path not in {"primary", "fallback"}:
+            raise VisualSourceSelectionError(
+                f"E_VISUAL_SOURCE_SELECTED_PATH_INVALID: {intent_id}"
+            )
+        routes[intent_id] = selected_path
+    missing = sorted(set(intent_ids) - set(routes))
+    if missing:
+        raise VisualSourceSelectionError(
+            f"E_VISUAL_SOURCE_SELECTED_PATH_INVALID: missing intents {missing}"
+        )
+    return routes
 
 
 def select(
@@ -75,9 +110,9 @@ def select(
             raise VisualSourceSelectionError("selection contractVersion must be 1.0.0")
         if selection.get("episodeDate") != contract["episodeDate"]:
             raise VisualSourceSelectionError("selection episodeDate mismatch")
-        selected_path = selection.get("selectedPath")
-        if selected_path not in {"primary", "fallback"}:
-            raise VisualSourceSelectionError("E_VISUAL_SOURCE_SELECTED_PATH_INVALID")
+        routes = _selection_routes(selection, intents)
+        route_values = set(routes.values())
+        selected_path = next(iter(route_values)) if len(route_values) == 1 else "mixed"
 
         result_map = {
             (item.get("intentId"), item.get("path")): item
@@ -87,25 +122,26 @@ def select(
         selected_assets = []
         for intent in intents:
             intent_id = intent["intentId"]
-            result = result_map.get((intent_id, selected_path))
+            intent_path = routes[intent_id]
+            result = result_map.get((intent_id, intent_path))
             if result is None:
                 raise VisualSourceSelectionError(
-                    f"E_VISUAL_SOURCE_SELECTED_PATH_INVALID: missing resolution for {intent_id}/{selected_path}"
+                    f"E_VISUAL_SOURCE_SELECTED_PATH_INVALID: missing resolution for {intent_id}/{intent_path}"
                 )
             if result.get("status") != "ready":
                 raise VisualSourceSelectionError(
-                    f"E_VISUAL_SOURCE_{selected_path.upper()}_UNRESOLVED: {intent_id}: {result.get('failureReason')}"
+                    f"E_VISUAL_SOURCE_{intent_path.upper()}_UNRESOLVED: {intent_id}: {result.get('failureReason')}"
                 )
-            candidate = intent[selected_path]
+            candidate = intent[intent_path]
             rights = result.get("rightsStatus")
             if candidate["sourceKind"] == "existing-asset":
                 if rights not in {"cleared", "not-required"}:
                     raise VisualSourceSelectionError(
-                        f"E_VISUAL_SOURCE_RIGHTS_UNRESOLVED: {intent_id}/{selected_path}"
+                        f"E_VISUAL_SOURCE_RIGHTS_UNRESOLVED: {intent_id}/{intent_path}"
                     )
             elif rights != "cleared":
                 raise VisualSourceSelectionError(
-                    f"E_VISUAL_SOURCE_RIGHTS_UNRESOLVED: {intent_id}/{selected_path} requires cleared"
+                    f"E_VISUAL_SOURCE_RIGHTS_UNRESOLVED: {intent_id}/{intent_path} requires cleared"
                 )
             selected_assets.append(
                 {
@@ -113,7 +149,7 @@ def select(
                     "sceneId": intent["target"]["sceneId"],
                     "visualBeatId": intent["target"]["visualBeatId"],
                     "presentationClass": intent["presentationClass"],
-                    "selectedPath": selected_path,
+                    "selectedPath": intent_path,
                     "candidateId": candidate["candidateId"],
                     "assetId": candidate["assetId"],
                     "sourceKind": candidate["sourceKind"],
@@ -143,6 +179,9 @@ def select(
         "selected_path": selected_path,
         "unresolved_count": 0,
         "selected_assets": [item["assetId"] for item in selected_assets],
+        "intent_routes": {
+            item["intentId"]: item["selectedPath"] for item in selected_assets
+        },
         "selection_file_sha256": sha256_file(selection_path)
         if selection_path and selection_path.is_file()
         else None,
