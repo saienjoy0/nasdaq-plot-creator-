@@ -5,14 +5,15 @@ TEST / ACCEPTANCE ONLY. This script does not infer causality or rewrite narratio
 It takes the already-approved 2026-08-10 story and changes only the visual authoring
 needed to prove the production path can show the evidence the story already cites:
 
-- BLS July Employment Situation as an actual official PDF page Visual Source;
-- Microchip Q1 FY27 IR release as an actual company-page Visual Source;
-- QQQ 08:29 / 08:30 / 08:31 ET verified minute closes as a real series;
-- reusable Fed / semiconductor backgrounds for visual variety without adding claims.
+- BLS July Employment Situation has an actual official PDF Primary plus an approved
+  news-surface Fallback because BLS blocks GitHub-hosted acquisition;
+- Microchip Q1 FY27 IR remains an actual company-page Visual Source on both global
+  routes so the BLS technical fallback does not discard a working real document;
+- QQQ 08:29 / 08:30 / 08:31 ET verified minute closes are a real series;
+- reusable Fed / semiconductor backgrounds improve variety without adding claims.
 
-Primary and Approved Fallback are both authored before acquisition. The default
-acceptance selection is Primary; a technical acquisition failure is expected to be
-handled by changing the explicit selection to Fallback, never by the renderer.
+The acceptance freezes the global Fallback route only after the verified BLS technical
+failure. The renderer never chooses a route and narration/causality remain unchanged.
 """
 
 from __future__ import annotations
@@ -54,7 +55,6 @@ def beat_id(beat: dict[str, Any]) -> str:
 
 
 def canonical_visual_beat_id(value: str) -> str:
-    """Return the canonical Final Episode Contract Beat ID."""
     if re.fullmatch(r"vb-0[1-9]-[0-9]{2}", value):
         return value
     match = re.fullmatch(r"scene-(0[1-9])-beat-([0-9]{3})", value)
@@ -66,11 +66,8 @@ def canonical_visual_beat_id(value: str) -> str:
 def scene_map(render: dict[str, Any]) -> dict[int, dict[str, Any]]:
     result = {}
     for scene in render.get("scenes", []):
-        if not isinstance(scene, dict):
-            continue
-        number = scene.get("sceneNumber")
-        if isinstance(number, int):
-            result[number] = scene
+        if isinstance(scene, dict) and isinstance(scene.get("sceneNumber"), int):
+            result[scene["sceneNumber"]] = scene
     missing = sorted(set(range(1, 10)) - set(result))
     if missing:
         raise SystemExit(f"missing scenes: {missing}")
@@ -127,13 +124,10 @@ def source_intent(
 
 
 def replace_scene_background(scene: dict[str, Any], asset_id: str) -> None:
-    placements = scene.get("assetPlacements")
-    if not isinstance(placements, list):
-        return
-    for placement in placements:
-        if not isinstance(placement, dict):
-            continue
-        if placement.get("role") == "background" or placement.get("assetId") == "mainBackground":
+    for placement in scene.get("assetPlacements", []):
+        if isinstance(placement, dict) and (
+            placement.get("role") == "background" or placement.get("assetId") == "mainBackground"
+        ):
             placement["assetId"] = asset_id
             return
 
@@ -152,17 +146,14 @@ def qqq_release_window(receipt: dict[str, Any]) -> list[dict[str, Any]]:
 
 def patch_verified_series(scene: dict[str, Any], receipt: dict[str, Any]) -> None:
     beats = scene.get("visualBeats")
-    if not isinstance(beats, list) or not beats:
-        raise SystemExit("Scene 8 has no Visual Beat")
-    beat = beats[0]
-    if not isinstance(beat, dict):
+    if not isinstance(beats, list) or not beats or not isinstance(beats[0], dict):
         raise SystemExit("Scene 8 first Visual Beat invalid")
+    beat = beats[0]
     rows = qqq_release_window(receipt)
     ids = ["scene-08-qqq-0829", "scene-08-qqq-0830", "scene-08-qqq-0831"]
     labels = ["08:29 ET", "08:30 ET", "08:31 ET"]
     numbers = [
-        item
-        for item in scene.get("numbers", [])
+        item for item in scene.get("numbers", [])
         if isinstance(item, dict) and (item.get("numberId") or item.get("key")) not in set(ids)
     ]
     for object_id, label, row in zip(ids, labels, rows):
@@ -251,7 +242,11 @@ def apply(root: Path) -> dict[str, Any]:
                 scene_id="scene-02",
                 target_beat_id=scene2_beat,
                 source_id="source-002",
-                purpose="Show page 1 of the actual BLS July 2026 Employment Situation PDF before abstracting the numbers.",
+                purpose=(
+                    "Primary is page 1 of the actual BLS July 2026 Employment Situation PDF. "
+                    "Approved Fallback preserves the BLS numbers/source label on the news surface "
+                    "when BLS blocks GitHub-hosted acquisition."
+                ),
                 primary=visual_candidate(
                     candidate_id="vsp-20260810-bls-primary",
                     asset_id="daily-bls-employment-july-2026",
@@ -276,7 +271,11 @@ def apply(root: Path) -> dict[str, Any]:
                 scene_id="scene-06",
                 target_beat_id=scene6_beat,
                 source_id="source-004",
-                purpose="Show the actual Microchip Q1 FY27 IR release before the approved semiconductor close comparison.",
+                purpose=(
+                    "Show the actual Microchip Q1 FY27 IR release. The fallback route intentionally "
+                    "uses the same official page with a distinct production asset so a BLS-only "
+                    "technical failure does not discard this working real document."
+                ),
                 primary=visual_candidate(
                     candidate_id="vsp-20260810-microchip-primary",
                     asset_id="daily-microchip-q1-fy27-ir",
@@ -288,11 +287,11 @@ def apply(root: Path) -> dict[str, Any]:
                 ),
                 fallback=visual_candidate(
                     candidate_id="vsp-20260810-microchip-fallback",
-                    asset_id="background_scene_semiconductor",
-                    source_kind="existing-asset",
-                    locator={"assetId": "background_scene_semiconductor"},
-                    capture_method="registry-reference",
-                    capture_spec=None,
+                    asset_id="daily-microchip-q1-fy27-ir-fallback",
+                    source_kind="official-url",
+                    locator={"url": MICROCHIP_URL},
+                    capture_method="webpage-screenshot",
+                    capture_spec={"viewport": {"width": 1440, "height": 900}},
                     rights_status="cleared",
                 ),
             ),
@@ -301,7 +300,7 @@ def apply(root: Path) -> dict[str, Any]:
     selection = {
         "contractVersion": "1.0.0",
         "episodeDate": DATE,
-        "selectedPath": "primary",
+        "selectedPath": "fallback",
     }
 
     write(render_path, render)
@@ -312,13 +311,15 @@ def apply(root: Path) -> dict[str, Any]:
         "episodeDate": DATE,
         "renderSpec": render_path.relative_to(root).as_posix(),
         "visualSourceIntentCount": len(intents["intents"]),
-        "selectedPath": "primary",
+        "selectedPath": "fallback",
+        "fallbackReason": "BLS blocks GitHub-hosted HTTP acquisition with 403; Microchip real IR remains preserved on fallback route.",
         "verifiedSeries": {
             "symbol": "QQQ.US",
             "precision": "verified-intraday-series",
             "points": qqq_release_window(receipt),
         },
-        "realEvidence": ["source-002", "source-004"],
+        "realEvidence": ["source-004"],
+        "approvedFallbackEvidence": ["source-002"],
         "reusableBackgrounds": ["background_scene_fed", "background_scene_semiconductor"],
     }
 
