@@ -1,0 +1,80 @@
+name: Temporary Build Production Diagnostic
+
+on:
+  push:
+    branches:
+      - fix/measured-visual-diversity-2026-08-10
+    paths:
+      - ".github/temporary-build-production-diagnostic.json"
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      DATE: 2026-08-10
+      SOURCE_RUN_ID: "31451704351"
+      SOURCE_ARTIFACT: h4-clean-real-day-2026-08-10
+      NASDAQ_CAFE_RENDERER_ROOT: ${{ github.workspace }}/.renderer
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/measured-visual-diversity-2026-08-10
+          persist-credentials: false
+          clean: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.SOURCE_ARTIFACT }}
+          path: .diagnostic-input
+          run-id: ${{ env.SOURCE_RUN_ID }}
+          github-token: ${{ github.token }}
+
+      - name: Restore failed H4 state
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp -a .diagnostic-input/. .
+
+      - uses: actions/checkout@v6
+        with:
+          repository: saienjoy0/saienjoy0-nasdaq-cafe-remotion
+          ref: 0aaaf77eb2fd54e3e1b5eb4db05410dcaf71b673
+          path: .renderer
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install finalizer validation dependency
+        run: python -m pip install --disable-pip-version-check jsonschema
+
+      - name: Re-run only build-production and capture exact failure
+        shell: bash
+        run: |
+          set +e
+          python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" build-production \
+            --episode-date "$DATE" \
+            --episode-package "episodes/$DATE/episode_package_$DATE.md" \
+            > /tmp/build-production.stdout 2> /tmp/build-production.stderr
+          rc=$?
+          set -e
+          {
+            echo "exit_code=$rc"
+            echo "--- stdout ---"
+            tail -n 80 /tmp/build-production.stdout
+            echo "--- stderr ---"
+            tail -n 120 /tmp/build-production.stderr
+          } | tee verification/$DATE/build_production_exact_failure.txt
+          test "$rc" -ne 0
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-production-exact-failure
+          path: verification/2026-08-10/build_production_exact_failure.txt
+          retention-days: 2
