@@ -204,13 +204,18 @@ jobs:
             --repo-root "$GITHUB_WORKSPACE" \
             --output verification/$DATE/approved_episode_assembly.json
 
-      - name: Assert real evidence survived final render authoring
+      - name: Assert selected evidence survived final episode assembly
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
           date='2026-08-10'
-          render=json.loads(Path(f'render-specs/{date}/render_spec.json').read_text(encoding='utf-8'))
+          package_text=Path(f'episodes/{date}/episode_package_{date}.md').read_text(encoding='utf-8')
+          begin='<!--BEGIN_FINAL_PRODUCTION_SOURCE-->'
+          end='<!--END_FINAL_PRODUCTION_SOURCE-->'
+          block=package_text.split(begin,1)[1].split(end,1)[0]
+          annex=json.loads(block.split('```json',1)[1].split('```',1)[0])
+          render=annex['render_spec']
           scenes={scene['sceneNumber']:scene for scene in render['scenes']}
           beat=scenes[8]['visualBeats'][0]
           rt=beat['templateConfig']['reactionTimeline']
@@ -237,7 +242,7 @@ jobs:
           placements={p['assetId'] for scene in render['scenes'] for p in scene.get('assetPlacements', [])}
           required={'background_scene_news','daily-microchip-q1-fy27-ir-fallback'}
           if not required.issubset(placements):
-              raise SystemExit(f'final selected visual assets missing: {sorted(required-placements)}')
+              raise SystemExit(f'assembled production render missing selected assets: {sorted(required-placements)}')
 
           raw=json.loads(Path(f'verification/{date}/asset_resolution_raw.json').read_text(encoding='utf-8'))
           results={(item['intentId'],item['path']):item for item in raw.get('results', [])}
@@ -248,7 +253,7 @@ jobs:
           if not output_path or not Path(output_path).is_file():
               raise SystemExit(f'Microchip real IR output missing: {output_path}')
 
-          print('PASS BLS approved fallback + actual Microchip IR + QQQ verified series')
+          print('PASS assembled render: BLS approved fallback + actual Microchip IR + QQQ verified series')
           PY
 
       - name: Validate Episode Memory hardening
@@ -311,7 +316,7 @@ jobs:
           python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" status \
             --episode-date $DATE | tee verification/$DATE/h4_control_plane_status.json
 
-      - name: Assert verified timing propagated through Research Story Package and Render
+      - name: Assert verified timing and selected evidence reached final render spec
         run: |
           python - <<'PY'
           import json
@@ -339,8 +344,8 @@ jobs:
           dossier=paths[0].read_text(encoding='utf-8')
           script=paths[2].read_text(encoding='utf-8')
           package=paths[3].read_text(encoding='utf-8')
-          render=paths[4].read_text(encoding='utf-8')
-          combined='\n'.join((dossier,script,package,render))
+          render_text=paths[4].read_text(encoding='utf-8')
+          combined='\n'.join((dossier,script,package,render_text))
           missing=[token for token in required if token not in combined]
           if missing:
               raise SystemExit(f'verified minute values missing from final lineage: {missing}')
@@ -355,7 +360,18 @@ jobs:
           result=json.loads(Path(f'research/{date}/research_acquisition_result_w02.json').read_text(encoding='utf-8'))
           if result['status'] != 'success':
               raise SystemExit('wave 2 success did not survive the full pipeline')
-          print('PASS successful timing lineage propagated end-to-end')
+
+          final_render=json.loads(render_text)
+          placements={p['assetId'] for scene in final_render['scenes'] for p in scene.get('assetPlacements', [])}
+          required_assets={'background_scene_news','daily-microchip-q1-fy27-ir-fallback'}
+          if not required_assets.issubset(placements):
+              raise SystemExit(f'final render spec lost selected visual assets: {sorted(required_assets-placements)}')
+          scene8=next(scene for scene in final_render['scenes'] if scene['sceneNumber']==8)
+          beat8=scene8['visualBeats'][0]
+          rt=beat8['templateConfig']['reactionTimeline']
+          if beat8['visualTemplate']!='event-reaction-timeline' or rt['precision']!='verified-intraday-series':
+              raise SystemExit('final render spec lost QQQ verified-series')
+          print('PASS final render: BLS approved fallback + actual Microchip IR + QQQ verified series')
           PY
 
       - name: Assert no date-specific production corrector is invoked
