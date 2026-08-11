@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import importlib.util
 import sys
 from copy import deepcopy
@@ -8,11 +9,11 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
+ADAPTER_PATH = ROOT / "critic-adapters/openai/main.py"
 
 
 def load_adapter():
-    path = ROOT / "critic-adapters/openai/main.py"
-    spec = importlib.util.spec_from_file_location("interest_openai_critic_adapter", path)
+    spec = importlib.util.spec_from_file_location("interest_openai_critic_adapter", ADAPTER_PATH)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
@@ -88,6 +89,25 @@ def finding(issue_type: str, severity: str, scene_ids: list[str]) -> dict:
         "viewer_impact": "中盤の進展が弱く感じられる。",
         "minimal_fix": "既存Evidenceと因果を保ったまま重複説明を圧縮する。",
     }
+
+
+def test_adapter_import_does_not_require_openai_sdk_at_module_scope():
+    tree = ast.parse(ADAPTER_PATH.read_text(encoding="utf-8"))
+    top_level_openai_imports = [
+        node
+        for node in tree.body
+        if isinstance(node, (ast.Import, ast.ImportFrom))
+        and (
+            (isinstance(node, ast.ImportFrom) and node.module == "openai")
+            or (
+                isinstance(node, ast.Import)
+                and any(alias.name == "openai" for alias in node.names)
+            )
+        )
+    ]
+    assert top_level_openai_imports == []
+    adapter = load_adapter()
+    assert callable(adapter.validate_review)
 
 
 def test_minor_fact_stacking_can_keep_external_critic_pass():
