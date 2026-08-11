@@ -174,7 +174,7 @@ def build_handoff(*, source_root: Path, bundle_root: Path, date: str, mode: str,
     asset_manifest = load_json(sources["asset_manifest"], "asset manifest")
     if asset_manifest.get("episode_date") != date:
         raise HandoffError("asset manifest episode_date mismatch")
-    if asset_manifest.get("selected_path") not in {"primary", "fallback", "not-required"}:
+    if asset_manifest.get("selected_path") not in {"primary", "fallback", "mixed", "not-required"}:
         raise HandoffError("asset manifest selected_path is unresolved")
 
     approval_record = load_json(approval_path.resolve(), "approval record") if approval_path else None
