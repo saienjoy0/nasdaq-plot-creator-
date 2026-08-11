@@ -1,0 +1,41 @@
+name: Temporary Targeted Authoring Patch
+
+on:
+  push:
+    branches:
+      - fix/measured-visual-diversity-2026-08-10
+    paths:
+      - ".github/temporary-patch-requests/scene8-beat-id.json"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor == github.repository_owner
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/measured-visual-diversity-2026-08-10
+          fetch-depth: 0
+      - name: Apply exact one-line compatibility patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('tests/real-day-2026-08-10/apply_visual_evidence_first.py')
+          text=path.read_text(encoding='utf-8')
+          old='"visualBeatId": f"vb-08-{index:02d}",'
+          new='"visualBeatId": f"scene-08-beat-{index:03d}",'
+          if text.count(old) != 1:
+              raise SystemExit(f'expected exactly one target, got {text.count(old)}')
+          path.write_text(text.replace(old,new), encoding='utf-8')
+          PY
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add tests/real-day-2026-08-10/apply_visual_evidence_first.py
+          git diff --cached --check
+          git commit -m 'fix: preserve producer beat alias before renderer canonicalization'
+          git push origin HEAD:fix/measured-visual-diversity-2026-08-10
