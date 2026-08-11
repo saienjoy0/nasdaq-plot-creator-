@@ -1,7 +1,21 @@
 {
-  "contract_version": "1.0.0",
+  "contract_version": "1.1.0",
   "episode_date": "2026-08-10",
-  "purpose": "Benchmark interestingness as evidence-backed explanatory model updates without changing the frozen causal contract.",
+  "purpose": "Benchmark interestingness as evidence-backed explanatory-model updates while keeping the real historical H4 causal dossier byte-identical.",
+  "baseline_source_receipt": "tests/story-engine/fixtures/2026-08-10-interest/baseline_source_receipt.json",
+  "editorial_invariants": "tests/story-engine/fixtures/2026-08-10-interest/editorial_invariants.json",
+  "historical_h4": {
+    "score": 29,
+    "verdict": "pass",
+    "findings": [],
+    "structure": "Scene 4 establishes the macro rates model; Scene 6 adds MCHP earnings; Scene 7 adds counterexamples; the strongest minute-timing branch arrives in Scene 8.",
+    "semantic_interest_reassessment_targets": [
+      "FACT_STACKING",
+      "LOW_INFORMATION_GAIN",
+      "PAYOFF_DROUGHT"
+    ],
+    "note": "These are semantic Critic targets, not deterministic expected failures. Historical H4 can retain real late value while still placing its strongest discovery too late."
+  },
   "central_contradiction": "July payrolls missed badly, yet NASDAQ rose 1.30% and SOXX rose 2.02%.",
   "provisional_model": "Weak jobs reduced rate-hike expectations and eased the rate headwind for tech.",
   "final_model": "The same semiconductor-up session contained different causal engines: immediate macro rate reaction and company-specific MCHP earnings, with counterexamples limiting any blanket-tech explanation.",
@@ -28,7 +42,7 @@
       "scene_id": "scene-04",
       "primary_gain": "mechanism_reveal",
       "strength": "high",
-      "required_evidence_ids": ["E-001", "E-002"],
+      "required_evidence_ids": ["E-002", "E-003", "E-004"],
       "meaning": "Expected/Actual/Gap and the 67->55->44 rate-hike path make the provisional policy-transmission mechanism visible."
     },
     {
@@ -42,7 +56,7 @@
       "primary_gain": "branch",
       "secondary_gains": ["verification"],
       "strength": "very_high",
-      "required_evidence_ids": ["E-003", "E-004", "E-007"],
+      "required_evidence_ids": ["E-008", "E-010", "E-011", "E-012"],
       "meaning": "QQQ/SOXX/NVDA react at 8:30 ET while MCHP does not, splitting one apparent semiconductor trade into multiple engines."
     },
     {
@@ -50,7 +64,7 @@
       "primary_gain": "branch",
       "secondary_gains": ["narrow"],
       "strength": "high",
-      "required_evidence_ids": ["E-005", "E-006"],
+      "required_evidence_ids": ["E-005", "E-006", "E-007"],
       "meaning": "MCHP earnings explain the company-specific engine while AMD/Alphabet counterexamples limit a blanket-tech-rally claim."
     },
     {
@@ -60,22 +74,31 @@
       "meaning": "Different causal engines aligned in the same index direction; timing supports chronology but not standalone causal proof."
     }
   ],
-  "old_frontloaded_expected_findings": [
-    "FACT_STACKING",
-    "PAYOFF_DROUGHT",
-    "WEAK_SURPRISE",
-    "NO_LATE_PAYOFF"
-  ],
   "revised_expected_hard_findings_absent": [
     "HOOK_EXHAUSTS_STORY",
     "NO_UNDERSTANDING_UPGRADE",
     "FAKE_UNDERSTANDING_UPGRADE",
     "NO_LATE_PAYOFF"
   ],
+  "revised_expected_major_interest_findings_absent": [
+    "FACT_STACKING",
+    "LOW_INFORMATION_GAIN",
+    "PAYOFF_DROUGHT",
+    "WEAK_SURPRISE"
+  ],
   "interest_findings": [
     "FACT_STACKING",
     "LOW_INFORMATION_GAIN",
     "PAYOFF_DROUGHT",
     "WEAK_SURPRISE"
-  ]
+  ],
+  "deterministic_acceptance": {
+    "historical_core_sha_match": true,
+    "same_causal_dossier_sha": true,
+    "same_expected_actual_gap": true,
+    "same_chronology": true,
+    "material_counterevidence_retained": true,
+    "company_material_not_promoted_to_nasdaq_primary": true,
+    "scene_06_revised_upgrade_uses_minute_evidence": true
+  }
 }
