@@ -7,6 +7,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
+# Optional runtime dependency. Tests may inject a fake client through this symbol
+# without requiring the OpenAI SDK to be installed in generic production CI.
+OpenAI: Any | None = None
+
 
 class AdapterError(RuntimeError):
     pass
@@ -246,6 +250,8 @@ def validate_review(review: dict[str, Any], request: dict[str, Any]) -> None:
 
 
 def main() -> int:
+    global OpenAI
+
     request_path = Path(os.environ.get("NASDAQ_CAFE_CRITIC_REQUEST", ""))
     manifest_path = Path(os.environ.get("NASDAQ_CAFE_CRITIC_BUNDLE", ""))
     output_path = Path(os.environ.get("NASDAQ_CAFE_CRITIC_REVIEW_OUT", ""))
@@ -264,10 +270,12 @@ def main() -> int:
     timeout_seconds = float(os.environ.get("OPENAI_CRITIC_TIMEOUT_SECONDS", "180"))
     if not os.environ.get("OPENAI_API_KEY"):
         raise AdapterError("OPENAI_API_KEY is required")
-    try:
-        from openai import OpenAI
-    except ImportError as exc:
-        raise AdapterError("openai package is required for external Critic execution") from exc
+    if OpenAI is None:
+        try:
+            from openai import OpenAI as OpenAIClient
+        except ImportError as exc:
+            raise AdapterError("openai package is required for external Critic execution") from exc
+        OpenAI = OpenAIClient
 
     bundle_text = render_bundle(manifest_path.parent, manifest)
     frozen_instruction = str(request.get("instruction", ""))
