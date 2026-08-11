@@ -1,4 +1,0 @@
-{
-  "branch": "fix/measured-visual-diversity-2026-08-10",
-  "fixes": ["scene4-causal-data", "scene8-alternate-closing-surface"]
-}
