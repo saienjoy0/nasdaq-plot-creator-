@@ -44,6 +44,12 @@ def main() -> int:
         value = merge(value, piece)
     if value.get("episodeDate") != args.date:
         raise SystemExit("assembled authoring episodeDate mismatch")
+    review = value.get("review")
+    if isinstance(review, dict) and "scores" not in review:
+        story_scores = review.get("storyScores")
+        if not isinstance(story_scores, dict):
+            raise SystemExit("review.storyScores is required")
+        review["scores"] = dict(story_scores)
     output = root / "daily-authoring" / f"{args.date}.json"
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
