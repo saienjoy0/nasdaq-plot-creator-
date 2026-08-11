@@ -1,6 +1,6 @@
 ---
 name: nasdaq-cafe-story-engine
-version: 1.3.2
+version: 1.3.3
 description: Turn a validated causal dossier into a reviewed 9-Scene episode package by chaining viewer understanding without changing market causality, then hand the reviewed story to explicit Visual Evidence Planning.
 ---
 
@@ -410,7 +410,7 @@ Adjacent Scenes mainly add facts or support while the explanatory model remains 
 
 #### `LOW_INFORMATION_GAIN`
 
-Ask what the viewer can explain differently after this Scene. If the answer is only that the same hypothesis now has one more supporting fact, the Scene may be low gain. `support` is valid; issue this finding when runtime/emphasis is disproportionate to the gain.
+Ask what the viewer can explain differently after this Scene. If the answer is only that the same hypothesis now has one more supporting fact, the Scene may be low gain. `support` is valid; issue this finding when **narrative weight/emphasis** is disproportionate to the gain. At this pre-TTS review stage, do not infer actual runtime from word count; use measured duration only when it is explicitly present in the sealed review input.
 
 #### `PAYOFF_DROUGHT`
 
@@ -749,7 +749,9 @@ Scene 1–2 are not sacred. Rewrite only Scenes that fail the same Critic criter
 
 # 2026-08-10 interest regression requirement
 
-Use 2026-08-10 as the benchmark for "correct but potentially lecture-like" episodes.
+Use the **real historical H4 output** as the benchmark for "correct but potentially lecture-like" episodes. The historical H4 review was 29/30, PASS, with no findings. That historical score is evidence of the old review behavior, not proof that the script is optimally interesting under the new Information Gain policy.
+
+The baseline is reproduced from immutable acceptance fixture commit `b986888660aa8efd64428aa8119200965351c047` and must match the recorded historical core SHA-256 values before any revised A/B is accepted. The revised side must keep the causal dossier byte-identical and satisfy the separate Editorial Invariant Manifest. Claim IDs may change in a full Story Engine rerun; market meaning may not.
 
 Frozen market meaning:
 
@@ -775,6 +777,8 @@ Required interest progression:
 
 The Engine must be able to issue `FACT_STACKING`, `LOW_INFORMATION_GAIN`, `PAYOFF_DROUGHT`, or `WEAK_SURPRISE` when the facts are preserved but the explanatory progress is too weak. These findings may never be resolved by inventing causality or withholding truth.
 
+Deterministic CI proves lineage, structure, chronology, Evidence retention, scope boundaries and A/B invariants. It does **not** prove that either script is interesting. The actual semantic judgment remains the 04 Editorial Critic responsibility.
+
 ---
 
 # Required validations
@@ -785,7 +789,8 @@ The Engine must be able to issue `FACT_STACKING`, `LOW_INFORMATION_GAIN`, `PAYOF
 - Evidence-backed Understanding Upgrade structural guards
 - Scene 4 → Scene 8 understanding delta guard
 - Information Gain interest-quality diagnostics in 04
-- 2026-08-10 interest benchmark regression
+- real historical 2026-08-10 H4 SHA-bound interest A/B regression
+- Editorial Invariant Manifest comparison for full Story Engine reruns
 - material counterevidence guard
 - fixed Scene order / Scene 9 guard
 - 04 hard narrative gates before scoring
