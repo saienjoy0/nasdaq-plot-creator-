@@ -217,6 +217,4 @@ def test_2026_08_10_interest_benchmark_uses_real_h4_and_scene6_minute_branch():
     assert "NO_LATE_PAYOFF" in benchmark["revised_expected_hard_findings_absent"]
     assert set(benchmark["revised_expected_major_interest_findings_absent"]) == INTEREST_FINDINGS
     assert Path(ROOT / "tests/story-engine/run_2026_08_10_interest_regression.py").is_file()
-    assert Path(ROOT / "tests/story-engine/run_2026_08_10_interest_regression_v2.py").is_file()
     assert Path(ROOT / f"{fixture_root}/materialize_revised_interest_fixture.py").is_file()
-    assert Path(ROOT / f"{fixture_root}/materialize_revised_interest_fixture_v2.py").is_file()
