@@ -3,18 +3,21 @@
 
 This module performs no editorial selection. It preserves the approved dossier/story,
 normalizes strict renderer enums, supplies projection-only Markdown anchors per Scene,
-projects explicit financial bindings, and binds authored intraday evidence.
+projects explicit financial bindings, binds authored intraday evidence, and completes
+explicit show sequences for already-authored multi-object Visual Beats.
 """
 from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 FIXED_SCENE_09_NARRATION = (
     "以上、朝のNASDAQカフェでした。今日も気をつけて、いってらっしゃい。"
     "こちらはそろそろ、おやすみなさい。"
 )
+EVENT_RE = re.compile(r"^event-(\d{3})$")
 
 
 def load(path: Path):
@@ -176,7 +179,6 @@ def canonical_reaction_id(source_beat_id: str) -> str:
     parts = source_beat_id.split("-")
     if len(parts) == 5 and parts[0] == "scene" and parts[2] == "beat":
         return f"vb-{parts[1]}-{int(parts[3] if parts[3].isdigit() else parts[4]):02d}"
-    # Expected source form is scene-06-beat-001; handle it explicitly and fail closed otherwise.
     if source_beat_id.startswith("scene-") and "-beat-" in source_beat_id:
         scene_part, beat_part = source_beat_id.split("-beat-", 1)
         scene_id = scene_part.removeprefix("scene-")
@@ -207,7 +209,6 @@ def normalize_reaction_bindings(authoring: dict, render: dict, root: Path, date:
         for beat in scene.get("visualBeats", [])
     }
     for row, beat_id in zip(rows, expected, strict=True):
-        # Renderer 2.4 canonicalizes Visual Beat IDs before consuming reaction bindings.
         row["visualBeatId"] = canonical_reaction_id(beat_id)
         asset = assets.get(beat_id)
         if asset is None:
@@ -232,6 +233,62 @@ def normalize_reaction_bindings(authoring: dict, render: dict, root: Path, date:
     return len(rows)
 
 
+def complete_show_sequences(render: dict) -> int:
+    serial = 0
+    for scene in render.get("scenes", []):
+        for event in scene.get("visualEvents", []):
+            match = EVENT_RE.fullmatch(str(event.get("eventId", "")))
+            if match:
+                serial = max(serial, int(match.group(1)))
+
+    added = 0
+    for scene in render.get("scenes", []):
+        events = scene.setdefault("visualEvents", [])
+        chunks = scene.get("narrationChunks", [])
+        chunk_order = {
+            chunk.get("chunkId"): index
+            for index, chunk in enumerate(chunks)
+            if isinstance(chunk, dict)
+        }
+        for beat in scene.get("visualBeats", []):
+            object_ids = list(beat.get("objectIds", []))
+            if len(object_ids) <= 1:
+                continue
+            start_id = beat.get("startChunkId")
+            end_id = beat.get("endChunkId")
+            start_index = chunk_order.get(start_id)
+            end_index = chunk_order.get(end_id)
+            if start_index is None or end_index is None:
+                raise SystemExit(f"invalid Beat chunk range: {scene.get('sceneId')}/{beat.get('beatId')}")
+            selected = set(object_ids)
+            shown: set[str] = set()
+            for event in events:
+                if event.get("action") != "show" or event.get("targetId") not in selected:
+                    continue
+                event_index = chunk_order.get(event.get("atChunkId"))
+                if event_index is not None and start_index <= event_index <= end_index:
+                    shown.add(event["targetId"])
+            missing = [object_id for object_id in object_ids if object_id not in shown]
+            for ordinal, object_id in enumerate(missing, start=1):
+                serial += 1
+                if serial > 999:
+                    raise SystemExit("visual event serial exceeds renderer contract")
+                events.append({
+                    "eventId": f"event-{serial:03d}",
+                    "atChunkId": start_id,
+                    "timing": "chunk-start",
+                    "action": "show",
+                    "targetId": object_id,
+                    "offsetMs": min(9000, ordinal * 180),
+                    "expression": None,
+                    "motionPreset": "rise-soft",
+                    "durationMs": 420,
+                    "easingPreset": "smooth-out",
+                })
+                added += 1
+    return added
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--date", required=True)
@@ -247,10 +304,13 @@ def main() -> int:
     normalize_review(authoring, root, date)
     render = normalize_render(authoring, root, date)
     reaction_count = normalize_reaction_bindings(authoring, render, root, date)
+    show_events_added = complete_show_sequences(render)
+    dump(root / "render-specs" / date / "render_spec.json", render)
 
     print(
         f"FIXED daily materialization {date}: canonical inquisition + scene-scoped anchors + "
-        f"canonical reaction IDs ({reaction_count}) + {len(authoring.get('financialBindings', []))} financial bindings"
+        f"canonical reaction IDs ({reaction_count}) + {len(authoring.get('financialBindings', []))} financial bindings + "
+        f"completed show events ({show_events_added})"
     )
     return 0
 
