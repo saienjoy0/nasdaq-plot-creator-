@@ -3,8 +3,8 @@
 
 Fragments are editorially complete inputs created by ChatGPT. This script only performs
 a deterministic deep merge, binds the exact daily-source file SHA required by lineage,
-exposes already-approved review scores under legacy field names, and activates the exact
-Renderer 2.4 Financial Template scope for the subsequent deterministic materializer.
+exposes already-approved review scores under legacy field names, and activates exact
+Renderer 2.4 compatibility aliases for the subsequent deterministic materializer.
 It makes no market or creative decisions.
 """
 from __future__ import annotations
@@ -54,13 +54,7 @@ def bind_daily_source_lineage(value: dict[str, Any], root: Path, date: str) -> s
 
 
 def activate_renderer_240_financial_scope(root: Path) -> None:
-    """Align the ephemeral daily materializer with the pinned Renderer 2.4 registry.
-
-    The persistent legacy module originally recognized only two financial templates.
-    Renderer 2.4 defines five. Daily authoring supplies explicit bindings for every used
-    financial template, so this activation only widens the deterministic binding gate;
-    it never creates or selects a visual.
-    """
+    """Align the ephemeral daily materializer with the pinned Renderer 2.4 registry."""
     path = root / "scripts" / "materialize_renderer_sources.py"
     text = path.read_text(encoding="utf-8")
     legacy = 'FINANCIAL_TEMPLATES = {"market-pulse-grid", "dual-asset-split"}'
@@ -73,6 +67,33 @@ def activate_renderer_240_financial_scope(root: Path) -> None:
         path.write_text(text, encoding="utf-8")
     elif renderer_240 not in text:
         raise SystemExit("cannot activate Renderer 2.4 financial template scope")
+
+
+def normalize_renderer_visual_modes(value: dict[str, Any]) -> int:
+    """Apply template-implied visual-mode aliases without changing authored content.
+
+    Renderer projection treats `number-comparison`/`stock-comparison` as data-shape
+    instructions before it looks at the template. A source-receipt nested in a numeric
+    Scene must therefore explicitly use the media mode instead of inheriting the Scene
+    mode. This is a deterministic template compatibility mapping, not a visual choice.
+    """
+    changed = 0
+    scenes = value.get("scenes")
+    if not isinstance(scenes, list):
+        raise SystemExit("assembled authoring scenes must be an array")
+    for scene in scenes:
+        if not isinstance(scene, dict):
+            continue
+        beats = scene.get("beats")
+        if not isinstance(beats, list):
+            continue
+        for beat in beats:
+            if not isinstance(beat, dict):
+                continue
+            if beat.get("visualTemplate") == "source-receipt" and beat.get("visualMode") != "news-media":
+                beat["visualMode"] = "news-media"
+                changed += 1
+    return changed
 
 
 def main() -> int:
@@ -101,12 +122,14 @@ def main() -> int:
         review["scores"] = dict(story_scores)
     daily_sha = bind_daily_source_lineage(value, root, args.date)
     activate_renderer_240_financial_scope(root)
+    mode_aliases = normalize_renderer_visual_modes(value)
     output = root / "daily-authoring" / f"{args.date}.json"
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(
         f"ASSEMBLED {len(parts)} authoring parts -> {output}; "
-        f"daily_sha256={daily_sha}; renderer_financial_scope=2.4"
+        f"daily_sha256={daily_sha}; renderer_financial_scope=2.4; "
+        f"source_receipt_mode_aliases={mode_aliases}"
     )
     return 0
 
