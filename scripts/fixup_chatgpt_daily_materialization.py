@@ -172,6 +172,19 @@ def normalize_render(authoring: dict, root: Path, date: str) -> dict:
     return render
 
 
+def canonical_reaction_id(source_beat_id: str) -> str:
+    parts = source_beat_id.split("-")
+    if len(parts) == 5 and parts[0] == "scene" and parts[2] == "beat":
+        return f"vb-{parts[1]}-{int(parts[3] if parts[3].isdigit() else parts[4]):02d}"
+    # Expected source form is scene-06-beat-001; handle it explicitly and fail closed otherwise.
+    if source_beat_id.startswith("scene-") and "-beat-" in source_beat_id:
+        scene_part, beat_part = source_beat_id.split("-beat-", 1)
+        scene_id = scene_part.removeprefix("scene-")
+        if len(scene_id) == 2 and scene_id.isdigit() and beat_part.isdigit():
+            return f"vb-{scene_id}-{int(beat_part):02d}"
+    raise SystemExit(f"unsupported reaction source Beat ID: {source_beat_id}")
+
+
 def normalize_reaction_bindings(authoring: dict, render: dict, root: Path, date: str) -> int:
     path = root / "working" / date / "reaction_timeline_bindings.json"
     reaction = load(path)
@@ -194,7 +207,8 @@ def normalize_reaction_bindings(authoring: dict, render: dict, root: Path, date:
         for beat in scene.get("visualBeats", [])
     }
     for row, beat_id in zip(rows, expected, strict=True):
-        row["visualBeatId"] = beat_id
+        # Renderer 2.4 canonicalizes Visual Beat IDs before consuming reaction bindings.
+        row["visualBeatId"] = canonical_reaction_id(beat_id)
         asset = assets.get(beat_id)
         if asset is None:
             continue
@@ -236,7 +250,7 @@ def main() -> int:
 
     print(
         f"FIXED daily materialization {date}: canonical inquisition + scene-scoped anchors + "
-        f"{reaction_count} reaction bindings + {len(authoring.get('financialBindings', []))} financial bindings"
+        f"canonical reaction IDs ({reaction_count}) + {len(authoring.get('financialBindings', []))} financial bindings"
     )
     return 0
 
