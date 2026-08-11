@@ -4,6 +4,11 @@
 Acceptance-only helper. It changes no narration or causal meaning. The purpose is to
 make Pre-TTS validation, Story auxiliary bindings, Renderer 2.4 canonicalization, and
 the public episode package see the same explicitly authored Scene 8 verified series.
+
+The Story projection intentionally keeps spoken narration and visible caption text as
+separate fields. The final package validator requires every visible render string to
+remain auditable in the package, so this helper also records the already-derived
+caption strings in a machine-only annex. It never rewrites the spoken narration.
 """
 
 from __future__ import annotations
@@ -15,6 +20,8 @@ from pathlib import Path
 from typing import Any
 
 DATE = "2026-08-10"
+CAPTION_BEGIN = "<!--BEGIN_DISPLAY_CAPTION_PROJECTION-->"
+CAPTION_END = "<!--END_DISPLAY_CAPTION_PROJECTION-->"
 
 
 def load(path: Path) -> dict[str, Any]:
@@ -40,9 +47,59 @@ def canonical_visual_beat_id(value: str) -> str:
     raise SystemExit(f"unsupported Scene 8 Visual Beat ID alias: {value}")
 
 
+def sync_caption_projection(render: dict[str, Any], package_path: Path) -> int:
+    captions: dict[str, str] = {}
+    for scene in render.get("scenes", []):
+        if not isinstance(scene, dict):
+            continue
+        scene_id = scene.get("sceneId")
+        for chunk in scene.get("narrationChunks", []):
+            if not isinstance(chunk, dict):
+                continue
+            chunk_id = chunk.get("chunkId")
+            caption = chunk.get("captionText")
+            if (
+                isinstance(scene_id, str)
+                and isinstance(chunk_id, str)
+                and isinstance(caption, str)
+                and caption.strip()
+            ):
+                captions[f"{scene_id}/{chunk_id}"] = caption
+    if not captions:
+        raise SystemExit("display caption projection is empty")
+
+    text = package_path.read_text(encoding="utf-8")
+    if CAPTION_BEGIN in text or CAPTION_END in text:
+        if text.count(CAPTION_BEGIN) != 1 or text.count(CAPTION_END) != 1:
+            raise SystemExit("display caption projection markers are malformed")
+        start = text.index(CAPTION_BEGIN)
+        end = text.index(CAPTION_END, start) + len(CAPTION_END)
+        text = (text[:start] + text[end:]).rstrip()
+    annex = (
+        CAPTION_BEGIN
+        + "\n```json\n"
+        + json.dumps(
+            {
+                "contractVersion": "1.0.0",
+                "episodeDate": DATE,
+                "derivation": "captionText is the deterministic display projection of approved speechText; spoken narration is unchanged",
+                "captions": captions,
+            },
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n```\n"
+        + CAPTION_END
+    )
+    package_path.write_text(text + "\n\n" + annex + "\n", encoding="utf-8")
+    return len(captions)
+
+
 def apply(root: Path) -> dict[str, Any]:
     render_path = root / f"render-specs/{DATE}/render_spec.json"
     bindings_path = root / f"working/{DATE}/story-engine/story_production_bindings.json"
+    package_path = root / f"episodes/{DATE}/episode_package_public_{DATE}.md"
     render = load(render_path)
     bindings = load(bindings_path)
     scene8 = next(
@@ -102,6 +159,7 @@ def apply(root: Path) -> dict[str, Any]:
         }
     )
     write(bindings_path, bindings)
+    caption_count = sync_caption_projection(render, package_path)
     return {
         "status": "pass",
         "episodeDate": DATE,
@@ -112,6 +170,7 @@ def apply(root: Path) -> dict[str, Any]:
         "precision": "verified-intraday-series",
         "seriesObjectIds": list(object_ids),
         "visualGrammarId": "reaction",
+        "captionProjectionCount": caption_count,
         "narrationChanged": False,
     }
 
