@@ -203,6 +203,13 @@ def test_scene_1_to_8_require_payoff(tmp_path: Path):
     assert any("scene-05: new_meaning payoff is required" in error for error in result.errors)
 
 
+def test_scene_1_to_8_require_structural_belief_change(tmp_path: Path):
+    plan = fresh(tmp_path)
+    plan["scenes"][4]["viewer_belief_after"] = plan["scenes"][4]["viewer_belief_before"]
+    result = validate(tmp_path, plan)
+    assert any("scene-05: viewer understanding must change structurally" in error for error in result.errors)
+
+
 def test_scene_1_to_7_require_continuation_reason(tmp_path: Path):
     plan = fresh(tmp_path)
     plan["scenes"][3]["continuation_reason"] = ""
@@ -215,6 +222,29 @@ def test_scene_8_must_close_instead_of_continue(tmp_path: Path):
     plan["scenes"][7]["continuation_reason"] = "watch the next scene"
     result = validate(tmp_path, plan)
     assert any("scene-08: continuation_reason must be empty" in error for error in result.errors)
+
+
+def test_scene_8_understanding_must_differ_from_scene_4(tmp_path: Path):
+    plan = fresh(tmp_path)
+    plan["scenes"][7]["viewer_belief_after"] = plan["scenes"][3]["viewer_belief_after"]
+    result = validate(tmp_path, plan)
+    assert any("scene-08 understanding must be structurally deeper/different than scene-04" in error for error in result.errors)
+
+
+def test_closing_reframe_cannot_repeat_opening_promise(tmp_path: Path):
+    plan = fresh(tmp_path)
+    same = plan["opening_promise"]
+    plan["closing_reframe"]["text"] = same
+    plan["angle_candidates"][0]["closing_reframe"] = same
+    result = validate(tmp_path, plan)
+    assert any("closing_reframe must not merely repeat the opening_promise" in error for error in result.errors)
+
+
+def test_understanding_upgrade_requires_evidence(tmp_path: Path):
+    plan = fresh(tmp_path)
+    plan["midpoint_turn"]["evidence_ids"] = []
+    result = validate(tmp_path, plan)
+    assert any("understanding upgrade must be backed by at least one evidence id" in error for error in result.errors)
 
 
 def test_scene_09_cannot_add_evidence_meaning_or_continuation(tmp_path: Path):

@@ -97,6 +97,11 @@ def normalize_question(value: str) -> str:
     return "".join(value.lower().split()).strip("?？。.!！")
 
 
+def normalize_understanding(value: str) -> str:
+    """Normalize only for obvious structural equality checks, never semantic scoring."""
+    return "".join(value.lower().split()).strip("?？。.!！,，、:：;；『』「」()（）[]【】")
+
+
 def confidence_rank(value: str) -> int:
     return {"unknown": 0, "low": 1, "medium": 2, "high": 3}[value]
 
@@ -253,12 +258,16 @@ def validate_story_plan(
     # continuation reason. Scene 8 closes the narrative instead of opening one.
     for scene in plan["scenes"][:8]:
         scene_id = scene["scene_id"]
-        if not scene["viewer_belief_before"].strip():
+        before = scene["viewer_belief_before"].strip()
+        after = scene["viewer_belief_after"].strip()
+        if not before:
             errors.append(f"{scene_id}: viewer_belief_before is required")
         if not scene["new_meaning"].strip():
             errors.append(f"{scene_id}: new_meaning payoff is required")
-        if not scene["viewer_belief_after"].strip():
+        if not after:
             errors.append(f"{scene_id}: viewer_belief_after is required")
+        if before and after and normalize_understanding(before) == normalize_understanding(after):
+            errors.append(f"{scene_id}: viewer understanding must change structurally from before to after")
 
     for scene in plan["scenes"][:7]:
         if not scene["continuation_reason"].strip():
@@ -267,6 +276,15 @@ def validate_story_plan(
     scene_08 = plan["scenes"][7]
     if scene_08["continuation_reason"].strip():
         errors.append("scene-08: continuation_reason must be empty because Scene 8 closes the story")
+
+    # Late-value structural guard. This is intentionally only an obvious-equality
+    # check; semantic late value remains an Entertainment Critic responsibility.
+    scene_04 = plan["scenes"][3]
+    if normalize_understanding(scene_04["viewer_belief_after"]) == normalize_understanding(scene_08["viewer_belief_after"]):
+        errors.append("scene-08 understanding must be structurally deeper/different than scene-04 understanding")
+
+    if normalize_understanding(plan["opening_promise"]) == normalize_understanding(plan["closing_reframe"]["text"]):
+        errors.append("closing_reframe must not merely repeat the opening_promise")
 
     closing = plan["scenes"][8]
     if closing["new_evidence_ids"]:
@@ -278,12 +296,21 @@ def validate_story_plan(
     if closing["connector"] != "closing":
         errors.append("scene-09: connector must be closing")
 
+    # Legacy field name `midpoint_turn` now carries the semantic contract of an
+    # evidence-backed Understanding Upgrade. Do not allow an evidence-free turn.
     turn_scene = plan["midpoint_turn"]["scene_id"]
     if turn_scene not in {"scene-04", "scene-05", "scene-06"}:
-        errors.append("midpoint turn must be in scene-04 through scene-06")
+        errors.append("understanding upgrade must be in scene-04 through scene-06")
+    if not plan["midpoint_turn"]["evidence_ids"]:
+        errors.append("understanding upgrade must be backed by at least one evidence id")
+    if not plan["midpoint_turn"]["what_changes"].strip():
+        errors.append("understanding upgrade must state what changes in the explanatory model")
     turn_plan_scene = next((s for s in plan["scenes"] if s["scene_id"] == turn_scene), None)
-    if turn_plan_scene and not turn_plan_scene["new_meaning"].strip():
-        errors.append(f"{turn_scene}: midpoint turn scene must add new meaning")
+    if turn_plan_scene:
+        if not turn_plan_scene["new_meaning"].strip():
+            errors.append(f"{turn_scene}: understanding-upgrade scene must add new meaning")
+        if normalize_understanding(turn_plan_scene["viewer_belief_before"]) == normalize_understanding(turn_plan_scene["viewer_belief_after"]):
+            errors.append(f"{turn_scene}: understanding-upgrade scene must change viewer understanding")
 
     if plan["closing_reframe"]["scene_id"] != "scene-08":
         errors.append("closing reframe must occur in scene-08")
@@ -300,10 +327,28 @@ def validate_story_plan(
         if close_num > 8:
             errors.append(f"{loop['id']}: open loops must close by scene-08")
 
+    # A no-new-evidence late section can still be valid if it creates a new
+    # interpretation from earlier evidence, so emit only a warning and leave the
+    # semantic deletion test to the Critic.
+    seen_before_late = {
+        evidence_id
+        for scene in plan["scenes"][:5]
+        for evidence_id in scene["new_evidence_ids"]
+    }
+    late_evidence = {
+        evidence_id
+        for scene in plan["scenes"][5:8]
+        for evidence_id in scene["new_evidence_ids"]
+    }
+    if late_evidence and late_evidence.issubset(seen_before_late):
+        warnings.append(
+            "Scenes 6-8 introduce no structurally new evidence ids; Entertainment Critic must verify that reinterpretation still creates distinct late value"
+        )
+
     if len(angles) < 3:
         errors.append("at least three angle candidates are required")
 
-    return ValidationResult(sorted(set(errors)), warnings)
+    return ValidationResult(sorted(set(errors)), sorted(set(warnings)))
 
 
 def parse_args() -> argparse.Namespace:

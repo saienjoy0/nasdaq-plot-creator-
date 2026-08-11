@@ -19,11 +19,21 @@ ISSUE_TYPES = [
     "NO_NEW_EVIDENCE_OR_MEANING", "NO_PAYOFF", "FAKE_OPEN_LOOP",
     "DEAD_END_SCENE", "ANSWER_REVEALED_TOO_EARLY", "PROCEDURAL_NARRATION",
     "SCENE_ORDER_INTERCHANGEABLE", "FOX_VOICE_ABSENT", "NO_LATE_PAYOFF",
+    "HOOK_EXHAUSTS_STORY", "NO_UNDERSTANDING_UPGRADE", "FAKE_UNDERSTANDING_UPGRADE",
     "ABSTRACT_EDITORIAL_LANGUAGE", "NO_BEFORE_CONTEXT", "NO_AFTER_IMPLICATION",
     "NO_MIDPOINT_TURN", "OPEN_LOOP_UNRESOLVED", "OPENING_PROMISE_NOT_RECOVERED",
     "ENDING_NOT_BOOKENDED", "CAUSALITY_DRIFT", "COUNTEREVIDENCE_REMOVED",
     "TIMELINE_DRIFT", "NASDAQ_SCOPE_OVERREACH", "CLARITY_OVERLOAD",
 ]
+
+HARD_NARRATIVE_FINDINGS = {
+    "HOOK_EXHAUSTS_STORY",
+    "NO_UNDERSTANDING_UPGRADE",
+    "FAKE_UNDERSTANDING_UPGRADE",
+    "NO_LATE_PAYOFF",
+    "OPENING_PROMISE_NOT_RECOVERED",
+    "ENDING_NOT_BOOKENDED",
+}
 
 SCENE_CHECK_SCHEMA: dict[str, Any] = {
     "type": "object",
@@ -150,16 +160,24 @@ You are a separate reviewer, not the Author. Review only the sealed input bundle
 Priority and boundaries:
 1. Preserve frozen facts, Expected/Actual/Gap, chronology, causal scope, confidence, counterevidence, uncertainty, official 9-Scene roles, and fox constraints.
 2. Do not create or strengthen causality to make the episode more interesting.
-3. The governing retention principle is understanding progression, not question count: each Scene should deliver a real payoff; Scenes 1-7 should make the next comparison/test/boundary/counterevidence/implication/verification valuable; Scene 8 should close and reframe the opening promise.
-4. Do not require a question mark or fake suspense. Flag FAKE_OPEN_LOOP when an already-known answer is withheld only to force continuation.
-5. Scene 4 may reveal the central hypothesis. Flag NO_LATE_PAYOFF only when Scenes 6-8 then add no independent value.
-6. Scene 8 must not be failed for lacking a next hook. It should preserve uncertainty and verification conditions and close the analytical story before fixed Scene 9.
-7. Detect procedural narration that sounds like production steps rather than natural fox speech.
-8. If you detect factual error, unsupported Expected, chronology distortion, causal overstatement, evidence loss, investment advice, or invented fox history, use a critical causal-safety finding and verdict=fail rather than repairing the fact yourself.
-9. Findings must name Scene IDs, concrete problem, viewer impact and smallest safe fix.
-10. Write reviewer-facing text in Japanese. Finding issue_type values remain the fixed uppercase identifiers.
+3. The governing retention principle is understanding progression, not question count. The episode should not delay the conclusion; it should deepen the conclusion.
+4. Before scoring, run these hard narrative tests:
+   A) Hook Exhaustion: if Scenes 1-2 already contain the full final synthesis and later Scenes are only documentation, issue HOOK_EXHAUSTS_STORY at major or critical severity.
+   B) Understanding Upgrade Authenticity: the legacy midpoint_turn must change, branch, narrow, reveal mechanism, materially test, disprove, or resolve uncertainty in the explanatory model. A new supporting fact alone is not an upgrade. If it only adds information, issue NO_UNDERSTANDING_UPGRADE. If it is manufactured by withholding already-known evidence, issue FAKE_UNDERSTANDING_UPGRADE or FAKE_OPEN_LOOP.
+   C) Scene 4 -> Scene 8 Delta: state to yourself what the viewer understands by Scene 8 that was not already understood by Scene 4. If there is no material evidence-backed delta, issue NO_LATE_PAYOFF.
+   D) Late Value Deletion: imagine removing Scenes 6-8. If the viewer loses no important understanding beyond examples, repeated support, or disclaimers, issue NO_LATE_PAYOFF.
+   E) No Forced Drama: do not demand a theatrical reversal. A branch, boundary, mechanism reveal, price test, or reason-unknown payoff is valid.
+5. Do not require a question mark or fake suspense. Flag FAKE_OPEN_LOOP when an already-known answer is withheld only to force continuation.
+6. Scene 4 may reveal the provisional/central hypothesis. That is not a failure. It is a failure only when Scene 8 is not materially more informed.
+7. Scene 8 must not be failed for lacking a next hook. It should preserve uncertainty and verification conditions and close the analytical story before fixed Scene 9.
+8. A PASS review requires payoff_delivered=true and belief_changed=true for every Scene 1-8; Scenes 1-7 also require continuation_reason_natural=true; Scene 8 requires closure_effective=true and opening_promise_recovered=true.
+9. The hard narrative findings HOOK_EXHAUSTS_STORY, NO_UNDERSTANDING_UPGRADE, FAKE_UNDERSTANDING_UPGRADE, NO_LATE_PAYOFF, OPENING_PROMISE_NOT_RECOVERED, and ENDING_NOT_BOOKENDED may not be downgraded to minor merely to preserve PASS.
+10. Detect procedural narration that sounds like production steps rather than natural fox speech.
+11. If you detect factual error, unsupported Expected, chronology distortion, causal overstatement, evidence loss, investment advice, or invented fox history, use a critical causal-safety finding and verdict=fail rather than repairing the fact yourself.
+12. Findings must name Scene IDs, concrete problem, viewer impact and smallest safe fix.
+13. Write reviewer-facing text in Japanese. Finding issue_type values remain the fixed uppercase identifiers.
 
-Scoring uses six 0-5 dimensions: opening, progression, discovery, clarity, fox_voice, late_payoff. total_score must equal their sum. verdict=pass is allowed only when there are no immediate failures, no critical or major findings, every dimension is at least 3, the frozen threshold is satisfied, and Scene 8 closure/opening-promise recovery pass."""
+Scoring uses six 0-5 dimensions: opening, progression, discovery, clarity, fox_voice, late_payoff. total_score must equal their sum. Score is secondary: verdict=pass is allowed only when there are no immediate failures, no critical or major findings, every dimension is at least 3, the frozen threshold is satisfied, every Scene payoff/belief-change check passes, and Scene 8 closure/opening-promise recovery pass."""
 
 
 def validate_review(review: dict[str, Any], request: dict[str, Any]) -> None:
@@ -194,6 +212,10 @@ def validate_review(review: dict[str, Any], request: dict[str, Any]) -> None:
             if not isinstance(row.get("closure_effective"), bool) or not isinstance(row.get("opening_promise_recovered"), bool):
                 raise AdapterError("scene-08 requires closure and opening-promise assessments")
 
+    for item in review.get("findings", []):
+        if item.get("issue_type") in HARD_NARRATIVE_FINDINGS and item.get("severity") == "minor":
+            raise AdapterError(f"{item.get('issue_type')} cannot be minor")
+
     if review.get("verdict") == "pass":
         if review.get("immediate_failures"):
             raise AdapterError("PASS review cannot contain immediate failures")
@@ -203,7 +225,16 @@ def validate_review(review: dict[str, Any], request: dict[str, Any]) -> None:
             raise AdapterError("PASS review requires every score dimension >=3")
         if total < int(required.get("minimum_total_score", 0)):
             raise AdapterError("PASS review is below the frozen minimum_total_score")
+        for index, row in enumerate(checks[:7], start=1):
+            if not row.get("payoff_delivered"):
+                raise AdapterError(f"PASS review requires scene-{index:02d} payoff_delivered=true")
+            if not row.get("belief_changed"):
+                raise AdapterError(f"PASS review requires scene-{index:02d} belief_changed=true")
+            if row.get("continuation_reason_natural") is not True:
+                raise AdapterError(f"PASS review requires scene-{index:02d} natural continuation")
         scene_08 = checks[-1]
+        if not scene_08.get("payoff_delivered") or not scene_08.get("belief_changed"):
+            raise AdapterError("PASS review requires Scene 8 payoff and belief change")
         if not scene_08.get("closure_effective") or not scene_08.get("opening_promise_recovered"):
             raise AdapterError("PASS review requires Scene 8 closure and opening-promise recovery")
 

@@ -1,7 +1,7 @@
 ---
 name: nasdaq-cafe-story-plan
 description: Transform a validated causal research dossier into an evidence-bound nine-scene understanding progression before fox narration is written.
-version: 1.2.0
+version: 1.2.1
 ---
 
 # NASDAQ Cafe Story Plan
@@ -20,6 +20,12 @@ The governing retention principle is:
 > **朝のNASDAQカフェは、質問を連鎖させる番組ではない。視聴者の理解を連鎖させる番組である。**
 
 A viewer should continue because a new piece of understanding makes the next comparison, test, boundary, counterevidence, implication, or verification valuable — not because an already-known answer was artificially withheld.
+
+A second governing principle is:
+
+> **結論を遅らせるのではなく、結論を進化させる。**
+
+The opening may reveal the direction and even the provisional driver. It must not consume the final synthesis. By Scene 8, the viewer must understand something materially deeper, narrower, more branched, or better tested than they did around Scene 4.
 
 ## Authority boundary
 
@@ -120,10 +126,12 @@ reason_unknown
 Select the angle that best:
 1. explains the contradiction
 2. reaches NASDAQ without overreach
-3. creates a real explanatory turn
+3. creates a real evidence-backed understanding upgrade
 4. preserves counterevidence
 5. leaves independent value for Scenes 6–8
 6. delivers the headline-beyond discovery
+
+Do not choose an angle merely because it can manufacture a reversal. A straight causal chain can still be interesting if later evidence reveals mechanism, scope, scale, branching, or a meaningful verification boundary.
 
 ## Stage 5 — Opening Promise
 
@@ -135,19 +143,29 @@ Scenes 1–2 must establish:
 The opening must provide early value, not merely promise later value.
 Do not hide evidence that is already needed to make the opening truthful.
 
+The opening should normally provide a **provisional understanding**, not the full final synthesis.
+
 Bad:
 
 ```text
 「答えは後半で分かります」
 ```
 
+Also bad:
+
+```text
+Scene 1 already states the primary driver, all amplifiers, all counterevidence, the scope boundary, and the final synthesis.
+```
+
 Better structure:
 
 ```text
 方向を示す
-→ 単純説明では噛み合わないことを示す
-→ そのズレを何で判定するかが次の価値になる
+→ 暫定的に何が効いたかを示す
+→ その説明の範囲・別エンジン・反対材料・実反応のどれを確認すると理解が深くなるかを残す
 ```
+
+This is the `HOOK_EXHAUSTS_STORY` boundary: early value is required, early exhaustion is not.
 
 ## Stage 6 — Build the fixed nine-scene Understanding Progression
 
@@ -188,6 +206,20 @@ A payoff does **not** require a new causal explanation. Valid payoffs include:
 - understanding contrary evidence
 - understanding what remains unknown
 - learning what would strengthen or weaken the hypothesis
+
+**Information addition is not automatically an understanding upgrade.**
+
+A new statistic, another headline, or another supporting factor does not count as progression if the viewer's explanatory model is unchanged.
+
+For Scenes 1–8:
+
+```text
+viewer_belief_before
+!=
+viewer_belief_after
+```
+
+The difference must be about market understanding, not merely wording.
 
 ### Scenes 1–7 — continuation
 
@@ -239,16 +271,45 @@ Scene 9 has:
 
 Do not repair an unresolved story in Scene 9.
 
-## Stage 7 — Midpoint Turn
+## Stage 7 — Evidence-backed Understanding Upgrade
 
-A real explanatory turn must occur in Scene 4, 5, or 6.
-A turn changes the explanation, not just the amount of information.
+The existing JSON field remains named `midpoint_turn` for compatibility, but its semantic contract is now **Understanding Upgrade**, not mandatory theatrical reversal.
 
-Valid examples:
+It must occur in Scene 4, 5, or 6 and must be backed by one or more real Evidence IDs.
+
+A valid upgrade changes, branches, narrows, or materially tests the viewer's explanatory model. Valid forms include:
+
+```text
+turn
+branch
+boundary
+scale_reveal
+mechanism_reveal
+disproof
+reason_unknown_payoff
+```
+
+Examples:
 - a naive explanation is rejected
-- peer comparison changes the evaluation axis
-- price reaction meaningfully tests the hypothesis
-- reason_unknown becomes the most defensible conclusion
+- the same sector move splits into macro and company-specific engines
+- a company explanation is narrowed because the index/peer reaction does not match
+- price timing materially tests the provisional hypothesis
+- a hidden mechanism explains why the same headline produced different reactions
+- reason_unknown becomes the most defensible conclusion after competing explanations fail
+
+Invalid upgrade:
+
+```text
+暫定解：弱い雇用で金利観測が下がった
+追加情報：原油も下がった
+最終解：弱い雇用で金利観測が下がった
+```
+
+That is support, not an upgrade.
+
+The legacy `midpoint_turn.what_changes` must explicitly state the before→after model change. The turn Scene's `viewer_belief_before` and `viewer_belief_after` must reflect that same change.
+
+Do not manufacture a reversal. If the evidence does not support a reversal, use a genuine branch, boundary, mechanism, verification result, or reason-unknown payoff. If even those are unavailable, shorten the episode rather than invent late drama.
 
 ## Stage 8 — Macro Open Loops
 
@@ -269,10 +330,29 @@ Rules:
 
 These are macro episode loops only. `continuation_reason` is local Scene-to-Scene value and does not need to be an open loop.
 
-## Stage 9 — Closing Reframe
+## Stage 9 — Late Value and Closing Reframe
 
 The bookend belongs in Scene 8.
 The viewer should see the opening contradiction differently because of the evidence and meaning accumulated across the episode.
+
+The key test is not whether Scene 4 already reveals the central hypothesis. It may.
+
+The key test is:
+
+> **If Scenes 6–8 were removed, what material understanding would the viewer lose?**
+
+A valid answer must name a concrete evidence-backed gain such as:
+- a second causal engine
+- a scope limit
+- a disconfirming peer
+- an actual price-reaction test
+- a mechanism the headline did not reveal
+- a falsification condition
+- a reason why one-cause attribution remains unresolved
+
+If no material understanding is lost, the late section is an appendix and the plan is not ready.
+
+Scene 8 must also be materially more informed than Scene 4. Repeating the Scene 4 answer plus a disclaimer is not a closing reframe.
 
 ## Stage 10 — reason_unknown episodes
 
@@ -298,14 +378,16 @@ Python validates structure and evidence safety only:
 - material counterevidence preservation
 - fixed Scene order and roles
 - Scenes 1–8 have before / payoff / after
+- Scenes 1–8 have structurally distinct before / after text
 - Scenes 1–7 have `continuation_reason`
 - Scene 8 has no continuation reason
-- Scene 4–6 midpoint turn
-- Scene 8 closing reframe
+- Scene 4–6 Understanding Upgrade has evidence
+- Scene 8 understanding is structurally distinct from Scene 4 understanding
+- Scene 8 closing reframe is not identical to the opening promise
 - macro loops close by Scene 8
 - Scene 9 adds nothing new
 
-Python does **not** judge whether prose is interesting, whether belief change is meaningful enough, or whether the continuation reason feels natural. That belongs to 04 / the Entertainment Critic.
+Python does **not** judge whether prose is interesting, whether the model change is semantically meaningful enough, or whether the late value is genuinely worth watching. That belongs to 04 / the Entertainment Critic.
 
 Forbidden validators:
 - question-mark counting
@@ -328,6 +410,9 @@ DEAD_END_SCENE
 PROCEDURAL_NARRATION
 SCENE_ORDER_INTERCHANGEABLE
 NO_MIDPOINT_TURN
+NO_UNDERSTANDING_UPGRADE
+FAKE_UNDERSTANDING_UPGRADE
+HOOK_EXHAUSTS_STORY
 NO_LATE_PAYOFF
 OPENING_PROMISE_NOT_RECOVERED
 ENDING_NOT_BOOKENDED

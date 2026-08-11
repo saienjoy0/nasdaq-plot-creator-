@@ -52,6 +52,9 @@ class OpenAICriticAdapterTests(unittest.TestCase):
     def setUpClass(cls):
         cls.adapter = load_adapter()
 
+    def request(self) -> dict:
+        return {"episode_date": "2026-08-06", "required_review": {"round": 2, "minimum_total_score": 25}}
+
     def valid_review(self, date: str = "2026-08-06", round_no: int = 2) -> dict:
         checks = []
         for i in range(1, 8):
@@ -96,22 +99,19 @@ class OpenAICriticAdapterTests(unittest.TestCase):
         }
 
     def test_validate_review_rejects_score_mismatch(self):
-        request = {"episode_date": "2026-08-06", "required_review": {"round": 2, "minimum_total_score": 25}}
         review = self.valid_review()
         review["total_score"] = 26
         with self.assertRaises(self.adapter.AdapterError):
-            self.adapter.validate_review(review, request)
+            self.adapter.validate_review(review, self.request())
 
     def test_validate_review_rejects_scene_08_continuation_mode(self):
-        request = {"episode_date": "2026-08-06", "required_review": {"round": 2, "minimum_total_score": 25}}
         review = self.valid_review()
         review["scene_checks"][7]["mode"] = "continue"
         review["scene_checks"][7]["continuation_reason_natural"] = True
         with self.assertRaises(self.adapter.AdapterError):
-            self.adapter.validate_review(review, request)
+            self.adapter.validate_review(review, self.request())
 
     def test_validate_review_rejects_major_finding_on_pass(self):
-        request = {"episode_date": "2026-08-06", "required_review": {"round": 2, "minimum_total_score": 25}}
         review = self.valid_review()
         review["findings"] = [{
             "finding_id": "finding-01",
@@ -123,7 +123,42 @@ class OpenAICriticAdapterTests(unittest.TestCase):
             "minimal_fix": "現在SceneでPayoffを渡す。",
         }]
         with self.assertRaises(self.adapter.AdapterError):
-            self.adapter.validate_review(review, request)
+            self.adapter.validate_review(review, self.request())
+
+    def test_validate_review_rejects_29_point_pass_when_late_scene_has_no_payoff(self):
+        review = self.valid_review()
+        review["scores"] = {
+            "opening": 5,
+            "progression": 5,
+            "discovery": 5,
+            "clarity": 5,
+            "fox_voice": 4,
+            "late_payoff": 5,
+        }
+        review["total_score"] = 29
+        review["scene_checks"][5]["payoff_delivered"] = False
+        with self.assertRaises(self.adapter.AdapterError):
+            self.adapter.validate_review(review, self.request())
+
+    def test_validate_review_rejects_pass_when_scene_8_has_no_belief_change(self):
+        review = self.valid_review()
+        review["scene_checks"][7]["belief_changed"] = False
+        with self.assertRaises(self.adapter.AdapterError):
+            self.adapter.validate_review(review, self.request())
+
+    def test_validate_review_rejects_minor_hard_narrative_finding(self):
+        review = self.valid_review()
+        review["findings"] = [{
+            "finding_id": "finding-01",
+            "severity": "minor",
+            "issue_type": "NO_UNDERSTANDING_UPGRADE",
+            "scene_ids": ["scene-05"],
+            "problem": "追加情報だけで説明モデルが変わっていない。",
+            "viewer_impact": "中盤に発見がない。",
+            "minimal_fix": "既存Evidenceでモデルの分岐・限定・検証を作る。",
+        }]
+        with self.assertRaises(self.adapter.AdapterError):
+            self.adapter.validate_review(review, self.request())
 
     def test_render_bundle_reads_only_manifest_paths(self):
         with tempfile.TemporaryDirectory() as temp:
