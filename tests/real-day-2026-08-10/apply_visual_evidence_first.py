@@ -9,11 +9,13 @@ needed to prove the production path can show the evidence the story already cite
   news-surface Fallback because BLS blocks GitHub-hosted acquisition;
 - Microchip Q1 FY27 IR remains an actual company-page Visual Source on both global
   routes so the BLS technical fallback does not discard a working real document;
-- QQQ 08:29 / 08:30 / 08:31 ET verified minute closes are a real series;
-- reusable Fed / semiconductor backgrounds improve variety without adding claims.
+- QQQ 08:29 / 08:30 / 08:31 ET verified minute closes are a real series.
 
 The acceptance freezes the global Fallback route only after the verified BLS technical
 failure. The renderer never chooses a route and narration/causality remain unchanged.
+The fixed full-Scene renderer background remains ``mainBackground`` as required by the
+Renderer 2.4 contract; evidence diversity is supplied through main-stage source media
+and the verified market series rather than by replacing that mandatory background.
 """
 
 from __future__ import annotations
@@ -123,15 +125,6 @@ def source_intent(
     }
 
 
-def replace_scene_background(scene: dict[str, Any], asset_id: str) -> None:
-    for placement in scene.get("assetPlacements", []):
-        if isinstance(placement, dict) and (
-            placement.get("role") == "background" or placement.get("assetId") == "mainBackground"
-        ):
-            placement["assetId"] = asset_id
-            return
-
-
 def qqq_release_window(receipt: dict[str, Any]) -> list[dict[str, Any]]:
     for item in receipt.get("series", []):
         if isinstance(item, dict) and item.get("symbol") == "QQQ.US":
@@ -226,8 +219,6 @@ def apply(root: Path) -> dict[str, Any]:
     receipt = load(receipt_path)
     scenes = scene_map(render)
 
-    replace_scene_background(scenes[4], "background_scene_fed")
-    replace_scene_background(scenes[6], "background_scene_semiconductor")
     patch_verified_series(scenes[8], receipt)
 
     scene2_beat = canonical_visual_beat_id(beat_id(scenes[2]["visualBeats"][0]))
@@ -320,7 +311,7 @@ def apply(root: Path) -> dict[str, Any]:
         },
         "realEvidence": ["source-004"],
         "approvedFallbackEvidence": ["source-002"],
-        "reusableBackgrounds": ["background_scene_fed", "background_scene_semiconductor"],
+        "reusableBackgrounds": [],
     }
 
 
