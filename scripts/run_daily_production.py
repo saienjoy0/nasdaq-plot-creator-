@@ -61,6 +61,13 @@ ERROR_CODES = {
     "memory_promotion": "E_MEMORY_PROMOTION_BLOCKED",
 }
 
+PRE_VISUAL_DIRECTOR_RENDERER_COMMITS = frozenset(
+    {
+        "0aaaf77eb2fd54e3e1b5eb4db05410dcaf71b673",
+        "36440cbe84331d020d4fe808d5c2fcbcac20833c",
+    }
+)
+
 
 class DailyProductionError(ValueError):
     def __init__(self, code: str, message: str):
@@ -155,16 +162,17 @@ def init_request(*, workspace: Path, date: str, daily_source: Path, requested_sc
             "commit": renderer_commit,
             "contract_version": renderer_contract_version,
         },
-        "visual_director": {
-            "required": True,
-            "contract_version": "1.0.0",
-        },
         "approvals": {
             "preview_requested": requested_scope == "preview",
             "final_requested": False,
             "memory_promotion_requested": False,
         },
     }
+    if renderer_commit not in PRE_VISUAL_DIRECTOR_RENDERER_COMMITS:
+        request["visual_director"] = {
+            "required": True,
+            "contract_version": "1.0.0",
+        }
     write_atomic(req_path, request)
     state = {
         "contract_version": "1.0.0",
