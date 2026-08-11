@@ -107,6 +107,7 @@ def test_adapter_import_does_not_require_openai_sdk_at_module_scope():
     ]
     assert top_level_openai_imports == []
     adapter = load_adapter()
+    assert adapter.OpenAI is None
     assert callable(adapter.validate_review)
 
 
