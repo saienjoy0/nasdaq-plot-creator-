@@ -1,7 +1,7 @@
 ---
 name: nasdaq-cafe-story-plan
 description: Transform a validated causal research dossier into an evidence-bound nine-scene understanding progression before fox narration is written.
-version: 1.2.1
+version: 1.2.2
 ---
 
 # NASDAQ Cafe Story Plan
@@ -26,6 +26,12 @@ A second governing principle is:
 > **結論を遅らせるのではなく、結論を進化させる。**
 
 The opening may reveal the direction and even the provisional driver. It must not consume the final synthesis. By Scene 8, the viewer must understand something materially deeper, narrower, more branched, or better tested than they did around Scene 4.
+
+A third planning principle is:
+
+> **面白さは、Evidenceによって視聴者の説明モデルが有意味に更新される量で作る。**
+
+This is an editorial Information Gain concept, not a numeric formula. New information is useful only when it changes, narrows, branches, tests, or clarifies the viewer's model enough to make the next Scene more valuable.
 
 ## Authority boundary
 
@@ -130,8 +136,11 @@ Select the angle that best:
 4. preserves counterevidence
 5. leaves independent value for Scenes 6–8
 6. delivers the headline-beyond discovery
+7. creates more than one meaningful Evidence-backed model update instead of one reveal surrounded by factual filler
 
 Do not choose an angle merely because it can manufacture a reversal. A straight causal chain can still be interesting if later evidence reveals mechanism, scope, scale, branching, or a meaningful verification boundary.
+
+Before selecting, compare the likely **Understanding Gain curve** of each angle. Prefer the angle in which several Scenes change the explanatory model for distinct reasons rather than one angle that spends most of the runtime accumulating support for an answer already understood.
 
 ## Stage 5 — Opening Promise
 
@@ -166,6 +175,32 @@ Better structure:
 ```
 
 This is the `HOOK_EXHAUSTS_STORY` boundary: early value is required, early exhaustion is not.
+
+### Information Gap boundary
+
+Use an **honest unresolved mismatch**, not a hidden answer.
+
+A strong opening can tell the viewer:
+- the provisional driver,
+- what concrete part of the market does not yet fit that driver,
+- why resolving that mismatch matters.
+
+It does not need to state every later numeric receipt immediately if those values are not required to make the opening truthful.
+
+Good:
+
+```text
+金利がまず鍵です。
+ただ、半導体を全部この説明に入れると、一銘柄だけ発表時刻と値動きが合いません。
+```
+
+Bad:
+
+```text
+答えは知っているけれど後半まで隠します。
+```
+
+Never withhold evidence that changes the truth of the provisional statement. Information Gap may organize disclosure; it may not manufacture ignorance.
 
 ## Stage 6 — Build the fixed nine-scene Understanding Progression
 
@@ -220,6 +255,49 @@ viewer_belief_after
 ```
 
 The difference must be about market understanding, not merely wording.
+
+### Internal Understanding Gain classification
+
+Before narration, classify each Scene's main gain internally. This is a planning aid and is **not** a required Story Plan schema field yet.
+
+Allowed primary gain types:
+
+```text
+support
+narrow
+branch
+disproof
+mechanism_reveal
+verification
+uncertainty_reduction
+synthesis
+```
+
+Definitions:
+- `support`: strengthens an already-understood model without materially changing it
+- `narrow`: limits scope, confidence, or applicability
+- `branch`: separates one apparent explanation into multiple causal engines
+- `disproof`: rejects a plausible simple explanation
+- `mechanism_reveal`: shows how the effect travels rather than only that it exists
+- `verification`: tests the provisional model against timing, price, peers, or another direct observation
+- `uncertainty_reduction`: makes what remains unknown more specific
+- `synthesis`: combines prior model updates into the final interpretation
+
+`support` is valid but usually low Information Gain. A Story Plan with many consecutive `support` Scenes is at risk of becoming a correct but dull evidence receipt.
+
+Do not assign a stronger gain type than the evidence supports merely to improve the curve.
+
+### Payoff-drought planning check
+
+Before approving the plan, inspect Scenes 1–8 for stretches where facts accumulate but the explanatory model barely moves.
+
+If two or more consecutive Scenes are primarily factual accumulation or `support`:
+- preserve the fixed formal roles,
+- keep mandatory facts and Evidence bindings,
+- make those Scenes concise,
+- move the next real comparison, test, boundary, or model update forward within chronology-compatible Scene roles when possible.
+
+Do not invent a surprise to avoid a drought. A short necessary low-gain Scene is better than fake drama.
 
 ### Scenes 1–7 — continuation
 
@@ -387,7 +465,7 @@ Python validates structure and evidence safety only:
 - macro loops close by Scene 8
 - Scene 9 adds nothing new
 
-Python does **not** judge whether prose is interesting, whether the model change is semantically meaningful enough, or whether the late value is genuinely worth watching. That belongs to 04 / the Entertainment Critic.
+Python does **not** judge whether prose is interesting, whether a Scene's Information Gain is high or low, whether a `support` stretch is boring, whether the model change is semantically meaningful enough, or whether the late value is genuinely worth watching. Those belong to 04 / the Entertainment Critic.
 
 Forbidden validators:
 - question-mark counting
@@ -395,6 +473,7 @@ Forbidden validators:
 - requiring new Evidence in every Scene
 - requiring a fixed connective phrase
 - requiring a surprise word
+- assigning Information Gain from Evidence count
 - judging interestingness from character count
 
 ## Downstream failure vocabulary
@@ -417,6 +496,10 @@ NO_LATE_PAYOFF
 OPENING_PROMISE_NOT_RECOVERED
 ENDING_NOT_BOOKENDED
 NO_NEW_EVIDENCE_OR_MEANING
+FACT_STACKING
+LOW_INFORMATION_GAIN
+PAYOFF_DROUGHT
+WEAK_SURPRISE
 ```
 
 Causal-safety failures remain critical and upstream-owned.
