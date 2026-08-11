@@ -1,0 +1,15 @@
+{
+  "contractVersion": "1.0.0",
+  "episodeDate": "2026-08-12",
+  "confirmation": "PREVIEW",
+  "requestedBy": "chatgpt",
+  "sourceCollection": {
+    "broadRunId": 31539166716,
+    "broadArtifactId": 9120075244,
+    "followupRunId": 31539832225,
+    "followupArtifactId": 9120247524
+  },
+  "rendererCommit": "9f0acd45586b2aff8902aae7a5f7df0beb7df120",
+  "retryOfPlotRunId": 31545323627,
+  "finalAuthorized": false
+}
