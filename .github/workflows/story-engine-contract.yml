@@ -13,6 +13,7 @@ on:
       - 'tests/story-engine/fixtures/2026-08-06/**'
       - 'tests/story-engine/fixtures/2026-08-10-interest/**'
       - 'tests/story-engine/run_2026_08_10_interest_regression.py'
+      - 'tests/story-engine/run_2026_08_10_interest_regression_v2.py'
       - 'tests/story-engine/test_committed_valid_fixtures.py'
       - 'tests/story-engine/test_understanding_progression_review.py'
       - 'tests/story-engine/test_interest_quality_policy.py'
@@ -58,13 +59,15 @@ jobs:
       - name: Compile Interest A-B regression
         run: |
           python -m py_compile tests/story-engine/fixtures/2026-08-10-interest/materialize_revised_interest_fixture.py
+          python -m py_compile tests/story-engine/fixtures/2026-08-10-interest/materialize_revised_interest_fixture_v2.py
           python -m py_compile tests/story-engine/run_2026_08_10_interest_regression.py
+          python -m py_compile tests/story-engine/run_2026_08_10_interest_regression_v2.py
       - run: python tests/story-engine/test_story_engine.py
       - run: python tests/story-engine/test_committed_valid_fixtures.py
       - run: pytest -q tests/story-plan/test_story_plan.py tests/story-plan/test_story_plan_migration.py tests/story-plan/test_story_plan_2026_08_10_regression.py tests/story-engine/test_story_engine_2026_08_06_fixture.py tests/story-engine/test_understanding_progression_review.py tests/story-engine/test_interest_quality_policy.py tests/story-engine-integration/test_optional_external_critic_policy.py tests/story-engine-integration/test_display_text.py tests/story-engine-integration/test_openai_critic_adapter.py tests/story-engine-integration/test_openai_critic_interest_policy.py
       - name: Run real historical H4 versus revised Interest A-B
         run: |
-          python tests/story-engine/run_2026_08_10_interest_regression.py \
+          python tests/story-engine/run_2026_08_10_interest_regression_v2.py \
             --repo-root "$GITHUB_WORKSPACE" \
             --acceptance-source "$GITHUB_WORKSPACE/.acceptance-fixture" \
             --output "$GITHUB_WORKSPACE/verification/2026-08-10/story_interest_regression.json"
