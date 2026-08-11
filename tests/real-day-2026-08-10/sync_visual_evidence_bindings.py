@@ -11,7 +11,8 @@ Four narrow corrections are made:
 - Scene 6 Beat 1 shows the actual Microchip Q1 FY27 IR as ``news-media / evidence``
   while that Beat narrates the company results and guidance.
 - Scene 6 Beat 2 keeps the existing SOXX/MCHP/NVIDIA market-pulse comparison and is
-  explicitly ``reaction`` grammar, preserving the Scene 6 reaction role.
+  explicitly ``reaction`` grammar, preserving the Scene 6 reaction role. Its numeric
+  objects remain the responsibility of the existing financial materializer.
 - Scene 8 carries the verified QQQ minute series with an explicit reaction binding.
 
 The helper also records already-derived display captions in a machine-only annex;
@@ -264,9 +265,6 @@ def patch_scene6_market_reaction(render: dict[str, Any], overrides: dict[str, An
         raise SystemExit(
             f"Scene 6 Beat 2 must stay market-pulse-grid, got {beat.get('visualTemplate')!r}"
         )
-    object_ids = beat.get("objectIds")
-    if not isinstance(object_ids, list) or len(object_ids) < 3:
-        raise SystemExit("Scene 6 Beat 2 market reaction objects missing")
     grammar = beat.get("visualGrammar")
     if not isinstance(grammar, dict):
         raise SystemExit("Scene 6 Beat 2 visualGrammar missing")
