@@ -1,0 +1,76 @@
+name: Temporary Measured Diversity Patch
+
+on:
+  push:
+    branches: [main]
+    paths: [".github/temporary-measured-diversity-patch.json"]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/measured-visual-diversity-2026-08-10
+          fetch-depth: 0
+      - name: Patch Scene 4 causal data and Scene 8 final appearance
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('tests/real-day-2026-08-10/apply_visual_evidence_first.py')
+          text=p.read_text(encoding='utf-8')
+
+          old='''    beat.update(\n        {\n            "contentType": "analogy-steps",'''
+          new='''    node_ids = [\n        "scene-04-scorecard-node-001",\n        "scene-04-scorecard-node-002",\n        "scene-04-scorecard-node-003",\n    ]\n    arrow_ids = [\n        "scene-04-scorecard-arrow-001",\n        "scene-04-scorecard-arrow-002",\n    ]\n    reserved = set(node_ids + arrow_ids)\n    scene["nodes"] = [\n        item for item in scene.get("nodes", [])\n        if isinstance(item, dict) and item.get("nodeId") not in reserved\n    ] + [\n        {"nodeId": node_ids[0], "label": "景気の採点表：赤点"},\n        {"nodeId": node_ids[1], "label": "金利の採点表：利上げリスク↓"},\n        {"nodeId": node_ids[2], "label": "大型テック：逆風が和らぐ"},\n    ]\n    scene["arrows"] = [\n        item for item in scene.get("arrows", [])\n        if isinstance(item, dict) and item.get("arrowId") not in reserved\n    ] + [\n        {\n            "arrowId": arrow_ids[0],\n            "fromNodeId": node_ids[0],\n            "toNodeId": node_ids[1],\n            "label": "読み替え",\n        },\n        {\n            "arrowId": arrow_ids[1],\n            "fromNodeId": node_ids[1],\n            "toNodeId": node_ids[2],\n            "label": "金利経路",\n        },\n    ]\n    beat.update(\n        {\n            "contentType": "analogy-steps",'''
+          if text.count(old)!=1: raise SystemExit(f'Scene4 insertion target count={text.count(old)}')
+          text=text.replace(old,new,1)
+
+          old='''            "objectIds": [],\n            "sequencePolicy": "explicit",'''
+          new='''            "objectIds": [node_ids[0], node_ids[1], arrow_ids[0], node_ids[2], arrow_ids[1]],\n            "sequencePolicy": "explicit",'''
+          # Restrict to the Scene 4 function by replacing the first occurrence after its function marker.
+          marker='def patch_scene4_scorecard_analogy'
+          pos=text.index(marker)
+          tail=text[pos:]
+          if tail.count(old)<1: raise SystemExit('Scene4 objectIds target missing')
+          tail=tail.replace(old,new,1)
+          text=text[:pos]+tail
+
+          old='''            "nodeOrder": [],\n            "outcomeNodeId": None,'''
+          new='''            "nodeOrder": node_ids,\n            "outcomeNodeId": node_ids[-1],'''
+          pos=text.index(marker)
+          tail=text[pos:]
+          if tail.count(old)<1: raise SystemExit('Scene4 templateConfig target missing')
+          tail=tail.replace(old,new,1)
+          text=text[:pos]+tail
+
+          old='''            "contentType": "verification-matrix",\n            "visualTemplate": "verification-matrix",\n            "visualMode": "verification",\n            "screenState": "Data",\n            "templateVariant": "strengthen-vs-weaken",'''
+          new='''            "contentType": "evidence-boundary",\n            "visualTemplate": "evidence-boundary",\n            "visualMode": "text-focus",\n            "screenState": "Data",\n            "templateVariant": "confirmed-vs-unconfirmed",'''
+          if text.count(old)!=1: raise SystemExit(f'Scene8 Beat4 template target count={text.count(old)}')
+          text=text.replace(old,new,1)
+
+          old='''            "visualGrammarId": "verification",\n            "visualGrammar": {\n                "contractVersion": "1.0.0",\n                "grammarId": "verification",'''
+          new='''            "visualGrammarId": "evidence",\n            "visualGrammar": {\n                "contractVersion": "1.0.0",\n                "grammarId": "evidence",'''
+          # Replace the last matching block (Beat4), leaving Beat3 verification intact.
+          idx=text.rfind(old)
+          if idx<0: raise SystemExit('Scene8 Beat4 grammar target missing')
+          text=text[:idx]+text[idx:].replace(old,new,1)
+
+          old='''                "variant": "strengthen-vs-weaken",\n                "comparisonBasis": "中心仮説を強める/弱める材料",'''
+          new='''                "variant": "confirmed-vs-unconfirmed",\n                "comparisonBasis": "中心仮説と残る反対材料の境界",'''
+          if text.count(old)!=1: raise SystemExit(f'Scene8 Beat4 config target count={text.count(old)}')
+          text=text.replace(old,new,1)
+
+          p.write_text(text,encoding='utf-8')
+          PY
+          python -m py_compile tests/real-day-2026-08-10/apply_visual_evidence_first.py
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add tests/real-day-2026-08-10/apply_visual_evidence_first.py
+          git diff --cached --check
+          git commit -m 'fix: materialize Scene 4 nodes and alternate Scene 8 closing surface'
+          git push origin HEAD:fix/measured-visual-diversity-2026-08-10
