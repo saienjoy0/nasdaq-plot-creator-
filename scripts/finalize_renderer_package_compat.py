@@ -12,13 +12,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+import finalize_renderer_package as base
 import financial_final_episode_contract_1_0 as financial_contract_v1
 import financial_recipe_compiler as recipe_compiler
 import financial_visual_cross_artifact
-import finalize_renderer_package as base
 import remotion_240_projection
 import remotion_sequence_policy
 import remotion_template_data
+import visual_director_bridge
 
 
 class CompatibilityFinalizationError(ValueError):
@@ -323,6 +324,7 @@ def _transaction_paths(output_root: Path, date: str) -> list[Path]:
         verification / "production_consistency_report.json",
         verification / "official_execution_preflight.json",
         verification / "financial_visual_consistency_report.json",
+        verification / "visual_direction_compile_report.json",
         verification / "renderer_validation_report.json",
     ]
 
@@ -353,6 +355,7 @@ def _persist_renderer_evidence(
     financial_contract_path: Path,
     terminal_binding_path: Path,
     structural_report_path: Path,
+    visual_direction_report_path: Path | None,
 ) -> None:
     verification = output_root / "verification" / date
     consistency_path = verification / "production_consistency_report.json"
@@ -375,6 +378,10 @@ def _persist_renderer_evidence(
         ),
         "unresolved_states": 0,
     }
+    if visual_direction_report_path is not None:
+        renderer_contract["visual_direction_compile_report_sha256"] = (
+            base.sha256_file(visual_direction_report_path)
+        )
     consistency["renderer_contract"] = renderer_contract
     consistency["status"] = "pass"
     consistency["unresolved_states"] = 0
@@ -389,6 +396,10 @@ def _persist_renderer_evidence(
     artifacts["visual_grammar_structural_report"] = base.sha256_file(
         structural_report_path
     )
+    if visual_direction_report_path is not None:
+        artifacts["visual_direction_compile_report"] = base.sha256_file(
+            visual_direction_report_path
+        )
     artifacts["visual_final_episode_contract"] = base.sha256_file(
         visual_contract_path
     )
@@ -469,10 +480,35 @@ def finalize(
             terminal_binding=terminal_binding,
         )
         remotion_sequence_policy.resolve_sequence_policies(strict)
+        renderer = base._renderer_request(output_root, date)
+        request = base.load_json(
+            output_root / "working" / date / "production_request.json",
+            "production request",
+        )
+        visual_direction: dict[str, Any] | None = None
+        visual_director_binding = request.get("visual_director")
+        if visual_director_binding is not None:
+            if visual_director_binding != {
+                "required": True,
+                "contract_version": "1.0.0",
+            }:
+                raise CompatibilityFinalizationError(
+                    "production request Visual Director binding is invalid"
+                )
+            try:
+                visual_direction = visual_director_bridge.prepare_and_compile(
+                    render=strict,
+                    output_root=output_root,
+                    date=date,
+                    renderer_root=renderer_root,
+                    expected_renderer_commit=renderer["commit"],
+                )
+            except visual_director_bridge.VisualDirectorBridgeError as exc:
+                raise CompatibilityFinalizationError(str(exc)) from exc
+            strict = visual_direction["render"]
         _validate_referential_integrity(strict)
         base.write_atomic(render_spec_path, strict)
 
-        renderer = base._renderer_request(output_root, date)
         report_path = verification / "renderer_validation_report.json"
         validation = base._validate_with_pinned_renderer(
             renderer_root=renderer_root,
@@ -491,9 +527,12 @@ def finalize(
             financial_contract_path=financial_contract_path,
             terminal_binding_path=terminal_binding_path,
             structural_report_path=structural_report_path,
+            visual_direction_report_path=(
+                visual_direction["report_path"] if visual_direction else None
+            ),
         )
         preflight_path = verification / "official_execution_preflight.json"
-        return {
+        result = {
             "status": "pass",
             "paths": {
                 "final_episode_contract": str(visual_contract_path),
@@ -522,6 +561,31 @@ def finalize(
             },
             "rendererValidation": validation,
         }
+        if visual_direction:
+            result["paths"]["visual_candidate_catalog"] = str(
+                visual_direction["catalog_path"]
+            )
+            result["paths"]["visual_direction_plan"] = str(
+                visual_direction["plan_path"]
+            )
+            result["paths"]["visual_direction_compile_report"] = str(
+                visual_direction["report_path"]
+            )
+            result["hashes"]["visual_candidate_catalog"] = base.sha256_file(
+                visual_direction["catalog_path"]
+            )
+            result["hashes"]["visual_direction_plan"] = base.sha256_file(
+                visual_direction["plan_path"]
+            )
+            result["hashes"]["visual_direction_compile_report"] = (
+                base.sha256_file(visual_direction["report_path"])
+            )
+            result["visualDirection"] = {
+                "status": "pass",
+                "semanticDiff": "PASS",
+                "warnings": visual_direction["warnings"],
+            }
+        return result
     except Exception:
         _restore(snapshot)
         raise
