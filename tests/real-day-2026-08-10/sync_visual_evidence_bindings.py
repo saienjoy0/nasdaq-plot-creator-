@@ -2,14 +2,15 @@
 """Synchronize the 2026-08-10 evidence-first Visual Beat into Story bindings.
 
 Acceptance-only helper. It changes no narration or causal meaning. The purpose is to
-make Pre-TTS validation and the public episode package see the same explicitly authored
-Scene 8 visual that is present in render_spec.json.
+make Pre-TTS validation, Story auxiliary bindings, Renderer 2.4 canonicalization, and
+the public episode package see the same explicitly authored Scene 8 verified series.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -30,6 +31,15 @@ def write(path: Path, value: dict[str, Any]) -> None:
     )
 
 
+def canonical_visual_beat_id(value: str) -> str:
+    if re.fullmatch(r"vb-0[1-9]-[0-9]{2}", value):
+        return value
+    match = re.fullmatch(r"scene-(0[1-9])-beat-([0-9]{3})", value)
+    if match:
+        return f"vb-{match.group(1)}-{int(match.group(2)):02d}"
+    raise SystemExit(f"unsupported Scene 8 Visual Beat ID alias: {value}")
+
+
 def apply(root: Path) -> dict[str, Any]:
     render_path = root / f"render-specs/{DATE}/render_spec.json"
     bindings_path = root / f"working/{DATE}/story-engine/story_production_bindings.json"
@@ -42,6 +52,25 @@ def apply(root: Path) -> dict[str, Any]:
     beat_id = beat.get("beatId")
     if not isinstance(beat_id, str) or not beat_id:
         raise SystemExit("Scene 8 beatId missing")
+    visual_beat_id = canonical_visual_beat_id(
+        str(beat.get("visualBeatId") or beat_id)
+    )
+    config = beat.get("templateConfig")
+    if not isinstance(config, dict):
+        raise SystemExit("Scene 8 templateConfig missing")
+    reaction = config.get("reactionTimeline")
+    if not isinstance(reaction, dict):
+        raise SystemExit("Scene 8 reactionTimeline config missing")
+    object_ids = beat.get("objectIds")
+    if not isinstance(object_ids, list) or len(object_ids) < 3:
+        raise SystemExit("Scene 8 verified series objectIds missing")
+    event_order = reaction.get("eventOrderIds")
+    series_ids = reaction.get("seriesObjectIds")
+    if event_order != object_ids or series_ids != object_ids:
+        raise SystemExit("Scene 8 reaction order must match authored objectIds")
+    if reaction.get("precision") != "verified-intraday-series":
+        raise SystemExit("Scene 8 reaction precision is not verified-intraday-series")
+
     overrides = bindings.setdefault("beat_overrides", {})
     override = overrides.setdefault(beat_id, {})
     override.update(
@@ -57,6 +86,19 @@ def apply(root: Path) -> dict[str, Any]:
             "templateVariant": "verified-series",
             "visualGrammarId": "reaction",
             "transitionRole": "major-shift",
+            "reactionTimelineBinding": {
+                "visualBeatId": visual_beat_id,
+                "visualTemplate": "event-reaction-timeline",
+                "templateVariant": "verified-series",
+                "precision": "verified-intraday-series",
+                "eventOrderIds": list(object_ids),
+                "seriesObjectIds": list(object_ids),
+                "evidenceBasis": (
+                    "Longbridge verified 1-minute Kline minute-close around the "
+                    "2026-08-07 08:30 ET BLS release: QQQ 719.16 -> 720.23 -> 720.531. "
+                    "Timing alignment evidence only; not causal proof."
+                ),
+            },
         }
     )
     write(bindings_path, bindings)
@@ -64,8 +106,11 @@ def apply(root: Path) -> dict[str, Any]:
         "status": "pass",
         "episodeDate": DATE,
         "beatId": beat_id,
+        "visualBeatId": visual_beat_id,
         "visualTemplate": "event-reaction-timeline",
         "templateVariant": "verified-series",
+        "precision": "verified-intraday-series",
+        "seriesObjectIds": list(object_ids),
         "visualGrammarId": "reaction",
         "narrationChanged": False,
     }
