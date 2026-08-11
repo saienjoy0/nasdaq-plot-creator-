@@ -140,7 +140,9 @@ def build_render() -> dict:
     }
 
 
-def test_real_20260810_receipt_becomes_fallback_plus_real_ir_and_verified_series(tmp_path: Path) -> None:
+def test_real_20260810_receipt_becomes_fallback_plus_real_ir_and_verified_series(
+    tmp_path: Path, monkeypatch
+) -> None:
     render_path = tmp_path / "render-specs/2026-08-10/render_spec.json"
     render_path.parent.mkdir(parents=True, exist_ok=True)
     render_path.write_text(json.dumps(build_render(), ensure_ascii=False), encoding="utf-8")
@@ -151,6 +153,31 @@ def test_real_20260810_receipt_becomes_fallback_plus_real_ir_and_verified_series
         ROOT / "tests/fixtures/real-day-2026-08-10/collector_wave2_success_receipt.json",
         receipt_target,
     )
+
+    # This is deliberately a lightweight Visual Source fixture, not a Story/Visual
+    # Grammar fixture. Supply the minimum surrounding files required by the full H4
+    # authoring entry point, while stubbing only the measured-diversity edits that
+    # belong to H4. The source-document and verified-series behavior remains real.
+    story_path = tmp_path / "working/2026-08-10/story-engine/story_script.json"
+    story_path.parent.mkdir(parents=True, exist_ok=True)
+    story_path.write_text(
+        json.dumps({"scenes": [{"scene_id": "scene-08", "narration": ""}]}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    bindings_path = tmp_path / "working/2026-08-10/story-engine/story_production_bindings.json"
+    bindings_path.write_text(json.dumps({"beat_overrides": {}}), encoding="utf-8")
+    package_path = tmp_path / "episodes/2026-08-10/episode_package_public_2026-08-10.md"
+    package_path.parent.mkdir(parents=True, exist_ok=True)
+    package_path.write_text("# lightweight Visual Source fixture\n", encoding="utf-8")
+
+    monkeypatch.setattr(acceptance, "patch_scene1_evidence_boundary", lambda scene, overrides: None)
+    monkeypatch.setattr(acceptance, "patch_scene4_scorecard_analogy", lambda scene, overrides: None)
+    monkeypatch.setattr(
+        acceptance,
+        "patch_scene8_measured_diversity",
+        lambda scene, receipt, narration, overrides: acceptance.patch_verified_series(scene, receipt),
+    )
+    monkeypatch.setattr(acceptance, "replace_scene8_visual_beats", lambda md, beats: md)
 
     result = acceptance.apply(tmp_path)
     assert result["visualSourceIntentCount"] == 2
