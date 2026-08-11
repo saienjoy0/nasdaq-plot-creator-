@@ -118,7 +118,9 @@ def collect_public_strings(render_spec: dict[str, Any]) -> list[tuple[str, str]]
         for b_index, beat in enumerate(scene.get("visualBeats", [])):
             if not isinstance(beat, dict):
                 continue
-            for key in ("narrationStartCue", "narrationEndCue", "screenQuestion", "primaryElement", "changeCue"):
+            # changeCue is renderer timing/transition metadata. It is required in
+            # the production contract but is not a public Markdown surface.
+            for key in ("narrationStartCue", "narrationEndCue", "screenQuestion", "primaryElement"):
                 value = beat.get(key)
                 if isinstance(value, str) and value.strip():
                     values.append((f"{scene_id}.visualBeats[{b_index}].{key}", value))
