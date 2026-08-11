@@ -72,8 +72,18 @@ def _materialize_h4_baseline(root: Path, acceptance_source: Path) -> None:
         cwd=root,
     )
     # Reproduce the historical H4 pre-Story authoring path exactly before checking SHAs.
+    run(
+        sys.executable,
+        "tests/real-day-2026-08-10/restore_immutable_intake.py",
+        "--repo-root",
+        str(root),
+        "--acceptance-source",
+        str(acceptance_source),
+        "--output",
+        str(verification / "interest_h4_immutable_intake_restore.json"),
+        cwd=root,
+    )
     for script_name, report_name in (
-        ("restore_immutable_intake.py", "interest_h4_immutable_intake_restore.json"),
         ("sync_story_plan_authoring.py", "interest_h4_story_plan_authoring_sync.json"),
         ("sync_scene3_renderer_authoring.py", "interest_h4_scene3_renderer_authoring_sync.json"),
         ("sync_public_timing_authoring.py", "interest_h4_public_timing_authoring_sync.json"),
