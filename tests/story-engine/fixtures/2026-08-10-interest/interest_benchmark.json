@@ -1,0 +1,81 @@
+{
+  "contract_version": "1.0.0",
+  "episode_date": "2026-08-10",
+  "purpose": "Benchmark interestingness as evidence-backed explanatory model updates without changing the frozen causal contract.",
+  "central_contradiction": "July payrolls missed badly, yet NASDAQ rose 1.30% and SOXX rose 2.02%.",
+  "provisional_model": "Weak jobs reduced rate-hike expectations and eased the rate headwind for tech.",
+  "final_model": "The same semiconductor-up session contained different causal engines: immediate macro rate reaction and company-specific MCHP earnings, with counterexamples limiting any blanket-tech explanation.",
+  "scene_gain_profile": [
+    {
+      "scene_id": "scene-01",
+      "primary_gain": "narrow",
+      "strength": "medium",
+      "meaning": "Move from simple bad-jobs-risk-off intuition to a provisional rates explanation while naming an unresolved mismatch without giving away the full late evidence."
+    },
+    {
+      "scene_id": "scene-02",
+      "primary_gain": "narrow",
+      "strength": "medium",
+      "meaning": "The weakness is broad enough that the market cannot be described as simply ignoring a trivial miss."
+    },
+    {
+      "scene_id": "scene-03",
+      "primary_gain": "disproof",
+      "strength": "medium",
+      "meaning": "NASDAQ/SOXX strength rejects a simple economic-strength-only reading of the session."
+    },
+    {
+      "scene_id": "scene-04",
+      "primary_gain": "mechanism_reveal",
+      "strength": "high",
+      "required_evidence_ids": ["E-001", "E-002"],
+      "meaning": "Expected/Actual/Gap and the 67->55->44 rate-hike path make the provisional policy-transmission mechanism visible."
+    },
+    {
+      "scene_id": "scene-05",
+      "primary_gain": "support",
+      "strength": "low",
+      "meaning": "Oil/yield context supports the same direction but should remain concise because it does not materially change the model."
+    },
+    {
+      "scene_id": "scene-06",
+      "primary_gain": "branch",
+      "secondary_gains": ["verification"],
+      "strength": "very_high",
+      "required_evidence_ids": ["E-003", "E-004", "E-007"],
+      "meaning": "QQQ/SOXX/NVDA react at 8:30 ET while MCHP does not, splitting one apparent semiconductor trade into multiple engines."
+    },
+    {
+      "scene_id": "scene-07",
+      "primary_gain": "branch",
+      "secondary_gains": ["narrow"],
+      "strength": "high",
+      "required_evidence_ids": ["E-005", "E-006"],
+      "meaning": "MCHP earnings explain the company-specific engine while AMD/Alphabet counterexamples limit a blanket-tech-rally claim."
+    },
+    {
+      "scene_id": "scene-08",
+      "primary_gain": "synthesis",
+      "strength": "high",
+      "meaning": "Different causal engines aligned in the same index direction; timing supports chronology but not standalone causal proof."
+    }
+  ],
+  "old_frontloaded_expected_findings": [
+    "FACT_STACKING",
+    "PAYOFF_DROUGHT",
+    "WEAK_SURPRISE",
+    "NO_LATE_PAYOFF"
+  ],
+  "revised_expected_hard_findings_absent": [
+    "HOOK_EXHAUSTS_STORY",
+    "NO_UNDERSTANDING_UPGRADE",
+    "FAKE_UNDERSTANDING_UPGRADE",
+    "NO_LATE_PAYOFF"
+  ],
+  "interest_findings": [
+    "FACT_STACKING",
+    "LOW_INFORMATION_GAIN",
+    "PAYOFF_DROUGHT",
+    "WEAK_SURPRISE"
+  ]
+}
