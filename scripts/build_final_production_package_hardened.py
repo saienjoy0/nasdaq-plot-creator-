@@ -47,9 +47,24 @@ def _real_renderer_finalizer(*, output_root: Path, date: str, renderer_root: Pat
         "renderer_package_finalizer_compat",
         ROOT / "scripts/finalize_renderer_package_compat.py",
     )
-    return module.finalize(
-        output_root=output_root, date=date, renderer_root=renderer_root
+    render_spec_path = output_root / "render-specs" / date / "render_spec.json"
+    runtime_registry = module.base._build_validation_runtime_asset_registry(
+        output_root=output_root,
+        date=date,
+        render_spec_path=render_spec_path,
     )
+    previous_registry = os.environ.get("NASDAQ_CAFE_RUNTIME_ASSET_REGISTRY")
+    if runtime_registry is not None:
+        os.environ["NASDAQ_CAFE_RUNTIME_ASSET_REGISTRY"] = str(runtime_registry)
+    try:
+        return module.finalize(
+            output_root=output_root, date=date, renderer_root=renderer_root
+        )
+    finally:
+        if previous_registry is None:
+            os.environ.pop("NASDAQ_CAFE_RUNTIME_ASSET_REGISTRY", None)
+        else:
+            os.environ["NASDAQ_CAFE_RUNTIME_ASSET_REGISTRY"] = previous_registry
 
 def _errors(result: Any) -> list[str]:
     value = getattr(result, "errors", None)
