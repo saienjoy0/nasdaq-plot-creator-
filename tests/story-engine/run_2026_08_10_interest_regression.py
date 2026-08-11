@@ -60,8 +60,44 @@ def _copy_acceptance_payload(root: Path, acceptance_source: Path) -> None:
 def _materialize_h4_baseline(root: Path, acceptance_source: Path) -> None:
     verification = root / f"verification/{DATE}"
     verification.mkdir(parents=True, exist_ok=True)
-    run(sys.executable, "tests/real-day-2026-08-10/materialize_fixture.py", "--repo-root", str(root), "--acceptance-source", str(acceptance_source), "--output", str(verification / "interest_h4_fixture_materialization.json"), cwd=root)
-    run(sys.executable, "scripts/story-engine/materialize_story_engine.py", "--repo-root", str(root), "--date", DATE, "--external-critic", "off", cwd=root)
+    run(
+        sys.executable,
+        "tests/real-day-2026-08-10/materialize_fixture.py",
+        "--repo-root",
+        str(root),
+        "--acceptance-source",
+        str(acceptance_source),
+        "--output",
+        str(verification / "interest_h4_fixture_materialization.json"),
+        cwd=root,
+    )
+    # Reproduce the historical H4 pre-Story authoring path exactly before checking SHAs.
+    for script_name, report_name in (
+        ("restore_immutable_intake.py", "interest_h4_immutable_intake_restore.json"),
+        ("sync_story_plan_authoring.py", "interest_h4_story_plan_authoring_sync.json"),
+        ("sync_scene3_renderer_authoring.py", "interest_h4_scene3_renderer_authoring_sync.json"),
+        ("sync_public_timing_authoring.py", "interest_h4_public_timing_authoring_sync.json"),
+    ):
+        run(
+            sys.executable,
+            f"tests/real-day-2026-08-10/{script_name}",
+            "--repo-root",
+            str(root),
+            "--output",
+            str(verification / report_name),
+            cwd=root,
+        )
+    run(
+        sys.executable,
+        "scripts/story-engine/materialize_story_engine.py",
+        "--repo-root",
+        str(root),
+        "--date",
+        DATE,
+        "--external-critic",
+        "off",
+        cwd=root,
+    )
 
 
 def _story_paths(root: Path) -> dict[str, Path]:
@@ -92,12 +128,30 @@ def _verify_historical_baseline(root: Path, receipt: dict[str, Any]) -> dict[str
 
 def _patch_revised_templates(root: Path) -> dict[str, Any]:
     output = root / f"verification/{DATE}/interest_revised_fixture_materialization.json"
-    run(sys.executable, "tests/story-engine/fixtures/2026-08-10-interest/materialize_revised_interest_fixture.py", "--repo-root", str(root), "--output", str(output), cwd=root)
+    run(
+        sys.executable,
+        "tests/story-engine/fixtures/2026-08-10-interest/materialize_revised_interest_fixture.py",
+        "--repo-root",
+        str(root),
+        "--output",
+        str(output),
+        cwd=root,
+    )
     return load(output)
 
 
 def _materialize_revised(root: Path) -> None:
-    run(sys.executable, "scripts/story-engine/materialize_story_engine.py", "--repo-root", str(root), "--date", DATE, "--external-critic", "off", cwd=root)
+    run(
+        sys.executable,
+        "scripts/story-engine/materialize_story_engine.py",
+        "--repo-root",
+        str(root),
+        "--date",
+        DATE,
+        "--external-critic",
+        "off",
+        cwd=root,
+    )
 
 
 def _verify_invariants(root: Path, invariants: dict[str, Any], baseline_dossier_sha: str) -> dict[str, Any]:
