@@ -2,8 +2,9 @@
 """Normalize mechanically materialized ChatGPT daily artifacts.
 
 No editorial decisions are made here. This only maps already-approved authoring into
-legacy Story/Renderer field names, normalizes strict Renderer 2.4 enum aliases, and
-binds explicitly-authored reaction assets to generated Beat/object IDs.
+legacy Story/Renderer field names, preserves dossier-selected Story wording exactly,
+normalizes strict Renderer 2.4 enum aliases, and binds explicitly-authored reaction
+assets to generated Beat/object IDs.
 """
 from __future__ import annotations
 
@@ -20,6 +21,57 @@ def dump(path: Path, value) -> None:
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def normalize_story_plan(authoring: dict, root: Path, date: str) -> None:
+    plan_path = root / "working" / date / "story-engine" / "templates" / "story_plan.template.json"
+    plan = load(plan_path)
+    dossier = authoring["causalDossier"]
+
+    contradiction_id = plan["central_contradiction_id"]
+    contradiction = next(
+        (
+            item for item in dossier["contradictions"]
+            if isinstance(item, dict) and item.get("id") == contradiction_id
+        ),
+        None,
+    )
+    if contradiction is None:
+        raise SystemExit(f"story contradiction missing from authored dossier: {contradiction_id}")
+    plan["central_contradiction"] = contradiction["statement"]
+
+    selected_id = plan["selected_angle_id"]
+    selected = next(
+        (
+            item for item in plan["angle_candidates"]
+            if isinstance(item, dict) and item.get("id") == selected_id
+        ),
+        None,
+    )
+    if selected is None:
+        raise SystemExit(f"selected story angle missing: {selected_id}")
+
+    handoff = dossier["editorial_handoff"]
+    plan["headline_beyond_discovery"] = handoff["headline_beyond_discovery"]
+    plan["central_question"] = selected["central_question"]
+    plan["story_spine"] = selected["story_spine"]
+    plan["opening_promise"] = selected["opening_promise"]
+    plan["midpoint_turn"]["claim"] = selected["midpoint_turn_claim"]
+    plan["closing_reframe"]["text"] = selected["closing_reframe"]
+
+    # Scene 9 is the fixed 03 closing. It may restate approved meaning in narration,
+    # but the Story Plan contract forbids registering new evidence or new meaning here.
+    closing = next(
+        (scene for scene in plan["scenes"] if scene.get("scene_id") == "scene-09"),
+        None,
+    )
+    if closing is None:
+        raise SystemExit("story plan scene-09 missing")
+    closing["new_evidence_ids"] = []
+    closing["new_meaning"] = ""
+    closing["continuation_reason"] = ""
+    closing["connector"] = "closing"
+    dump(plan_path, plan)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--date", required=True)
@@ -29,6 +81,8 @@ def main() -> int:
     date = args.date
     authoring = load(root / "daily-authoring" / f"{date}.json")
     review = authoring["review"]
+
+    normalize_story_plan(authoring, root, date)
 
     creative_path = root / "working" / date / "story-engine" / "templates" / "creative_review.template.json"
     creative = load(creative_path)
@@ -125,7 +179,7 @@ def main() -> int:
     dump(reaction_path, reaction)
 
     print(
-        f"FIXED daily materialization {date}: renderer enums/review + "
+        f"FIXED daily materialization {date}: story preservation + renderer enums/review + "
         f"{len(rows)} reaction bindings / {len(asset_by_beat)} bound assets"
     )
     return 0
