@@ -3,8 +3,9 @@
 
 Fragments are editorially complete inputs created by ChatGPT. This script only performs
 a deterministic deep merge, binds the exact daily-source file SHA required by lineage,
-and exposes already-approved review scores under legacy field names. It makes no market
-or creative decisions.
+validates that authored Financial Visual Templates are explicitly closed by authored
+financial bindings, and exposes already-approved review scores under legacy field names.
+It makes no market or creative decisions.
 """
 from __future__ import annotations
 
@@ -13,6 +14,8 @@ import hashlib
 import json
 from pathlib import Path
 from typing import Any
+
+import validate_chatgpt_daily_authoring_closure as authoring_closure
 
 
 def merge(left: Any, right: Any, path: str = "$") -> Any:
@@ -77,10 +80,21 @@ def main() -> int:
             raise SystemExit("review.storyScores is required")
         review["scores"] = dict(story_scores)
     daily_sha = bind_daily_source_lineage(value, root, args.date)
+    registry = authoring_closure.load_json(
+        root / "contracts" / "financial_recipe_registry.json",
+        "financial recipe registry",
+    )
+    try:
+        authoring_closure.validate_or_raise(value, registry)
+    except authoring_closure.AuthoringClosureError as exc:
+        raise SystemExit(f"daily authoring renderer closure failed:\n{exc}") from exc
     output = root / "daily-authoring" / f"{args.date}.json"
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(f"ASSEMBLED {len(parts)} authoring parts -> {output}; daily_sha256={daily_sha}")
+    print(
+        f"ASSEMBLED {len(parts)} authoring parts -> {output}; "
+        f"daily_sha256={daily_sha}; renderer_closure=PASS"
+    )
     return 0
 
 
