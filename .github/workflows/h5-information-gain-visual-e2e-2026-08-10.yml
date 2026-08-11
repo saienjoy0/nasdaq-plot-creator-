@@ -70,6 +70,7 @@ jobs:
             tests/story-engine/run_2026_08_10_interest_regression.py \
             tests/story-engine/fixtures/2026-08-10-interest/materialize_revised_interest_fixture.py \
             tests/real-day-2026-08-10/apply_information_gain_visual_evidence.py \
+            tests/real-day-2026-08-10/patch_information_gain_scene8_cards.py \
             tests/real-day-2026-08-10/apply_visual_evidence_first.py \
             tests/real-day-2026-08-10/sync_visual_evidence_bindings.py \
             scripts/story-engine/materialize_story_engine.py \
@@ -165,6 +166,9 @@ jobs:
           p.write_text(json.dumps(value,ensure_ascii=False,indent=2,sort_keys=True)+'\n',encoding='utf-8')
           print('PASS removed stale financial binding scene-06-beat-002')
           PY
+          python tests/real-day-2026-08-10/patch_information_gain_scene8_cards.py \
+            --repo-root "$GITHUB_WORKSPACE" \
+            --output verification/$DATE/h5_scene8_renderer_cards.json
           python scripts/story-engine/project_story_script_to_production.py \
             --story-script working/$DATE/story-engine/story_script.json \
             --creative-review working/$DATE/story-engine/creative_review.json \
@@ -237,6 +241,12 @@ jobs:
               raise SystemExit('Scene 8 must integrate already-seen evidence')
           if any(b['visualGrammar']['grammarId'] != 'verification' for b in s8['visualBeats'][:2]):
               raise SystemExit('Scene 8 grammar drift')
+          if [len(b.get('objectIds',[])) for b in s8['visualBeats'][:2]] != [4,4]:
+              raise SystemExit('Scene 8 verification cards missing')
+          card_ids={card['cardId'] for card in s8.get('cards',[])}
+          for beat in s8['visualBeats'][:2]:
+              if not set(beat['objectIds']).issubset(card_ids):
+                  raise SystemExit('Scene 8 verification Beat references missing cards')
           selected=json.loads(Path(f'working/{date}/visual_source_selected_assets.json').read_text(encoding='utf-8'))
           if selected.get('selectedPath') != 'fallback':
               raise SystemExit(f"expected approved fallback route, got {selected.get('selectedPath')!r}")
