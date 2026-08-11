@@ -199,7 +199,7 @@ Ask:
 
 If the answer is only "the same hypothesis now has one more supporting fact," the Scene may have low Information Gain.
 
-`support` is not automatically a failure. A required support Scene can be brief. Issue this finding when the runtime or emphasis is disproportionate to the understanding gained.
+`support` is not automatically a failure. A required support Scene can be brief. Issue this finding when the **narrative weight or emphasis** is disproportionate to the understanding gained. At this pre-TTS review stage, do not infer actual runtime from word count; only use measured duration if it is explicitly present in the sealed review input.
 
 ### `PAYOFF_DROUGHT`
 
