@@ -8,8 +8,12 @@ on:
       - "contracts/financial_visual_consistency_report.schema.json"
       - "scripts/financial_visual_cross_artifact.py"
       - "scripts/finalize_renderer_package_compat.py"
+      - "scripts/remotion_intraday_series.py"
+      - "scripts/build_final_production_package_hardened.py"
+      - "skills/nasdaq-cafe-final-production/SKILL.md"
       - "tests/financial-visual-cross-artifact/**"
       - "tests/remotion-compat/test_renderer_240_transaction.py"
+      - "tests/remotion-compat/test_intraday_series_attachment.py"
       - "designs/FINANCIAL_RENDERER_COMPATIBILITY.md"
       - ".github/workflows/financial-renderer-compatibility.yml"
       - "contracts/final_episode_contract.schema.json"
@@ -26,8 +30,12 @@ on:
       - "contracts/financial_visual_consistency_report.schema.json"
       - "scripts/financial_visual_cross_artifact.py"
       - "scripts/finalize_renderer_package_compat.py"
+      - "scripts/remotion_intraday_series.py"
+      - "scripts/build_final_production_package_hardened.py"
+      - "skills/nasdaq-cafe-final-production/SKILL.md"
       - "tests/financial-visual-cross-artifact/**"
       - "tests/remotion-compat/test_renderer_240_transaction.py"
+      - "tests/remotion-compat/test_intraday_series_attachment.py"
       - "designs/FINANCIAL_RENDERER_COMPATIBILITY.md"
       - ".github/workflows/financial-renderer-compatibility.yml"
   workflow_dispatch:
@@ -53,9 +61,12 @@ jobs:
             scripts/financial_recipe_compiler.py \
             scripts/financial_visual_cross_artifact.py \
             scripts/finalize_renderer_package_compat.py \
+            scripts/remotion_intraday_series.py \
+            scripts/build_final_production_package_hardened.py \
             tests/final-episode-contract/generate_fixtures.py \
             tests/financial-visual-cross-artifact/test_financial_visual_cross_artifact.py \
-            tests/remotion-compat/test_renderer_240_transaction.py
+            tests/remotion-compat/test_renderer_240_transaction.py \
+            tests/remotion-compat/test_intraday_series_attachment.py
       - name: Parse strict JSON contracts
         run: |
           python -m json.tool contracts/financial_visual_compatibility.json >/dev/null
@@ -83,6 +94,8 @@ jobs:
         run: python -m unittest discover -s tests/financial-visual-cross-artifact -p 'test_*.py' -v
       - name: Run Renderer 2.4 transaction regression
         run: python tests/remotion-compat/test_renderer_240_transaction.py
+      - name: Run verified intraday attachment regression
+        run: python tests/remotion-compat/test_intraday_series_attachment.py
       - name: Run Recipe Compiler regression
         run: python -m unittest discover -s tests/financial-recipe-compiler -p 'test_*.py' -v
       - name: Run Final Episode Contract regression
