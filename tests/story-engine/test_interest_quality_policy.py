@@ -104,6 +104,8 @@ def test_interest_policy_is_wired_across_story_plan_authoring_and_critic():
 
     for issue_type in INTEREST_FINDINGS:
         assert issue_type in critic
+    assert "narrative weight or emphasis" in critic
+    assert "do not infer actual runtime from word count" in critic
 
 
 def test_creative_review_schema_accepts_interest_findings():
@@ -126,6 +128,9 @@ def test_external_critic_has_same_interest_vocabulary_and_policy():
     assert INTEREST_FINDINGS.isdisjoint(hard_findings)
     assert "interest-quality diagnostics" in prompt_source
     assert "Interestingness means Evidence-backed model update" in prompt_source
+    assert "narrative weight/emphasis" in prompt_source
+    assert "do not infer actual runtime from word count" in prompt_source
+    assert "disproportionate runtime/emphasis" not in prompt_source
 
 
 def test_interest_quality_remains_semantic_not_story_plan_schema_math():
@@ -212,4 +217,6 @@ def test_2026_08_10_interest_benchmark_uses_real_h4_and_scene6_minute_branch():
     assert "NO_LATE_PAYOFF" in benchmark["revised_expected_hard_findings_absent"]
     assert set(benchmark["revised_expected_major_interest_findings_absent"]) == INTEREST_FINDINGS
     assert Path(ROOT / "tests/story-engine/run_2026_08_10_interest_regression.py").is_file()
+    assert Path(ROOT / "tests/story-engine/run_2026_08_10_interest_regression_v2.py").is_file()
     assert Path(ROOT / f"{fixture_root}/materialize_revised_interest_fixture.py").is_file()
+    assert Path(ROOT / f"{fixture_root}/materialize_revised_interest_fixture_v2.py").is_file()
