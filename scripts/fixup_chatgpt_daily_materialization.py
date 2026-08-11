@@ -3,14 +3,19 @@
 
 No editorial decisions are made here. This only maps already-approved authoring into
 legacy Story/Renderer field names, preserves dossier-selected Story wording exactly,
-normalizes strict Renderer 2.4 enum aliases, and binds explicitly-authored reaction
-assets to generated Beat/object IDs.
+applies the canonical fixed Scene 9 closing, normalizes strict Renderer 2.4 enum aliases,
+and binds explicitly-authored reaction assets to generated Beat/object IDs.
 """
 from __future__ import annotations
 
 import argparse
 import json
 from pathlib import Path
+
+FIXED_SCENE_09_NARRATION = (
+    "以上、朝のNASDAQカフェでした。今日も気をつけて、いってらっしゃい。"
+    "こちらはそろそろ、おやすみなさい。"
+)
 
 
 def load(path: Path):
@@ -57,8 +62,6 @@ def normalize_story_plan(authoring: dict, root: Path, date: str) -> None:
     plan["midpoint_turn"]["claim"] = selected["midpoint_turn_claim"]
     plan["closing_reframe"]["text"] = selected["closing_reframe"]
 
-    # Scene 9 is the fixed 03 closing. It may restate approved meaning in narration,
-    # but the Story Plan contract forbids registering new evidence or new meaning here.
     closing = next(
         (scene for scene in plan["scenes"] if scene.get("scene_id") == "scene-09"),
         None,
@@ -72,6 +75,22 @@ def normalize_story_plan(authoring: dict, root: Path, date: str) -> None:
     dump(plan_path, plan)
 
 
+def normalize_story_script(root: Path, date: str) -> None:
+    script_path = root / "working" / date / "story-engine" / "templates" / "story_script.template.json"
+    script = load(script_path)
+    closing = next(
+        (scene for scene in script["scenes"] if scene.get("scene_id") == "scene-09"),
+        None,
+    )
+    if closing is None:
+        raise SystemExit("story script scene-09 missing")
+    closing["narration"] = FIXED_SCENE_09_NARRATION
+    closing["connection_to_previous"] = "closing"
+    closing["evidence_ids"] = []
+    closing["causal_claims"] = []
+    dump(script_path, script)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--date", required=True)
@@ -83,6 +102,7 @@ def main() -> int:
     review = authoring["review"]
 
     normalize_story_plan(authoring, root, date)
+    normalize_story_script(root, date)
 
     creative_path = root / "working" / date / "story-engine" / "templates" / "creative_review.template.json"
     creative = load(creative_path)
@@ -179,7 +199,7 @@ def main() -> int:
     dump(reaction_path, reaction)
 
     print(
-        f"FIXED daily materialization {date}: story preservation + renderer enums/review + "
+        f"FIXED daily materialization {date}: story preservation/fixed closing + renderer enums/review + "
         f"{len(rows)} reaction bindings / {len(asset_by_beat)} bound assets"
     )
     return 0
