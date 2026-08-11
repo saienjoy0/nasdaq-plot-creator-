@@ -74,7 +74,6 @@ def normalize_story(authoring: dict, root: Path, date: str) -> None:
             chunks = authored.get("chunks", [])
             if not chunks:
                 raise SystemExit(f"authoring chunks missing: {scene_id}")
-            # Formatting-only blank lines from the authoring JSON are not spoken text.
             target["narration"] = "".join(chunk["text"] for chunk in chunks)
         else:
             target["narration"] = FIXED_SCENE_09_NARRATION
@@ -87,6 +86,14 @@ def normalize_story(authoring: dict, root: Path, date: str) -> None:
 def normalize_public_package(authoring: dict, root: Path, date: str) -> None:
     path = root / "episodes" / date / f"episode_package_public_{date}.md"
     text = path.read_text(encoding="utf-8")
+
+    legacy_inquisition = "## 04による興味深さ・わかりやすさ審問結果"
+    canonical_inquisition = "## H. 04 興味深さ・わかりやすさ審問結果"
+    if legacy_inquisition in text:
+        text = text.replace(legacy_inquisition, canonical_inquisition, 1)
+    elif canonical_inquisition not in text:
+        raise SystemExit("integrated 04 inquisition heading is missing")
+
     scenes = authoring.get("scenes", [])
     if len(scenes) != 9:
         raise SystemExit("episode package normalization requires nine scenes")
@@ -228,7 +235,7 @@ def main() -> int:
     reaction_count = normalize_reaction_bindings(authoring, render, root, date)
 
     print(
-        f"FIXED daily materialization {date}: scene-scoped package anchors + "
+        f"FIXED daily materialization {date}: canonical inquisition + scene-scoped anchors + "
         f"{reaction_count} reaction bindings + {len(authoring.get('financialBindings', []))} financial bindings"
     )
     return 0
