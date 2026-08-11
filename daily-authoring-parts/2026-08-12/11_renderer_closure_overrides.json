@@ -1,0 +1,59 @@
+{
+  "rendererClosureOverrides": [
+    {
+      "sceneNumber": 2,
+      "beatNumber": 1,
+      "patch": {
+        "visualTemplate": "evidence-boundary",
+        "grammarId": "evidence",
+        "visualMode": "verification-points",
+        "screenState": "Data",
+        "variant": "confirmed-vs-unconfirmed"
+      }
+    },
+    {
+      "sceneNumber": 3,
+      "beatNumber": 1,
+      "patch": {
+        "visualTemplate": "evidence-boundary",
+        "grammarId": "evidence",
+        "visualMode": "verification-points",
+        "screenState": "Data",
+        "variant": "confirmed-vs-unconfirmed"
+      }
+    },
+    {
+      "sceneNumber": 5,
+      "beatNumber": 1,
+      "patch": {
+        "visualTemplate": "evidence-boundary",
+        "grammarId": "evidence",
+        "visualMode": "verification-points",
+        "screenState": "Data",
+        "variant": "confirmed-vs-unconfirmed"
+      }
+    },
+    {
+      "sceneNumber": 5,
+      "beatNumber": 2,
+      "patch": {
+        "visualTemplate": "causal-lane",
+        "grammarId": "causal",
+        "visualMode": "causal-diagram",
+        "screenState": "Chart",
+        "variant": "left-to-right"
+      }
+    },
+    {
+      "sceneNumber": 7,
+      "beatNumber": 1,
+      "patch": {
+        "visualTemplate": "evidence-boundary",
+        "grammarId": "evidence",
+        "visualMode": "verification-points",
+        "screenState": "Data",
+        "variant": "confirmed-vs-unconfirmed"
+      }
+    }
+  ]
+}
