@@ -1,0 +1,13 @@
+{
+  "reactionAssets": [
+    {
+      "sceneNumber": 6,
+      "beatNumber": 1,
+      "intradaySeriesPath": "research/2026-08-12/evidence/QQQ.US_1m.json",
+      "templateVariant": "verified-series",
+      "precision": "verified-intraday-series",
+      "displayTimezone": "America/New_York",
+      "evidenceBasis": "Longbridge verified 1-minute QQQ regular-session observations from the 2026-08-11 follow-up. The chart is timing evidence, not causal proof."
+    }
+  ]
+}
