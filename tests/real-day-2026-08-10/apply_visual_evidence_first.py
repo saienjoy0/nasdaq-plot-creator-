@@ -2,20 +2,16 @@
 """Apply the evidence-first 2026-08-10 acceptance authoring.
 
 TEST / ACCEPTANCE ONLY. This script does not infer causality or rewrite narration.
-It takes the already-approved 2026-08-10 story and changes only the visual authoring
-needed to prove the production path can show the evidence the story already cites:
+It takes the already-approved story and changes only visual authoring:
 
-- BLS July Employment Situation has an actual official PDF Primary plus an approved
-  news-surface Fallback because BLS blocks GitHub-hosted acquisition;
-- Microchip Q1 FY27 IR remains an actual company-page Visual Source on both global
-  routes so the BLS technical fallback does not discard a working real document;
-- QQQ 08:29 / 08:30 / 08:31 ET verified minute closes are a real series.
+- BLS Employment Situation: official PDF Primary plus Approved Fallback because BLS
+  blocks GitHub-hosted acquisition;
+- Microchip Q1 FY27: actual company IR shown as ``news-media`` on the Beat whose
+  narration states the results and guidance;
+- QQQ 08:29 / 08:30 / 08:31 ET: verified minute closes shown as a real series.
 
-The acceptance freezes the global Fallback route only after the verified BLS technical
-failure. The renderer never chooses a route and narration/causality remain unchanged.
-The fixed full-Scene renderer background remains ``mainBackground`` as required by the
-Renderer 2.4 contract; evidence diversity is supplied through main-stage source media
-and the verified market series rather than by replacing that mandatory background.
+The fixed full-Scene renderer background stays ``mainBackground``. The renderer never
+chooses Primary/Fallback and narration/causality are unchanged.
 """
 
 from __future__ import annotations
@@ -43,10 +39,7 @@ def load(path: Path) -> dict[str, Any]:
 
 def write(path: Path, value: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    path.write_text(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def beat_id(beat: dict[str, Any]) -> str:
@@ -66,26 +59,18 @@ def canonical_visual_beat_id(value: str) -> str:
 
 
 def scene_map(render: dict[str, Any]) -> dict[int, dict[str, Any]]:
-    result = {}
-    for scene in render.get("scenes", []):
-        if isinstance(scene, dict) and isinstance(scene.get("sceneNumber"), int):
-            result[scene["sceneNumber"]] = scene
+    result = {
+        scene["sceneNumber"]: scene
+        for scene in render.get("scenes", [])
+        if isinstance(scene, dict) and isinstance(scene.get("sceneNumber"), int)
+    }
     missing = sorted(set(range(1, 10)) - set(result))
     if missing:
         raise SystemExit(f"missing scenes: {missing}")
     return result
 
 
-def visual_candidate(
-    *,
-    candidate_id: str,
-    asset_id: str,
-    source_kind: str,
-    locator: dict[str, Any],
-    capture_method: str,
-    rights_status: str,
-    capture_spec: dict[str, Any] | None,
-) -> dict[str, Any]:
+def visual_candidate(*, candidate_id: str, asset_id: str, source_kind: str, locator: dict[str, Any], capture_method: str, rights_status: str, capture_spec: dict[str, Any] | None) -> dict[str, Any]:
     return {
         "candidateId": candidate_id,
         "assetId": asset_id,
@@ -97,16 +82,7 @@ def visual_candidate(
     }
 
 
-def source_intent(
-    *,
-    intent_id: str,
-    scene_id: str,
-    target_beat_id: str,
-    source_id: str,
-    purpose: str,
-    primary: dict[str, Any],
-    fallback: dict[str, Any],
-) -> dict[str, Any]:
+def source_intent(*, intent_id: str, scene_id: str, target_beat_id: str, source_id: str, purpose: str, primary: dict[str, Any], fallback: dict[str, Any]) -> dict[str, Any]:
     return {
         "intentId": intent_id,
         "target": {"sceneId": scene_id, "visualBeatId": target_beat_id},
@@ -125,6 +101,60 @@ def source_intent(
     }
 
 
+def patch_microchip_news_media(scene: dict[str, Any]) -> str:
+    beat = scene["visualBeats"][0]
+    source_ids = [item for item in beat.get("evidenceSourceIds", []) if isinstance(item, str)]
+    if "source-004" not in source_ids:
+        source_ids.append("source-004")
+    beat["evidenceSourceIds"] = source_ids
+    scene_ids = [item for item in scene.get("evidenceSourceIds", []) if isinstance(item, str)]
+    if "source-004" not in scene_ids:
+        scene_ids.append("source-004")
+    scene["evidenceSourceIds"] = scene_ids
+
+    beat.update(
+        {
+            "contentType": "news-media",
+            "visualTemplate": "news-media",
+            "visualMode": "news-media",
+            "screenState": "News",
+            "templateVariant": "default",
+            "objectIds": [],
+            "sequencePolicy": "explicit",
+            "screenQuestion": "Microchipは何を発表した？",
+            "primaryElement": "Microchip Q1 FY27 公式IR",
+            "changeCue": "Microchip Q1 FY27公式IR",
+            "viewerTexts": [
+                "Microchip Q1 FY27 公式IR",
+                "売上 14.85億ドル / 非GAAP EPS 0.76ドル",
+                "次四半期売上 15.89億〜16.18億ドル",
+            ],
+            "templateConfig": {
+                "comparisonBasis": None,
+                "dataBasis": "Microchip Technology official Q1 FY27 investor-relations release",
+                "laneLabels": [],
+                "nodeOrder": [],
+                "outcomeNodeId": None,
+                "variant": "default",
+            },
+        }
+    )
+    grammar = beat.get("visualGrammar")
+    if not isinstance(grammar, dict):
+        raise SystemExit("Scene 6 Beat 1 visualGrammar missing")
+    grammar["grammarId"] = "evidence"
+    beat["visualGrammarId"] = "evidence"
+
+    # The old event showed a BLS/rate/close card while narration was discussing
+    # Microchip results. It is no longer an object in this Beat.
+    scene["visualEvents"] = [
+        event
+        for event in scene.get("visualEvents", [])
+        if not (isinstance(event, dict) and event.get("targetId") == "scene-06-card-001")
+    ]
+    return canonical_visual_beat_id(beat_id(beat))
+
+
 def qqq_release_window(receipt: dict[str, Any]) -> list[dict[str, Any]]:
     for item in receipt.get("series", []):
         if isinstance(item, dict) and item.get("symbol") == "QQQ.US":
@@ -138,10 +168,7 @@ def qqq_release_window(receipt: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def patch_verified_series(scene: dict[str, Any], receipt: dict[str, Any]) -> None:
-    beats = scene.get("visualBeats")
-    if not isinstance(beats, list) or not beats or not isinstance(beats[0], dict):
-        raise SystemExit("Scene 8 first Visual Beat invalid")
-    beat = beats[0]
+    beat = scene["visualBeats"][0]
     rows = qqq_release_window(receipt)
     ids = ["scene-08-qqq-0829", "scene-08-qqq-0830", "scene-08-qqq-0831"]
     labels = ["08:29 ET", "08:30 ET", "08:31 ET"]
@@ -198,16 +225,9 @@ def patch_verified_series(scene: dict[str, Any], receipt: dict[str, Any]) -> Non
     )
     grammar = beat.get("visualGrammar")
     if not isinstance(grammar, dict):
-        grammar = {
-            "contractVersion": "1.0.0",
-            "grammarId": "reaction",
-            "transitionRole": "major-shift",
-            "returnTargetBeatId": None,
-        }
-        beat["visualGrammar"] = grammar
-    else:
-        grammar["grammarId"] = "reaction"
-        grammar["transitionRole"] = "major-shift"
+        raise SystemExit("Scene 8 visualGrammar missing")
+    grammar["grammarId"] = "reaction"
+    grammar["transitionRole"] = "major-shift"
     beat["visualGrammarId"] = "reaction"
     beat["transitionRole"] = "major-shift"
 
@@ -219,10 +239,10 @@ def apply(root: Path) -> dict[str, Any]:
     receipt = load(receipt_path)
     scenes = scene_map(render)
 
+    microchip_beat = patch_microchip_news_media(scenes[6])
     patch_verified_series(scenes[8], receipt)
 
     scene2_beat = canonical_visual_beat_id(beat_id(scenes[2]["visualBeats"][0]))
-    scene6_beat = canonical_visual_beat_id(beat_id(scenes[6]["visualBeats"][1]))
     intents = {
         "contractVersion": "1.0.0",
         "episodeDate": DATE,
@@ -260,12 +280,12 @@ def apply(root: Path) -> dict[str, Any]:
             source_intent(
                 intent_id="vsi-20260810-microchip-ir",
                 scene_id="scene-06",
-                target_beat_id=scene6_beat,
+                target_beat_id=microchip_beat,
                 source_id="source-004",
                 purpose=(
-                    "Show the actual Microchip Q1 FY27 IR release. The fallback route intentionally "
-                    "uses the same official page with a distinct production asset so a BLS-only "
-                    "technical failure does not discard this working real document."
+                    "Show the actual Microchip Q1 FY27 IR release while the approved narration states "
+                    "its results and next-quarter guidance. The fallback route uses the same official "
+                    "page with a distinct asset so a BLS-only technical failure does not discard it."
                 ),
                 primary=visual_candidate(
                     candidate_id="vsp-20260810-microchip-primary",
@@ -288,11 +308,7 @@ def apply(root: Path) -> dict[str, Any]:
             ),
         ],
     }
-    selection = {
-        "contractVersion": "1.0.0",
-        "episodeDate": DATE,
-        "selectedPath": "fallback",
-    }
+    selection = {"contractVersion": "1.0.0", "episodeDate": DATE, "selectedPath": "fallback"}
 
     write(render_path, render)
     write(root / f"working/{DATE}/visual_source_intents.json", intents)
@@ -304,6 +320,7 @@ def apply(root: Path) -> dict[str, Any]:
         "visualSourceIntentCount": len(intents["intents"]),
         "selectedPath": "fallback",
         "fallbackReason": "BLS blocks GitHub-hosted HTTP acquisition with 403; Microchip real IR remains preserved on fallback route.",
+        "microchipVisualBeatId": microchip_beat,
         "verifiedSeries": {
             "symbol": "QQQ.US",
             "precision": "verified-intraday-series",
