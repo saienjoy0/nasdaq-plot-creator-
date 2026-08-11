@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      RENDERER_COMMIT: 36440cbe84331d020d4fe808d5c2fcbcac20833c
+      RENDERER_COMMIT: 9f0acd45586b2aff8902aae7a5f7df0beb7df120
       RENDERER_CONTRACT_VERSION: 2.4.0
       NASDAQ_CAFE_RENDERER_ROOT: ${{ github.workspace }}/.renderer
     steps:
