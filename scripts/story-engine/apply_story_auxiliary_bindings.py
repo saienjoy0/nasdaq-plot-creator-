@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +29,17 @@ def dump(path: Path, value: dict[str, Any]) -> None:
     )
 
 
+def beat_aliases(value: str) -> set[str]:
+    aliases = {value}
+    match = re.fullmatch(r"scene-(0[1-9])-beat-([0-9]{3})", value)
+    if match:
+        aliases.add(f"vb-{match.group(1)}-{int(match.group(2)):02d}")
+    match = re.fullmatch(r"vb-(0[1-9])-([0-9]{2})", value)
+    if match:
+        aliases.add(f"scene-{match.group(1)}-beat-{int(match.group(2)):03d}")
+    return aliases
+
+
 def apply_story_reaction_bindings(
     story_bindings_path: Path,
     reaction_bindings_path: Path,
@@ -44,6 +56,33 @@ def apply_story_reaction_bindings(
     rows = reaction.get("bindings")
     if not isinstance(rows, list):
         raise ValueError("reaction timeline bindings must contain bindings array")
+
+    # If Story explicitly replaces an event-reaction-timeline Beat with another
+    # template, its old base reaction binding is stale and must not survive into
+    # renderer canonicalization. Remove only that exact Beat (including the
+    # historical vb-XX-YY alias), never unrelated reaction bindings.
+    replaced_aliases: set[str] = set()
+    for source_beat_id, override in story.get("beat_overrides", {}).items():
+        if not isinstance(source_beat_id, str) or not isinstance(override, dict):
+            continue
+        template = override.get("visualTemplate")
+        if isinstance(template, str) and template != "event-reaction-timeline":
+            replaced_aliases.update(beat_aliases(source_beat_id))
+    removed = [
+        row.get("visualBeatId")
+        for row in rows
+        if isinstance(row, dict) and row.get("visualBeatId") in replaced_aliases
+    ]
+    if removed:
+        rows[:] = [
+            row
+            for row in rows
+            if not (
+                isinstance(row, dict)
+                and row.get("visualBeatId") in replaced_aliases
+            )
+        ]
+
     by_id = {
         row.get("visualBeatId"): row
         for row in rows
@@ -99,6 +138,7 @@ def apply_story_reaction_bindings(
     return {
         "status": "pass",
         "episode_date": story_date,
+        "removed_reaction_bindings": removed,
         "inserted_reaction_bindings": inserted,
         "binding_count": len(rows),
     }
