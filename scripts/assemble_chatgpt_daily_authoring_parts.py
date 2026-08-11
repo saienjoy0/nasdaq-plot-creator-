@@ -2,10 +2,11 @@
 """Assemble split ChatGPT-authored JSON fragments into one daily authoring file.
 
 Fragments are editorially complete inputs created by ChatGPT. This script only performs
-a deterministic deep merge, binds the exact daily-source file SHA required by lineage,
-validates that authored Financial Visual Templates are explicitly closed by authored
-financial bindings, and exposes already-approved review scores under legacy field names.
-It makes no market or creative decisions.
+a deterministic deep merge, applies explicit renderer-only Beat overrides authored in
+the fragments, binds the exact daily-source file SHA required by lineage, validates that
+authored Financial Visual Templates are explicitly closed by authored financial bindings,
+and exposes already-approved review scores under legacy field names. It makes no market
+or creative decisions.
 """
 from __future__ import annotations
 
@@ -16,6 +17,15 @@ from pathlib import Path
 from typing import Any
 
 import validate_chatgpt_daily_authoring_closure as authoring_closure
+
+
+ALLOWED_RENDERER_OVERRIDE_FIELDS = {
+    "visualTemplate",
+    "grammarId",
+    "visualMode",
+    "screenState",
+    "variant",
+}
 
 
 def merge(left: Any, right: Any, path: str = "$") -> Any:
@@ -29,6 +39,47 @@ def merge(left: Any, right: Any, path: str = "$") -> Any:
     if left == right:
         return left
     raise ValueError(f"conflicting scalar at {path}: {left!r} != {right!r}")
+
+
+def apply_renderer_closure_overrides(value: dict[str, Any]) -> int:
+    rows = value.pop("rendererClosureOverrides", [])
+    if not isinstance(rows, list):
+        raise SystemExit("rendererClosureOverrides must be an array")
+    scenes = value.get("scenes")
+    if not isinstance(scenes, list):
+        raise SystemExit("scenes are required before renderer closure overrides")
+    seen: set[tuple[int, int]] = set()
+    for index, row in enumerate(rows):
+        path = f"rendererClosureOverrides[{index}]"
+        if not isinstance(row, dict):
+            raise SystemExit(f"{path} must be an object")
+        scene_number = row.get("sceneNumber")
+        beat_number = row.get("beatNumber")
+        patch = row.get("patch")
+        if not isinstance(scene_number, int) or not 1 <= scene_number <= len(scenes):
+            raise SystemExit(f"{path}.sceneNumber is invalid")
+        scene = scenes[scene_number - 1]
+        beats = scene.get("beats") if isinstance(scene, dict) else None
+        if not isinstance(beats, list):
+            raise SystemExit(f"{path}: target scene has no beats array")
+        if not isinstance(beat_number, int) or not 1 <= beat_number <= len(beats):
+            raise SystemExit(f"{path}.beatNumber is invalid")
+        key = (scene_number, beat_number)
+        if key in seen:
+            raise SystemExit(f"{path}: duplicate override target scene-{scene_number:02d}-beat-{beat_number:03d}")
+        seen.add(key)
+        if not isinstance(patch, dict) or not patch:
+            raise SystemExit(f"{path}.patch must be a non-empty object")
+        unsupported = sorted(set(patch) - ALLOWED_RENDERER_OVERRIDE_FIELDS)
+        if unsupported:
+            raise SystemExit(f"{path}.patch contains non-renderer fields: {unsupported}")
+        if not all(isinstance(item, str) and item for item in patch.values()):
+            raise SystemExit(f"{path}.patch values must be non-empty strings")
+        beat = beats[beat_number - 1]
+        if not isinstance(beat, dict):
+            raise SystemExit(f"{path}: target beat is not an object")
+        beat.update(patch)
+    return len(rows)
 
 
 def bind_daily_source_lineage(value: dict[str, Any], root: Path, date: str) -> str:
@@ -73,6 +124,7 @@ def main() -> int:
         value = merge(value, piece)
     if value.get("episodeDate") != args.date:
         raise SystemExit("assembled authoring episodeDate mismatch")
+    override_count = apply_renderer_closure_overrides(value)
     review = value.get("review")
     if isinstance(review, dict) and "scores" not in review:
         story_scores = review.get("storyScores")
@@ -93,7 +145,7 @@ def main() -> int:
     output.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(
         f"ASSEMBLED {len(parts)} authoring parts -> {output}; "
-        f"daily_sha256={daily_sha}; renderer_closure=PASS"
+        f"daily_sha256={daily_sha}; renderer_overrides={override_count}; renderer_closure=PASS"
     )
     return 0
 
