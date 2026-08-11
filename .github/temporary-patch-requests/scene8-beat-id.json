@@ -1,0 +1,4 @@
+{
+  "request": "preserve-producer-beat-alias",
+  "target": "tests/real-day-2026-08-10/apply_visual_evidence_first.py"
+}
