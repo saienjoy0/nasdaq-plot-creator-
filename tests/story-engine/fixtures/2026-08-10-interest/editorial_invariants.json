@@ -12,7 +12,7 @@
     "full_story_engine_rerun": "claim IDs may change; dossier SHA, chronology, confidence ceiling, causal scope ceiling, material counterevidence and required meaning must remain invariant",
     "surface_only_rewrite": "claim IDs and guarded claim metadata must remain identical"
   },
-  "contract_version": "1.0.0",
+  "contract_version": "1.1.0",
   "episode_date": "2026-08-10",
   "expected_actual_gap": {
     "actual": "-2.3万人",
