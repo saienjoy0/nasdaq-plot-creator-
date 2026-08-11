@@ -198,8 +198,8 @@ def patch_story_script(script: dict[str, Any], plan_sha: str, dossier_sha: str) 
     ]
     scenes["scene-02"]["evidence_ids"] = ["E-002"]
     scenes["scene-02"]["causal_claims"] = []
-    scenes["scene-03"]["evidence_ids"] = ["E-001"]
-    scenes["scene-03"]["causal_claims"] = [{"claim_id": "claim-03", "statement": "Nasdaq Composite、SOXX、NVIDIAは上昇し、単純な景気悪化=リスクオフと反対方向だった。", "claim_type": "fact", "evidence_ids": ["E-001"], "confidence": "high", "scope": "nasdaq_support"}]
+    scenes["scene-03"]["evidence_ids"] = ["E-001", "E-004"]
+    scenes["scene-03"]["causal_claims"] = [{"claim_id": "claim-03", "statement": "Nasdaq Composite、SOXX、NVIDIAは上昇し、単純な景気悪化=リスクオフと反対方向だった。", "claim_type": "fact", "evidence_ids": ["E-001", "E-004"], "confidence": "high", "scope": "nasdaq_support"}]
     scenes["scene-04"]["evidence_ids"] = ["E-002", "E-003", "E-004"]
     scenes["scene-04"]["causal_claims"] = [
         {"claim_id": "claim-04", "statement": "Expected +8万人に対しActual -2.3万人、Gap -10.3万人だった。", "claim_type": "fact", "evidence_ids": ["E-002", "E-003"], "confidence": "high", "scope": "nasdaq_support"},
