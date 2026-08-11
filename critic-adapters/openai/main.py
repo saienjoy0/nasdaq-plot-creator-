@@ -170,7 +170,7 @@ Priority and boundaries:
    E) No Forced Drama: do not demand a theatrical reversal. A branch, boundary, mechanism reveal, price test, or reason-unknown payoff is valid.
 5. Then run interest-quality diagnostics. Interestingness means Evidence-backed model update, not fact count or dramatic wording.
    - FACT_STACKING: adjacent Scenes mainly add facts/support while the explanatory model stays the same.
-   - LOW_INFORMATION_GAIN: a Scene receives disproportionate runtime/emphasis but changes little beyond adding support.
+   - LOW_INFORMATION_GAIN: a Scene receives disproportionate narrative weight/emphasis but changes little beyond adding support. At this pre-TTS review stage, do not infer actual runtime from word count; use measured duration only when it is explicitly present in the sealed bundle.
    - PAYOFF_DROUGHT: a multi-Scene stretch goes too long without a meaningful model update, useful narrowing, direct test, mechanism reveal, or consequential counterevidence.
    - WEAK_SURPRISE: the nominated upgrade technically exists but has little explanatory consequence; removing it would barely change the final model. Surprise does not require a twist.
    These four findings may be minor when localized and compressible, or major when they materially damage progression. If the defect actually means there is no real upgrade or late payoff, use the stronger hard finding instead.
