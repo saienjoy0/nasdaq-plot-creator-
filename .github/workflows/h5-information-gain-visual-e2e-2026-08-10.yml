@@ -150,6 +150,21 @@ jobs:
           python tests/real-day-2026-08-10/apply_information_gain_visual_evidence.py \
             --repo-root "$GITHUB_WORKSPACE" \
             --output verification/$DATE/h5_visual_evidence_authoring.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('working/2026-08-10/financial_visual_bindings.json')
+          value=json.loads(p.read_text(encoding='utf-8'))
+          rows=value.get('bindings')
+          if not isinstance(rows,list):
+              raise SystemExit('financial bindings array missing')
+          removed=[row for row in rows if row.get('sourceBeatId')=='scene-06-beat-002']
+          if len(removed)!=1:
+              raise SystemExit(f'expected exactly one stale Scene 6 financial binding, found {len(removed)}')
+          value['bindings']=[row for row in rows if row.get('sourceBeatId')!='scene-06-beat-002']
+          p.write_text(json.dumps(value,ensure_ascii=False,indent=2,sort_keys=True)+'\n',encoding='utf-8')
+          print('PASS removed stale financial binding scene-06-beat-002')
+          PY
           python scripts/story-engine/project_story_script_to_production.py \
             --story-script working/$DATE/story-engine/story_script.json \
             --creative-review working/$DATE/story-engine/creative_review.json \
