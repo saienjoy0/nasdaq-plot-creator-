@@ -7,8 +7,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from openai import OpenAI
-
 
 class AdapterError(RuntimeError):
     pass
@@ -266,6 +264,10 @@ def main() -> int:
     timeout_seconds = float(os.environ.get("OPENAI_CRITIC_TIMEOUT_SECONDS", "180"))
     if not os.environ.get("OPENAI_API_KEY"):
         raise AdapterError("OPENAI_API_KEY is required")
+    try:
+        from openai import OpenAI
+    except ImportError as exc:
+        raise AdapterError("openai package is required for external Critic execution") from exc
 
     bundle_text = render_bundle(manifest_path.parent, manifest)
     frozen_instruction = str(request.get("instruction", ""))
