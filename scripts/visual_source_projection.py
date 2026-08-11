@@ -14,6 +14,7 @@ from typing import Any
 import resolve_visual_sources
 import select_visual_sources
 import verify_visual_source_ab
+import visual_evidence_quality_gate
 import visual_source_contract
 
 
@@ -231,6 +232,34 @@ def _run_ab_gate(
         raise VisualSourceProjectionError(f"E_VISUAL_SOURCE_AB_DRIFT: {exc}") from exc
 
 
+def _run_evidence_quality_gate(
+    *, root: Path, date: str, render: dict[str, Any], intents_path: Path
+) -> None:
+    try:
+        intents_doc = visual_evidence_quality_gate.load_json(
+            intents_path, "Visual Source intents"
+        )
+        report = visual_evidence_quality_gate.validate_visual_evidence(
+            render=render,
+            intents_doc=intents_doc,
+        )
+    except (
+        OSError,
+        json.JSONDecodeError,
+        visual_evidence_quality_gate.VisualEvidenceQualityError,
+    ) as exc:
+        raise VisualSourceProjectionError(str(exc)) from exc
+    report_path = root / "verification" / date / "visual_evidence_quality_gate.json"
+    write_json(report_path, report)
+    if report.get("status") != "PASS":
+        raise VisualSourceProjectionError(
+            "\n".join(
+                f"{item['code']} {item['path']}: {item['message']}"
+                for item in report.get("violations", [])
+            )
+        )
+
+
 def prepare_visual_sources(
     *,
     root: Path,
@@ -241,9 +270,24 @@ def prepare_visual_sources(
     root = root.resolve()
     work = root / "working" / date
     intents_path = work / "visual_source_intents.json"
+    if not intents_path.is_file():
+        raise VisualSourceProjectionError(
+            "E_VISUAL_SOURCE_PLANNING_MISSING: visual_source_intents.json is required even when no Visual Source is needed"
+        )
+
+    # Enforce the visual meaning against the final post-Story render, not only the
+    # earlier prepare step. This prevents acceptance or assembly paths from silently
+    # bypassing evidence-first planning.
+    _run_evidence_quality_gate(
+        root=root,
+        date=date,
+        render=render,
+        intents_path=intents_path,
+    )
+
     visual_source_contract.attach_visual_sources(
         contract_path=final_contract_path,
-        intent_path=intents_path if intents_path.is_file() else None,
+        intent_path=intents_path,
         schema_path=root / "contracts/final_episode_contract.schema.json",
     )
     contract = load_json(final_contract_path, "Final Episode Contract")

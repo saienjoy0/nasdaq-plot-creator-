@@ -7,11 +7,15 @@ on:
       - "tests/fixtures/real-day-2026-08-10/**"
       - "scripts/assemble_approved_daily_episode.py"
       - "scripts/pre_tts_visual_gate.py"
+      - "scripts/visual_evidence_quality_gate.py"
+      - "scripts/prepare_visual_sources.py"
+      - "scripts/visual_source_projection.py"
       - "scripts/finalize_renderer_package_compat.py"
       - "scripts/financial_visual_cross_artifact.py"
       - "scripts/restart_causal_research.py"
       - "scripts/run_daily_production_hardened.py"
       - "skills/nasdaq-cafe-daily-production/contracts/research_retry_request.schema.json"
+      - "designs/VISUAL_EVIDENCE_FIRST_PRODUCTION_POLICY.md"
       - ".github/workflows/h4-clean-real-day-2026-08-10.yml"
   workflow_dispatch:
 
@@ -25,7 +29,7 @@ jobs:
     env:
       DATE: 2026-08-10
       ACCEPTANCE_FIXTURE_COMMIT: b986888660aa8efd64428aa8119200965351c047
-      RENDERER_COMMIT: 36440cbe84331d020d4fe808d5c2fcbcac20833c
+      RENDERER_COMMIT: 0aaaf77eb2fd54e3e1b5eb4db05410dcaf71b673
       RENDERER_CONTRACT_VERSION: 2.4.0
       NASDAQ_CAFE_RENDERER_ROOT: ${{ github.workspace }}/.renderer
     steps:
@@ -59,7 +63,8 @@ jobs:
 
       - name: Install validation dependencies
         run: |
-          python -m pip install --disable-pip-version-check jsonschema pytest pillow
+          python -m pip install --disable-pip-version-check jsonschema pytest pillow playwright==1.61.0
+          python -m playwright install --with-deps chromium
           npm ci --prefix .renderer
 
       - name: Compile H0-H4 production path
@@ -67,6 +72,9 @@ jobs:
           python -m py_compile \
             scripts/assemble_approved_daily_episode.py \
             scripts/pre_tts_visual_gate.py \
+            scripts/visual_evidence_quality_gate.py \
+            scripts/prepare_visual_sources.py \
+            scripts/visual_source_projection.py \
             scripts/finalize_renderer_package_compat.py \
             scripts/financial_visual_cross_artifact.py \
             scripts/restart_causal_research.py \
@@ -75,7 +83,9 @@ jobs:
             tests/real-day-2026-08-10/restore_immutable_intake.py \
             tests/real-day-2026-08-10/sync_story_plan_authoring.py \
             tests/real-day-2026-08-10/sync_scene3_renderer_authoring.py \
-            tests/real-day-2026-08-10/sync_public_timing_authoring.py
+            tests/real-day-2026-08-10/sync_public_timing_authoring.py \
+            tests/real-day-2026-08-10/apply_visual_evidence_first.py \
+            tests/real-day-2026-08-10/sync_visual_evidence_bindings.py
 
       - name: Run H0-H3-H1 focused regressions
         run: |
@@ -154,6 +164,26 @@ jobs:
             --bindings working/$DATE/story-engine/story_production_bindings.json \
             --report working/$DATE/story-engine/story_projection_report.json
 
+      - name: Author actual source documents and verified minute series
+        run: |
+          python tests/real-day-2026-08-10/apply_visual_evidence_first.py \
+            --repo-root "$GITHUB_WORKSPACE" \
+            --output verification/$DATE/h4_visual_evidence_authoring.json
+          python tests/real-day-2026-08-10/sync_visual_evidence_bindings.py \
+            --repo-root "$GITHUB_WORKSPACE" \
+            --output verification/$DATE/h4_visual_evidence_binding_sync.json
+          python scripts/story-engine/project_story_script_to_production.py \
+            --story-script working/$DATE/story-engine/story_script.json \
+            --creative-review working/$DATE/story-engine/creative_review.json \
+            --render-spec render-specs/$DATE/render_spec.json \
+            --episode-package-public episodes/$DATE/episode_package_public_$DATE.md \
+            --bindings working/$DATE/story-engine/story_production_bindings.json \
+            --report working/$DATE/story-engine/story_projection_report.json
+          python scripts/visual_evidence_quality_gate.py \
+            --render-spec render-specs/$DATE/render_spec.json \
+            --intents working/$DATE/visual_source_intents.json \
+            --output verification/$DATE/visual_evidence_quality_gate.json
+
       - name: Run completed Pre-TTS Visual Gate before final package assembly
         run: |
           python scripts/pre_tts_visual_gate.py \
@@ -161,12 +191,70 @@ jobs:
             --story-bindings working/$DATE/story-engine/story_production_bindings.json \
             --output verification/$DATE/pre_tts_visual_gate.json
 
+      - name: Resolve actual Visual Source candidates
+        run: |
+          python scripts/prepare_visual_sources.py \
+            --date $DATE \
+            --repo-root "$GITHUB_WORKSPACE"
+
       - name: Assemble approved episode generically with no date-specific production corrector
         run: |
           python scripts/assemble_approved_daily_episode.py \
             --date $DATE \
             --repo-root "$GITHUB_WORKSPACE" \
             --output verification/$DATE/approved_episode_assembly.json
+
+      - name: Assert selected evidence survived final episode assembly
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          date='2026-08-10'
+          package_text=Path(f'episodes/{date}/episode_package_{date}.md').read_text(encoding='utf-8')
+          begin='<!--BEGIN_FINAL_PRODUCTION_SOURCE-->'
+          end='<!--END_FINAL_PRODUCTION_SOURCE-->'
+          block=package_text.split(begin,1)[1].split(end,1)[0]
+          annex=json.loads(block.split('```json',1)[1].split('```',1)[0])
+          render=annex['render_spec']
+          scenes={scene['sceneNumber']:scene for scene in render['scenes']}
+          beat=scenes[8]['visualBeats'][0]
+          rt=beat['templateConfig']['reactionTimeline']
+          if beat['visualTemplate'] != 'event-reaction-timeline' or beat['templateConfig']['variant'] != 'verified-series':
+              raise SystemExit('Scene 8 did not keep verified-series')
+          if rt['precision'] != 'verified-intraday-series' or len(rt['seriesObjectIds']) < 3:
+              raise SystemExit('Scene 8 verified intraday series missing')
+          number_map={item.get('numberId'):item.get('numericValue') for item in scenes[8].get('numbers', [])}
+          values=[number_map[item] for item in rt['seriesObjectIds']]
+          if values[:3] != [719.16, 720.23, 720.531]:
+              raise SystemExit(f'QQQ real minute values drifted: {values}')
+
+          selected=json.loads(Path(f'working/{date}/visual_source_selected_assets.json').read_text(encoding='utf-8'))
+          if selected.get('selectedPath') != 'fallback':
+              raise SystemExit(f"expected approved fallback path, got {selected.get('selectedPath')!r}")
+          rows={item['intentId']:item for item in selected.get('selectedAssets', [])}
+          bls=rows.get('vsi-20260810-bls-employment')
+          microchip=rows.get('vsi-20260810-microchip-ir')
+          if not bls or bls.get('assetId') != 'background_scene_news':
+              raise SystemExit(f'BLS approved fallback asset mismatch: {bls}')
+          if not microchip or microchip.get('assetId') != 'daily-microchip-q1-fy27-ir-fallback':
+              raise SystemExit(f'Microchip real fallback-route asset mismatch: {microchip}')
+
+          placements={p['assetId'] for scene in render['scenes'] for p in scene.get('assetPlacements', [])}
+          required={'background_scene_news','daily-microchip-q1-fy27-ir-fallback'}
+          if not required.issubset(placements):
+              raise SystemExit(f'assembled production render missing selected assets: {sorted(required-placements)}')
+
+          raw=json.loads(Path(f'verification/{date}/asset_resolution_raw.json').read_text(encoding='utf-8'))
+          results={(item['intentId'],item['path']):item for item in raw.get('results', [])}
+          microchip_fallback=results.get(('vsi-20260810-microchip-ir','fallback'))
+          if not microchip_fallback or microchip_fallback.get('status') != 'ready':
+              raise SystemExit(f'Microchip fallback-route real IR was not resolved: {microchip_fallback}')
+          output_path=microchip_fallback.get('outputPath')
+          if not output_path or not Path(output_path).is_file():
+              raise SystemExit(f'Microchip real IR output missing: {output_path}')
+
+          print('PASS assembled render: BLS approved fallback + actual Microchip IR + QQQ verified series')
+          PY
 
       - name: Validate Episode Memory hardening
         run: |
@@ -228,7 +316,7 @@ jobs:
           python scripts/run_daily_production_hardened.py --workspace "$GITHUB_WORKSPACE" status \
             --episode-date $DATE | tee verification/$DATE/h4_control_plane_status.json
 
-      - name: Assert verified timing propagated through Research Story Package and Render
+      - name: Assert verified timing and selected evidence reached final render spec
         run: |
           python - <<'PY'
           import json
@@ -256,8 +344,8 @@ jobs:
           dossier=paths[0].read_text(encoding='utf-8')
           script=paths[2].read_text(encoding='utf-8')
           package=paths[3].read_text(encoding='utf-8')
-          render=paths[4].read_text(encoding='utf-8')
-          combined='\n'.join((dossier,script,package,render))
+          render_text=paths[4].read_text(encoding='utf-8')
+          combined='\n'.join((dossier,script,package,render_text))
           missing=[token for token in required if token not in combined]
           if missing:
               raise SystemExit(f'verified minute values missing from final lineage: {missing}')
@@ -272,7 +360,18 @@ jobs:
           result=json.loads(Path(f'research/{date}/research_acquisition_result_w02.json').read_text(encoding='utf-8'))
           if result['status'] != 'success':
               raise SystemExit('wave 2 success did not survive the full pipeline')
-          print('PASS successful timing lineage propagated end-to-end')
+
+          final_render=json.loads(render_text)
+          placements={p['assetId'] for scene in final_render['scenes'] for p in scene.get('assetPlacements', [])}
+          required_assets={'background_scene_news','daily-microchip-q1-fy27-ir-fallback'}
+          if not required_assets.issubset(placements):
+              raise SystemExit(f'final render spec lost selected visual assets: {sorted(required_assets-placements)}')
+          scene8=next(scene for scene in final_render['scenes'] if scene['sceneNumber']==8)
+          beat8=scene8['visualBeats'][0]
+          rt=beat8['templateConfig']['reactionTimeline']
+          if beat8['visualTemplate']!='event-reaction-timeline' or rt['precision']!='verified-intraday-series':
+              raise SystemExit('final render spec lost QQQ verified-series')
+          print('PASS final render: BLS approved fallback + actual Microchip IR + QQQ verified series')
           PY
 
       - name: Assert no date-specific production corrector is invoked
@@ -298,6 +397,7 @@ jobs:
           path: |
             tests/fixtures/real-day-2026-08-10/collector_wave2_success_receipt.json
             daily-inputs/2026-08-10/
+            daily-assets/2026-08-10/
             research/2026-08-10/
             working/2026-08-10/
             episodes/2026-08-10/

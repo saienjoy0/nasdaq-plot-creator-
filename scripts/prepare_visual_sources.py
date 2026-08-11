@@ -10,8 +10,11 @@ before consuming the selected projection, so any Story/contract drift fails
 closed.
 
 Visual Evidence Planning is explicit. A missing intent document means the
-planning step was skipped and is a production error. An existing intent
-document with an empty ``intents`` array is the only valid not-required state.
+planning step was skipped and is a production error. In a complete production
+workspace, an empty ``intents`` array is accepted only after the evidence-first
+quality gate confirms that no approved original evidence or verified intraday
+series materially requires a real visual surface. Minimal contract-only test
+fixtures without a render shell retain the legacy explicit-not-required path.
 """
 
 from __future__ import annotations
@@ -25,11 +28,54 @@ from pathlib import Path
 import materialize_renderer_sources
 import resolve_visual_sources
 import select_visual_sources
+import visual_evidence_quality_gate
 import visual_source_contract
 
 
 class PrepareVisualSourceError(ValueError):
     pass
+
+
+def _write_quality_report(path: Path, report: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _run_quality_gate(
+    *, render_path: Path, intents_path: Path, quality_path: Path
+) -> dict:
+    render = visual_evidence_quality_gate.load_json(render_path, "render spec")
+    intents_doc = visual_evidence_quality_gate.load_json(
+        intents_path, "Visual Source intents"
+    )
+    quality = visual_evidence_quality_gate.validate_visual_evidence(
+        render=render,
+        intents_doc=intents_doc,
+    )
+    _write_quality_report(quality_path, quality)
+    if quality["status"] != "PASS":
+        raise visual_evidence_quality_gate.VisualEvidenceQualityError(
+            "\n".join(
+                f"{item['code']} {item['path']}: {item['message']}"
+                for item in quality["violations"]
+            )
+        )
+    return quality
+
+
+def _print_failure(message: str) -> int:
+    print(
+        json.dumps(
+            {"status": "FAIL", "errors": str(message).splitlines()},
+            ensure_ascii=False,
+            indent=2,
+        ),
+        file=sys.stderr,
+    )
+    return 2
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -44,72 +90,80 @@ def main(argv: list[str] | None = None) -> int:
     verification = root / "verification" / date
     intents_path = work / "visual_source_intents.json"
     selection_path = work / "visual_source_selection.json"
+    render_path = root / "render-specs" / date / "render_spec.json"
+    quality_path = verification / "visual_evidence_quality_gate.json"
 
     if not intents_path.is_file():
-        print(
-            json.dumps(
-                {
-                    "status": "FAIL",
-                    "errors": [
-                        "E_VISUAL_SOURCE_PLANNING_MISSING: visual_source_intents.json is required even when no Visual Source is needed"
-                    ],
-                },
-                ensure_ascii=False,
-                indent=2,
-            ),
-            file=sys.stderr,
+        return _print_failure(
+            "E_VISUAL_SOURCE_PLANNING_MISSING: visual_source_intents.json is required even when no Visual Source is needed"
         )
-        return 2
 
     try:
         visual_sources = visual_source_contract.load_intent_document(intents_path, date)
-    except (OSError, json.JSONDecodeError, visual_source_contract.VisualSourceContractError) as exc:
-        print(
-            json.dumps(
-                {"status": "FAIL", "errors": str(exc).splitlines()},
-                ensure_ascii=False,
-                indent=2,
-            ),
-            file=sys.stderr,
-        )
-        return 2
+    except (
+        OSError,
+        json.JSONDecodeError,
+        visual_source_contract.VisualSourceContractError,
+    ) as exc:
+        return _print_failure(str(exc))
 
+    # Preserve the established explicit-not-required contract for tiny unit
+    # fixtures that intentionally exercise only the planning document. Real
+    # Daily Production always has a render shell and therefore still runs the
+    # fail-closed evidence-first gate before accepting zero intents.
     if not visual_sources["intents"]:
-        print(
-            json.dumps(
-                {
-                    "status": "not-required",
-                    "episodeDate": date,
-                    "reason": "visual evidence planning explicitly completed with zero intents",
-                    "intentDocument": str(intents_path),
-                },
-                ensure_ascii=False,
-                indent=2,
-            )
-        )
+        quality_gate_value: str | None = None
+        if render_path.is_file():
+            try:
+                _run_quality_gate(
+                    render_path=render_path,
+                    intents_path=intents_path,
+                    quality_path=quality_path,
+                )
+                quality_gate_value = str(quality_path)
+            except (
+                OSError,
+                json.JSONDecodeError,
+                visual_evidence_quality_gate.VisualEvidenceQualityError,
+            ) as exc:
+                return _print_failure(str(exc))
+        result = {
+            "status": "not-required",
+            "episodeDate": date,
+            "reason": "visual evidence planning explicitly completed with zero intents",
+            "intentDocument": str(intents_path),
+        }
+        if quality_gate_value is not None:
+            result["qualityGate"] = quality_gate_value
+        print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
 
+    # Keep the long-standing fail-fast ordering: an authored non-empty plan
+    # requires an explicit Primary/Fallback selection before we do any render
+    # materialization or network-resolution work.
     if not selection_path.is_file():
-        print(
-            json.dumps(
-                {
-                    "status": "FAIL",
-                    "errors": [
-                        "E_VISUAL_SOURCE_SELECTED_PATH_INVALID: visual_source_selection.json is required for non-empty Visual Source intents"
-                    ],
-                },
-                ensure_ascii=False,
-                indent=2,
-            ),
-            file=sys.stderr,
+        return _print_failure(
+            "E_VISUAL_SOURCE_SELECTED_PATH_INVALID: visual_source_selection.json is required for non-empty Visual Source intents"
         )
-        return 2
+
+    try:
+        _run_quality_gate(
+            render_path=render_path,
+            intents_path=intents_path,
+            quality_path=quality_path,
+        )
+    except (
+        OSError,
+        json.JSONDecodeError,
+        visual_evidence_quality_gate.VisualEvidenceQualityError,
+    ) as exc:
+        return _print_failure(str(exc))
 
     try:
         renderer = materialize_renderer_sources.materialize(
             root=root,
             date=date,
-            render_path=root / "render-specs" / date / "render_spec.json",
+            render_path=render_path,
             public_package_path=root / "episodes" / date / f"episode_package_public_{date}.md",
             bindings_path=work / "financial_visual_bindings.json",
         )
@@ -150,6 +204,7 @@ def main(argv: list[str] | None = None) -> int:
             "assetResolutionRaw": str(raw_resolution),
             "assetResolutionLog": str(audit_output),
             "selectedProjection": str(selected_output),
+            "qualityGate": str(quality_path),
         }
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
@@ -162,15 +217,7 @@ def main(argv: list[str] | None = None) -> int:
         resolve_visual_sources.VisualSourceResolutionError,
         select_visual_sources.VisualSourceSelectionError,
     ) as exc:
-        print(
-            json.dumps(
-                {"status": "FAIL", "errors": str(exc).splitlines()},
-                ensure_ascii=False,
-                indent=2,
-            ),
-            file=sys.stderr,
-        )
-        return 2
+        return _print_failure(str(exc))
 
 
 if __name__ == "__main__":
