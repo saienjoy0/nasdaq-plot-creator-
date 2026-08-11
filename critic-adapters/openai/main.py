@@ -7,7 +7,9 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from openai import OpenAI
+# Optional runtime dependency. Tests may inject a fake client through this symbol
+# without requiring the OpenAI SDK to be installed in generic production CI.
+OpenAI: Any | None = None
 
 
 class AdapterError(RuntimeError):
@@ -22,7 +24,8 @@ ISSUE_TYPES = [
     "HOOK_EXHAUSTS_STORY", "NO_UNDERSTANDING_UPGRADE", "FAKE_UNDERSTANDING_UPGRADE",
     "ABSTRACT_EDITORIAL_LANGUAGE", "NO_BEFORE_CONTEXT", "NO_AFTER_IMPLICATION",
     "NO_MIDPOINT_TURN", "OPEN_LOOP_UNRESOLVED", "OPENING_PROMISE_NOT_RECOVERED",
-    "ENDING_NOT_BOOKENDED", "CAUSALITY_DRIFT", "COUNTEREVIDENCE_REMOVED",
+    "ENDING_NOT_BOOKENDED", "FACT_STACKING", "LOW_INFORMATION_GAIN",
+    "PAYOFF_DROUGHT", "WEAK_SURPRISE", "CAUSALITY_DRIFT", "COUNTEREVIDENCE_REMOVED",
     "TIMELINE_DRIFT", "NASDAQ_SCOPE_OVERREACH", "CLARITY_OVERLOAD",
 ]
 
@@ -167,15 +170,22 @@ Priority and boundaries:
    C) Scene 4 -> Scene 8 Delta: state to yourself what the viewer understands by Scene 8 that was not already understood by Scene 4. If there is no material evidence-backed delta, issue NO_LATE_PAYOFF.
    D) Late Value Deletion: imagine removing Scenes 6-8. If the viewer loses no important understanding beyond examples, repeated support, or disclaimers, issue NO_LATE_PAYOFF.
    E) No Forced Drama: do not demand a theatrical reversal. A branch, boundary, mechanism reveal, price test, or reason-unknown payoff is valid.
-5. Do not require a question mark or fake suspense. Flag FAKE_OPEN_LOOP when an already-known answer is withheld only to force continuation.
-6. Scene 4 may reveal the provisional/central hypothesis. That is not a failure. It is a failure only when Scene 8 is not materially more informed.
-7. Scene 8 must not be failed for lacking a next hook. It should preserve uncertainty and verification conditions and close the analytical story before fixed Scene 9.
-8. A PASS review requires payoff_delivered=true and belief_changed=true for every Scene 1-8; Scenes 1-7 also require continuation_reason_natural=true; Scene 8 requires closure_effective=true and opening_promise_recovered=true.
-9. The hard narrative findings HOOK_EXHAUSTS_STORY, NO_UNDERSTANDING_UPGRADE, FAKE_UNDERSTANDING_UPGRADE, NO_LATE_PAYOFF, OPENING_PROMISE_NOT_RECOVERED, and ENDING_NOT_BOOKENDED may not be downgraded to minor merely to preserve PASS.
-10. Detect procedural narration that sounds like production steps rather than natural fox speech.
-11. If you detect factual error, unsupported Expected, chronology distortion, causal overstatement, evidence loss, investment advice, or invented fox history, use a critical causal-safety finding and verdict=fail rather than repairing the fact yourself.
-12. Findings must name Scene IDs, concrete problem, viewer impact and smallest safe fix.
-13. Write reviewer-facing text in Japanese. Finding issue_type values remain the fixed uppercase identifiers.
+5. Then run interest-quality diagnostics. Interestingness means Evidence-backed model update, not fact count or dramatic wording.
+   - FACT_STACKING: adjacent Scenes mainly add facts/support while the explanatory model stays the same.
+   - LOW_INFORMATION_GAIN: a Scene receives disproportionate narrative weight/emphasis but changes little beyond adding support. At this pre-TTS review stage, do not infer actual runtime from word count; use measured duration only when it is explicitly present in the sealed bundle.
+   - PAYOFF_DROUGHT: a multi-Scene stretch goes too long without a meaningful model update, useful narrowing, direct test, mechanism reveal, or consequential counterevidence.
+   - WEAK_SURPRISE: the nominated upgrade technically exists but has little explanatory consequence; removing it would barely change the final model. Surprise does not require a twist.
+   These four findings may be minor when localized and compressible, or major when they materially damage progression. If the defect actually means there is no real upgrade or late payoff, use the stronger hard finding instead.
+6. Use ABT only as a diagnostic for factual stacking. Do not require literal AND/BUT/THEREFORE wording and do not invent a contradiction.
+7. Do not require a question mark or fake suspense. Flag FAKE_OPEN_LOOP when an already-known answer is withheld only to force continuation.
+8. Scene 4 may reveal the provisional/central hypothesis. That is not a failure. It is a failure only when Scene 8 is not materially more informed.
+9. Scene 8 must not be failed for lacking a next hook. It should preserve uncertainty and verification conditions and close the analytical story before fixed Scene 9.
+10. A PASS review requires payoff_delivered=true and belief_changed=true for every Scene 1-8; Scenes 1-7 also require continuation_reason_natural=true; Scene 8 requires closure_effective=true and opening_promise_recovered=true.
+11. The hard narrative findings HOOK_EXHAUSTS_STORY, NO_UNDERSTANDING_UPGRADE, FAKE_UNDERSTANDING_UPGRADE, NO_LATE_PAYOFF, OPENING_PROMISE_NOT_RECOVERED, and ENDING_NOT_BOOKENDED may not be downgraded to minor merely to preserve PASS.
+12. Detect procedural narration that sounds like production steps rather than natural fox speech.
+13. If you detect factual error, unsupported Expected, chronology distortion, causal overstatement, evidence loss, investment advice, or invented fox history, use a critical causal-safety finding and verdict=fail rather than repairing the fact yourself.
+14. Findings must name Scene IDs, concrete problem, viewer impact and smallest safe fix.
+15. Write reviewer-facing text in Japanese. Finding issue_type values remain the fixed uppercase identifiers.
 
 Scoring uses six 0-5 dimensions: opening, progression, discovery, clarity, fox_voice, late_payoff. total_score must equal their sum. Score is secondary: verdict=pass is allowed only when there are no immediate failures, no critical or major findings, every dimension is at least 3, the frozen threshold is satisfied, every Scene payoff/belief-change check passes, and Scene 8 closure/opening-promise recovery pass."""
 
@@ -240,6 +250,8 @@ def validate_review(review: dict[str, Any], request: dict[str, Any]) -> None:
 
 
 def main() -> int:
+    global OpenAI
+
     request_path = Path(os.environ.get("NASDAQ_CAFE_CRITIC_REQUEST", ""))
     manifest_path = Path(os.environ.get("NASDAQ_CAFE_CRITIC_BUNDLE", ""))
     output_path = Path(os.environ.get("NASDAQ_CAFE_CRITIC_REVIEW_OUT", ""))
@@ -258,6 +270,12 @@ def main() -> int:
     timeout_seconds = float(os.environ.get("OPENAI_CRITIC_TIMEOUT_SECONDS", "180"))
     if not os.environ.get("OPENAI_API_KEY"):
         raise AdapterError("OPENAI_API_KEY is required")
+    if OpenAI is None:
+        try:
+            from openai import OpenAI as OpenAIClient
+        except ImportError as exc:
+            raise AdapterError("openai package is required for external Critic execution") from exc
+        OpenAI = OpenAIClient
 
     bundle_text = render_bundle(manifest_path.parent, manifest)
     frozen_instruction = str(request.get("instruction", ""))

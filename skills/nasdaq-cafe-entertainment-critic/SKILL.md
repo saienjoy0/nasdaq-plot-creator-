@@ -1,7 +1,7 @@
 ---
 name: nasdaq-cafe-entertainment-critic
 description: Review a NASDAQ Cafe story for interest, clarity, understanding progression, fox voice, and late payoff while preserving the frozen causal contract.
-version: 1.1.2
+version: 1.2.0
 ---
 
 # NASDAQ Cafe Entertainment Critic
@@ -19,6 +19,12 @@ The governing principle is:
 A second governing principle is:
 
 > **Score is secondary. A script that fails the understanding-upgrade or late-value hard gates cannot PASS even at 29/30.**
+
+A third interest principle is:
+
+> **Interestingness comes from Evidence-backed model updates, not from the number of facts, headlines, or dramatic words.**
+
+Treat Information Gain as a semantic editorial judgment. Do not infer it mechanically from Evidence count or text length.
 
 ## Reviewer modes
 
@@ -163,6 +169,68 @@ A branch, boundary, mechanism reveal, price test, or reason-unknown payoff can s
 
 If the only way to make the episode pass would be to invent a dramatic reversal, return upstream or shorten the episode instead.
 
+## Interest-quality diagnostics — run after hard gates, before scoring
+
+These diagnostics catch stories that are causally safe and structurally valid but still feel like a correct lecture or evidence receipt.
+
+They do **not** override causal truth. Never create, exaggerate, or reorder a fact merely to avoid one of these findings.
+
+### `FACT_STACKING`
+
+Issue when adjacent Scenes mainly add facts or supporting headlines while the explanatory model remains effectively unchanged.
+
+Typical pattern:
+
+```text
+fact A
+AND fact B
+AND fact C
+```
+
+without a meaningful comparison, boundary, test, mechanism, or implication.
+
+This is usually a pacing/authoring problem. Prefer compression, a clearer ABT relation, or earlier arrival at the next genuine model update while keeping formal Scene roles intact.
+
+### `LOW_INFORMATION_GAIN`
+
+Ask:
+
+> After learning this Scene, what can the viewer explain differently that they could not explain before it?
+
+If the answer is only "the same hypothesis now has one more supporting fact," the Scene may have low Information Gain.
+
+`support` is not automatically a failure. A required support Scene can be brief. Issue this finding when the **narrative weight or emphasis** is disproportionate to the understanding gained. At this pre-TTS review stage, do not infer actual runtime from word count; only use measured duration if it is explicitly present in the sealed review input.
+
+### `PAYOFF_DROUGHT`
+
+Issue when a multi-Scene stretch makes the viewer wait too long between meaningful understanding rewards.
+
+A drought is not measured by seconds or a fixed Scene count alone. Judge whether the viewer receives a meaningful model update, useful narrowing, direct test, mechanism reveal, or consequential counterevidence often enough for the episode to keep advancing.
+
+Two or more consecutive low-gain/support-heavy Scenes are a strong review signal, not an automatic failure.
+
+### `WEAK_SURPRISE`
+
+"Surprise" here means a meaningful Evidence-backed change in the viewer's prediction or explanatory model, not theatrical shock.
+
+Issue when the nominated Understanding Upgrade exists structurally but has little explanatory consequence.
+
+Ask:
+
+> If this upgrade disappeared, would the final model materially change?
+
+If no, the upgrade is weak even if it technically changes wording or adds evidence.
+
+Do not use this finding simply because the episode lacks a twist. A strong verification, boundary, mechanism reveal, or reason-unknown conclusion can be highly interesting without surprise theater.
+
+### Severity guidance for interest findings
+
+`FACT_STACKING`, `LOW_INFORMATION_GAIN`, `PAYOFF_DROUGHT`, and `WEAK_SURPRISE` may be `minor` when localized and safely compressible.
+
+Use `major` when the issue materially damages progression or discovery across multiple Scenes and the script should not PASS without a targeted rewrite.
+
+If the same defect also means there is no real Understanding Upgrade or late payoff, use the stronger existing hard finding (`NO_UNDERSTANDING_UPGRADE` / `NO_LATE_PAYOFF`) rather than relying only on an interest diagnostic.
+
 ## Scene checks
 
 ### Scenes 1–7 — Progression Check
@@ -209,6 +277,7 @@ Detect especially:
 - the opening fully exhausts the story
 - adjacent Scenes repeat the same conclusion
 - facts change but understanding does not
+- consecutive Scenes stack facts without enough explanatory gain
 - a Scene has no payoff
 - a continuation exists only because an already-known answer was hidden
 - a Scene dead-ends before Scene 8
@@ -216,7 +285,9 @@ Detect especially:
 - Scene order is interchangeable
 - no evidence-backed understanding upgrade
 - the nominated upgrade is only an extra supporting fact
+- a structurally valid upgrade has weak explanatory consequence
 - Scenes 6–8 are appendices
+- a multi-Scene stretch has a payoff drought
 - Scene 8 is only a schedule/checklist
 - Scene 8 does not recover the opening promise
 - Scene 8 repeats the Scene 4 answer plus a disclaimer
@@ -240,6 +311,10 @@ NO_LATE_PAYOFF
 OPENING_PROMISE_NOT_RECOVERED
 ENDING_NOT_BOOKENDED
 NO_NEW_EVIDENCE_OR_MEANING
+FACT_STACKING
+LOW_INFORMATION_GAIN
+PAYOFF_DROUGHT
+WEAK_SURPRISE
 ```
 
 Legacy `NO_MIDPOINT_TURN` may be used only when the Story Plan lacks any nominated upgrade at all. Prefer `NO_UNDERSTANDING_UPGRADE` when an upgrade exists structurally but does not actually change the explanatory model.
@@ -325,6 +400,10 @@ If review is not pass, issue only the smallest safe operations:
 - `restore_causality_wording`
 - `adjust_visual_beat`
 
+For `FACT_STACKING`, `LOW_INFORMATION_GAIN`, or `PAYOFF_DROUGHT`, prefer `compress_scene`, `replace_connector`, or compatible movement of already-supported content before any broader rewrite.
+
+For `WEAK_SURPRISE`, first ask whether existing evidence can play a more explanatory comparison/test/boundary role. Never invent a turn.
+
 Forbidden:
 - remove/reorder formal Scenes
 - merge away a formal role
@@ -335,7 +414,7 @@ Forbidden:
 
 ## Surface-only preference
 
-For `PROCEDURAL_NARRATION`, `ABSTRACT_EDITORIAL_LANGUAGE`, `FOX_VOICE_ABSENT`, or a weak continuation, prefer surface-only rewrite first.
+For `PROCEDURAL_NARRATION`, `ABSTRACT_EDITORIAL_LANGUAGE`, `FOX_VOICE_ABSENT`, `FACT_STACKING`, `LOW_INFORMATION_GAIN`, `PAYOFF_DROUGHT`, or a weak continuation, prefer surface-only rewrite first when the Story Plan meaning is already sufficient.
 
 Do not touch Claim IDs, Evidence IDs, numbers, timeline, confidence, scope, or counterevidence unless restoring them to the frozen contract.
 

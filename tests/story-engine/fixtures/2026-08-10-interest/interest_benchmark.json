@@ -1,0 +1,104 @@
+{
+  "contract_version": "1.1.0",
+  "episode_date": "2026-08-10",
+  "purpose": "Benchmark interestingness as evidence-backed explanatory-model updates while keeping the real historical H4 causal dossier byte-identical.",
+  "baseline_source_receipt": "tests/story-engine/fixtures/2026-08-10-interest/baseline_source_receipt.json",
+  "editorial_invariants": "tests/story-engine/fixtures/2026-08-10-interest/editorial_invariants.json",
+  "historical_h4": {
+    "score": 29,
+    "verdict": "pass",
+    "findings": [],
+    "structure": "Scene 4 establishes the macro rates model; Scene 6 adds MCHP earnings; Scene 7 adds counterexamples; the strongest minute-timing branch arrives in Scene 8.",
+    "semantic_interest_reassessment_targets": [
+      "FACT_STACKING",
+      "LOW_INFORMATION_GAIN",
+      "PAYOFF_DROUGHT"
+    ],
+    "note": "These are semantic Critic targets, not deterministic expected failures. Historical H4 can retain real late value while still placing its strongest discovery too late."
+  },
+  "central_contradiction": "July payrolls missed badly, yet NASDAQ rose 1.30% and SOXX rose 2.02%.",
+  "provisional_model": "Weak jobs reduced rate-hike expectations and eased the rate headwind for tech.",
+  "final_model": "The same semiconductor-up session contained different causal engines: immediate macro rate reaction and company-specific MCHP earnings, with counterexamples limiting any blanket-tech explanation.",
+  "scene_gain_profile": [
+    {
+      "scene_id": "scene-01",
+      "primary_gain": "narrow",
+      "strength": "medium",
+      "meaning": "Move from simple bad-jobs-risk-off intuition to a provisional rates explanation while naming an unresolved mismatch without giving away the full late evidence."
+    },
+    {
+      "scene_id": "scene-02",
+      "primary_gain": "narrow",
+      "strength": "medium",
+      "meaning": "The weakness is broad enough that the market cannot be described as simply ignoring a trivial miss."
+    },
+    {
+      "scene_id": "scene-03",
+      "primary_gain": "disproof",
+      "strength": "medium",
+      "meaning": "NASDAQ/SOXX strength rejects a simple economic-strength-only reading of the session."
+    },
+    {
+      "scene_id": "scene-04",
+      "primary_gain": "mechanism_reveal",
+      "strength": "high",
+      "required_evidence_ids": ["E-002", "E-003", "E-004"],
+      "meaning": "Expected/Actual/Gap and the 67->55->44 rate-hike path make the provisional policy-transmission mechanism visible."
+    },
+    {
+      "scene_id": "scene-05",
+      "primary_gain": "support",
+      "strength": "low",
+      "meaning": "Oil/yield context supports the same direction but should remain concise because it does not materially change the model."
+    },
+    {
+      "scene_id": "scene-06",
+      "primary_gain": "branch",
+      "secondary_gains": ["verification"],
+      "strength": "very_high",
+      "required_evidence_ids": ["E-008", "E-010", "E-011", "E-012"],
+      "meaning": "QQQ/SOXX/NVDA react at 8:30 ET while MCHP does not, splitting one apparent semiconductor trade into multiple engines."
+    },
+    {
+      "scene_id": "scene-07",
+      "primary_gain": "branch",
+      "secondary_gains": ["narrow"],
+      "strength": "high",
+      "required_evidence_ids": ["E-005", "E-006", "E-007"],
+      "meaning": "MCHP earnings explain the company-specific engine while AMD/Alphabet counterexamples limit a blanket-tech-rally claim."
+    },
+    {
+      "scene_id": "scene-08",
+      "primary_gain": "synthesis",
+      "strength": "high",
+      "meaning": "Different causal engines aligned in the same index direction; timing supports chronology but not standalone causal proof."
+    }
+  ],
+  "revised_expected_hard_findings_absent": [
+    "HOOK_EXHAUSTS_STORY",
+    "NO_UNDERSTANDING_UPGRADE",
+    "FAKE_UNDERSTANDING_UPGRADE",
+    "NO_LATE_PAYOFF"
+  ],
+  "revised_expected_major_interest_findings_absent": [
+    "FACT_STACKING",
+    "LOW_INFORMATION_GAIN",
+    "PAYOFF_DROUGHT",
+    "WEAK_SURPRISE"
+  ],
+  "interest_findings": [
+    "FACT_STACKING",
+    "LOW_INFORMATION_GAIN",
+    "PAYOFF_DROUGHT",
+    "WEAK_SURPRISE"
+  ],
+  "deterministic_acceptance": {
+    "historical_core_sha_match": true,
+    "same_causal_dossier_sha": true,
+    "same_expected_actual_gap": true,
+    "same_chronology": true,
+    "material_counterevidence_retained": true,
+    "company_material_not_promoted_to_nasdaq_primary": true,
+    "scene_06_revised_upgrade_uses_minute_evidence": true
+  }
+}

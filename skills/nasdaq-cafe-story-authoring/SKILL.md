@@ -1,7 +1,7 @@
 ---
 name: nasdaq-cafe-story-authoring
 description: Convert an approved NASDAQ Cafe Story Plan into the fox's natural nine-scene narration without changing market causality, confidence, timing, counterevidence, or formal scene roles.
-version: 1.1.0
+version: 1.1.1
 ---
 
 # NASDAQ Cafe Story Authoring
@@ -111,6 +111,52 @@ Better examples:
 - 「じゃあ、この説明は実際の値動きとも合うのか。」
 - 「ただ、NASDAQまでAMD一社で説明すると、話がきれいすぎます。」
 
+## Stage 3.5 — Compress fact stacking with ABT logic
+
+Use **And / But / Therefore (ABT)** as a diagnostic, not as a mandatory sentence template.
+
+The purpose is to stop the middle of the episode from becoming:
+
+```text
+fact
+AND fact
+AND fact
+AND another fact
+```
+
+when the viewer's explanatory model is not changing.
+
+Before the spoken delivery pass, inspect adjacent Scenes 1–7. If two or more consecutive Scenes mainly add supporting facts, ask whether they can be expressed more economically as:
+
+```text
+known context / fact
+BUT contradiction, boundary, or mismatch
+THEREFORE updated interpretation
+```
+
+Example:
+
+```text
+雇用は予想を大きく下回った。
+でもNASDAQとSOXは上昇した。
+だから市場が採点していたのは、景気だけではない。
+```
+
+ABT is not permission to invent a contradiction. `BUT` must be supported by the locked evidence. `THEREFORE` may not strengthen causality, confidence, or scope beyond the Story Plan.
+
+### Fact-stacking compression rule
+
+If two consecutive Scenes are both primarily `support` or factual accumulation and neither changes the explanatory model materially:
+- keep every fact required by the formal role and causal contract,
+- compress duplicate explanation,
+- move repeated setup wording within compatible Scenes if needed,
+- make the next actual comparison/test/boundary arrive sooner.
+
+Do **not** merge or remove formal Scenes.
+Do **not** omit Expected / Actual / Gap, counterevidence, chronology, or required uncertainty for pacing.
+
+A weak Scene may remain short when its formal role is necessary. It does not need artificial drama.
+
 ## Stage 4 — Preserve the fox
 
 - first person is 「僕」
@@ -174,6 +220,7 @@ Allowed changes:
 - whether a question is explicit or implicit
 - optional short analogy
 - pauses/punctuation
+- compression of repeated factual setup when all guarded meaning remains present
 
 Forbidden changes:
 - Claim ID
@@ -213,6 +260,7 @@ Before Critic handoff:
 - formal roles match Story Plan
 - Scenes 1–8 each deliver their planned understanding payoff
 - Scenes 1–7 naturally justify continuation without question-factory behavior
+- adjacent Scenes are not merely fact stacking when a truthful ABT compression can expose the meaning faster
 - Scene 6 and 7 have independent value
 - Scene 8 closes the opening promise
 - Scene 9 adds nothing new
