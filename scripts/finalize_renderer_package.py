@@ -133,9 +133,80 @@ def _renderer_request(output_root: Path, date: str) -> dict[str, Any]:
         raise RendererFinalizationError("production request must bind renderer 2.4.0")
     return renderer
 
+
+def _build_validation_runtime_asset_registry(
+    *, output_root: Path, date: str, render_spec_path: Path
+) -> Path | None:
+    """Bind ready day-specific assets to the renderer's existing runtime registry.
+
+    This is validation-only. The immutable handoff later rebuilds the authoritative
+    runtime registry from the exact bundle and rechecks every asset SHA before Preview.
+    """
+    asset_manifest_path = output_root / "episodes" / date / "asset_manifest.json"
+    manifest = load_json(asset_manifest_path, "asset manifest")
+    entries: list[dict[str, Any]] = []
+    for index, asset in enumerate(manifest.get("assets", [])):
+        if not isinstance(asset, dict):
+            raise RendererFinalizationError(
+                f"asset manifest assets[{index}] must be an object"
+            )
+        if asset.get("status") != "ready":
+            continue
+        asset_id = asset.get("asset_id")
+        source_path = asset.get("path")
+        declared_sha = asset.get("sha256")
+        if not isinstance(asset_id, str) or not asset_id:
+            raise RendererFinalizationError(
+                f"asset manifest assets[{index}].asset_id is required for ready asset"
+            )
+        if not isinstance(source_path, str) or not source_path:
+            raise RendererFinalizationError(
+                f"asset manifest assets[{index}].path is required for ready asset"
+            )
+        if source_path.startswith("renderer-registry/"):
+            continue
+        source = (output_root / source_path).resolve()
+        root = output_root.resolve()
+        if root not in source.parents or not source.is_file():
+            raise RendererFinalizationError(
+                f"ready runtime asset path is missing or escapes output root: {source_path}"
+            )
+        actual_sha = sha256_file(source)
+        if not isinstance(declared_sha, str) or declared_sha != actual_sha:
+            raise RendererFinalizationError(
+                f"ready runtime asset SHA mismatch: {asset_id}"
+            )
+        entries.append(
+            {
+                "assetId": asset_id,
+                "path": f"generated/preflight-assets/{date}/{asset_id}/{source.name}",
+                "sha256": actual_sha,
+                "source": "handoff",
+            }
+        )
+    if not entries:
+        return None
+    entries.sort(key=lambda item: item["assetId"])
+    binding = {
+        "episodeDate": date,
+        "renderSpecSha256": sha256_file(render_spec_path),
+        "assets": entries,
+    }
+    bundle_id = hashlib.sha256(canonical_json(binding).encode("utf-8")).hexdigest()
+    registry = {
+        "contractVersion": "1.0.0",
+        "bundleId": bundle_id,
+        "episodeDate": date,
+        "assets": entries,
+    }
+    path = output_root / "verification" / date / "renderer_runtime_asset_registry.json"
+    write_atomic(path, registry)
+    return path
+
+
 def _validate_with_pinned_renderer(
     *, renderer_root: Path, expected_commit: str, render_spec_path: Path,
-    report_path: Path, date: str,
+    report_path: Path, date: str, runtime_asset_registry: Path | None = None,
 ) -> dict[str, Any]:
     renderer_root = renderer_root.resolve()
     if not (renderer_root / "scripts/spec-cli.ts").is_file():
@@ -154,7 +225,12 @@ def _validate_with_pinned_renderer(
         "npx", "--no-install", "tsx", "scripts/spec-cli.ts",
         "validate", str(render_spec_path.resolve()),
     ]
-    completed = subprocess.run(command, cwd=renderer_root, capture_output=True, text=True)
+    env = os.environ.copy()
+    if runtime_asset_registry is not None:
+        env["NASDAQ_CAFE_RUNTIME_ASSET_REGISTRY"] = str(runtime_asset_registry.resolve())
+    completed = subprocess.run(
+        command, cwd=renderer_root, capture_output=True, text=True, env=env
+    )
     report = {
         "contractVersion": "1.0.0",
         "status": "PASS" if completed.returncode == 0 else "FAIL",
@@ -168,6 +244,14 @@ def _validate_with_pinned_renderer(
             "path": render_spec_path.as_posix(),
             "sha256": sha256_file(render_spec_path),
         },
+        "runtimeAssetRegistry": (
+            {
+                "path": runtime_asset_registry.as_posix(),
+                "sha256": sha256_file(runtime_asset_registry),
+            }
+            if runtime_asset_registry is not None
+            else None
+        ),
         "validator": {
             "command": command, "exitCode": completed.returncode,
             "stdout": completed.stdout, "stderr": completed.stderr,
@@ -229,11 +313,15 @@ def finalize(*, output_root: Path, date: str, renderer_root: Path) -> dict[str, 
         renderer_compatibility_path=output_root / "contracts/visual_grammar_renderer_compatibility.json",
     )
     write_atomic(render_spec_path, strict)
+    runtime_asset_registry = _build_validation_runtime_asset_registry(
+        output_root=output_root, date=date, render_spec_path=render_spec_path
+    )
     renderer = _renderer_request(output_root, date)
     report_path = verification / "renderer_validation_report.json"
     validation = _validate_with_pinned_renderer(
         renderer_root=renderer_root, expected_commit=renderer["commit"],
         render_spec_path=render_spec_path, report_path=report_path, date=date,
+        runtime_asset_registry=runtime_asset_registry,
     )
     consistency_path = verification / "production_consistency_report.json"
     consistency = load_json(consistency_path, "production consistency report")
@@ -254,6 +342,8 @@ def finalize(*, output_root: Path, date: str, renderer_root: Path) -> dict[str, 
     artifacts["consistency_report"] = sha256_file(consistency_path)
     artifacts["renderer_validation_report"] = sha256_file(report_path)
     artifacts["visual_grammar_structural_report"] = sha256_file(structural_report_path)
+    if runtime_asset_registry is not None:
+        artifacts["renderer_runtime_asset_registry"] = sha256_file(runtime_asset_registry)
     preflight["renderer_validation"] = {
         "status": "pass", "repository": renderer["repository"],
         "commit": renderer["commit"], "contract_version": renderer["contract_version"],
@@ -272,6 +362,9 @@ def finalize(*, output_root: Path, date: str, renderer_root: Path) -> dict[str, 
             "financial_visual_consistency_report": cross_result["paths"]["cross_report"],
             "visual_grammar_structural_report": str(structural_report_path),
             "renderer_validation_report": str(report_path),
+            "renderer_runtime_asset_registry": (
+                str(runtime_asset_registry) if runtime_asset_registry is not None else None
+            ),
         },
         "hashes": {
             "render_spec": sha256_file(render_spec_path),
