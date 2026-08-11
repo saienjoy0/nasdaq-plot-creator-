@@ -13,7 +13,7 @@ permissions:
 jobs:
   diagnose:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 12
     env:
       DATE: 2026-08-10
       SOURCE_RUN_ID: "31451704351"
@@ -42,7 +42,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: .renderer/package-lock.json
       - run: python -m pip install --disable-pip-version-check jsonschema
+      - run: npm ci --prefix .renderer
       - name: Capture exact error
         shell: bash
         run: |
@@ -52,8 +58,9 @@ jobs:
             > /tmp/out 2> /tmp/err
           rc=$?
           set -e
-          TEXT="$( { echo "exit_code=$rc"; echo '--- stdout ---'; tail -n 50 /tmp/out; echo '--- stderr ---'; tail -n 100 /tmp/err; } )"
+          TEXT="$( { echo "exit_code=$rc"; echo '--- stdout ---'; tail -n 80 /tmp/out; echo '--- stderr ---'; tail -n 120 /tmp/err; } )"
           TITLE="TEMP BUILD PRODUCTION DIAGNOSTIC 2026-08-10"
-          BODY="Temporary diagnostic.\n\n\`\`\`text\n${TEXT}\n\`\`\`"
-          gh issue create --title "$TITLE" --body "$BODY"
+          BODY="Temporary diagnostic attempt 2.\n\n\`\`\`text\n${TEXT}\n\`\`\`"
+          n="$(gh issue list --state open --search "${TITLE} in:title" --json number,title --jq ".[] | select(.title == \"${TITLE}\") | .number" | head -n1)"
+          if [[ -n "$n" ]]; then gh issue edit "$n" --body "$BODY"; else gh issue create --title "$TITLE" --body "$BODY"; fi
           test "$rc" -ne 0
