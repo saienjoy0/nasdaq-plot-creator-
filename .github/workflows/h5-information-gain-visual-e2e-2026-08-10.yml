@@ -96,21 +96,12 @@ jobs:
             --acceptance-source "$GITHUB_WORKSPACE/.acceptance-fixture" \
             --output verification/$DATE/h5_story_interest_regression.json
 
-      - name: Restore immutable intake and successful wave-2 authoring
+      - name: Restore immutable intake only
         run: |
           python tests/real-day-2026-08-10/restore_immutable_intake.py \
             --repo-root . \
             --acceptance-source .acceptance-fixture \
             --output verification/$DATE/h5_immutable_intake_restore.json
-          python tests/real-day-2026-08-10/sync_story_plan_authoring.py \
-            --repo-root . \
-            --output verification/$DATE/h5_story_plan_authoring_sync.json
-          python tests/real-day-2026-08-10/sync_scene3_renderer_authoring.py \
-            --repo-root . \
-            --output verification/$DATE/h5_scene3_renderer_authoring_sync.json
-          python tests/real-day-2026-08-10/sync_public_timing_authoring.py \
-            --repo-root . \
-            --output verification/$DATE/h5_public_timing_authoring_sync.json
 
       - name: Verify frozen dossier and wave-2 lineage
         run: |
@@ -199,7 +190,6 @@ jobs:
           date='2026-08-10'
           render=json.loads(Path(f'render-specs/{date}/render_spec.json').read_text(encoding='utf-8'))
           scenes={scene['sceneNumber']:scene for scene in render['scenes']}
-
           s6=scenes[6]
           series=s6['visualBeats'][0]
           compare=s6['visualBeats'][1]
@@ -210,16 +200,15 @@ jobs:
               raise SystemExit('Scene 6 Beat 1 precision drift')
           number_map={item['numberId']:item.get('numericValue') for item in s6.get('numbers', [])}
           values=[number_map[item] for item in rt['seriesObjectIds']]
-          if values != [719.16, 720.23, 720.531]:
+          if values != [719.16,720.23,720.531]:
               raise SystemExit(f'QQQ release window drift: {values}')
-          if compare['visualTemplate'] != 'index-return-bars' or compare.get('visualGrammarId') != 'reaction':
+          if compare['visualTemplate'] != 'index-return-bars' or compare['visualGrammar']['grammarId'] != 'reaction':
               raise SystemExit('Scene 6 Beat 2 is not reaction comparison')
           release={item['label']:item['numericValue'] for item in s6['numbers'] if item['numberId'] in compare['objectIds']}
           expected={'QQQ':0.1487846932532566,'SOXX':0.24766199682106915,'NVIDIA':0.1636735621732166,'MCHP':-0.025131942699163634}
-          for key, target in expected.items():
-              if key not in release or not math.isclose(release[key], target, rel_tol=0, abs_tol=1e-6):
+          for key,target in expected.items():
+              if key not in release or not math.isclose(release[key],target,rel_tol=0,abs_tol=1e-6):
                   raise SystemExit(f'Scene 6 release return drift {key}: {release.get(key)}')
-
           s7=scenes[7]
           if s7['visualBeats'][0]['visualTemplate'] != 'news-media':
               raise SystemExit('Scene 7 Beat 1 must be Microchip real IR')
@@ -228,13 +217,11 @@ jobs:
           daily={item['label']:item['numericValue'] for item in s7['numbers'] if item['numberId'] in s7['visualBeats'][1]['objectIds']}
           if daily != {'MCHP':13.89,'AMD':-1.21,'Alphabet':-0.96,'Microsoft':0.03}:
               raise SystemExit(f'Scene 7 daily divergence drift: {daily}')
-
           s8=scenes[8]
           if [b['visualTemplate'] for b in s8['visualBeats'][:2]] != ['verification-matrix','verification-checklist']:
               raise SystemExit('Scene 8 must integrate already-seen evidence')
-          if any(b.get('visualGrammarId') != 'verification' for b in s8['visualBeats'][:2]):
+          if any(b['visualGrammar']['grammarId'] != 'verification' for b in s8['visualBeats'][:2]):
               raise SystemExit('Scene 8 grammar drift')
-
           selected=json.loads(Path(f'working/{date}/visual_source_selected_assets.json').read_text(encoding='utf-8'))
           if selected.get('selectedPath') != 'fallback':
               raise SystemExit(f"expected approved fallback route, got {selected.get('selectedPath')!r}")
@@ -243,12 +230,11 @@ jobs:
               raise SystemExit('BLS fallback asset drift')
           if rows.get('vsi-20260810-microchip-ir',{}).get('assetId') != 'daily-microchip-q1-fy27-ir-secondary':
               raise SystemExit('Microchip real IR fallback-route asset drift')
-
           story=json.loads(Path(f'working/{date}/story-engine/story_script.json').read_text(encoding='utf-8'))
           render_narration={scene['sceneId']:''.join(chunk['speechText'] for chunk in scene['narrationChunks']) for scene in render['scenes']}
-          for scene in story['scenes']:
-              if render_narration[scene['scene_id']] != scene['narration']:
-                  raise SystemExit(f"narration mismatch: {scene['scene_id']}")
+          for row in story['scenes']:
+              if render_narration[row['scene_id']] != row['narration']:
+                  raise SystemExit(f"narration mismatch: {row['scene_id']}")
           print('PASS H5 Story -> Visual Evidence -> assembled render')
           PY
 
