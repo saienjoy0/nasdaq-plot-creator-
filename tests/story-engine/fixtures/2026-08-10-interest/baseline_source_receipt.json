@@ -1,0 +1,41 @@
+{
+  "contract_version": "1.0.0",
+  "episode_date": "2026-08-10",
+  "files": {
+    "causal_dossier": {
+      "artifact_path": "research/2026-08-10/causal_research_dossier_2026-08-10.json",
+      "bytes": 27731,
+      "fixture_path": "tests/story-engine/fixtures/2026-08-10-interest/baseline/causal_dossier.json",
+      "sha256": "d4ddd1277376865dae1f8d534e4844b2967cf31667e19fce4b78a5bbb04e6533"
+    },
+    "creative_review": {
+      "artifact_path": "working/2026-08-10/story-engine/creative_review.json",
+      "bytes": 2697,
+      "fixture_path": "tests/story-engine/fixtures/2026-08-10-interest/baseline/creative_review.json",
+      "sha256": "4e24377f9568297be73ff4ef94237dc54496552173f47018ea66fd4e484b108d"
+    },
+    "story_plan": {
+      "artifact_path": "working/2026-08-10/story-engine/story_plan.json",
+      "bytes": 13174,
+      "fixture_path": "tests/story-engine/fixtures/2026-08-10-interest/baseline/story_plan.json",
+      "sha256": "4da26c26e2fbc845e0ca59715b054eec6356fc1c1a7856a46631da359f6ea872"
+    },
+    "story_script": {
+      "artifact_path": "working/2026-08-10/story-engine/story_script.json",
+      "bytes": 11564,
+      "fixture_path": "tests/story-engine/fixtures/2026-08-10-interest/baseline/story_script.json",
+      "sha256": "6c53d9810528391e3d0306036b42b5cbe3e0b76d7eac8a97a0c130bb384c8c61"
+    }
+  },
+  "source": {
+    "artifact_id": 9060389935,
+    "artifact_name": "h4-clean-real-day-2026-08-10",
+    "artifact_sha256": "696a65ec8ef837860d3a41c8feae65ead5a08c9625881190bab4c9dc02b02705",
+    "artifact_size_bytes": 223099,
+    "collector_run_id": 31357986916,
+    "head_branch": "feat/h4-clean-2026-08-10-regression",
+    "head_sha": "aa23c9937ecab51ebd259f41ceb7383cb06369bc",
+    "workflow_name": "H4 Clean Real-Day 2026-08-10",
+    "workflow_run_id": 31382440383
+  }
+}
