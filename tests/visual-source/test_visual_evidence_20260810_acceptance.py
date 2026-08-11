@@ -86,9 +86,7 @@ def scene(number: int, beats: list[dict]) -> dict:
 
 def build_render() -> dict:
     scenes = [scene(number, []) for number in range(1, 10)]
-    scenes[1]["visualBeats"] = [
-        visual_beat("vb-02-01", ["source-002"], function="Anchor")
-    ]
+    scenes[1]["visualBeats"] = [visual_beat("vb-02-01", ["source-002"], function="Anchor")]
     scenes[1]["evidenceSourceIds"] = ["source-002"]
     scenes[5]["visualBeats"] = [
         visual_beat("vb-06-01", ["source-001"], function="Explain"),
@@ -142,15 +140,12 @@ def build_render() -> dict:
     }
 
 
-def test_real_20260810_receipt_becomes_source_docs_and_verified_series(tmp_path: Path) -> None:
+def test_real_20260810_receipt_becomes_fallback_plus_real_ir_and_verified_series(tmp_path: Path) -> None:
     render_path = tmp_path / "render-specs/2026-08-10/render_spec.json"
     render_path.parent.mkdir(parents=True, exist_ok=True)
     render_path.write_text(json.dumps(build_render(), ensure_ascii=False), encoding="utf-8")
 
-    receipt_target = (
-        tmp_path
-        / "tests/fixtures/real-day-2026-08-10/collector_wave2_success_receipt.json"
-    )
+    receipt_target = tmp_path / "tests/fixtures/real-day-2026-08-10/collector_wave2_success_receipt.json"
     receipt_target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(
         ROOT / "tests/fixtures/real-day-2026-08-10/collector_wave2_success_receipt.json",
@@ -159,7 +154,9 @@ def test_real_20260810_receipt_becomes_source_docs_and_verified_series(tmp_path:
 
     result = acceptance.apply(tmp_path)
     assert result["visualSourceIntentCount"] == 2
-    assert result["selectedPath"] == "primary"
+    assert result["selectedPath"] == "fallback"
+    assert result["approvedFallbackEvidence"] == ["source-002"]
+    assert result["realEvidence"] == ["source-004"]
     assert [item["close"] for item in result["verifiedSeries"]["points"]] == [
         719.16,
         720.23,
@@ -187,20 +184,14 @@ def test_real_20260810_receipt_becomes_source_docs_and_verified_series(tmp_path:
     assert scene6["assetPlacements"][0]["assetId"] == "background_scene_semiconductor"
 
     intents_doc = json.loads(
-        (tmp_path / "working/2026-08-10/visual_source_intents.json").read_text(
-            encoding="utf-8"
-        )
+        (tmp_path / "working/2026-08-10/visual_source_intents.json").read_text(encoding="utf-8")
     )
-    assert {item["sourceIds"][0] for item in intents_doc["intents"]} == {
-        "source-002",
-        "source-004",
-    }
-    assert {item["primary"]["sourceKind"] for item in intents_doc["intents"]} == {
-        "official-url"
-    }
-    assert {item["fallback"]["sourceKind"] for item in intents_doc["intents"]} == {
-        "existing-asset"
-    }
+    assert {item["sourceIds"][0] for item in intents_doc["intents"]} == {"source-002", "source-004"}
+    assert {item["primary"]["sourceKind"] for item in intents_doc["intents"]} == {"official-url"}
+    by_source = {item["sourceIds"][0]: item for item in intents_doc["intents"]}
+    assert by_source["source-002"]["fallback"]["sourceKind"] == "existing-asset"
+    assert by_source["source-004"]["fallback"]["sourceKind"] == "official-url"
+    assert by_source["source-004"]["fallback"]["assetId"] == "daily-microchip-q1-fy27-ir-fallback"
 
     report = gate.validate_visual_evidence(render=render, intents_doc=intents_doc)
     assert report["status"] == "PASS", report
