@@ -236,11 +236,11 @@ jobs:
           microchip=rows.get('vsi-20260810-microchip-ir')
           if not bls or bls.get('assetId') != 'background_scene_news':
               raise SystemExit(f'BLS approved fallback asset mismatch: {bls}')
-          if not microchip or microchip.get('assetId') != 'daily-microchip-q1-fy27-ir-fallback':
+          if not microchip or microchip.get('assetId') != 'daily-microchip-q1-fy27-ir-secondary':
               raise SystemExit(f'Microchip real fallback-route asset mismatch: {microchip}')
 
           placements={p['assetId'] for scene in render['scenes'] for p in scene.get('assetPlacements', [])}
-          required={'background_scene_news','daily-microchip-q1-fy27-ir-fallback'}
+          required={'background_scene_news','daily-microchip-q1-fy27-ir-secondary'}
           if not required.issubset(placements):
               raise SystemExit(f'assembled production render missing selected assets: {sorted(required-placements)}')
 
@@ -363,7 +363,7 @@ jobs:
 
           final_render=json.loads(render_text)
           placements={p['assetId'] for scene in final_render['scenes'] for p in scene.get('assetPlacements', [])}
-          required_assets={'background_scene_news','daily-microchip-q1-fy27-ir-fallback'}
+          required_assets={'background_scene_news','daily-microchip-q1-fy27-ir-secondary'}
           if not required_assets.issubset(placements):
               raise SystemExit(f'final render spec lost selected visual assets: {sorted(required_assets-placements)}')
           scene8=next(scene for scene in final_render['scenes'] if scene['sceneNumber']==8)

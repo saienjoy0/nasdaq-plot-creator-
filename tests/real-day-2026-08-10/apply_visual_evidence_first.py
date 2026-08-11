@@ -28,6 +28,8 @@ MICROCHIP_URL = (
     "https://ir.microchip.com/news-events/press-releases/detail/1409/"
     "microchip-technology-announces-financial-results-for-first-quarter-of-fiscal-year-2027"
 )
+MICROCHIP_PRIMARY_ASSET_ID = "daily-microchip-q1-fy27-ir"
+MICROCHIP_SECONDARY_ASSET_ID = "daily-microchip-q1-fy27-ir-secondary"
 
 
 def load(path: Path) -> dict[str, Any]:
@@ -285,11 +287,12 @@ def apply(root: Path) -> dict[str, Any]:
                 purpose=(
                     "Show the actual Microchip Q1 FY27 IR release while the approved narration states "
                     "its results and next-quarter guidance. The fallback route uses the same official "
-                    "page with a distinct asset so a BLS-only technical failure does not discard it."
+                    "page with a distinct production-safe asset ID so a BLS-only technical failure "
+                    "does not discard the real IR."
                 ),
                 primary=visual_candidate(
                     candidate_id="vsp-20260810-microchip-primary",
-                    asset_id="daily-microchip-q1-fy27-ir",
+                    asset_id=MICROCHIP_PRIMARY_ASSET_ID,
                     source_kind="official-url",
                     locator={"url": MICROCHIP_URL},
                     capture_method="webpage-screenshot",
@@ -298,7 +301,7 @@ def apply(root: Path) -> dict[str, Any]:
                 ),
                 fallback=visual_candidate(
                     candidate_id="vsp-20260810-microchip-fallback",
-                    asset_id="daily-microchip-q1-fy27-ir-fallback",
+                    asset_id=MICROCHIP_SECONDARY_ASSET_ID,
                     source_kind="official-url",
                     locator={"url": MICROCHIP_URL},
                     capture_method="webpage-screenshot",

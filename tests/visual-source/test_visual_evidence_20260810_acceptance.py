@@ -195,7 +195,8 @@ def test_real_20260810_receipt_becomes_fallback_plus_real_ir_and_verified_series
     by_source = {item["sourceIds"][0]: item for item in intents_doc["intents"]}
     assert by_source["source-002"]["fallback"]["sourceKind"] == "existing-asset"
     assert by_source["source-004"]["fallback"]["sourceKind"] == "official-url"
-    assert by_source["source-004"]["fallback"]["assetId"] == "daily-microchip-q1-fy27-ir-fallback"
+    assert by_source["source-004"]["fallback"]["assetId"] == acceptance.MICROCHIP_SECONDARY_ASSET_ID
+    assert "fallback" not in acceptance.MICROCHIP_SECONDARY_ASSET_ID
 
     report = gate.validate_visual_evidence(render=render, intents_doc=intents_doc)
     assert report["status"] == "PASS", report
