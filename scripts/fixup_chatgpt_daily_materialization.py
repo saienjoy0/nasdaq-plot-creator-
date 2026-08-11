@@ -3,8 +3,9 @@
 
 No editorial decisions are made here. This only maps already-approved authoring into
 legacy Story/Renderer field names, preserves dossier-selected Story wording exactly,
-applies the canonical fixed Scene 9 closing, normalizes strict Renderer 2.4 enum aliases,
-and binds explicitly-authored reaction assets to generated Beat/object IDs.
+applies the canonical fixed Scene 9 closing, normalizes projection-only whitespace and
+source anchors, projects explicit financial bindings, normalizes strict Renderer 2.4
+enum aliases, and binds explicitly-authored reaction assets to generated Beat/object IDs.
 """
 from __future__ import annotations
 
@@ -75,20 +76,52 @@ def normalize_story_plan(authoring: dict, root: Path, date: str) -> None:
     dump(plan_path, plan)
 
 
-def normalize_story_script(root: Path, date: str) -> None:
+def normalize_story_script(authoring: dict, root: Path, date: str) -> None:
     script_path = root / "working" / date / "story-engine" / "templates" / "story_script.template.json"
     script = load(script_path)
-    closing = next(
-        (scene for scene in script["scenes"] if scene.get("scene_id") == "scene-09"),
-        None,
-    )
-    if closing is None:
-        raise SystemExit("story script scene-09 missing")
-    closing["narration"] = FIXED_SCENE_09_NARRATION
-    closing["connection_to_previous"] = "closing"
-    closing["evidence_ids"] = []
-    closing["causal_claims"] = []
+    authored_scenes = authoring.get("scenes", [])
+    if len(authored_scenes) != 9:
+        raise SystemExit(f"authoring must contain nine scenes; found={len(authored_scenes)}")
+
+    by_id = {scene.get("scene_id"): scene for scene in script.get("scenes", [])}
+    for scene_index, authored_scene in enumerate(authored_scenes, 1):
+        scene_id = f"scene-{scene_index:02d}"
+        scene = by_id.get(scene_id)
+        if scene is None:
+            raise SystemExit(f"story script scene missing: {scene_id}")
+        if scene_index < 9:
+            chunks = authored_scene.get("chunks", [])
+            if not chunks:
+                raise SystemExit(f"authoring chunks missing: {scene_id}")
+            scene["narration"] = "".join(chunk["text"] for chunk in chunks)
+        else:
+            scene["narration"] = FIXED_SCENE_09_NARRATION
+            scene["connection_to_previous"] = "closing"
+            scene["evidence_ids"] = []
+            scene["causal_claims"] = []
     dump(script_path, script)
+
+
+def normalize_public_episode_package(authoring: dict, root: Path, date: str) -> None:
+    package_path = root / "episodes" / date / f"episode_package_public_{date}.md"
+    text = package_path.read_text(encoding="utf-8")
+    for scene_index, scene in enumerate(authoring.get("scenes", []), 1):
+        source_line = f"- ナレーションで示す出典主体・媒体：{scene.get('sourceLabel', '')}"
+        if source_line in text:
+            continue
+        anchor = f"- 根拠と不確実性：{scene.get('uncertainty', '')}"
+        if anchor not in text:
+            raise SystemExit(f"episode package uncertainty anchor missing: scene-{scene_index:02d}")
+        text = text.replace(anchor, source_line + "\n" + anchor, 1)
+    package_path.write_text(text, encoding="utf-8")
+
+
+def normalize_financial_bindings(authoring: dict, root: Path, date: str) -> None:
+    rows = authoring.get("financialBindings")
+    if not isinstance(rows, list):
+        raise SystemExit("financialBindings must be an authored list")
+    path = root / "working" / date / "financial_visual_bindings.json"
+    dump(path, {"contractVersion": "1.0.0", "episodeDate": date, "bindings": rows})
 
 
 def main() -> int:
@@ -102,7 +135,9 @@ def main() -> int:
     review = authoring["review"]
 
     normalize_story_plan(authoring, root, date)
-    normalize_story_script(root, date)
+    normalize_story_script(authoring, root, date)
+    normalize_public_episode_package(authoring, root, date)
+    normalize_financial_bindings(authoring, root, date)
 
     creative_path = root / "working" / date / "story-engine" / "templates" / "creative_review.template.json"
     creative = load(creative_path)
@@ -199,8 +234,9 @@ def main() -> int:
     dump(reaction_path, reaction)
 
     print(
-        f"FIXED daily materialization {date}: story preservation/fixed closing + renderer enums/review + "
-        f"{len(rows)} reaction bindings / {len(asset_by_beat)} bound assets"
+        f"FIXED daily materialization {date}: story projection compatibility + "
+        f"{len(rows)} reaction bindings / {len(asset_by_beat)} bound assets + "
+        f"{len(authoring.get('financialBindings', []))} financial bindings"
     )
     return 0
 
