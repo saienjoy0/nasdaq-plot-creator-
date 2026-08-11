@@ -155,6 +155,10 @@ def init_request(*, workspace: Path, date: str, daily_source: Path, requested_sc
             "commit": renderer_commit,
             "contract_version": renderer_contract_version,
         },
+        "visual_director": {
+            "required": True,
+            "contract_version": "1.0.0",
+        },
         "approvals": {
             "preview_requested": requested_scope == "preview",
             "final_requested": False,
