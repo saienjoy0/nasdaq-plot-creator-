@@ -12,6 +12,14 @@ EXPECTED_ROLES = [
 CONF = {'unknown':0,'low':1,'medium':2,'high':3}
 FORBIDDEN_ADVICE = ('買い場','買うべき','売るべき','必ず上がる','必ず下がる','暴落確定','乗り遅れるな')
 FORBIDDEN_FIRST_PERSON = re.compile(r'(^|[、。\s])(私|俺|われわれ|我々)([はがをも、。\s]|$)')
+HARD_NARRATIVE_FINDINGS = {
+    'HOOK_EXHAUSTS_STORY',
+    'NO_UNDERSTANDING_UPGRADE',
+    'FAKE_UNDERSTANDING_UPGRADE',
+    'NO_LATE_PAYOFF',
+    'OPENING_PROMISE_NOT_RECOVERED',
+    'ENDING_NOT_BOOKENDED',
+}
 
 class Result:
     def __init__(self, errors, warnings): self.errors=errors; self.warnings=warnings
@@ -136,6 +144,11 @@ def validate_review(review:dict, errors:list[str]):
     vals=list(review['scores'].values()); total=sum(vals)
     if review['total_score']!=total: errors.append(f'review total_score={review["total_score"]} but sum={total}')
     validate_scene_checks(review,errors)
+
+    for finding in review.get('findings',[]):
+        if finding.get('issue_type') in HARD_NARRATIVE_FINDINGS and finding.get('severity') == 'minor':
+            errors.append(f"{finding.get('finding_id')}: {finding.get('issue_type')} must be major or critical")
+
     severe=any(f['severity']=='critical' for f in review['findings'])
     major=any(f['severity']=='major' for f in review['findings'])
     if review['immediate_failures'] or severe:
@@ -148,6 +161,27 @@ def validate_review(review:dict, errors:list[str]):
         expected='restructure'
     else:
         expected='fail'
+
+    if review['verdict']=='pass':
+        checks=review['scene_checks']
+        for check in checks[:7]:
+            sid=check['scene_id']
+            if not check['payoff_delivered']:
+                errors.append(f'{sid}: PASS requires payoff_delivered=true')
+            if not check['belief_changed']:
+                errors.append(f'{sid}: PASS requires belief_changed=true')
+            if check['continuation_reason_natural'] is not True:
+                errors.append(f'{sid}: PASS requires a natural continuation reason')
+        scene8=checks[7]
+        if not scene8['payoff_delivered']:
+            errors.append('scene-08: PASS requires payoff_delivered=true')
+        if not scene8['belief_changed']:
+            errors.append('scene-08: PASS requires belief_changed=true')
+        if not scene8['closure_effective']:
+            errors.append('scene-08: PASS requires effective closure')
+        if not scene8['opening_promise_recovered']:
+            errors.append('scene-08: PASS requires opening-promise recovery')
+
     if review['verdict']!=expected: errors.append(f'review verdict must be {expected} for scores/findings')
     return {f['finding_id']:f for f in review['findings']}
 

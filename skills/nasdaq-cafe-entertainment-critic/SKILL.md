@@ -1,7 +1,7 @@
 ---
 name: nasdaq-cafe-entertainment-critic
 description: Review a NASDAQ Cafe story for interest, clarity, understanding progression, fox voice, and late payoff while preserving the frozen causal contract.
-version: 1.1.1
+version: 1.1.2
 ---
 
 # NASDAQ Cafe Entertainment Critic
@@ -15,6 +15,10 @@ The Critic may improve presentation. It may not change facts, chronology, Expect
 The governing principle is:
 
 > **Do not ask whether the script contains enough questions. Ask whether the viewer understands something new, and whether that new understanding makes the next Scene valuable.**
+
+A second governing principle is:
+
+> **Score is secondary. A script that fails the understanding-upgrade or late-value hard gates cannot PASS even at 29/30.**
 
 ## Reviewer modes
 
@@ -56,6 +60,108 @@ Normal pass requires:
 - every score >= 3
 - total >= 25/30
 - no unresolved major/critical finding
+- all hard narrative gates below pass
+
+## Hard narrative gates — run before scoring
+
+### Gate A — Hook Exhaustion Test
+
+Ask:
+
+> By the end of Scene 1–2, has the script already stated the primary driver, the main amplifiers, the important boundary/counterevidence, and the final synthesis so completely that the rest is only documentation?
+
+If yes, issue `HOOK_EXHAUSTS_STORY` as major or critical.
+
+Early value is good. Early exhaustion is not.
+
+Allowed:
+
+```text
+「鍵は金利です」
+```
+
+Not allowed as a complete opening synthesis:
+
+```text
+「雇用悪化で金利観測が下がり、原油も下がり、好決算も重なり、ただし全面高ではなく…」
+```
+
+when those are the episode's remaining discoveries.
+
+### Gate B — Understanding Upgrade Authenticity Test
+
+The Story Plan field is still named `midpoint_turn`, but review it as an **Evidence-backed Understanding Upgrade**.
+
+A real upgrade changes, branches, narrows, or materially tests the explanatory model.
+
+Valid forms include:
+- turn
+- branch
+- boundary
+- scale reveal
+- mechanism reveal
+- disproof
+- reason-unknown payoff
+
+A mere extra fact or extra supporting factor is not an upgrade.
+
+If the nominated upgrade is only information addition, issue `NO_UNDERSTANDING_UPGRADE`.
+
+If the author manufactured a turn by withholding evidence that was already available, issue `FAKE_UNDERSTANDING_UPGRADE` or `FAKE_OPEN_LOOP`.
+
+Do **not** demand a theatrical reversal when evidence does not support one.
+
+### Gate C — Scene 4 → Scene 8 Understanding Delta
+
+Ask explicitly:
+
+> What does the viewer understand in Scene 8 that they did not already understand by Scene 4?
+
+The answer must be concrete and evidence-backed.
+
+Examples of valid delta:
+- macro move vs company-specific move separated
+- causal scope narrowed
+- a peer or price reaction limits the simple explanation
+- the actual transmission mechanism becomes visible
+- a one-cause explanation becomes reason_unknown
+- falsification conditions become materially clearer
+
+Invalid delta:
+
+```text
+Scene 4: weak jobs lowered rate-hike expectations and helped tech.
+Scene 8: weak jobs lowered rate-hike expectations and helped tech, but causality cannot be proven perfectly.
+```
+
+That is the same answer plus a disclaimer.
+
+If there is no material delta, issue `NO_LATE_PAYOFF` as major or critical.
+
+### Gate D — Late Value Deletion Test
+
+Ask:
+
+> If Scenes 6–8 were removed, what important understanding would the viewer lose?
+
+The lost value must be stated concretely.
+
+If the answer is only:
+- extra examples
+- another supporting statistic
+- repeated caution
+- a checklist that does not change the interpretation
+
+then issue `NO_LATE_PAYOFF`.
+
+The late section is not allowed to exist merely because the format has nine Scenes.
+
+### Gate E — No Forced Drama
+
+If the evidence does not support a reversal, do not fail the script for lacking one.
+A branch, boundary, mechanism reveal, price test, or reason-unknown payoff can satisfy the upgrade requirement.
+
+If the only way to make the episode pass would be to invent a dramatic reversal, return upstream or shorten the episode instead.
 
 ## Scene checks
 
@@ -76,6 +182,8 @@ procedural_language_dominant
 A Scene may continue by question, comparison, test, boundary, counterevidence, implication, or verification.
 Do not penalize a Scene merely because it does not end with a question mark.
 
+A PASS review should mark `payoff_delivered=true` and `belief_changed=true` for every Scene 1–7. If either is false, the Scene requires a matching finding and the review cannot PASS until fixed.
+
 ### Scene 8 — Closure Check
 
 Record:
@@ -93,6 +201,8 @@ procedural_language_dominant
 
 Scene 8 must **not** be failed for having no next-scene hook. Its job is to close the analytical story before the fixed Scene 9 exit.
 
+A PASS review requires Scene 8 to deliver a payoff, change understanding relative to the earlier provisional answer, close effectively, and recover the opening promise at a deeper level.
+
 ## Immediate narrative concerns
 
 Detect especially:
@@ -104,10 +214,12 @@ Detect especially:
 - a Scene dead-ends before Scene 8
 - procedural transitions dominate
 - Scene order is interchangeable
-- no meaningful midpoint turn
+- no evidence-backed understanding upgrade
+- the nominated upgrade is only an extra supporting fact
 - Scenes 6–8 are appendices
 - Scene 8 is only a schedule/checklist
 - Scene 8 does not recover the opening promise
+- Scene 8 repeats the Scene 4 answer plus a disclaimer
 - abstract editorial language replaces human explanation
 - generic narrator voice replaces the fox
 
@@ -121,11 +233,16 @@ NO_BELIEF_CHANGE
 FAKE_OPEN_LOOP
 DEAD_END_SCENE
 PROCEDURAL_NARRATION
+HOOK_EXHAUSTS_STORY
+NO_UNDERSTANDING_UPGRADE
+FAKE_UNDERSTANDING_UPGRADE
 NO_LATE_PAYOFF
 OPENING_PROMISE_NOT_RECOVERED
 ENDING_NOT_BOOKENDED
 NO_NEW_EVIDENCE_OR_MEANING
 ```
+
+Legacy `NO_MIDPOINT_TURN` may be used only when the Story Plan lacks any nominated upgrade at all. Prefer `NO_UNDERSTANDING_UPGRADE` when an upgrade exists structurally but does not actually change the explanatory model.
 
 Causal-safety findings remain critical:
 
@@ -167,13 +284,32 @@ Scene possesses the answer
 Scene 4 may reveal the central hypothesis.
 That is not a failure.
 
-The Critic must instead ask whether Scenes 6–8 still add distinct value:
+The Critic must instead ask whether Scenes 6–8 still add distinct value and whether Scene 8 is materially more informed than Scene 4.
+
+Distinct late value can come from:
 - market reaction test
+- second causal engine
+- mechanism reveal
 - boundary / counterevidence
 - uncertainty / falsification condition
 - closing reframe
 
 If Scene 4 makes the rest optional, issue `NO_LATE_PAYOFF`.
+
+## Hard-finding severity rule
+
+The following findings may not be downgraded to `minor` merely to preserve a PASS:
+
+```text
+HOOK_EXHAUSTS_STORY
+NO_UNDERSTANDING_UPGRADE
+FAKE_UNDERSTANDING_UPGRADE
+NO_LATE_PAYOFF
+OPENING_PROMISE_NOT_RECOVERED
+ENDING_NOT_BOOKENDED
+```
+
+Use at least `major` unless the same defect is causal-safety critical.
 
 ## Targeted patch policy
 
@@ -221,6 +357,8 @@ Final title and thumbnail promise audits occur only after the final episode pack
 ## Acceptance
 
 A PASS 04 review plus a passing causal bundle validator is required for Story Engine creative acceptance.
+
+A high numerical score cannot override a hard narrative gate.
 
 When no external Critic executed, keep:
 

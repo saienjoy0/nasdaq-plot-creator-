@@ -1,6 +1,6 @@
 ---
 name: nasdaq-cafe-story-engine
-version: 1.3.0
+version: 1.3.1
 description: Turn a validated causal dossier into a reviewed 9-Scene episode package by chaining viewer understanding without changing market causality, then hand the reviewed story to explicit Visual Evidence Planning.
 ---
 
@@ -23,7 +23,11 @@ causal_dossier_valid
 
 > **朝のNASDAQカフェは、質問を連鎖させる番組ではない。視聴者の理解を連鎖させる番組である。**
 
+> **結論を遅らせるのではなく、結論を進化させる。**
+
 Do not retain viewers by hiding a known answer. Give a real payoff, then let that new understanding make the next comparison, test, boundary, counterevidence, implication or verification valuable.
+
+The opening may give the direction and a provisional answer. The late section must still change, branch, narrow, reveal mechanism, or materially test that answer. A repeated answer plus extra examples or disclaimers is not progression.
 
 The strict layer is market meaning. The flexible layer is spoken delivery.
 
@@ -68,6 +72,8 @@ Extract from the validated dossier:
 Do not write narration.
 For reason_unknown, explain uncertainty rather than inventing a cause.
 
+Choose an angle for explanatory value, not for theatrical reversals. The same evidence can support a compelling causal chain, comparison, branch, boundary, mechanism reveal, or reason-unknown story without a fake surprise.
+
 ## Pass B — Understanding Progression / Story Plan v1.2
 
 Keep 03's formal Scene 1–9 roles unchanged.
@@ -99,6 +105,79 @@ counterevidence
 implication
 verification
 ```
+
+A new number or another supporting headline does not automatically count as progress. The viewer's explanatory model must actually move.
+
+### Evidence-backed Understanding Upgrade
+
+The legacy Story Plan field remains named `midpoint_turn` for schema compatibility. Its semantic meaning is now **Understanding Upgrade**, not mandatory dramatic reversal.
+
+It must occur in Scene 4–6 and must be backed by real Evidence IDs.
+
+Valid upgrade forms:
+
+```text
+turn
+branch
+boundary
+scale_reveal
+mechanism_reveal
+disproof
+reason_unknown_payoff
+```
+
+A valid upgrade changes, branches, narrows, or materially tests the provisional explanation.
+
+Examples:
+- a simple explanation is rejected by evidence
+- one apparent sector move separates into macro and company-specific engines
+- a company explanation is narrowed by peer/index evidence
+- actual price timing materially tests the hypothesis
+- a mechanism becomes visible that the headline did not reveal
+- competing explanations fail enough that reason_unknown is the strongest conclusion
+
+Invalid:
+
+```text
+暫定解：弱い雇用 → 利上げ観測後退
+追加情報：原油も下落
+最終解：弱い雇用 → 利上げ観測後退
+```
+
+That is additional support, not an Understanding Upgrade.
+
+Do not create a reversal to satisfy the contract. If no reversal is supported, use a real branch, boundary, mechanism, price test, or reason-unknown payoff. If the evidence cannot support any meaningful late upgrade, shorten the episode rather than inventing drama.
+
+### Scene 4 → Scene 8 delta
+
+Scene 4 may already reveal the central hypothesis. That is allowed.
+
+But Scene 8 must be materially more informed than Scene 4. Before authoring, state internally:
+
+```text
+Scene 4 provisional understanding:
+Scene 8 final understanding:
+What evidence-backed understanding was added or changed:
+```
+
+If the third line cannot be answered concretely, the plan has no sufficient late value.
+
+### Scenes 6–8 deletion test
+
+Before authoring, ask:
+
+> If Scenes 6–8 were removed, what important understanding would the viewer lose?
+
+Valid lost value includes:
+- a second causal engine
+- a scope limit
+- a peer contradiction
+- an actual price-reaction test
+- a mechanism reveal
+- a falsification condition
+- a defensible reason_unknown conclusion
+
+If the answer is only extra examples, another supporting statistic, repeated caution, or a schedule/checklist, the late section is an appendix and the plan must be reworked or shortened.
 
 ### Scene 8
 
@@ -148,6 +227,8 @@ Avoid procedural narration such as:
 Use one fox voice and first person `僕`.
 The fox is a guide, not a teacher or outside announcer.
 
+The fox should sound like a guide updating an explanation with the viewer, not a narrator reading the already-completed audit trail. Do not invent a personal past belief such as 「僕も最初は〜と思った」 unless that experience is actually recorded.
+
 After the factual draft, run exactly one surface-only Spoken Delivery Pass.
 
 Allowed surface changes:
@@ -179,6 +260,58 @@ Run causal before/after validation after the pass.
 The 04 entertainment/clarity review is always required.
 It is required even when no paid external Independent Critic is connected.
 
+**Run narrative hard gates before numeric scoring. A high score cannot override a failed gate.**
+
+### Hard Gate A — Hook Exhaustion
+
+If Scenes 1–2 already state the driver, major amplifiers, important boundary/counterevidence, and final synthesis so completely that the rest is only evidence receipts, issue:
+
+```text
+HOOK_EXHAUSTS_STORY
+```
+
+Early direction is good. Early exhaustion is not.
+
+### Hard Gate B — Understanding Upgrade Authenticity
+
+Review the legacy `midpoint_turn` as the Evidence-backed Understanding Upgrade defined in Pass B.
+
+If it is only an extra supporting fact and does not change/branch/narrow/test the model, issue:
+
+```text
+NO_UNDERSTANDING_UPGRADE
+```
+
+If the apparent upgrade exists only because already-known evidence was artificially withheld, issue:
+
+```text
+FAKE_UNDERSTANDING_UPGRADE
+```
+
+or `FAKE_OPEN_LOOP` as appropriate.
+
+### Hard Gate C — Scene 4 → Scene 8 Delta
+
+Ask:
+
+> What does the viewer understand in Scene 8 that they did not already understand by Scene 4?
+
+If there is no concrete evidence-backed answer, issue `NO_LATE_PAYOFF`.
+
+A Scene 8 that repeats the Scene 4 conclusion plus 「ただし断定はできません」 does not pass.
+
+### Hard Gate D — Late Value Deletion Test
+
+Ask:
+
+> If Scenes 6–8 were removed, what important understanding would the viewer lose?
+
+If no material understanding is lost, issue `NO_LATE_PAYOFF`.
+
+### Hard Gate E — No Forced Drama
+
+Do not penalize an episode merely because it lacks a theatrical reversal. A real branch, boundary, mechanism reveal, price test, or reason-unknown payoff is enough.
+
 ### Scenes 1–7 Progression Check
 
 Check:
@@ -186,6 +319,8 @@ Check:
 - `belief_changed`
 - `continuation_reason_natural`
 - `procedural_language_dominant`
+
+A PASS requires all three positive progression checks to succeed for every Scene 1–7.
 
 ### Scene 8 Closure Check
 
@@ -195,6 +330,8 @@ Check:
 - `closure_effective`
 - `opening_promise_recovered`
 - `procedural_language_dominant`
+
+A PASS requires Scene 8 to deliver a payoff, change understanding relative to the provisional answer, close effectively, and recover the opening promise at a deeper level.
 
 Do not require a Scene 8 next-hook.
 
@@ -209,12 +346,26 @@ DEAD_END_SCENE
 PROCEDURAL_NARRATION
 SCENE_ORDER_INTERCHANGEABLE
 NO_MIDPOINT_TURN
+NO_UNDERSTANDING_UPGRADE
+FAKE_UNDERSTANDING_UPGRADE
+HOOK_EXHAUSTS_STORY
 NO_LATE_PAYOFF
 OPENING_PROMISE_NOT_RECOVERED
 ENDING_NOT_BOOKENDED
 NO_NEW_EVIDENCE_OR_MEANING
 FOX_VOICE_ABSENT
 ABSTRACT_EDITORIAL_LANGUAGE
+```
+
+The following may not be downgraded to minor merely to preserve a PASS:
+
+```text
+HOOK_EXHAUSTS_STORY
+NO_UNDERSTANDING_UPGRADE
+FAKE_UNDERSTANDING_UPGRADE
+NO_LATE_PAYOFF
+OPENING_PROMISE_NOT_RECOVERED
+ENDING_NOT_BOOKENDED
 ```
 
 Causal-safety findings remain Critical:
@@ -235,6 +386,8 @@ Scene 9 cannot be patched.
 
 For surface failures, prefer a surface-only fix first.
 
+For `NO_UNDERSTANDING_UPGRADE` or `NO_LATE_PAYOFF`, do not invent new evidence or causal claims. Reuse already-supported Evidence in a better explanatory role, move compatible explanation blocks, or shorten the episode. If the evidence itself is insufficient, return upstream.
+
 ## Pass F — Causality Preservation
 
 Reject any rewrite that causes:
@@ -251,6 +404,8 @@ Reject any rewrite that causes:
 
 Maximum two review/rewrite rounds.
 If a Critical issue remains, block and return to the owning stage.
+
+A final PASS requires the hard narrative gates and the normal 04 score threshold. Numerical score never overrides the hard gates.
 
 ---
 
@@ -479,8 +634,11 @@ Scene 1–2 are not sacred. Rewrite only Scenes that fail the same Critic criter
 - Story Plan v1.2 validator
 - Story Script / causal bundle validator
 - Understanding Progression scene checks
+- Evidence-backed Understanding Upgrade structural guards
+- Scene 4 → Scene 8 understanding delta guard
 - material counterevidence guard
 - fixed Scene order / Scene 9 guard
+- 04 hard narrative gates before scoring
 - Visual Evidence Planning intent-document presence gate
 - optional external Critic policy tests
 - v1.1 strict external attestation tests

@@ -67,7 +67,7 @@ def test_review_score_contract_fails(tmp_path):
     root,dp,pp,sp,rp,script,review=base(tmp_path); review['scores']['fox_voice']=2; review['total_score']=23; review['verdict']='pass'; rp=dump(root,'working/review2.json',review); assert any('verdict' in e for e in run(root,dp,pp,sp,rp).errors)
 
 def test_patch_cannot_touch_scene9(tmp_path):
-    root,dp,pp,sp,rp,script,review=base(tmp_path); review['scores']['opening']=4; review['total_score']=24; review['verdict']='conditional'; review['findings']=[{'finding_id':'finding-01','severity':'minor','issue_type':'NO_LATE_PAYOFF','scene_ids':['scene-08'],'problem':'弱い','viewer_impact':'回収が弱い','minimal_fix':'Scene 8を修正'}]; rp=dump(root,'working/review2.json',review)
+    root,dp,pp,sp,rp,script,review=base(tmp_path); review['scores']['opening']=4; review['total_score']=24; review['verdict']='conditional'; review['findings']=[{'finding_id':'finding-01','severity':'minor','issue_type':'ABSTRACT_EDITORIAL_LANGUAGE','scene_ids':['scene-08'],'problem':'表現が抽象的','viewer_impact':'回収が伝わりにくい','minimal_fix':'Scene 8の表現を具体化'}]; rp=dump(root,'working/review2.json',review)
     patch={'contract_version':'1.0.0','episode_date':'2026-08-06','round':1,'source_review_round':1,'operations':[{'operation_id':'patch-01','operation':'rewrite_scene','target_scene_ids':['scene-09'],'finding_ids':['finding-01'],'purpose':'回収','instruction':'書き換える'}]}; xp=dump(root,'working/patch.json',patch)
     assert any('Scene 9' in e for e in run(root,dp,pp,sp,rp,xp).errors)
 
