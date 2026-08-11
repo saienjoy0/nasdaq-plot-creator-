@@ -5,11 +5,13 @@ Acceptance-only helper. It changes no narration or causal meaning. It keeps the
 approved Story, Pre-TTS validation, Renderer 2.4 finalization, and public package on
 the same explicitly authored visual contract.
 
-Three narrow corrections are made:
+Four narrow corrections are made:
 - Scene 5 Beat 1 is qualitative supporting-factor analysis, so it is authored as
   nonnumeric ``tailwind-headwind / causal`` rather than fake numeric evidence.
 - Scene 6 Beat 1 shows the actual Microchip Q1 FY27 IR as ``news-media / evidence``
   while that Beat narrates the company results and guidance.
+- Scene 6 Beat 2 keeps the existing SOXX/MCHP/NVIDIA market-pulse comparison and is
+  explicitly ``reaction`` grammar, preserving the Scene 6 reaction role.
 - Scene 8 carries the verified QQQ minute series with an explicit reaction binding.
 
 The helper also records already-derived display captions in a machine-only annex;
@@ -248,6 +250,39 @@ def patch_scene6_microchip_media(render: dict[str, Any], overrides: dict[str, An
     return beat_id
 
 
+def patch_scene6_market_reaction(render: dict[str, Any], overrides: dict[str, Any]) -> str:
+    scene6 = next(
+        scene for scene in render.get("scenes", []) if scene.get("sceneNumber") == 6
+    )
+    if len(scene6.get("visualBeats", [])) < 2:
+        raise SystemExit("Scene 6 requires the existing market reaction Beat 2")
+    beat = scene6["visualBeats"][1]
+    beat_id = beat.get("beatId")
+    if not isinstance(beat_id, str) or not beat_id:
+        raise SystemExit("Scene 6 Beat 2 beatId missing")
+    if beat.get("visualTemplate") != "market-pulse-grid":
+        raise SystemExit(
+            f"Scene 6 Beat 2 must stay market-pulse-grid, got {beat.get('visualTemplate')!r}"
+        )
+    object_ids = beat.get("objectIds")
+    if not isinstance(object_ids, list) or len(object_ids) < 3:
+        raise SystemExit("Scene 6 Beat 2 market reaction objects missing")
+    grammar = beat.get("visualGrammar")
+    if not isinstance(grammar, dict):
+        raise SystemExit("Scene 6 Beat 2 visualGrammar missing")
+    grammar["grammarId"] = "reaction"
+    beat["visualGrammarId"] = "reaction"
+
+    override = overrides.setdefault(beat_id, {})
+    override.update(
+        {
+            "visualGrammarId": "reaction",
+            "transitionRole": grammar["transitionRole"],
+        }
+    )
+    return beat_id
+
+
 def patch_scene8_verified_series(render: dict[str, Any], overrides: dict[str, Any]) -> tuple[str, str, list[str]]:
     scene8 = next(
         scene for scene in render.get("scenes", []) if scene.get("sceneNumber") == 8
@@ -315,6 +350,7 @@ def apply(root: Path) -> dict[str, Any]:
 
     scene5_beat_id = patch_scene5_support_forces(render, overrides)
     scene6_beat_id = patch_scene6_microchip_media(render, overrides)
+    scene6_reaction_beat_id = patch_scene6_market_reaction(render, overrides)
     beat_id, visual_beat_id, object_ids = patch_scene8_verified_series(render, overrides)
 
     write(render_path, render)
@@ -329,6 +365,9 @@ def apply(root: Path) -> dict[str, Any]:
         "scene6BeatId": scene6_beat_id,
         "scene6VisualTemplate": "news-media",
         "scene6VisualGrammarId": "evidence",
+        "scene6ReactionBeatId": scene6_reaction_beat_id,
+        "scene6ReactionVisualTemplate": "market-pulse-grid",
+        "scene6ReactionVisualGrammarId": "reaction",
         "beatId": beat_id,
         "visualBeatId": visual_beat_id,
         "visualTemplate": "event-reaction-timeline",
