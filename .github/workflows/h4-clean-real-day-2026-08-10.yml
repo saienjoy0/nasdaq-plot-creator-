@@ -222,14 +222,33 @@ jobs:
           values=[number_map[item] for item in rt['seriesObjectIds']]
           if values[:3] != [719.16, 720.23, 720.531]:
               raise SystemExit(f'QQQ real minute values drifted: {values}')
-          placements={p['assetId'] for scene in render['scenes'] for p in scene.get('assetPlacements', [])}
-          required={'daily-bls-employment-july-2026','daily-microchip-q1-fy27-ir'}
-          if not required.issubset(placements):
-              raise SystemExit(f'actual source document assets missing: {sorted(required-placements)}')
+
           selected=json.loads(Path(f'working/{date}/visual_source_selected_assets.json').read_text(encoding='utf-8'))
-          if selected.get('selectedPath') != 'primary':
-              raise SystemExit('real-day acceptance did not select Primary evidence path')
-          print('PASS actual BLS + Microchip source documents + QQQ verified series')
+          if selected.get('selectedPath') != 'fallback':
+              raise SystemExit(f"expected approved fallback path, got {selected.get('selectedPath')!r}")
+          rows={item['intentId']:item for item in selected.get('selectedAssets', [])}
+          bls=rows.get('vsi-20260810-bls-employment')
+          microchip=rows.get('vsi-20260810-microchip-ir')
+          if not bls or bls.get('assetId') != 'background_scene_news':
+              raise SystemExit(f'BLS approved fallback asset mismatch: {bls}')
+          if not microchip or microchip.get('assetId') != 'daily-microchip-q1-fy27-ir-fallback':
+              raise SystemExit(f'Microchip real fallback-route asset mismatch: {microchip}')
+
+          placements={p['assetId'] for scene in render['scenes'] for p in scene.get('assetPlacements', [])}
+          required={'background_scene_news','daily-microchip-q1-fy27-ir-fallback'}
+          if not required.issubset(placements):
+              raise SystemExit(f'final selected visual assets missing: {sorted(required-placements)}')
+
+          raw=json.loads(Path(f'verification/{date}/asset_resolution_raw.json').read_text(encoding='utf-8'))
+          results={(item['intentId'],item['path']):item for item in raw.get('results', [])}
+          microchip_fallback=results.get(('vsi-20260810-microchip-ir','fallback'))
+          if not microchip_fallback or microchip_fallback.get('status') != 'ready':
+              raise SystemExit(f'Microchip fallback-route real IR was not resolved: {microchip_fallback}')
+          output_path=microchip_fallback.get('outputPath')
+          if not output_path or not Path(output_path).is_file():
+              raise SystemExit(f'Microchip real IR output missing: {output_path}')
+
+          print('PASS BLS approved fallback + actual Microchip IR + QQQ verified series')
           PY
 
       - name: Validate Episode Memory hardening
