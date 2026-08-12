@@ -7,6 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import fixup_chatgpt_daily_materialization as fixup  # noqa: E402
 import materialize_chatgpt_daily_authoring as materializer  # noqa: E402
 import validate_chatgpt_daily_authoring_closure as closure  # noqa: E402
 
@@ -83,6 +84,47 @@ class ProductionClosureTests(unittest.TestCase):
         self.assertEqual(["number-a", "number-b"], [row["targetId"] for row in events])
         self.assertEqual([0, 5000], [row["offsetMs"] for row in events])
         self.assertEqual(["event-001", "event-002"], [row["eventId"] for row in events])
+
+    def test_legacy_show_completion_adds_nothing_to_fully_authored_production_beat(self) -> None:
+        render = {
+            "scenes": [
+                {
+                    "sceneId": "scene-06",
+                    "narrationChunks": [
+                        {"chunkId": "scene-06-chunk-001"},
+                    ],
+                    "visualBeats": [
+                        {
+                            "beatId": "scene-06-beat-001",
+                            "startChunkId": "scene-06-chunk-001",
+                            "endChunkId": "scene-06-chunk-001",
+                            "objectIds": ["number-a", "number-b"],
+                        }
+                    ],
+                    "visualEvents": [
+                        {
+                            "eventId": "event-001",
+                            "atChunkId": "scene-06-chunk-001",
+                            "timing": "chunk-start",
+                            "action": "show",
+                            "targetId": "number-a",
+                            "offsetMs": 0,
+                        },
+                        {
+                            "eventId": "event-002",
+                            "atChunkId": "scene-06-chunk-001",
+                            "timing": "chunk-start",
+                            "action": "show",
+                            "targetId": "number-b",
+                            "offsetMs": 5000,
+                        },
+                    ],
+                }
+            ]
+        }
+        before = list(render["scenes"][0]["visualEvents"])
+        self.assertEqual(0, fixup.complete_show_sequences(render))
+        self.assertEqual(before, render["scenes"][0]["visualEvents"])
 
     def test_shots_use_existing_renderer_relative_progress_contract(self) -> None:
         shots = materializer._validate_authored_shots(
