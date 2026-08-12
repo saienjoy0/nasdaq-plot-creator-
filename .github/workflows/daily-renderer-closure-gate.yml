@@ -1,0 +1,216 @@
+name: Daily Renderer Closure Gate
+
+on:
+  pull_request:
+    paths:
+      - "daily-authoring-parts/**"
+      - "daily-authoring/**"
+      - "daily-inputs/**"
+      - "working/**"
+      - "research/**"
+      - "episodes/**"
+      - "render-specs/**"
+      - "contracts/financial_recipe_registry.json"
+      - "contracts/financial_visual_compatibility_2_4.json"
+      - "contracts/visual_grammar_*.json"
+      - "scripts/assemble_chatgpt_daily_authoring_parts.py"
+      - "scripts/materialize_chatgpt_daily_authoring.py"
+      - "scripts/fixup_chatgpt_daily_materialization.py"
+      - "scripts/validate_chatgpt_daily_authoring_closure.py"
+      - "scripts/materialize_daily_episode.py"
+      - "scripts/materialize_financial_contract_1_0.py"
+      - "scripts/finalize_renderer_package*.py"
+      - "scripts/remotion_*.py"
+      - "scripts/visual_director_bridge.py"
+      - "scripts/run_daily_production_hardened.py"
+      - "tests/remotion-compat/**"
+      - ".github/workflows/daily-renderer-closure-gate.yml"
+  workflow_dispatch:
+    inputs:
+      episode_date:
+        description: "YYYY-MM-DD"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  closure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      RENDERER_COMMIT: 9f0acd45586b2aff8902aae7a5f7df0beb7df120
+      RENDERER_CONTRACT_VERSION: 2.4.0
+      NASDAQ_CAFE_RENDERER_ROOT: ${{ github.workspace }}/.renderer
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve exact episode date
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            EPISODE_DATE="${{ inputs.episode_date }}"
+          else
+            git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" > /tmp/changed-files.txt
+            EPISODE_DATE="$(python - <<'PY'
+          import re
+          from pathlib import Path
+          dates=set()
+          patterns=(
+              r"^daily-authoring-parts/(\d{4}-\d{2}-\d{2})/",
+              r"^daily-authoring/(\d{4}-\d{2}-\d{2})\.json$",
+              r"^daily-inputs/(\d{4}-\d{2}-\d{2})/",
+              r"^working/(\d{4}-\d{2}-\d{2})/",
+              r"^research/(\d{4}-\d{2}-\d{2})/",
+              r"^episodes/(\d{4}-\d{2}-\d{2})/",
+              r"^render-specs/(\d{4}-\d{2}-\d{2})/",
+              r"^daily-assets/(\d{4}-\d{2}-\d{2})/",
+          )
+          for line in Path('/tmp/changed-files.txt').read_text(encoding='utf-8').splitlines():
+              for pattern in patterns:
+                  match=re.match(pattern, line)
+                  if match:
+                      dates.add(match.group(1))
+          if len(dates) > 1:
+              raise SystemExit('closure PR must target exactly one episode date: ' + ','.join(sorted(dates)))
+          print(next(iter(dates), '2026-08-10'))
+          PY
+          )"
+          fi
+          [[ "$EPISODE_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
+          echo "EPISODE_DATE=$EPISODE_DATE" >> "$GITHUB_ENV"
+          echo "Closure target: $EPISODE_DATE"
+
+      - name: Checkout exact Preview renderer
+        uses: actions/checkout@v4
+        with:
+          repository: saienjoy0/saienjoy0-nasdaq-cafe-remotion
+          ref: ${{ env.RENDERER_COMMIT }}
+          path: .renderer
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: .renderer/package-lock.json
+
+      - name: Install closure dependencies
+        run: |
+          python -m pip install --disable-pip-version-check jsonschema pytest pillow
+          npm --prefix .renderer ci
+
+      - name: Run closure regression tests
+        run: |
+          python -m pytest -q tests/remotion-compat/test_chatgpt_daily_authoring_closure.py
+          python -m py_compile scripts/validate_chatgpt_daily_authoring_closure.py scripts/assemble_chatgpt_daily_authoring_parts.py
+
+      - name: Expand exact authored day
+        run: |
+          test -d "daily-authoring-parts/$EPISODE_DATE"
+          test -f "daily-inputs/$EPISODE_DATE/daily_source_package_$EPISODE_DATE.md"
+          python scripts/assemble_chatgpt_daily_authoring_parts.py --date "$EPISODE_DATE" --repo-root .
+          python scripts/materialize_chatgpt_daily_authoring.py --date "$EPISODE_DATE" --repo-root .
+          python scripts/fixup_chatgpt_daily_materialization.py --date "$EPISODE_DATE" --repo-root .
+          mkdir -p "verification/$EPISODE_DATE"
+          python scripts/validate_chatgpt_daily_authoring_closure.py \
+            --authoring "daily-authoring/$EPISODE_DATE.json" \
+            --registry contracts/financial_recipe_registry.json \
+            --json-output "verification/$EPISODE_DATE/authoring_renderer_closure.json"
+
+      - name: Bind legacy materializer to exact authored day
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib, json, os, re
+          from pathlib import Path
+          date = os.environ["EPISODE_DATE"]
+          authoring = json.loads(Path(f"daily-authoring/{date}.json").read_text(encoding="utf-8"))
+          dossier = Path(f"research/{date}/causal_research_dossier.template.json")
+          dossier_sha = hashlib.sha256(dossier.read_bytes()).hexdigest()
+          path = Path("scripts/materialize_daily_episode.py")
+          text = path.read_text(encoding="utf-8")
+          text, n1 = re.subn(r'DOSSIER_TEMPLATE_SHA = "[0-9a-f]{64}"', f'DOSSIER_TEMPLATE_SHA = "{dossier_sha}"', text, count=1)
+          text, n2 = re.subn(r'"--market-date", "[0-9]{4}-[0-9]{2}-[0-9]{2}"', f'"--market-date", "{authoring["marketDate"]}"', text, count=1)
+          text, n3 = re.subn(r'"--information-cutoff", "[^"]+"', f'"--information-cutoff", "{authoring["informationCutoff"]}"', text, count=1)
+          if (n1, n2, n3) != (1, 1, 1):
+              raise SystemExit(f"legacy materializer bind failed: {(n1,n2,n3)}")
+          path.write_text(text, encoding="utf-8")
+          print(f"bound exact day={date} market={authoring['marketDate']} dossier={dossier_sha}")
+          PY
+
+      - name: Validate authored Visual Grammar
+        run: |
+          python scripts/pre_tts_visual_gate.py \
+            --render-spec "render-specs/$EPISODE_DATE/render_spec.json" \
+            --story-bindings "working/$EPISODE_DATE/story-engine/story_production_bindings.json" \
+            --output "verification/$EPISODE_DATE/pre_tts_visual_gate.json"
+
+      - name: Prepare explicit visual sources
+        shell: bash
+        run: |
+          set -o pipefail
+          python scripts/prepare_visual_sources.py --date "$EPISODE_DATE" --repo-root . \
+            | tee "verification/$EPISODE_DATE/visual-source-prepare.log"
+
+      - name: Materialize exact episode and financial contract
+        shell: bash
+        run: |
+          set -o pipefail
+          {
+            python scripts/materialize_daily_episode.py --date "$EPISODE_DATE" --repo-root .
+            python scripts/materialize_financial_contract_1_0.py --date "$EPISODE_DATE" --repo-root .
+          } 2>&1 | tee "verification/$EPISODE_DATE/materializer.log"
+
+      - name: Initialize deterministic production state
+        run: |
+          python scripts/run_daily_production_hardened.py --workspace . init \
+            --episode-date "$EPISODE_DATE" \
+            --daily-source-package "daily-inputs/$EPISODE_DATE/daily_source_package_$EPISODE_DATE.md" \
+            --requested-scope preview \
+            --renderer-commit "$RENDERER_COMMIT" \
+            --renderer-contract-version "$RENDERER_CONTRACT_VERSION"
+
+      - name: Advance validated editorial stages
+        run: |
+          STORY="working/$EPISODE_DATE/story-engine"
+          ACCEPT="$STORY/story_engine_acceptance.json"
+          python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state research_inputs_bound --evidence "research/$EPISODE_DATE/research_input_manifest.json"
+          python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state causal_dossier_valid --evidence "research/$EPISODE_DATE/causal_research_dossier_$EPISODE_DATE.json" "research/$EPISODE_DATE/causal_dossier_validation.json"
+          python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state episode_package_final --evidence "episodes/$EPISODE_DATE/episode_package_$EPISODE_DATE.md" "$ACCEPT" "$STORY/story_projection_report.json" "verification/$EPISODE_DATE/pre_tts_visual_gate.json"
+          python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state memory_usage_valid --evidence "research/$EPISODE_DATE/causal_dossier_validation.json"
+          python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state assets_resolved --evidence "verification/$EPISODE_DATE/asset_resolution_log.json" "verification/$EPISODE_DATE/image_generation_log.json"
+
+      - name: Activate exact Remotion 2.4 compatibility tuple
+        run: cp contracts/financial_visual_compatibility_2_4.json contracts/financial_visual_compatibility.json
+
+      - name: Require complete renderer closure
+        shell: bash
+        run: |
+          set -o pipefail
+          {
+            python scripts/run_daily_production_hardened.py --workspace . build-production \
+              --episode-date "$EPISODE_DATE" \
+              --episode-package "episodes/$EPISODE_DATE/episode_package_$EPISODE_DATE.md"
+            python scripts/run_daily_production_hardened.py --workspace . status --episode-date "$EPISODE_DATE"
+          } 2>&1 | tee "verification/$EPISODE_DATE/renderer-closure.log"
+
+      - name: Upload closure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-renderer-closure-${{ env.EPISODE_DATE }}
+          path: |
+            verification/${{ env.EPISODE_DATE }}/
+            working/${{ env.EPISODE_DATE }}/
+            render-specs/${{ env.EPISODE_DATE }}/render_spec.json
+          if-no-files-found: warn
+          retention-days: 7
