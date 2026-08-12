@@ -42,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      RENDERER_COMMIT: 9f0acd45586b2aff8902aae7a5f7df0beb7df120
+      RENDERER_COMMIT: d1bf3a70e8d25a344c146cd076533697dc115246
       NASDAQ_CAFE_RENDERER_ROOT: ${{ github.workspace }}/.renderer
     steps:
       - uses: actions/checkout@v4
@@ -122,11 +122,14 @@ jobs:
 
       - name: Run closure regression tests
         run: |
-          python -m pytest -q tests/remotion-compat/test_chatgpt_daily_authoring_closure.py
+          python -m pytest -q \
+            tests/remotion-compat/test_chatgpt_daily_authoring_closure.py \
+            tests/remotion-compat/test_fox_expression_projection.py
           python -m py_compile \
             scripts/validate_chatgpt_daily_authoring_closure.py \
             scripts/run_daily_renderer_closure.py \
-            scripts/assemble_chatgpt_daily_authoring_parts.py
+            scripts/assemble_chatgpt_daily_authoring_parts.py \
+            scripts/fixup_chatgpt_daily_materialization.py
 
       - name: Require exact-day Renderer 2.4 closure
         run: |
