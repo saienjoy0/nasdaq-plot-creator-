@@ -25,12 +25,20 @@ def spec_for(template: str, *, beat_variant=None, config_variant=None):
 
 
 @pytest.mark.parametrize("variant", ["strengthen-vs-weaken", "reported-sequence"])
-def test_verification_matrix_requires_and_preserves_explicit_variant(variant: str) -> None:
-    value = spec_for("verification-matrix", beat_variant=variant, config_variant=variant)
+def test_verification_matrix_preserves_explicit_template_config_variant(variant: str) -> None:
+    value = spec_for("verification-matrix", config_variant=variant)
     variants.normalize_single_variant_templates(value)
     beat = value["scenes"][0]["visualBeats"][0]
     assert beat["templateVariant"] == variant
     assert beat["templateConfig"]["variant"] == variant
+
+
+@pytest.mark.parametrize("variant", ["strengthen-vs-weaken", "reported-sequence"])
+def test_matching_optional_template_variant_is_accepted(variant: str) -> None:
+    value = spec_for("verification-matrix", beat_variant=variant, config_variant=variant)
+    variants.normalize_single_variant_templates(value)
+    beat = value["scenes"][0]["visualBeats"][0]
+    assert beat["templateVariant"] == variant
 
 
 @pytest.mark.parametrize(
@@ -38,7 +46,6 @@ def test_verification_matrix_requires_and_preserves_explicit_variant(variant: st
     [
         (None, None),
         ("reported-sequence", None),
-        (None, "reported-sequence"),
         ("reported-sequence", "strengthen-vs-weaken"),
         ("default", "default"),
     ],
