@@ -93,6 +93,23 @@ def ensure_renderer(renderer_root: Path) -> None:
         )
 
 
+def sync_renderer_owned_contracts(root: Path, renderer_root: Path) -> None:
+    source = renderer_root / "contracts" / "visual_grammar_renderer_compatibility.json"
+    target = root / "contracts" / "visual_grammar_renderer_compatibility.json"
+    if not source.is_file():
+        raise ClosureError(f"pinned Renderer compatibility registry missing: {source}")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(source, target)
+    source_sha = hashlib.sha256(source.read_bytes()).hexdigest()
+    target_sha = hashlib.sha256(target.read_bytes()).hexdigest()
+    if source_sha != target_sha:
+        raise ClosureError(
+            "Renderer compatibility registry sync mismatch: "
+            f"source={source_sha} target={target_sha}"
+        )
+    print(f"BOUND_RENDERER_VISUAL_GRAMMAR_REGISTRY sha256={source_sha}", flush=True)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--date", required=True)
@@ -224,6 +241,7 @@ def main() -> int:
             root / "contracts" / "financial_visual_compatibility_2_4.json",
             root / "contracts" / "financial_visual_compatibility.json",
         )
+        sync_renderer_owned_contracts(root, renderer_root)
         run(
             root,
             "python",
