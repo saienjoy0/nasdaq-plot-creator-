@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Validate ChatGPT daily authoring closure before renderer production.
 
-This gate makes no editorial or visual selection. It checks that every authored
-Financial Visual Template has one explicit authored financial binding and that each
-binding points to the exact Scene/Beat/template it claims to drive. Financial template
-ownership is derived from the existing financial recipe registry, not duplicated here.
+This gate makes no editorial or visual selection. It checks the author-owned duration
+mode contract, the fixed nine-Scene/chunk-to-Beat closure, and that every authored
+Financial Visual Template has one explicit authored financial binding pointing to the
+exact Scene/Beat/template it claims to drive. Financial template ownership is derived
+from the existing financial recipe registry, not duplicated here.
 """
 from __future__ import annotations
 
@@ -53,16 +54,33 @@ def financial_template_ids(registry: dict[str, Any]) -> set[str]:
     return result
 
 
+def validate_duration_ownership(authoring: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    mode = authoring.get("durationMode")
+    reason = authoring.get("shortenedReason")
+    if mode not in {"standard", "shortened"}:
+        errors.append("$.durationMode: must be 'standard' or 'shortened'")
+        return errors
+    if mode == "standard" and reason is not None:
+        errors.append("$.shortenedReason: standard duration requires null")
+    if mode == "shortened" and (not isinstance(reason, str) or not reason.strip()):
+        errors.append("$.shortenedReason: shortened duration requires a non-empty reason")
+    return errors
+
+
 def validate_authoring(authoring: dict[str, Any], registry: dict[str, Any]) -> list[str]:
     errors: list[str] = []
+    errors.extend(validate_duration_ownership(authoring))
+
     scenes = authoring.get("scenes")
     if not isinstance(scenes, list):
-        return ["$.scenes: must be an array"]
+        return [*errors, "$.scenes: must be an array"]
     if len(scenes) != 9:
         errors.append(f"$.scenes: expected 9 scenes; found={len(scenes)}")
 
     financial_templates = financial_template_ids(registry)
     beat_map: dict[str, tuple[int, dict[str, Any]]] = {}
+    total_beats = 0
     for scene_index, scene in enumerate(scenes, 1):
         if not isinstance(scene, dict):
             errors.append(f"$.scenes[{scene_index - 1}]: must be an object")
@@ -75,6 +93,7 @@ def validate_authoring(authoring: dict[str, Any], registry: dict[str, Any]) -> l
         if not isinstance(beats, list):
             errors.append(f"$.scenes[{scene_index - 1}].beats: must be an array")
             beats = []
+        total_beats += len(beats)
         if len(chunks) != len(beats):
             errors.append(
                 f"scene-{scene_index:02d}: chunks/beats length mismatch "
@@ -86,6 +105,8 @@ def validate_authoring(authoring: dict[str, Any], registry: dict[str, Any]) -> l
                 errors.append(f"{beat_id}: beat must be an object")
                 continue
             beat_map[beat_id] = (scene_index, beat)
+    if total_beats != 18:
+        errors.append(f"$.scenes[*].beats: expected 18 total Visual Beats; found={total_beats}")
 
     bindings = authoring.get("financialBindings", [])
     if not isinstance(bindings, list):
@@ -171,7 +192,7 @@ def main(argv: list[str] | None = None) -> int:
         registry = load_json(args.registry, "financial recipe registry")
         errors = validate_authoring(authoring, registry)
         report = {
-            "contractVersion": "1.0.0",
+            "contractVersion": "1.1.0",
             "status": "PASS" if not errors else "FAIL",
             "errorCount": len(errors),
             "errors": errors,
@@ -179,7 +200,7 @@ def main(argv: list[str] | None = None) -> int:
         code = 0 if not errors else 2
     except AuthoringClosureError as exc:
         report = {
-            "contractVersion": "1.0.0",
+            "contractVersion": "1.1.0",
             "status": "FAIL",
             "errorCount": 1,
             "errors": [str(exc)],

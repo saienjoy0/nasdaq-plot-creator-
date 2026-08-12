@@ -1,0 +1,42 @@
+{
+  "beatPatches": [
+    {
+      "sceneNumber": 6,
+      "beatNumber": 1,
+      "set": {
+        "visualEvents": [
+          {
+            "timing": "chunk-start",
+            "action": "show",
+            "targetId": "scene-06-number-01-01",
+            "offsetMs": 0,
+            "expression": null,
+            "motionPreset": "rise-soft",
+            "durationMs": 420,
+            "easingPreset": "smooth-out"
+          },
+          {
+            "timing": "chunk-start",
+            "action": "show",
+            "targetId": "scene-06-number-01-02",
+            "offsetMs": 3000,
+            "expression": null,
+            "motionPreset": "rise-soft",
+            "durationMs": 420,
+            "easingPreset": "smooth-out"
+          },
+          {
+            "timing": "chunk-start",
+            "action": "show",
+            "targetId": "scene-06-number-01-03",
+            "offsetMs": 6000,
+            "expression": null,
+            "motionPreset": "rise-soft",
+            "durationMs": 420,
+            "easingPreset": "smooth-out"
+          }
+        ]
+      }
+    }
+  ]
+}

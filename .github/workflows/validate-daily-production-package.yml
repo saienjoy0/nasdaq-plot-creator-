@@ -60,7 +60,7 @@ jobs:
     timeout-minutes: 45
     env:
       EPISODE_DATE: ${{ inputs.episode_date || '2026-08-06' }}
-      RENDERER_COMMIT: 36440cbe84331d020d4fe808d5c2fcbcac20833c
+      RENDERER_COMMIT: dd028591a08de8cf061c32550351478363221bb4
       RENDERER_CONTRACT_VERSION: 2.4.0
       NASDAQ_CAFE_RENDERER_ROOT: ${{ github.workspace }}/.renderer
     steps:

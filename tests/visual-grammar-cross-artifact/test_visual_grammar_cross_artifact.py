@@ -175,7 +175,7 @@ class VisualGrammarCrossArtifactTests(unittest.TestCase):
                 "selectedPath": "fallback" if number == 3 else "not-applicable",
             })
         return {
-            "contractVersion": "1.0.0",
+            "contractVersion": "1.1.0",
             "status": "PASS",
             "timingBasis": "post-tts-production-data",
             "episodeId": self.date,
@@ -215,6 +215,18 @@ class VisualGrammarCrossArtifactTests(unittest.TestCase):
                 "bridgeTextRatio": 0.0,
                 "appearanceDurationMs": appearance_duration,
                 "dominantSurfaceDurationMs": surface_duration,
+            },
+            "staticState": {
+                "mode": "report-only",
+                "warningThresholdMs": 8000,
+                "failureCandidateThresholdMs": 16000,
+                "longestStaticStateMs": 7000,
+                "longestStaticStateSceneId": "scene-01",
+                "longestStaticStateBeatId": "vb-01-01",
+                "warningCount": 0,
+                "failureCandidateCount": 0,
+                "warnings": [],
+                "failureCandidates": [],
             },
             "beats": beats,
             "failures": [],
@@ -335,6 +347,31 @@ class VisualGrammarCrossArtifactTests(unittest.TestCase):
         write_json(self.timing_path, timing)
         with self.assertRaisesRegex(Exception, "totalMeasuredMs mismatch"):
             self.authorize()
+
+    def test_13_static_state_failure_candidate_remains_report_only(self) -> None:
+        timing = json.loads(self.timing_path.read_text(encoding="utf-8"))
+        finding = {
+            "sceneId": "scene-01",
+            "beatId": "vb-01-01",
+            "startMs": 0,
+            "endMs": 17000,
+            "durationMs": 17000,
+            "startBoundaryKinds": ["scene-boundary", "beat-boundary"],
+            "endBoundaryKinds": ["beat-boundary"],
+        }
+        timing["staticState"].update({
+            "longestStaticStateMs": 17000,
+            "longestStaticStateSceneId": "scene-01",
+            "longestStaticStateBeatId": "vb-01-01",
+            "warningCount": 1,
+            "failureCandidateCount": 1,
+            "warnings": [finding],
+            "failureCandidates": [finding],
+        })
+        write_json(self.timing_path, timing)
+        result = self.authorize()
+        self.assertEqual("PASS", result["status"])
+        self.assertTrue(result["handoffAuthorized"])
 
 
 if __name__ == "__main__":

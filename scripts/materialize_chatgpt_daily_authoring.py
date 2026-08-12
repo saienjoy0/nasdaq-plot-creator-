@@ -2,9 +2,10 @@
 """Mechanically expand ChatGPT-authored daily JSON into production inputs.
 
 This script makes no editorial choices. All market causality, narration, visual grammar,
-source attribution, counterevidence and review conclusions must already be present in
-`daily-authoring/<date>.json`. It only projects that approved authoring into the existing
-NASDAQ Cafe direct-input contracts so GitHub Actions can validate and render it.
+source attribution, counterevidence, duration mode, review conclusions, and any intra-Beat
+visual progression must already be present in `daily-authoring/<date>.json`. It only
+projects that approved authoring into the existing NASDAQ Cafe direct-input contracts so
+GitHub Actions can validate and render it.
 """
 from __future__ import annotations
 
@@ -50,6 +51,103 @@ def card(card_id: str, title: str, lines: list[str]) -> dict[str, Any]:
             for i, value in enumerate(lines, 1)
         ],
     }
+
+
+def _validate_authored_shots(
+    beat: dict[str, Any],
+    *,
+    bid: str,
+    cid: str,
+    object_ids: list[str],
+) -> list[dict[str, Any]]:
+    raw = beat.get("shots")
+    if raw is None:
+        return []
+    if not isinstance(raw, list) or not 1 <= len(raw) <= 4:
+        raise SystemExit(f"{bid}: authored shots must contain 1-4 existing Renderer shots")
+    shots = copy.deepcopy(raw)
+    valid_targets = set(object_ids)
+    for shot_index, shot in enumerate(shots, 1):
+        if not isinstance(shot, dict):
+            raise SystemExit(f"{bid}: shot {shot_index} must be an object")
+        expected_id = f"{bid}-shot-{shot_index:03d}"
+        if shot.get("shotId") != expected_id:
+            raise SystemExit(f"{bid}: shot {shot_index} must use deterministic ID {expected_id}")
+        if shot.get("startChunkId") != cid or shot.get("endChunkId") != cid:
+            raise SystemExit(f"{bid}: authored shots must stay inside {cid}")
+        for key in ("startProgress", "endProgress"):
+            value = shot.get(key)
+            if not isinstance(value, (int, float)) or isinstance(value, bool) or not 0 <= value <= 1:
+                raise SystemExit(f"{bid}: shot {shot_index}.{key} must be within 0..1")
+        if float(shot["endProgress"]) <= float(shot["startProgress"]):
+            raise SystemExit(f"{bid}: shot {shot_index} must end after it starts")
+        for key in ("primaryTargetId", "referenceTargetId", "outcomeTargetId", "cameraTargetId"):
+            target = shot.get(key)
+            if target is not None and target not in valid_targets:
+                raise SystemExit(f"{bid}: shot {shot_index}.{key} targets unknown object {target}")
+        secondary = shot.get("secondaryTargetIds", [])
+        if not isinstance(secondary, list) or any(target not in valid_targets for target in secondary):
+            raise SystemExit(f"{bid}: shot {shot_index}.secondaryTargetIds contains unknown objects")
+    if float(shots[0]["startProgress"]) != 0:
+        raise SystemExit(f"{bid}: first authored shot must start at progress 0")
+    if float(shots[-1]["endProgress"]) != 1:
+        raise SystemExit(f"{bid}: final authored shot must end at progress 1")
+    return shots
+
+
+def _project_authored_visual_events(
+    beat: dict[str, Any],
+    *,
+    bid: str,
+    cid: str,
+    object_ids: list[str],
+    event_serial: list[int],
+) -> list[dict[str, Any]]:
+    raw = beat.get("visualEvents")
+    if raw is None:
+        return []
+    if not isinstance(raw, list) or not raw:
+        raise SystemExit(f"{bid}: visualEvents must be a non-empty array when present")
+    projected: list[dict[str, Any]] = []
+    valid_targets = set(object_ids)
+    visibility_targets: set[str] = set()
+    for item_index, item in enumerate(raw, 1):
+        if not isinstance(item, dict):
+            raise SystemExit(f"{bid}: visualEvents[{item_index}] must be an object")
+        action = item.get("action")
+        if action not in {"show", "hide", "highlight", "unhighlight", "set-expression"}:
+            raise SystemExit(f"{bid}: visualEvents[{item_index}] has invalid action {action!r}")
+        target = item.get("targetId")
+        if action == "set-expression":
+            if target is not None:
+                raise SystemExit(f"{bid}: set-expression must not target an object")
+        else:
+            if target not in valid_targets:
+                raise SystemExit(f"{bid}: visualEvents[{item_index}] targets unknown object {target!r}")
+            if action in {"show", "hide"}:
+                visibility_targets.add(str(target))
+        offset = item.get("offsetMs", 0)
+        if not isinstance(offset, int) or isinstance(offset, bool) or not 0 <= offset <= 10_000:
+            raise SystemExit(f"{bid}: visualEvents[{item_index}].offsetMs must be 0..10000")
+        event_serial[0] += 1
+        projected.append({
+            "eventId": f"event-{event_serial[0]:03d}",
+            "atChunkId": cid,
+            "timing": item.get("timing", "chunk-start"),
+            "action": action,
+            "targetId": target,
+            "offsetMs": offset,
+            "expression": item.get("expression"),
+            "motionPreset": item.get("motionPreset"),
+            "durationMs": item.get("durationMs"),
+            "easingPreset": item.get("easingPreset"),
+        })
+    if len(object_ids) > 1 and not set(object_ids).issubset(visibility_targets):
+        missing = sorted(set(object_ids) - visibility_targets)
+        raise SystemExit(
+            f"{bid}: multi-object visualEvents must explicitly author first visibility for every object; missing={missing}"
+        )
+    return projected
 
 
 def build_scene(
@@ -126,6 +224,25 @@ def build_scene(
         }
         if "reactionTimeline" in beat:
             template_config["reactionTimeline"] = copy.deepcopy(beat["reactionTimeline"])
+
+        authored_shots = _validate_authored_shots(
+            beat,
+            bid=bid,
+            cid=cid,
+            object_ids=object_ids,
+        )
+        authored_events = _project_authored_visual_events(
+            beat,
+            bid=bid,
+            cid=cid,
+            object_ids=object_ids,
+            event_serial=event_serial,
+        )
+        if len(object_ids) > 1 and not authored_shots and not authored_events:
+            raise SystemExit(
+                f"{bid}: multi-object Beat requires authored shots or visualEvents; automatic reveal order is not production-authoritative"
+            )
+
         visual_beat = {
             "beatId": bid,
             "visualBeatId": bid,
@@ -161,20 +278,43 @@ def build_scene(
                 "returnTargetBeatId": beat.get("returnTargetBeatId"),
             },
         }
+        if authored_shots:
+            visual_beat["shots"] = authored_shots
         visual_beats.append(visual_beat)
-        event_serial[0] += 1
-        visual_events.append({
-            "eventId": f"event-{event_serial[0]:03d}",
-            "atChunkId": cid,
-            "timing": "chunk-start",
-            "action": "show",
-            "targetId": object_ids[0],
-            "offsetMs": 0,
-            "expression": None,
-            "motionPreset": "rise-soft",
-            "durationMs": 420,
-            "easingPreset": "smooth-out",
-        })
+
+        if authored_events:
+            visual_events.extend(authored_events)
+        elif authored_shots:
+            # Shot progression owns the meaning. Make static object visibility explicit so
+            # legacy show-completion has nothing to infer or reorder.
+            for object_id in object_ids:
+                event_serial[0] += 1
+                visual_events.append({
+                    "eventId": f"event-{event_serial[0]:03d}",
+                    "atChunkId": cid,
+                    "timing": "chunk-start",
+                    "action": "show",
+                    "targetId": object_id,
+                    "offsetMs": 0,
+                    "expression": None,
+                    "motionPreset": None,
+                    "durationMs": None,
+                    "easingPreset": None,
+                })
+        else:
+            event_serial[0] += 1
+            visual_events.append({
+                "eventId": f"event-{event_serial[0]:03d}",
+                "atChunkId": cid,
+                "timing": "chunk-start",
+                "action": "show",
+                "targetId": object_ids[0],
+                "offsetMs": 0,
+                "expression": None,
+                "motionPreset": "rise-soft",
+                "durationMs": 420,
+                "easingPreset": "smooth-out",
+            })
 
     return {
         "sceneId": sid,
@@ -331,6 +471,7 @@ def build_episode_markdown(a: dict[str, Any], render: dict[str, Any]) -> str:
         f"- Gap：{e['gap']}",
         f"- Expectedの根拠区分：{e['expectedBasisType']} / {e['expectedBasisDetails']}",
         f"- 重要な反対材料：{' / '.join(e['counterEvidence'])}",
+        f"- Duration：{a['durationMode']} / shortenedReason={a.get('shortenedReason')}",
         f"- Primary / Approved Fallback：{a.get('selectedVisualSourcePath','not-required')}",
         "- 当日固有生成画像：not-required",
         "- Visual Beat総数：18",
@@ -362,6 +503,7 @@ def build_episode_markdown(a: dict[str, Any], render: dict[str, Any]) -> str:
                 f"  - 主要要素：{beat['primaryElement']}",
                 f"  - 視聴者向けテキスト：{' / '.join(beat['viewerTexts'])}",
                 f"  - 根拠ID：{', '.join(beat['evidenceSourceIds'])}",
+                f"  - Shot数：{len(beat.get('shots', []))}",
                 "",
             ]
         lines += ["### 完成ナレーション", ""]
@@ -406,6 +548,12 @@ def main() -> int:
     a, viewer_report = project_authoring_viewer_surfaces(raw_authoring)
     if a.get("episodeDate") != args.date:
         raise SystemExit("authoring episodeDate mismatch")
+    if a.get("durationMode") not in {"standard", "shortened"}:
+        raise SystemExit("authoring durationMode must be standard or shortened")
+    if a["durationMode"] == "standard" and a.get("shortenedReason") is not None:
+        raise SystemExit("standard duration requires shortenedReason=null")
+    if a["durationMode"] == "shortened" and not str(a.get("shortenedReason") or "").strip():
+        raise SystemExit("shortened duration requires non-empty shortenedReason")
     if len(a.get("scenes", [])) != 9:
         raise SystemExit("authoring requires exactly 9 scenes")
     beat_count = sum(len(scene.get("beats", [])) for scene in a["scenes"])
@@ -458,7 +606,7 @@ def main() -> int:
             "marketSession":f"{a['marketDate']} US market",
             "informationCutoff":a["informationCutoff"],
             "episodeType":a.get("episodeType","single-news"),
-            "durationMode":"standard","shortenedReason":None,
+            "durationMode":a["durationMode"],"shortenedReason":a.get("shortenedReason"),
             "fps":30,"width":1920,"height":1080,
         },
         "editorial":a["editorial"],
@@ -479,7 +627,6 @@ def main() -> int:
     }
     dump(render_dir / "render_spec.json", render)
 
-    # Reaction sidecar for the verified intraday beat, if supplied.
     bindings = []
     for sidx, scene in enumerate(a["scenes"], 1):
         for bidx, beat in enumerate(scene["beats"], 1):
@@ -496,7 +643,7 @@ def main() -> int:
     )
     print(
         f"MATERIALIZED ChatGPT daily authoring {args.date}: scenes=9 beats=18 "
-        f"viewerConversions={viewer_report['conversionCount']}"
+        f"durationMode={a['durationMode']} viewerConversions={viewer_report['conversionCount']}"
     )
     return 0
 
