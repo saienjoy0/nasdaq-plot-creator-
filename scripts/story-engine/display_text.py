@@ -1,6 +1,18 @@
 from __future__ import annotations
 
 import re
+import sys
+from pathlib import Path
+
+# Story Engine retains its finance-specific sign/unit projection, then delegates the
+# remaining viewer-surface policy to the repository-wide canonical projector. This
+# keeps narration projection and initial daily materialization on the same final
+# display contract without changing speechText.
+_SCRIPTS_DIR = Path(__file__).resolve().parents[1]
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+
+from viewer_surface_projection import project_caption_text
 
 _DIGITS = {
     "〇": 0,
@@ -50,13 +62,7 @@ def _signed(sign: str | None, value: str) -> str:
     return prefix + _number(value)
 
 
-def to_display_text(text: str) -> str:
-    """Normalize only finance-style spoken numbers for on-screen captions.
-
-    Ordinary Japanese prose is left untouched. Conversion is intentionally
-    limited to percentages and explicit financial/population units so TTS can
-    keep natural readings while captions use compact Arabic numerals.
-    """
+def _finance_display_text(text: str) -> str:
     text = re.sub(
         rf"(?:(プラス|マイナス))?({_JP_NUMBER})パーセント",
         lambda match: f"{_signed(match.group(1), match.group(2))}%",
@@ -68,3 +74,19 @@ def to_display_text(text: str) -> str:
         text,
     )
     return text
+
+
+def to_display_text(text: str) -> str:
+    """Project Story Engine narration into the canonical viewer-safe caption surface.
+
+    Finance-specific spoken signs/units are normalized first for compatibility with
+    existing Story Engine authoring. The repository-wide projector then handles the
+    rest of the approved viewer contract (times, durations, ordinals, explicit
+    decimals, etc.) and fails closed on ambiguous residual display numerals.
+    """
+    finance_projected = _finance_display_text(text)
+    projected, _ = project_caption_text(
+        finance_projected,
+        path="story-engine.captionText",
+    )
+    return projected
