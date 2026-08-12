@@ -37,44 +37,6 @@
           }
         ]
       }
-    },
-    {
-      "sceneNumber": 7,
-      "beatNumber": 2,
-      "set": {
-        "visualEvents": [
-          {
-            "timing": "chunk-start",
-            "action": "show",
-            "targetId": "scene-07-number-02-01",
-            "offsetMs": 0,
-            "expression": null,
-            "motionPreset": "rise-soft",
-            "durationMs": 420,
-            "easingPreset": "smooth-out"
-          },
-          {
-            "timing": "chunk-start",
-            "action": "show",
-            "targetId": "scene-07-number-02-02",
-            "offsetMs": 5000,
-            "expression": null,
-            "motionPreset": "rise-soft",
-            "durationMs": 420,
-            "easingPreset": "smooth-out"
-          },
-          {
-            "timing": "chunk-start",
-            "action": "highlight",
-            "targetId": "scene-07-number-02-02",
-            "offsetMs": 8000,
-            "expression": null,
-            "motionPreset": "focus-ring",
-            "durationMs": 300,
-            "easingPreset": "smooth-out"
-          }
-        ]
-      }
     }
   ]
 }
