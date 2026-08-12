@@ -18,16 +18,18 @@ KANJI_DIGITS = {"〇": 0, "零": 0, "一": 1, "二": 2, "三": 3, "四": 4, "五
 SMALL_UNITS = {"十": 10, "百": 100, "千": 1000}
 BIG_UNITS = {"万": 10_000, "億": 100_000_000, "兆": 1_000_000_000_000}
 NUM_CHARS = "〇零一二三四五六七八九十百千万億兆"
+COEFF_CHARS = "〇零一二三四五六七八九十百千"
 NUM_TOKEN = rf"[{NUM_CHARS}]+(?:・[{NUM_CHARS}]+)?"
+COEFF_TOKEN = rf"[{COEFF_CHARS}]+(?:・[〇零一二三四五六七八九]+)?"
 CONTEXT_RE = re.compile(
     rf"(?:第)?{NUM_TOKEN}(?=(?:パーセント|%|億ドル|万ドル|ドル|円|時|分|秒|年|月|日|回|件|社|人|位|番目|段|つ|分足))"
 )
-DECIMAL_RE = re.compile(rf"{NUM_TOKEN}")
 PERCENT_RE = re.compile(rf"({NUM_TOKEN})パーセント")
 TIME_RE = re.compile(rf"({NUM_TOKEN})時({NUM_TOKEN})分")
 PREFIX_RE = re.compile(rf"第({NUM_TOKEN})")
+FINANCIAL_MAGNITUDE_RE = re.compile(rf"({COEFF_TOKEN})(億|万)(ドル|円)")
 UNIT_RE = re.compile(
-    rf"({NUM_TOKEN})(億ドル|万ドル|ドル|円|分足|番目|年|月|日|回|件|社|人|位|段|つ)"
+    rf"({NUM_TOKEN})(ドル|円|分足|番目|年|月|日|回|件|社|人|位|段|つ)"
 )
 STANDALONE_DECIMAL_RE = re.compile(rf"({NUM_TOKEN})(?=[、。・\s]|$)")
 
@@ -115,6 +117,13 @@ def normalize_viewer_text(value: str, *, path: str, conversions: list[Conversion
         text, PREFIX_RE,
         lambda match: f"第{normalize_numeric_token(match.group(1))}",
         "ordinal-prefix", path, conversions,
+    )
+    # Preserve Japanese market-friendly magnitude units. "五千億ドル" means
+    # "5,000億ドル" on screen, not "500,000,000,000ドル".
+    text = _apply_regex(
+        text, FINANCIAL_MAGNITUDE_RE,
+        lambda match: f"{normalize_numeric_token(match.group(1))}{match.group(2)}{match.group(3)}",
+        "financial-magnitude", path, conversions,
     )
     text = _apply_regex(
         text, UNIT_RE,
