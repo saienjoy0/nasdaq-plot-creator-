@@ -106,7 +106,13 @@ def apply_explicit_beat_patches(value: dict[str, Any]) -> int:
 
 
 def normalize_renderer_visual_modes(value: dict[str, Any]) -> int:
-    """Apply template-implied mode aliases only where Renderer projection requires them."""
+    """Keep asset-free source receipts on a Data-compatible text mode.
+
+    Renderer 2.4 allows source-receipt on Data without a media placement, while the
+    legacy news-media mode itself requires a real main-media asset. The receipt
+    template still controls the rendered stage; this alias only prevents the legacy
+    mode validator from treating a receipt as an image-backed News beat.
+    """
     changed = 0
     scenes = value.get("scenes")
     if not isinstance(scenes, list):
@@ -120,9 +126,11 @@ def normalize_renderer_visual_modes(value: dict[str, Any]) -> int:
         for beat in beats:
             if not isinstance(beat, dict):
                 continue
-            if beat.get("visualTemplate") == "source-receipt" and beat.get("visualMode") != "news-media":
-                beat["visualMode"] = "news-media"
+            if beat.get("visualTemplate") == "source-receipt" and beat.get("visualMode") != "text-focus":
+                beat["visualMode"] = "text-focus"
                 changed += 1
+        if beats and isinstance(beats[0], dict) and beats[0].get("visualTemplate") == "source-receipt":
+            scene["visualMode"] = "text-focus"
     return changed
 
 
