@@ -1,0 +1,54 @@
+{
+  "contractVersion": "1.0.0",
+  "episodeDate": "2026-08-12",
+  "requestSha256": "5ce93b20bfea5282e7e46ce6886bbd3b3d4f5b93a95ee86833747cf99afcf670",
+  "results": [
+    {
+      "outputPath": null,
+      "provider": "Longbridge",
+      "reason": "Longbridge CLI / plugin unavailable. SDK credentials not provided yet. Detail: Longbridge historical intraday returned zero rows and the official 1m K-line history fallback failed.",
+      "recordCount": 0,
+      "requestId": "RA-QQQ-0811-1M",
+      "sha256": null,
+      "status": "unavailable"
+    },
+    {
+      "outputPath": "followup/wave-01/RA-NVDA-0811-1M_intraday_series.json",
+      "provider": "Longbridge",
+      "reason": "",
+      "recordCount": 390,
+      "requestId": "RA-NVDA-0811-1M",
+      "sha256": "80822c79c556fa89229774e6d1352bda5d973bde73709097e64d5da3be7368b4",
+      "status": "success"
+    },
+    {
+      "outputPath": "followup/wave-01/RA-SOXX-0811-1M_intraday_series.json",
+      "provider": "Longbridge",
+      "reason": "",
+      "recordCount": 390,
+      "requestId": "RA-SOXX-0811-1M",
+      "sha256": "729a18067d9e6b6fc6ce9de55b17e9ab79c609a587d05cb0c8753bd6ed5c1b5a",
+      "status": "success"
+    },
+    {
+      "outputPath": null,
+      "provider": "Raw Archive",
+      "reason": "HTTP 401",
+      "recordCount": 0,
+      "requestId": "RA-REUTERS-WALLST",
+      "sha256": null,
+      "status": "unavailable"
+    },
+    {
+      "outputPath": "followup/wave-01/RA-AP-CLOSE_exact_url_archive.json",
+      "provider": "Raw Archive",
+      "reason": "",
+      "recordCount": 1,
+      "requestId": "RA-AP-CLOSE",
+      "sha256": "6e7bdbcf5b9b3a0dde7aad850dc4e2fde8d059585a712121837b7f5b53ef0c55",
+      "status": "success"
+    }
+  ],
+  "status": "partial",
+  "wave": 1
+}
