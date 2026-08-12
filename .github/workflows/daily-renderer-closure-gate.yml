@@ -124,6 +124,8 @@ jobs:
           npm --prefix .renderer ci
 
       - name: Run closure regression tests
+        env:
+          PYTHONPATH: scripts
         run: |
           python -m pytest -q \
             tests/remotion-compat/test_chatgpt_daily_authoring_closure.py \
