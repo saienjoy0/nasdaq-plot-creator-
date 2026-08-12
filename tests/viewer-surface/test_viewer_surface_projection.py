@@ -21,6 +21,7 @@ import viewer_surface_projection as viewer  # noqa: E402
         ("NVIDIAは二・〇五パーセント下落", "NVIDIAは2.05%下落"),
         ("十五時五十九分まで確認", "15:59まで確認"),
         ("実際の一分足です", "実際の1分足です"),
+        ("最初の一分から確認", "最初の1分から確認"),
         ("五千億ドル規模", "5,000億ドル規模"),
         ("千四十億ドル", "1,040億ドル"),
         ("二十五・八億ドル", "25.8億ドル"),
@@ -33,7 +34,10 @@ def test_caption_numeric_projection(speech: str, expected: str) -> None:
     assert caption == expected
 
 
-@pytest.mark.parametrize("text", ["一方で四半期売上は増加", "唯一の反対材料", "三菱を確認"])
+@pytest.mark.parametrize(
+    "text",
+    ["一方で四半期売上は増加", "唯一の反対材料", "三菱を確認", "十分な材料", "一分野を確認"],
+)
 def test_non_numeric_japanese_is_unchanged(text: str) -> None:
     caption, _ = viewer.project_caption_text(text)
     assert caption == text
