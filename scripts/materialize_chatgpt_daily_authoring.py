@@ -14,6 +14,12 @@ import json
 from pathlib import Path
 from typing import Any
 
+from viewer_surface_projection import (
+    project_authoring_viewer_surfaces,
+    project_caption_text,
+    write_projection_report,
+)
+
 
 def load(path: Path) -> dict[str, Any]:
     value = json.loads(path.read_text(encoding="utf-8"))
@@ -46,7 +52,12 @@ def card(card_id: str, title: str, lines: list[str]) -> dict[str, Any]:
     }
 
 
-def build_scene(scene: dict[str, Any], scene_number: int, event_serial: list[int]) -> dict[str, Any]:
+def build_scene(
+    scene: dict[str, Any],
+    scene_number: int,
+    event_serial: list[int],
+    caption_conversions: list[dict[str, Any]],
+) -> dict[str, Any]:
     sid = f"scene-{scene_number:02d}"
     chunks = scene["chunks"]
     beats = scene["beats"]
@@ -63,10 +74,15 @@ def build_scene(scene: dict[str, Any], scene_number: int, event_serial: list[int
     for index, (chunk, beat) in enumerate(zip(chunks, beats, strict=True), 1):
         cid = f"{sid}-chunk-{index:03d}"
         bid = f"{sid}-beat-{index:03d}"
+        caption_text, caption_rows = project_caption_text(
+            chunk["text"],
+            path=f"$.scenes[{scene_number - 1}].chunks[{index - 1}].captionText",
+        )
+        caption_conversions.extend(row.__dict__ for row in caption_rows)
         narration_chunks.append({
             "chunkId": cid,
             "speechText": chunk["text"],
-            "captionText": chunk["text"],
+            "captionText": caption_text,
             "expression": chunk.get("expression", scene.get("initialExpression", "分析")),
             "pauseAfterMs": 200 if index == len(chunks) else 120,
         })
@@ -386,7 +402,8 @@ def main() -> int:
     ap.add_argument("--repo-root", type=Path, default=Path.cwd())
     args = ap.parse_args()
     root = args.repo_root.resolve()
-    a = load(root / "daily-authoring" / f"{args.date}.json")
+    raw_authoring = load(root / "daily-authoring" / f"{args.date}.json")
+    a, viewer_report = project_authoring_viewer_surfaces(raw_authoring)
     if a.get("episodeDate") != args.date:
         raise SystemExit("authoring episodeDate mismatch")
     if len(a.get("scenes", [])) != 9:
@@ -423,7 +440,15 @@ def main() -> int:
     dump(research / "causal_research_dossier.template.json", a["causalDossier"])
 
     event_serial = [0]
-    scenes = [build_scene(scene, i, event_serial) for i, scene in enumerate(a["scenes"], 1)]
+    caption_conversions: list[dict[str, Any]] = []
+    scenes = [
+        build_scene(scene, i, event_serial, caption_conversions)
+        for i, scene in enumerate(a["scenes"], 1)
+    ]
+    viewer_report["conversions"].extend(caption_conversions)
+    viewer_report["conversionCount"] = len(viewer_report["conversions"])
+    write_projection_report(work / "viewer_surface_projection_report.json", viewer_report)
+
     render = {
         "schemaVersion":"2.4.0",
         "visualGrammarContractVersion":"1.0.0",
@@ -465,11 +490,14 @@ def main() -> int:
     dump(work / "reaction_timeline_bindings.json", {
         "contractVersion":"1.0.0","episodeDate":args.date,"bindings":bindings
     })
-    (episodes).mkdir(parents=True, exist_ok=True)
+    episodes.mkdir(parents=True, exist_ok=True)
     (episodes / f"episode_package_public_{args.date}.md").write_text(
         build_episode_markdown(a, render), encoding="utf-8"
     )
-    print(f"MATERIALIZED ChatGPT daily authoring {args.date}: scenes=9 beats=18")
+    print(
+        f"MATERIALIZED ChatGPT daily authoring {args.date}: scenes=9 beats=18 "
+        f"viewerConversions={viewer_report['conversionCount']}"
+    )
     return 0
 
 

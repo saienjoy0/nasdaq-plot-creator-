@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NASDAQ Cafe Viewer Surface Policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contractVersion",
+    "viewerNumericStyle",
+    "fixedFinancialUi",
+    "speechSurfaceImmutable",
+    "ambiguousNumericPolicy",
+    "forbiddenFixedUiLabels"
+  ],
+  "properties": {
+    "contractVersion": {"const": "1.0.0"},
+    "viewerNumericStyle": {"const": "arabic-digits"},
+    "fixedFinancialUi": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["expected", "actual", "gap"],
+      "properties": {
+        "expected": {"const": "予想"},
+        "actual": {"const": "実際"},
+        "gap": {"const": "差分"}
+      }
+    },
+    "speechSurfaceImmutable": {"const": true},
+    "ambiguousNumericPolicy": {"const": "fail-closed"},
+    "forbiddenFixedUiLabels": {
+      "type": "array",
+      "items": {"type": "string"},
+      "minItems": 5,
+      "uniqueItems": true
+    }
+  }
+}

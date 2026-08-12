@@ -1,0 +1,12 @@
+{
+  "contractVersion": "1.0.0",
+  "viewerNumericStyle": "arabic-digits",
+  "fixedFinancialUi": {
+    "expected": "予想",
+    "actual": "実際",
+    "gap": "差分"
+  },
+  "speechSurfaceImmutable": true,
+  "ambiguousNumericPolicy": "fail-closed",
+  "forbiddenFixedUiLabels": ["EXPECTED", "ACTUAL", "GAP", "実績", "差"]
+}
