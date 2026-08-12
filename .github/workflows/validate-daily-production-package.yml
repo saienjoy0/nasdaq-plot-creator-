@@ -59,7 +59,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      EPISODE_DATE: ${{ inputs.episode_date || '2026-08-06' }}
+      # PR validation follows the current-contract canary. Historical daily artifacts
+      # remain immutable and can still be checked explicitly via workflow_dispatch.
+      EPISODE_DATE: ${{ inputs.episode_date || '2026-08-12' }}
       RENDERER_COMMIT: 6a44cdeb04d401dc45379783862e279a5c2f04a5
       RENDERER_CONTRACT_VERSION: 2.4.0
       NASDAQ_CAFE_RENDERER_ROOT: ${{ github.workspace }}/.renderer
