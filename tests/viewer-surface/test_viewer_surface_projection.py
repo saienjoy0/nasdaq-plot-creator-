@@ -9,6 +9,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import assemble_chatgpt_daily_authoring_parts as assembler  # noqa: E402
 import materialize_renderer_sources as renderer_sources  # noqa: E402
 import viewer_surface_projection as viewer  # noqa: E402
 
@@ -118,3 +119,29 @@ def test_numeric_financial_metric_projects_to_number() -> None:
     assert scene["cards"] == []
     assert scene["numbers"][0]["numberId"] == "metric.nasdaq.close"
     assert scene["numbers"][0]["numericValue"] == -0.6
+
+
+def test_renderer_financial_scope_is_verified_without_rewriting_source(tmp_path: Path) -> None:
+    materializer = tmp_path / "scripts" / "materialize_renderer_sources.py"
+    materializer.parent.mkdir(parents=True)
+    materializer.write_text(
+        "FINANCIAL_TEMPLATES = {\n"
+        '    "market-pulse-grid", "earnings-surprise", "dual-asset-split",\n'
+        '    "macro-pressure", "source-receipt",\n'
+        "}\n",
+        encoding="utf-8",
+    )
+    before = materializer.read_bytes()
+    assembler.assert_renderer_240_financial_scope(tmp_path)
+    assert materializer.read_bytes() == before
+
+
+def test_renderer_financial_scope_mismatch_fails_closed(tmp_path: Path) -> None:
+    materializer = tmp_path / "scripts" / "materialize_renderer_sources.py"
+    materializer.parent.mkdir(parents=True)
+    materializer.write_text(
+        'FINANCIAL_TEMPLATES = {"market-pulse-grid", "dual-asset-split"}\n',
+        encoding="utf-8",
+    )
+    with pytest.raises(SystemExit, match="Renderer 2.4 financial template scope mismatch"):
+        assembler.assert_renderer_240_financial_scope(tmp_path)
