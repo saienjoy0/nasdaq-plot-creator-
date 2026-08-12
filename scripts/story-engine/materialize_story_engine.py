@@ -67,6 +67,7 @@ def main() -> int:
     work = root / "working" / date / "story-engine"
     templates = work / "templates"
     dossier = root / "research" / date / f"causal_research_dossier_{date}.json"
+    authoring_path = root / "daily-authoring" / f"{date}.json"
     plan_template = templates / "story_plan.template.json"
     script_template = templates / "story_script.template.json"
     review_template = templates / "creative_review.template.json"
@@ -105,6 +106,13 @@ def main() -> int:
         receipt = load(critic_receipt)
 
     plan = load(plan_template)
+    if authoring_path.is_file():
+        authoring = load(authoring_path)
+        temporal_usage = authoring.get("temporalUsage")
+        if temporal_usage is not None:
+            if not isinstance(temporal_usage, dict):
+                raise SystemExit("daily authoring temporalUsage must be an object when present")
+            plan["temporal_usage"] = temporal_usage
     plan["causal_dossier"] = ref(root, dossier)
     dump(plan_path, plan)
 
