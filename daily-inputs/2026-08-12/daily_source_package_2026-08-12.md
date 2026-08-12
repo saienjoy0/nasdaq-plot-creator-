@@ -1,139 +1,152 @@
 # NASDAQ Cafe Daily Source Package — 2026-08-12
 
-## Collection provenance
+## Production identity
 
 - episode_date: `2026-08-12`
 - market_date: `2026-08-11`
+- episode_timezone: `Asia/Tokyo`
+- market_timezone: `America/New_York`
 - information_cutoff: `2026-08-11T21:52:37Z`
+- production_intent: `fresh real-day E2E after Collector production closure v1.2 and Temporal Evidence Loop v1.2`
+
+## Fresh Collector provenance — current main
+
 - collector_repository: `saienjoy0/nasdaq-cafe-news-collector`
-- broad_collection_run_id: `31539166716`
-- broad_collection_artifact_id: `9120075244`
+- collector_commit: `7f38ad31351a63b1801cb9689872cfa27728b507`
+- collector_commit_meaning: `production closure v1.2 — acquisition coverage, runtime safeguards, provider capability sidecar`
+- broad_collection_run_id: `31607044744`
+- broad_collection_artifact_id: `9145732111`
 - broad_collection_artifact: `nasdaq-cafe-2026-08-12`
-- broad_collection_refresh: `true`
-- broad_collection_generated_at: `2026-08-11T21:46:38Z`
-- targeted_followup_run_id: `31539832225`
-- targeted_followup_artifact_id: `9120247524`
-- targeted_followup: `wave-01 / verified 1-minute NVDA.US, QQQ.US, SOXX.US`
+- broad_collection_artifact_sha256: `b09e852dcf622aa1d3dc091664d8ecf1a1dda199d38c83de16e449a7fd608a00`
+- broad_collection_generated_at: `2026-08-12T14:34:18Z`
+- direct_fulltext_candidates: `94`
+- direct_fulltext_attempted: `94`
+- readable_fulltext: `77`
+- failed_fulltext: `17`
+- runtime_budget_deferred: `0`
+- total_acquisition_coverage: `0.819149`
+- provider_capability_sidecar: `present`
 
-This package is the direct daily input for the 2026-08-12 episode. It combines the successful refreshed Collector pack, the successful targeted 1-minute follow-up, and source verification performed by ChatGPT before authoring. Facts, reported interpretation, inference, and unknowns must remain distinct downstream.
+### Temporal cutoff rule for this refresh
 
-## Market close
+This fresh broad run was intentionally executed after the Collector overhaul, but it ran at about `23:34 JST` on 2026-08-12, well after this episode's information cutoff. Therefore:
 
-Collector close data for the 2026-08-11 US session:
+1. The fresh `source_pack.json` is the machine-origin Collector record and Candidate Pool for this production attempt.
+2. **Live 2026-08-12 U.S. quote fields and any article published after `2026-08-11T21:52:37Z` are not Current Evidence for this episode.**
+3. Candidate Pool / discovery coverage does not become Evidence merely because the Collector retrieved it.
+4. Historical 2026-08-11 facts used below must be independently time-bounded and source-verified.
+5. If a material timing gap remains, Causal Research should request a bounded read-only follow-up rather than reusing an older production artifact.
 
-- Nasdaq Composite: `26,445.446`, change `-159.911`, `-0.60%`
-- NVDA: `217.500`, `-0.02%`
-- MSFT: `503.810`, `-0.44%`
-- AAPL: `304.910`, `-1.09%`
-- AMZN: `272.270`, `-2.09%`
-- GOOGL: `343.800`, `-3.84%`
-- META: `599.120`, `+0.71%`
-- AVGO: `416.080`, `-1.50%`
-- TSM: `422.060`, `+0.86%`
-- AMD: `474.320`, `+1.01%`
-- TSLA: `332.810`, `+0.58%`
+This boundary is deliberate: the real-day test must prove that the new Collector can collect broadly **without letting post-cutoff data rewrite the morning episode**.
 
-### Important exclusion
+## Current Evidence available before the cutoff
 
-The Collector daily line labeled `SOX` showed `534.200 / +0.91%`. The price level is consistent with the SOXX ETF range rather than the Philadelphia Semiconductor Index, while the daily percentage is inconsistent with the verified regular-session SOXX series below. **Do not use this `SOX +0.91%` value in narration, cards, or causality.** For the semiconductor reaction, use only the verified Longbridge 1-minute SOXX series.
-
-## Verified intraday follow-up
-
-Longbridge minute series, regular session start (`09:30 ET`, `13:30Z`) to last regular-session minute (`15:59 ET`, `19:59Z`):
-
-| Symbol | 09:30 ET open | 15:59 ET close | Open→close |
-|---|---:|---:|---:|
-| NVDA | 222.05 | 217.50 | about `-2.05%` |
-| QQQ | 723.30 | 718.45 | about `-0.67%` |
-| SOXX | 537.31 | 534.20 | about `-0.58%` |
-
-Premarket 13:29Z closes for context: NVDA `222.05`, QQQ `723.28`, SOXX `538.17`.
-
-**Guardrail:** the 1-minute series establishes timing and direction only. It does not prove that oil or the Hormuz news directly caused each minute of NVDA/QQQ/SOXX movement.
-
-## Verified source evidence
-
-### Reuters — US-Iran / Hormuz / US stocks
-
-Reference: `https://www.reuters.com/business/wall-st-futures-muted-us-iran-impasse-lifts-oil-prices-2026-08-11/`
-
-Verified use:
-- U.S.-Iran peace optimism faded.
-- Reuters reported an Iranian security official saying the Strait of Hormuz would remain closed unless the U.S. met conditions.
-- The report linked fading optimism and higher oil with weaker U.S. equities.
-
-Use as major-reporting evidence for the qualitative Expected / Actual / Gap and the market-shared interpretation. Do not turn it into a precise causal contribution estimate.
-
-### Associated Press — exact close and contrary rates evidence
+### EVIDENCE CANDIDATE A — Associated Press market close
 
 Reference: `https://apnews.com/article/e5e8f3360f8d30714778761e3a483347`
 
+Time-bounded verified use:
+- Nasdaq Composite closed `-0.6%` at `26,445.45` on 2026-08-11.
+- Brent crude finished `+1.4%` at `$88.91`.
+- Treasury yields eased rather than spiking.
+
+Guardrail: closing co-movement does not by itself identify the causal contribution of oil, rates, or individual mega-cap news.
+
+### EVIDENCE CANDIDATE B — Reuters U.S.-Iran / Hormuz
+
+Reference: `https://www.reuters.com/world/middle-east/pakistan-says-us-iran-close-some-sort-deal-despite-attacks-shipping-2026-08-11/`
+
+Time-bounded verified use:
+- U.S.-Iran talks remained uncertain.
+- Reuters reported Iran saying the Strait of Hormuz would remain closed unless U.S. conditions/demands were met.
+- Oil rose as confidence in a near-term resolution weakened.
+
+Guardrail: use the statement and reported market context; do not convert it into a precise basis-point contribution to NASDAQ.
+
+### EVIDENCE CANDIDATE C — Reuters Trading Day / cross-asset interpretation
+
+Reference: `https://www.reuters.com/commentary/reuters-open-interest/global-markets-trading-day-graphic-2026-08-11/`
+
+Time-bounded verified use:
+- U.S. equities retreated while oil moved higher amid uncertainty around a possible peace/de-escalation outcome.
+- The next U.S. CPI release was a major near-term macro focus.
+- Reuters also discussed Nvidia-linked AI infrastructure financing as a separate supportive AI-capex development.
+
+Use this as reported interpretation, not as proof of a single-factor index cause.
+
+### EVIDENCE CANDIDATE D — official Nvidia AI compute financing model
+
+Reference: `https://blogs.nvidia.com/blog/nvidia-unlocks-ai-compute-at-scale-capital-partners-to-power-ai-infrastructure-buildout/`
+
 Verified use:
-- Nasdaq Composite: `-0.6%`, close `26,445.45`.
-- Brent crude: `+1.4%`, `88.91 dollars`.
-- AP also reported Treasury yields easing.
+- Nvidia described a financing model with capital partners intended to unlock additional AI compute infrastructure capacity.
 
-The easing-yield fact is important counterevidence: do **not** narrate that an observed Treasury-yield spike caused the Nasdaq decline.
+Guardrail: this supports the proposition that AI infrastructure financing activity remained active; it does not prove that every AI stock should rise or that a quoted financing ambition has already been fully invested.
 
-### U.S. Bureau of Labor Statistics — CPI release schedule
+### EVIDENCE CANDIDATE E — BLS schedule boundary
 
 Reference: `https://www.bls.gov/schedule/2026/08_sched_list.htm`
 
 Verified use:
-- July 2026 CPI release scheduled for `2026-08-12 08:30 ET` (`21:30 JST`).
+- July 2026 CPI was scheduled for `2026-08-12 08:30 ET`.
 
-At the information cutoff for this episode, the CPI result is still in the future. The episode may discuss pre-CPI uncertainty but must not state or imply a CPI actual value.
+At this episode's cutoff, the CPI actual was still in the future. **Do not use the later CPI result anywhere in Expected, Actual, Gap, narration, cards, or causal edges.**
 
-### Reuters — global markets / oil / Nvidia financing
+## Current-Evidence-first contradiction candidates
 
-Reference: `https://www.reuters.com/world/china/global-markets-global-markets-2026-08-11/`
+Before Memory or cross-market interpretation, the candidate contradiction is:
 
-Verified use:
-- Oil remained elevated as doubts about a potential U.S.-Iran deal persisted.
-- Reuters reported uncertainty around oil/inflation alongside retreating equities.
-- Reuters also reported Nvidia and major financial institutions pursuing a structure aimed at mobilizing up to `$500B` for AI compute infrastructure.
+> Nasdaq fell 0.6% while evidence of ongoing AI infrastructure financing remained present; therefore a simple “AI demand collapsed” explanation is incomplete.
 
-The `$500B` figure is a financing/mobilization ambition, not completed investment. Use it as counterevidence to a simple “AI investment has stopped” story.
+A second useful contradiction is:
 
-### Wall Street Journal — CoreWeave Q2 after the close
+> Oil rose while Treasury yields eased, so “an observed yield spike caused tech to fall” is not a satisfactory explanation of the session.
 
-Reference: `https://www.wsj.com/tech/ai/coreweave-earnings-q2-2026-crwv-stock-50f6fb00`
+These are research candidates, not pre-selected conclusions.
 
-Verified use:
-- Q2 revenue about `$2.58B`.
-- backlog about `$104B`.
-- shares rose about `12%` after hours in the report.
+## Expected / Actual / Gap — research starting point
 
-**Chronology guardrail:** this result is after the regular-session close. It cannot be used as the cause of the 2026-08-11 regular-session Nasdaq decline. It is only a post-close confirmation/counterevidence item showing that AI compute demand had not simply disappeared.
+- **Expected basis:** major reporting described optimism that de-escalation / progress toward reopening the Strait of Hormuz could reduce supply anxiety. This is qualitative, not a numeric consensus.
+- **Actual:** Iran-side conditions remained unresolved; Brent rose 1.4% to $88.91; Nasdaq fell 0.6%.
+- **Gap candidate:** the expected geopolitical/oil relief failed to arrive before the close, leaving oil/inflation uncertainty active ahead of CPI.
 
-## Editorially relevant contradiction
+Causal Research must still test alternatives and may downgrade this lead to `multiple`, `unresolved`, or `reason_unknown` if the evidence does not support a NASDAQ-wide attribution.
 
-The overnight contradiction is:
+## Required counter-hypotheses
 
-> Nasdaq fell 0.6%, while same-night AI infrastructure evidence remained strong enough that “AI demand collapsed” is an incomplete explanation.
+Test at least these alternatives:
 
-The best-supported lead candidate is therefore the fading optimism around the Strait of Hormuz / U.S.-Iran de-escalation, the associated rise in oil, and the way that left inflation and policy-rate uncertainty in place ahead of CPI. This is a **medium-confidence main-cause candidate**, not a single-factor proof.
+1. AI/semiconductor demand weakness was the primary NASDAQ-wide cause.
+2. An observed Treasury-yield spike was the primary cause.
+3. Mega-cap company-specific news explains more of the index move than the oil/geopolitical path.
+4. The oil/Hormuz story is mainly coincident rather than a material NASDAQ driver.
 
-## Expected / Actual / Gap evidence
+Retain evidence that weakens the selected explanation.
 
-- **Expected (qualitative, major reporting):** de-escalation and reopening of the Strait of Hormuz would ease supply-risk pressure and oil anxiety.
-- **Actual:** Iran-side conditions remained; the reopening relief did not materialize; Brent rose 1.4% to $88.91; Nasdaq fell 0.6%.
-- **Gap:** the expected geopolitical/oil relief failed to arrive, leaving inflation and policy-rate uncertainty alive into the CPI release.
+## Material evidence gap for bounded follow-up
 
-Do not invent a numeric consensus for this geopolitical expectation.
+The fresh broad Collector run cannot safely supply historical minute timing for the completed 2026-08-11 session because its broad quotes are live 2026-08-12 observations. If Causal Research uses intraday timing, request a new bounded read-only Research Acquisition wave for:
 
-## Required counterevidence and uncertainty
+- `QQQ.US`, date `2026-08-11`, `1m`, regular session
+- `NVDA.US`, date `2026-08-11`, `1m`, regular session
+- `SOXX.US`, date `2026-08-11`, `1m`, regular session
 
-Keep all of the following in the authored package:
+Minute data may test timing and direction only. It must not be treated as direct proof that Hormuz/oil caused each price move.
 
-1. Treasury yields eased; therefore “rates spiked and tech sold off” is not supported.
-2. Nvidia financing plans support continued AI infrastructure investment.
-3. CoreWeave after-close results support continued AI compute demand, but are not a regular-session cause.
-4. Longbridge 1-minute data confirms regular-session fading in NVDA/QQQ/SOXX but does not itself prove the geopolitical causal chain.
-5. The contribution of oil/geopolitics versus company-specific mega-cap news cannot be numerically decomposed from the available evidence.
+## Visual evidence direction
 
-## Production path
+Prefer real evidence surfaces when they materially improve understanding:
+- source receipt for the actual Reuters/AP item used;
+- verified 1-minute chart only if the fresh bounded follow-up succeeds;
+- Expected / Actual / Gap visual;
+- causal path with explicit uncertainty;
+- counterevidence / verification matrix.
 
-- Custom generated daily image: `not-required`.
-- Approved visual source path: use verified market data, registered chart/timeline templates, source receipts, and causal/verification diagrams.
-- Preview only. Final render is not authorized until the user visually reviews the preview and explicitly requests final.
+Do not create a daily generated image unless the final authored Visual Beat genuinely requires one.
+
+## Production guardrail
+
+- This file replaces the pre-overhaul 8/12 production input for the fresh E2E attempt.
+- Old `daily-authoring-parts/2026-08-12` conclusions and narration are **not** Current Evidence and must not be copied as the basis for the new causal decision.
+- Preview only.
+- Final render remains unauthorized until the user visually reviews the fresh Preview and explicitly requests final.
