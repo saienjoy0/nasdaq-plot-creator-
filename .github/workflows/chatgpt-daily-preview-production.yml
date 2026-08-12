@@ -129,8 +129,13 @@ jobs:
           python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state memory_usage_valid --evidence "research/$EPISODE_DATE/causal_dossier_validation.json"
           python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state assets_resolved --evidence "verification/$EPISODE_DATE/asset_resolution_log.json" "verification/$EPISODE_DATE/image_generation_log.json"
 
-      - name: Activate Remotion 2.4 compatibility tuple
-        run: cp contracts/financial_visual_compatibility_2_4.json contracts/financial_visual_compatibility.json
+      - name: Activate pinned Renderer 2.4 compatibility tuple
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp contracts/financial_visual_compatibility_2_4.json contracts/financial_visual_compatibility.json
+          cp .renderer/contracts/visual_grammar_renderer_compatibility.json contracts/visual_grammar_renderer_compatibility.json
+          cmp --silent .renderer/contracts/visual_grammar_renderer_compatibility.json contracts/visual_grammar_renderer_compatibility.json
 
       - name: Build and run official renderer validator
         shell: bash
