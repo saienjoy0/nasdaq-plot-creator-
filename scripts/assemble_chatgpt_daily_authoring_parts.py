@@ -4,19 +4,29 @@
 Fragments are editorially complete inputs created by ChatGPT. This script only performs
 a deterministic deep merge, applies explicit ChatGPT-authored Scene/Beat patches, binds
 the exact daily-source SHA required by lineage, exposes approved review scores under
-legacy field names, activates exact Renderer 2.4 compatibility aliases, and validates
-authored Financial Visual binding closure. It makes no market or creative decisions of
-its own.
+legacy field names, verifies the explicit Renderer 2.4 Financial Visual scope, and
+validates authored Financial Visual binding closure. It makes no market or creative
+decisions of its own and never rewrites renderer-source code at runtime.
 """
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import json
 from pathlib import Path
 from typing import Any
 
 import validate_chatgpt_daily_authoring_closure as authoring_closure
+
+
+RENDERER_240_FINANCIAL_TEMPLATES = {
+    "market-pulse-grid",
+    "earnings-surprise",
+    "dual-asset-split",
+    "macro-pressure",
+    "source-receipt",
+}
 
 
 def merge(left: Any, right: Any, path: str = "$") -> Any:
@@ -56,20 +66,49 @@ def bind_daily_source_lineage(value: dict[str, Any], root: Path, date: str) -> s
     return daily_sha
 
 
-def activate_renderer_240_financial_scope(root: Path) -> None:
-    """Align the ephemeral daily materializer with the pinned Renderer 2.4 registry."""
+def assert_renderer_240_financial_scope(root: Path) -> None:
+    """Fail closed unless the materializer declares the exact Renderer 2.4 template set.
+
+    This intentionally parses the source without importing or modifying it. The daily
+    assembler is a verifier, not a compatibility patcher: repository source must already
+    contain the production contract that will be reviewed and pinned.
+    """
     path = root / "scripts" / "materialize_renderer_sources.py"
-    text = path.read_text(encoding="utf-8")
-    legacy = 'FINANCIAL_TEMPLATES = {"market-pulse-grid", "dual-asset-split"}'
-    renderer_240 = (
-        'FINANCIAL_TEMPLATES = {"market-pulse-grid", "earnings-surprise", '
-        '"dual-asset-split", "macro-pressure", "source-receipt"}'
-    )
-    if legacy in text:
-        text = text.replace(legacy, renderer_240, 1)
-        path.write_text(text, encoding="utf-8")
-    elif renderer_240 not in text:
-        raise SystemExit("cannot activate Renderer 2.4 financial template scope")
+    try:
+        source = path.read_text(encoding="utf-8")
+        tree = ast.parse(source, filename=str(path))
+    except (OSError, SyntaxError) as exc:
+        raise SystemExit(f"cannot inspect Renderer 2.4 financial template scope: {exc}") from exc
+
+    found: set[str] | None = None
+    for node in tree.body:
+        if isinstance(node, ast.Assign):
+            targets = node.targets
+            value_node = node.value
+        elif isinstance(node, ast.AnnAssign):
+            targets = [node.target]
+            value_node = node.value
+        else:
+            continue
+        if not any(isinstance(target, ast.Name) and target.id == "FINANCIAL_TEMPLATES" for target in targets):
+            continue
+        if value_node is None:
+            break
+        try:
+            literal = ast.literal_eval(value_node)
+        except (ValueError, TypeError, SyntaxError) as exc:
+            raise SystemExit("FINANCIAL_TEMPLATES must be a literal set of strings") from exc
+        if not isinstance(literal, set) or not all(isinstance(item, str) for item in literal):
+            raise SystemExit("FINANCIAL_TEMPLATES must be a literal set of strings")
+        found = set(literal)
+        break
+
+    if found != RENDERER_240_FINANCIAL_TEMPLATES:
+        actual = "missing" if found is None else sorted(found)
+        raise SystemExit(
+            "Renderer 2.4 financial template scope mismatch: "
+            f"expected={sorted(RENDERER_240_FINANCIAL_TEMPLATES)} actual={actual}"
+        )
 
 
 def apply_explicit_scene_patches(value: dict[str, Any]) -> int:
@@ -194,7 +233,7 @@ def main() -> int:
             raise SystemExit("review.storyScores is required")
         review["scores"] = dict(story_scores)
     daily_sha = bind_daily_source_lineage(value, root, args.date)
-    activate_renderer_240_financial_scope(root)
+    assert_renderer_240_financial_scope(root)
     mode_aliases = normalize_renderer_visual_modes(value)
     registry = authoring_closure.load_json(
         root / "contracts" / "financial_recipe_registry.json",
