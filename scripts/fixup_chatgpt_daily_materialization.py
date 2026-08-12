@@ -3,8 +3,9 @@
 
 This module performs no editorial selection. It preserves the approved dossier/story,
 normalizes strict renderer enums, supplies projection-only Markdown anchors per Scene,
-projects explicit financial bindings, binds authored intraday evidence, and completes
-explicit show sequences for already-authored multi-object Visual Beats.
+projects explicit financial bindings, binds authored intraday evidence, completes
+explicit show sequences for already-authored multi-object Visual Beats, and registers
+all explicitly authored fox expressions as fixed renderer placements.
 """
 from __future__ import annotations
 
@@ -18,6 +19,15 @@ FIXED_SCENE_09_NARRATION = (
     "こちらはそろそろ、おやすみなさい。"
 )
 EVENT_RE = re.compile(r"^event-(\d{3})$")
+EXPRESSION_ASSET_MAP = {
+    "通常": "foxNormal",
+    "分析": "foxAnalysis",
+    "ニヤリ": "foxSmirk",
+    "軽い驚き": "foxSlightSurprise",
+    "困惑": "foxConfused",
+    "警戒": "foxAlert",
+    "眠そう": "foxSleepy",
+}
 
 
 def load(path: Path):
@@ -142,6 +152,49 @@ def normalize_review(authoring: dict, root: Path, date: str) -> None:
     dump(creative_path, creative)
 
 
+def ensure_fox_expression_placements(scene: dict) -> int:
+    """Register every explicitly authored expression used by this Scene.
+
+    The renderer resolves the current expression to a fixed asset ID and then requires
+    a matching fox-expression placement to exist in the Scene. This function only
+    projects already-authored initial/chunk expressions; it never chooses an expression.
+    """
+    expressions: list[str] = []
+    initial = scene.get("initialExpression")
+    if isinstance(initial, str):
+        expressions.append(initial)
+    for chunk in scene.get("narrationChunks", []):
+        if isinstance(chunk, dict) and isinstance(chunk.get("expression"), str):
+            expressions.append(chunk["expression"])
+
+    placements = scene.setdefault("assetPlacements", [])
+    existing_asset_ids = {
+        row.get("assetId")
+        for row in placements
+        if isinstance(row, dict) and row.get("role") == "fox-expression"
+    }
+    added = 0
+    for expression in dict.fromkeys(expressions):
+        asset_id = EXPRESSION_ASSET_MAP.get(expression)
+        if asset_id is None:
+            raise SystemExit(f"unsupported authored fox expression: {expression}")
+        if asset_id in existing_asset_ids:
+            continue
+        placements.append({
+            "placementId": f"{scene.get('sceneId')}-placement-{asset_id}",
+            "assetId": asset_id,
+            "role": "fox-expression",
+            "region": "fox-left",
+            "fit": "contain",
+            "opacity": 1,
+            "startChunkId": None,
+            "endChunkId": None,
+        })
+        existing_asset_ids.add(asset_id)
+        added += 1
+    return added
+
+
 def normalize_render(authoring: dict, root: Path, date: str) -> dict:
     path = root / "render-specs" / date / "render_spec.json"
     render = load(path)
@@ -171,6 +224,7 @@ def normalize_render(authoring: dict, root: Path, date: str) -> dict:
         for beat in scene.get("visualBeats", []):
             if beat.get("screenState") == "Source":
                 beat["screenState"] = "News"
+        ensure_fox_expression_placements(scene)
     dump(path, render)
     return render
 
@@ -307,10 +361,16 @@ def main() -> int:
     show_events_added = complete_show_sequences(render)
     dump(root / "render-specs" / date / "render_spec.json", render)
 
+    expression_placements = sum(
+        1
+        for scene in render.get("scenes", [])
+        for placement in scene.get("assetPlacements", [])
+        if placement.get("role") == "fox-expression"
+    )
     print(
         f"FIXED daily materialization {date}: canonical inquisition + scene-scoped anchors + "
         f"canonical reaction IDs ({reaction_count}) + {len(authoring.get('financialBindings', []))} financial bindings + "
-        f"completed show events ({show_events_added})"
+        f"completed show events ({show_events_added}) + fox expression placements ({expression_placements})"
     )
     return 0
 
