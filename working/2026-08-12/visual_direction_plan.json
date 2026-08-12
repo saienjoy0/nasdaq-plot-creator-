@@ -1,0 +1,97 @@
+{
+  "contractVersion": "1.0.0",
+  "episodeDate": "2026-08-12",
+  "candidateCatalogSha256": "024401f0d242bc9fe20710f993ec1fe96d38155371268978a9945ab7b2bf1f8a",
+  "selections": [
+    {
+      "visualBeatId": "vb-01-01",
+      "candidateId": "vc-vb-01-01-02",
+      "reason": "冒頭の矛盾を一枚で固定するため、元のopening-contradictionを維持する。"
+    },
+    {
+      "visualBeatId": "vb-01-02",
+      "candidateId": "vc-vb-01-02-01",
+      "reason": "主役候補のBrentを短く強調する元のhero-numberを維持する。"
+    },
+    {
+      "visualBeatId": "vb-02-01",
+      "candidateId": "vc-vb-02-01-01",
+      "reason": "Reuters報道を根拠として示すFinancial source-receiptを維持する。"
+    },
+    {
+      "visualBeatId": "vb-02-02",
+      "candidateId": "vc-vb-02-02-04",
+      "reason": "期待と現実の二項比較という著者意図に合わせ、元のsplit-comparisonを維持する。"
+    },
+    {
+      "visualBeatId": "vb-03-01",
+      "candidateId": "vc-vb-03-01-01",
+      "reason": "AP終値を一次の確認材料として示すsource-receiptを維持する。"
+    },
+    {
+      "visualBeatId": "vb-03-02",
+      "candidateId": "vc-vb-03-02-01",
+      "reason": "大型テック3銘柄の同一基準比較なのでmarket-pulse-gridを維持する。"
+    },
+    {
+      "visualBeatId": "vb-04-01",
+      "candidateId": "vc-vb-04-01-01",
+      "reason": "Expected / Actual / Gapの三段構造をそのまま見せる。"
+    },
+    {
+      "visualBeatId": "vb-04-02",
+      "candidateId": "vc-vb-04-02-01",
+      "reason": "短い大学課題の比喩はanalogy-stepsで提示し、市場説明へ戻す。"
+    },
+    {
+      "visualBeatId": "vb-05-01",
+      "candidateId": "vc-vb-05-01-01",
+      "reason": "ホルムズ報道の根拠をFinancial source-receiptで固定する。"
+    },
+    {
+      "visualBeatId": "vb-05-02",
+      "candidateId": "vc-vb-05-02-01",
+      "reason": "ホルムズから大型テックまでの4段経路をcausal-laneで維持する。"
+    },
+    {
+      "visualBeatId": "vb-05-03",
+      "candidateId": "vc-vb-05-03-01",
+      "reason": "向かい風と相殺材料を同時に残すtailwind-headwindを維持する。"
+    },
+    {
+      "visualBeatId": "vb-06-01",
+      "candidateId": "vc-vb-06-01-01",
+      "reason": "検証済み1分足というReality Anchorをevent-reaction-timelineで維持する。"
+    },
+    {
+      "visualBeatId": "vb-06-02",
+      "candidateId": "vc-vb-06-02-01",
+      "reason": "NVDA・QQQ・SOXXの同一セッション比較をmarket-pulse-gridで要約する。"
+    },
+    {
+      "visualBeatId": "vb-07-01",
+      "candidateId": "vc-vb-07-01-01",
+      "reason": "NVIDIA資金構想の報道根拠をsource-receiptで固定する。"
+    },
+    {
+      "visualBeatId": "vb-07-02",
+      "candidateId": "vc-vb-07-02-04",
+      "reason": "同一単位へ修正済みのCoreWeave比較を二分割で見せる著者意図を維持する。"
+    },
+    {
+      "visualBeatId": "vb-08-01",
+      "candidateId": "vc-vb-08-01-02",
+      "reason": "通常取引と引け後の境界をverification-matrixで明示する。"
+    },
+    {
+      "visualBeatId": "vb-08-02",
+      "candidateId": "vc-vb-08-02-01",
+      "reason": "今日の検証3点はverification-checklistで簡潔に残す。"
+    },
+    {
+      "visualBeatId": "vb-09-01",
+      "candidateId": "vc-vb-09-01-02",
+      "reason": "主役・反対材料・次の確認をfinal-assemblyで再構成して締める。"
+    }
+  ]
+}
