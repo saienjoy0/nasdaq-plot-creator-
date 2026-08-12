@@ -25,6 +25,7 @@ import viewer_surface_projection as viewer  # noqa: E402
         ("千四十億ドル", "1,040億ドル"),
         ("二十五・八億ドル", "25.8億ドル"),
         ("二万六千四百四十五・四五。", "26,445.45。"),
+        ("二万六千四百四十五・四五でした", "26,445.45でした"),
     ],
 )
 def test_caption_numeric_projection(speech: str, expected: str) -> None:
