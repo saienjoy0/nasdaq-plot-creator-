@@ -1,4 +1,13 @@
 {
+  "temporalUsage": {
+    "carryover_results": [],
+    "cross_market": {
+      "mode": "internal_only",
+      "scene_id": null,
+      "visual_need_ids": []
+    },
+    "validation_obligations": []
+  },
   "scenePatches": [
     {
       "sceneNumber": 4,
