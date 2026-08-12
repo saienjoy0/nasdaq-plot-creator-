@@ -69,8 +69,8 @@
             "targetId": "scene-07-number-02-02",
             "offsetMs": 8000,
             "expression": null,
-            "motionPreset": "emphasis-pop",
-            "durationMs": 360,
+            "motionPreset": "focus-ring",
+            "durationMs": 300,
             "easingPreset": "smooth-out"
           }
         ]
