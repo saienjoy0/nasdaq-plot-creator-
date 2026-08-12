@@ -1,0 +1,47 @@
+{
+  "beatPatches": [
+    {
+      "sceneNumber": 7,
+      "beatNumber": 2,
+      "set": {
+        "visualTemplate": "split-comparison",
+        "grammarId": "comparison",
+        "visualMode": "stock-comparison",
+        "screenQuestion": "AI需要の強さはCoreWeaveの数字でどう見えるか",
+        "primaryElement": "CoreWeave Q2売上とbacklog",
+        "viewerTexts": [
+          "Q2売上 $2.58B",
+          "backlog $104B",
+          "引け後の確認材料"
+        ],
+        "screenState": "Chart",
+        "transitionRole": "major-shift",
+        "variant": "two-lane",
+        "comparisonBasis": "CoreWeave Q2 2026 results released after close",
+        "metrics": [
+          {
+            "label": "Q2売上",
+            "value": "2.58",
+            "numericValue": 2.58,
+            "precision": 2,
+            "unit": "Bドル",
+            "tone": "positive",
+            "comparison": "CoreWeave Q2 2026 results"
+          },
+          {
+            "label": "backlog",
+            "value": "104",
+            "numericValue": 104,
+            "precision": 0,
+            "unit": "Bドル",
+            "tone": "positive",
+            "comparison": "CoreWeave Q2 2026 results"
+          }
+        ],
+        "evidenceSourceIds": [
+          "source-006"
+        ]
+      }
+    }
+  ]
+}
