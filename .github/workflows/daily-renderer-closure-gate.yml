@@ -45,7 +45,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      RENDERER_COMMIT: aa53da3a503cf28c2d9312540613d5ec37a44481
+      RENDERER_COMMIT: a656bcbc9156c84b3ca458d20763a44f31cf82e0
       NASDAQ_CAFE_RENDERER_ROOT: ${{ github.workspace }}/.renderer
     steps:
       - uses: actions/checkout@v4
@@ -124,10 +124,13 @@ jobs:
           npm --prefix .renderer ci
 
       - name: Run closure regression tests
+        env:
+          PYTHONPATH: scripts
         run: |
           python -m pytest -q \
             tests/remotion-compat/test_chatgpt_daily_authoring_closure.py \
             tests/remotion-compat/test_fox_expression_projection.py \
+            tests/remotion-compat/test_visual_director_bridge.py \
             tests/viewer-surface/test_viewer_surface_projection.py
           python -m py_compile \
             scripts/validate_chatgpt_daily_authoring_closure.py \
@@ -136,7 +139,8 @@ jobs:
             scripts/materialize_chatgpt_daily_authoring.py \
             scripts/viewer_surface_projection.py \
             scripts/materialize_renderer_sources.py \
-            scripts/fixup_chatgpt_daily_materialization.py
+            scripts/fixup_chatgpt_daily_materialization.py \
+            scripts/visual_director_bridge.py
 
       - name: Require exact-day Renderer 2.4 closure
         run: |
@@ -152,6 +156,7 @@ jobs:
           name: daily-renderer-closure-${{ env.EPISODE_DATE }}
           path: |
             verification/${{ env.EPISODE_DATE }}/
+            working/${{ env.EPISODE_DATE }}/visual_capability_hints.json
             working/${{ env.EPISODE_DATE }}/visual_candidate_catalog.json
             working/${{ env.EPISODE_DATE }}/visual_direction_plan.json
             render-specs/${{ env.EPISODE_DATE }}/render_spec.json

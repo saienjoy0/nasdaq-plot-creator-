@@ -18,7 +18,7 @@ import subprocess
 from pathlib import Path
 
 
-RENDERER_COMMIT = "aa53da3a503cf28c2d9312540613d5ec37a44481"
+RENDERER_COMMIT = "a656bcbc9156c84b3ca458d20763a44f31cf82e0"
 RENDERER_CONTRACT_VERSION = "2.4.0"
 
 
@@ -91,6 +91,23 @@ def ensure_renderer(renderer_root: Path) -> None:
         raise ClosureError(
             f"renderer SHA mismatch: expected={RENDERER_COMMIT} actual={actual or 'unavailable'}"
         )
+
+
+def sync_renderer_owned_contracts(root: Path, renderer_root: Path) -> None:
+    source = renderer_root / "contracts" / "visual_grammar_renderer_compatibility.json"
+    target = root / "contracts" / "visual_grammar_renderer_compatibility.json"
+    if not source.is_file():
+        raise ClosureError(f"pinned Renderer compatibility registry missing: {source}")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(source, target)
+    source_sha = hashlib.sha256(source.read_bytes()).hexdigest()
+    target_sha = hashlib.sha256(target.read_bytes()).hexdigest()
+    if source_sha != target_sha:
+        raise ClosureError(
+            "Renderer compatibility registry sync mismatch: "
+            f"source={source_sha} target={target_sha}"
+        )
+    print(f"BOUND_RENDERER_VISUAL_GRAMMAR_REGISTRY sha256={source_sha}", flush=True)
 
 
 def main() -> int:
@@ -224,6 +241,7 @@ def main() -> int:
             root / "contracts" / "financial_visual_compatibility_2_4.json",
             root / "contracts" / "financial_visual_compatibility.json",
         )
+        sync_renderer_owned_contracts(root, renderer_root)
         run(
             root,
             "python",

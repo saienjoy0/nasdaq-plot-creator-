@@ -1,9 +1,9 @@
 {
   "contractVersion": "1.0.0",
   "episodeDate": "2026-08-12",
-  "candidateCatalogSha256": "65221849080cb68a14bc622852b858a4d5fe3bd28953dd7102b28913259ac987",
+  "candidateCatalogSha256": "59fa7170d471ee274a6bc673dba16519f5d10b3c45ef092c7eb845508f444b43",
   "selections": [
-    {"visualBeatId": "vb-01-01", "candidateId": "vc-vb-01-01-02"},
+    {"visualBeatId": "vb-01-01", "candidateId": "vc-vb-01-01-01"},
     {"visualBeatId": "vb-01-02", "candidateId": "vc-vb-01-02-01"},
     {"visualBeatId": "vb-02-01", "candidateId": "vc-vb-02-01-01"},
     {"visualBeatId": "vb-02-02", "candidateId": "vc-vb-02-02-01"},
@@ -17,9 +17,9 @@
     {"visualBeatId": "vb-06-01", "candidateId": "vc-vb-06-01-01"},
     {"visualBeatId": "vb-06-02", "candidateId": "vc-vb-06-02-01"},
     {"visualBeatId": "vb-07-01", "candidateId": "vc-vb-07-01-01"},
-    {"visualBeatId": "vb-07-02", "candidateId": "vc-vb-07-02-04"},
-    {"visualBeatId": "vb-08-01", "candidateId": "vc-vb-08-01-02"},
+    {"visualBeatId": "vb-07-02", "candidateId": "vc-vb-07-02-01"},
+    {"visualBeatId": "vb-08-01", "candidateId": "vc-vb-08-01-01"},
     {"visualBeatId": "vb-08-02", "candidateId": "vc-vb-08-02-01"},
-    {"visualBeatId": "vb-09-01", "candidateId": "vc-vb-09-01-02"}
+    {"visualBeatId": "vb-09-01", "candidateId": "vc-vb-09-01-01"}
   ]
 }
