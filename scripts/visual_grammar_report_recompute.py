@@ -83,11 +83,75 @@ def validate_structural_report_against_render(
         )
 
 
+def _validate_static_state_report(timing_report: dict[str, Any]) -> None:
+    _require_equal("timing contractVersion", timing_report.get("contractVersion"), "1.1.0")
+    static = timing_report.get("staticState")
+    if not isinstance(static, dict):
+        raise VisualGrammarReportRecomputeError("timing report staticState must be an object")
+    _require_equal("staticState mode", static.get("mode"), "report-only")
+    _require_equal("staticState warningThresholdMs", static.get("warningThresholdMs"), 8000)
+    _require_equal(
+        "staticState failureCandidateThresholdMs",
+        static.get("failureCandidateThresholdMs"),
+        16000,
+    )
+    warnings = static.get("warnings")
+    candidates = static.get("failureCandidates")
+    if not isinstance(warnings, list) or not isinstance(candidates, list):
+        raise VisualGrammarReportRecomputeError(
+            "staticState warnings and failureCandidates must be arrays"
+        )
+    _require_equal("staticState warningCount", static.get("warningCount"), len(warnings))
+    _require_equal(
+        "staticState failureCandidateCount",
+        static.get("failureCandidateCount"),
+        len(candidates),
+    )
+    for index, row in enumerate(warnings):
+        if row.get("durationMs", 0) <= 8000:
+            raise VisualGrammarReportRecomputeError(
+                f"staticState warning[{index}] does not exceed 8000ms"
+            )
+    for index, row in enumerate(candidates):
+        if row.get("durationMs", 0) <= 16000:
+            raise VisualGrammarReportRecomputeError(
+                f"staticState failureCandidate[{index}] does not exceed 16000ms"
+            )
+    warning_keys = {
+        (row.get("sceneId"), row.get("beatId"), row.get("startMs"), row.get("endMs"))
+        for row in warnings
+    }
+    for index, row in enumerate(candidates):
+        key = (row.get("sceneId"), row.get("beatId"), row.get("startMs"), row.get("endMs"))
+        if key not in warning_keys:
+            raise VisualGrammarReportRecomputeError(
+                f"staticState failureCandidate[{index}] must also be present in warnings"
+            )
+    longest = float(static.get("longestStaticStateMs", 0))
+    if warnings:
+        _require_equal(
+            "staticState longestStaticStateMs",
+            longest,
+            max(float(row["durationMs"]) for row in warnings),
+        )
+    elif longest > 8000:
+        raise VisualGrammarReportRecomputeError(
+            "staticState longestStaticStateMs exceeds warning threshold without warning row"
+        )
+    # Phase 1 is deliberately report-only. Static findings must not be inserted into
+    # the existing hard-gate failures array or change the report status by themselves.
+    if any(str(row.get("code", "")).startswith("VG_STATIC_STATE") for row in timing_report.get("failures", [])):
+        raise VisualGrammarReportRecomputeError(
+            "Static State 1.1.0 is report-only and must not appear in hard failures"
+        )
+
+
 def validate_timing_report_metrics(timing_report: dict[str, Any]) -> None:
     if timing_report.get("failures") != []:
         raise VisualGrammarReportRecomputeError(
             "timing PASS report must contain zero failures"
         )
+    _validate_static_state_report(timing_report)
     rows = timing_report.get("beats", [])
     if not rows:
         raise VisualGrammarReportRecomputeError("timing report must contain measured Beats")
