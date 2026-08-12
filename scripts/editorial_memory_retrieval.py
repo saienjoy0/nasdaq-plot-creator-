@@ -12,6 +12,8 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Iterable
 
+from temporal_evidence import render_mandatory_temporal_carryover
+
 try:
     from jsonschema import Draft202012Validator, FormatChecker
 except ImportError as exc:  # pragma: no cover
@@ -788,6 +790,7 @@ def retrieve(
     *,
     repo_root: Path = DEFAULT_ROOT,
     contracts_dir: Path | None = None,
+    include_temporal_carryover: bool = True,
 ) -> dict[str, Any]:
     repo_root = repo_root.resolve()
     contracts_dir = contracts_dir or (repo_root / "skills" / "nasdaq-cafe-editorial-memory" / "contracts")
@@ -797,6 +800,13 @@ def retrieve(
 
     plan = load_json(query_plan_path)
     validate_document(plan, contracts_dir / "memory_query_plan.schema.json")
+    temporal_carryover = (
+        render_mandatory_temporal_carryover(
+            repo_root, episode_date=plan["episode_date"]
+        )
+        if include_temporal_carryover
+        else ""
+    )
 
     alias_doc = load_json(
         repo_root / "editorial-memory" / "entity_aliases.json",
@@ -835,6 +845,7 @@ def retrieve(
             "",
             "> 過去の編集記録であり、現在の事実を証明しません。台本へ使う前に当日の一次情報と市場データで再検証してください。",
             "",
+            *([temporal_carryover.rstrip(), ""] if include_temporal_carryover else []),
         ]
     )
     context, selected, rejected, duplicate_removed = select_candidates(

@@ -272,7 +272,11 @@ def validate_dossier(
     errors.extend(
         schema_errors(
             dossier,
-            contracts_dir / "causal_research_dossier_v0.2.schema.json",
+            contracts_dir / (
+                "causal_research_dossier_v0.3.schema.json"
+                if dossier.get("contract_version") == "0.3.0"
+                else "causal_research_dossier_v0.2.schema.json"
+            ),
             "dossier",
         )
     )
@@ -348,6 +352,9 @@ def validate_dossier(
                 repo_root=repo_root,
                 editorial_contracts_dir=editorial_contracts,
                 retrieval_runner=retrieval_runner,
+                include_temporal_carryover=(
+                    manifest.get("contract_version") == "1.1.0"
+                ),
             )
         except ManifestBuildError as exc:
             errors.append(f"retrieval lineage: {exc}")
@@ -551,6 +558,80 @@ def validate_dossier(
         errors.append(
             "input_provenance must include the manifest-bound daily source package path and SHA-256"
         )
+
+
+    if dossier.get("contract_version") == "0.3.0":
+        # Temporal Evidence is additive. Current evidence remains authoritative;
+        # memory and candidate-pool items may not become evidence by reference alone.
+        for index, result in enumerate(dossier.get("carryover_results", [])):
+            status = result.get("status")
+            ids = result.get("current_evidence_ids", [])
+            if status in {"supports", "weakens", "contradicts"} and not ids:
+                errors.append(f"carryover_results[{index}]: {status} requires Current Evidence ID")
+            if status == "expired" and not isinstance(result.get("completed_observation_sessions"), int):
+                errors.append(f"carryover_results[{index}]: expired requires completed_observation_sessions")
+            for evidence_id in ids:
+                item = evidence.get(evidence_id)
+                if not item:
+                    errors.append(f"carryover_results[{index}]: unknown evidence id {evidence_id}")
+                elif item.get("source_tier") in {"discovery_only", "unavailable"}:
+                    errors.append(f"carryover_results[{index}]: Candidate/Coverage item cannot be current evidence ({evidence_id})")
+
+        cross = dossier.get("cross_market_assessment", {})
+        materiality = cross.get("materiality")
+        alternatives = cross.get("alternatives", [])
+        if materiality == "material":
+            ids = [item.get("hypothesis_id") for item in alternatives]
+            if set(ids) != {"H1", "H2", "H3", "H4"} or len(ids) != 4:
+                errors.append("material cross-market assessment must compare H1/H2/H3/H4 exactly once")
+        elif alternatives:
+            errors.append("cross-market deep alternatives are allowed only when materiality=material")
+        for evidence_id in cross.get("evidence_ids", []):
+            if evidence_id not in evidence:
+                errors.append(f"cross_market_assessment: unknown evidence id {evidence_id}")
+        for alt in alternatives:
+            for key in ("supporting_evidence_ids", "weakening_evidence_ids"):
+                for evidence_id in alt.get(key, []):
+                    if evidence_id not in evidence:
+                        errors.append(f"cross_market_assessment {alt.get('hypothesis_id')}: unknown evidence id {evidence_id}")
+
+        candidate_keys: set[str] = set()
+        for index, candidate in enumerate(dossier.get("validation_candidates", [])):
+            target = candidate.get("observation_target")
+            if not isinstance(target, dict):
+                errors.append(f"validation_candidates[{index}]: observation_target must be one object")
+                continue
+            if target.get("session") != "next_completed_regular_session":
+                errors.append(f"validation_candidates[{index}]: session must be next_completed_regular_session")
+            if any(isinstance(value, (dict, list)) for value in target.values()):
+                errors.append(f"validation_candidates[{index}]: 1 VO = 1 observation target")
+            if not str(candidate.get("strengthen_condition", "")).strip() or not str(candidate.get("weaken_condition", "")).strip():
+                errors.append(f"validation_candidates[{index}]: strengthen/weaken conditions are required")
+            key = json.dumps(
+                {
+                    "hypothesis_reference": candidate.get("hypothesis_reference"),
+                    "observation_target": target,
+                    "strengthen_condition": candidate.get("strengthen_condition"),
+                    "weaken_condition": candidate.get("weaken_condition"),
+                },
+                ensure_ascii=False, sort_keys=True, separators=(",", ":"),
+            )
+            if key in candidate_keys:
+                errors.append(f"validation_candidates[{index}]: duplicate semantic validation candidate")
+            candidate_keys.add(key)
+
+        for index, need in enumerate(dossier.get("visual_evidence_needs", [])):
+            for evidence_id in need.get("evidence_ids", []):
+                if evidence_id not in evidence:
+                    errors.append(f"visual_evidence_needs[{index}]: unknown evidence id {evidence_id}")
+
+        collector_ref = manifest.get("inputs", {}).get("collector_source_pack")
+        if collector_ref and not any(
+            item.get("path_or_reference") == collector_ref.get("path")
+            and item.get("version_or_hash") == collector_ref.get("sha256")
+            for item in dossier.get("input_provenance", [])
+        ):
+            errors.append("input_provenance must include optional collector_source_pack path and SHA-256")
 
     return ValidationResult(sorted(set(errors)), sorted(set(warnings)))
 

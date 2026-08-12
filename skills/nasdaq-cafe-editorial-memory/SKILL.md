@@ -72,6 +72,34 @@ working/memory_promotion_plan_YYYY-MM-DD.json
 - 必要な場合だけ`active_context.md`
 - 複数回で再利用可能と確認した場合だけ`production-lessons.md`
 
+## Mandatory Temporal Carryover
+
+Temporal v1.2 adds one mandatory deterministic replay before normal relevant-memory selection. It is **not** limited to the immediately previous episode.
+
+```text
+approved episode revision history
+→ current_revision per episode date
+→ replay Structured Validation Obligation events chronologically
+→ remove closed / expired
+→ carry only open and in-window obligations
+```
+
+Production gaps do not drop an open obligation. Draft, rejected, abandoned, superseded non-current revisions and non-selected visual paths never enter Carryover. Old publication records without `temporal_evidence` mean “no Temporal Carryover” and require no migration.
+
+The generated `memory_context` must place `## Mandatory Temporal Carryover` before the normal relevant threads/claims/episodes. Carryover contains questions and falsification conditions, not conclusions. Current Evidence may revise memory; memory may not revise Current Evidence.
+
+## Validation Obligation / publication projection
+
+Structured `temporal_evidence.validation_obligations` is the semantic source of truth. Legacy `watch_next` is a human-readable projection and may also contain general monitoring points.
+
+After the final Story Plan and Causal Dossier are frozen, build the Temporal publication fields deterministically:
+
+```bash
+python scripts/project_temporal_publication_record.py   --publication-record working/publication_record_base_YYYY-MM-DD.json   --causal-dossier research/YYYY-MM-DD/causal_research_dossier_YYYY-MM-DD.json   --story-plan working/YYYY-MM-DD/story-engine/story_plan.json   --output working/publication_record_YYYY-MM-DD.json   --repo-root .
+```
+
+The projection copies `carryover_results` from the Causal Dossier, copies only the 0-2 editorially selected final VOs from Story Plan, strips Story/Visual planning metadata, and deterministically adds each `watch_next_display_text` to `watch_next`. Promotion preflight then validates duplicate control, current-revision history, max-three-open, one-target, session-expiry and Current-Evidence requirements.
+
 ## Retrievalルール
 
 - 全履歴を読まない。

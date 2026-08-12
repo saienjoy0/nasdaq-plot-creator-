@@ -25,49 +25,665 @@
     "scenes"
   ],
   "properties": {
-    "contract_version": {"const": "1.2.0"},
-    "episode_date": {"type": "string", "format": "date"},
-    "created_at": {"type": "string", "format": "date-time"},
-    "producer": {"const": "chatgpt"},
-    "causal_dossier": {"$ref": "#/$defs/fileRef"},
-    "central_contradiction_id": {"type": "string", "pattern": "^CON-[0-9]{2,}$"},
-    "central_contradiction": {"$ref": "#/$defs/nonEmptyString"},
-    "central_question": {"$ref": "#/$defs/nonEmptyString"},
-    "headline_beyond_discovery": {"$ref": "#/$defs/nonEmptyString"},
-    "naive_explanations": {"type": "array", "minItems": 1, "maxItems": 4, "items": {"$ref": "#/$defs/naiveExplanation"}},
-    "angle_candidates": {"type": "array", "minItems": 3, "maxItems": 5, "items": {"$ref": "#/$defs/angleCandidate"}},
-    "selected_angle_id": {"type": "string", "pattern": "^angle-[0-9]{2,}$"},
-    "story_spine": {"$ref": "#/$defs/nonEmptyString"},
-    "opening_promise": {"$ref": "#/$defs/nonEmptyString"},
-    "midpoint_turn": {"$ref": "#/$defs/midpointTurn"},
-    "closing_reframe": {"$ref": "#/$defs/closingReframe"},
-    "open_loops": {"type": "array", "maxItems": 2, "items": {"$ref": "#/$defs/openLoop"}},
-    "scenes": {"type": "array", "minItems": 9, "maxItems": 9, "items": {"$ref": "#/$defs/scene"}}
+    "contract_version": {
+      "const": "1.2.0"
+    },
+    "episode_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "producer": {
+      "const": "chatgpt"
+    },
+    "causal_dossier": {
+      "$ref": "#/$defs/fileRef"
+    },
+    "central_contradiction_id": {
+      "type": "string",
+      "pattern": "^CON-[0-9]{2,}$"
+    },
+    "central_contradiction": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "central_question": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "headline_beyond_discovery": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "naive_explanations": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4,
+      "items": {
+        "$ref": "#/$defs/naiveExplanation"
+      }
+    },
+    "angle_candidates": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 5,
+      "items": {
+        "$ref": "#/$defs/angleCandidate"
+      }
+    },
+    "selected_angle_id": {
+      "type": "string",
+      "pattern": "^angle-[0-9]{2,}$"
+    },
+    "story_spine": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "opening_promise": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "midpoint_turn": {
+      "$ref": "#/$defs/midpointTurn"
+    },
+    "closing_reframe": {
+      "$ref": "#/$defs/closingReframe"
+    },
+    "open_loops": {
+      "type": "array",
+      "maxItems": 2,
+      "items": {
+        "$ref": "#/$defs/openLoop"
+      }
+    },
+    "scenes": {
+      "type": "array",
+      "minItems": 9,
+      "maxItems": 9,
+      "items": {
+        "$ref": "#/$defs/scene"
+      }
+    },
+    "temporal_usage": {
+      "$ref": "#/$defs/temporalUsage"
+    }
   },
   "$defs": {
-    "nonEmptyString": {"type": "string", "minLength": 1},
-    "evidenceIds": {"type": "array", "items": {"type": "string", "pattern": "^E-[0-9]{3,}$"}, "uniqueItems": true},
-    "fileRef": {"type": "object", "additionalProperties": false, "required": ["path", "sha256"], "properties": {"path": {"type": "string", "minLength": 1}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}},
-    "confidence": {"type": "string", "enum": ["high", "medium", "low", "unknown"]},
-    "naiveExplanation": {"type": "object", "additionalProperties": false, "required": ["id", "explanation", "status", "evidence_ids", "why"], "properties": {"id": {"type": "string", "pattern": "^naive-[0-9]{2,}$"}, "explanation": {"$ref": "#/$defs/nonEmptyString"}, "status": {"type": "string", "enum": ["survives", "weakened", "rejected", "unresolved"]}, "evidence_ids": {"$ref": "#/$defs/evidenceIds"}, "why": {"$ref": "#/$defs/nonEmptyString"}}},
-    "angleCandidate": {"type": "object", "additionalProperties": false, "required": ["id", "angle_type", "central_question", "story_spine", "opening_promise", "midpoint_turn_claim", "closing_reframe", "causality_scope", "confidence", "evidence_ids", "counterevidence_ids", "risk", "why_distinct"], "properties": {"id": {"type": "string", "pattern": "^angle-[0-9]{2,}$"}, "angle_type": {"type": "string", "enum": ["contradiction", "comparison", "evaluation_axis_shift", "misconception_disproof", "causal_chain", "reason_unknown"]}, "central_question": {"$ref": "#/$defs/nonEmptyString"}, "story_spine": {"$ref": "#/$defs/nonEmptyString"}, "opening_promise": {"$ref": "#/$defs/nonEmptyString"}, "midpoint_turn_claim": {"$ref": "#/$defs/nonEmptyString"}, "closing_reframe": {"$ref": "#/$defs/nonEmptyString"}, "causality_scope": {"type": "string", "enum": ["company", "sector", "nasdaq_support", "nasdaq_primary", "reason_unknown"]}, "confidence": {"$ref": "#/$defs/confidence"}, "evidence_ids": {"$ref": "#/$defs/evidenceIds"}, "counterevidence_ids": {"$ref": "#/$defs/evidenceIds"}, "risk": {"$ref": "#/$defs/nonEmptyString"}, "why_distinct": {"$ref": "#/$defs/nonEmptyString"}}},
-    "midpointTurn": {"type": "object", "additionalProperties": false, "required": ["scene_id", "claim", "evidence_ids", "what_changes"], "properties": {"scene_id": {"type": "string", "enum": ["scene-04", "scene-05", "scene-06"]}, "claim": {"$ref": "#/$defs/nonEmptyString"}, "evidence_ids": {"$ref": "#/$defs/evidenceIds"}, "what_changes": {"$ref": "#/$defs/nonEmptyString"}}},
-    "closingReframe": {"type": "object", "additionalProperties": false, "required": ["scene_id", "text"], "properties": {"scene_id": {"const": "scene-08"}, "text": {"$ref": "#/$defs/nonEmptyString"}}},
-    "openLoop": {"type": "object", "additionalProperties": false, "required": ["id", "open_scene", "question", "promised_evidence_ids", "close_scene", "resolution"], "properties": {"id": {"type": "string", "pattern": "^loop-[0-9]{2,}$"}, "open_scene": {"type": "string", "pattern": "^scene-0[1-8]$"}, "question": {"$ref": "#/$defs/nonEmptyString"}, "promised_evidence_ids": {"$ref": "#/$defs/evidenceIds"}, "close_scene": {"type": "string", "pattern": "^scene-0[2-8]$"}, "resolution": {"$ref": "#/$defs/nonEmptyString"}}},
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidenceIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^E-[0-9]{3,}$"
+      },
+      "uniqueItems": true
+    },
+    "fileRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "confidence": {
+      "type": "string",
+      "enum": [
+        "high",
+        "medium",
+        "low",
+        "unknown"
+      ]
+    },
+    "naiveExplanation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "explanation",
+        "status",
+        "evidence_ids",
+        "why"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^naive-[0-9]{2,}$"
+        },
+        "explanation": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "survives",
+            "weakened",
+            "rejected",
+            "unresolved"
+          ]
+        },
+        "evidence_ids": {
+          "$ref": "#/$defs/evidenceIds"
+        },
+        "why": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "angleCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "angle_type",
+        "central_question",
+        "story_spine",
+        "opening_promise",
+        "midpoint_turn_claim",
+        "closing_reframe",
+        "causality_scope",
+        "confidence",
+        "evidence_ids",
+        "counterevidence_ids",
+        "risk",
+        "why_distinct"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^angle-[0-9]{2,}$"
+        },
+        "angle_type": {
+          "type": "string",
+          "enum": [
+            "contradiction",
+            "comparison",
+            "evaluation_axis_shift",
+            "misconception_disproof",
+            "causal_chain",
+            "reason_unknown"
+          ]
+        },
+        "central_question": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "story_spine": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "opening_promise": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "midpoint_turn_claim": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "closing_reframe": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "causality_scope": {
+          "type": "string",
+          "enum": [
+            "company",
+            "sector",
+            "nasdaq_support",
+            "nasdaq_primary",
+            "reason_unknown"
+          ]
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        },
+        "evidence_ids": {
+          "$ref": "#/$defs/evidenceIds"
+        },
+        "counterevidence_ids": {
+          "$ref": "#/$defs/evidenceIds"
+        },
+        "risk": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "why_distinct": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "midpointTurn": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scene_id",
+        "claim",
+        "evidence_ids",
+        "what_changes"
+      ],
+      "properties": {
+        "scene_id": {
+          "type": "string",
+          "enum": [
+            "scene-04",
+            "scene-05",
+            "scene-06"
+          ]
+        },
+        "claim": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "evidence_ids": {
+          "$ref": "#/$defs/evidenceIds"
+        },
+        "what_changes": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "closingReframe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scene_id",
+        "text"
+      ],
+      "properties": {
+        "scene_id": {
+          "const": "scene-08"
+        },
+        "text": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "openLoop": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "open_scene",
+        "question",
+        "promised_evidence_ids",
+        "close_scene",
+        "resolution"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^loop-[0-9]{2,}$"
+        },
+        "open_scene": {
+          "type": "string",
+          "pattern": "^scene-0[1-8]$"
+        },
+        "question": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "promised_evidence_ids": {
+          "$ref": "#/$defs/evidenceIds"
+        },
+        "close_scene": {
+          "type": "string",
+          "pattern": "^scene-0[2-8]$"
+        },
+        "resolution": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
     "scene": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["scene_id", "formal_role", "story_role", "viewer_belief_before", "new_evidence_ids", "new_meaning", "viewer_belief_after", "continuation_reason", "connector"],
+      "required": [
+        "scene_id",
+        "formal_role",
+        "story_role",
+        "viewer_belief_before",
+        "new_evidence_ids",
+        "new_meaning",
+        "viewer_belief_after",
+        "continuation_reason",
+        "connector"
+      ],
       "properties": {
-        "scene_id": {"type": "string", "pattern": "^scene-0[1-9]$"},
-        "formal_role": {"type": "string", "enum": ["direction_and_conclusion", "contradiction", "confirmed_facts", "expected_actual_gap", "global_context", "market_reaction", "entity_divergence", "validation_points", "fixed_closing"]},
-        "story_role": {"type": "string", "enum": ["hook", "question", "setup", "explanation", "context", "test", "comparison", "verification", "closing"]},
-        "viewer_belief_before": {"type": "string"},
-        "new_evidence_ids": {"$ref": "#/$defs/evidenceIds"},
-        "new_meaning": {"type": "string"},
-        "viewer_belief_after": {"type": "string"},
-        "continuation_reason": {"type": "string"},
-        "connector": {"type": "string", "enum": ["opening", "but", "therefore", "contrast", "callback", "closing"]}
+        "scene_id": {
+          "type": "string",
+          "pattern": "^scene-0[1-9]$"
+        },
+        "formal_role": {
+          "type": "string",
+          "enum": [
+            "direction_and_conclusion",
+            "contradiction",
+            "confirmed_facts",
+            "expected_actual_gap",
+            "global_context",
+            "market_reaction",
+            "entity_divergence",
+            "validation_points",
+            "fixed_closing"
+          ]
+        },
+        "story_role": {
+          "type": "string",
+          "enum": [
+            "hook",
+            "question",
+            "setup",
+            "explanation",
+            "context",
+            "test",
+            "comparison",
+            "verification",
+            "closing"
+          ]
+        },
+        "viewer_belief_before": {
+          "type": "string"
+        },
+        "new_evidence_ids": {
+          "$ref": "#/$defs/evidenceIds"
+        },
+        "new_meaning": {
+          "type": "string"
+        },
+        "viewer_belief_after": {
+          "type": "string"
+        },
+        "continuation_reason": {
+          "type": "string"
+        },
+        "connector": {
+          "type": "string",
+          "enum": [
+            "opening",
+            "but",
+            "therefore",
+            "contrast",
+            "callback",
+            "closing"
+          ]
+        }
+      }
+    },
+    "observationTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "market",
+        "instrument_group",
+        "metric",
+        "session",
+        "precision_required"
+      ],
+      "properties": {
+        "market": {
+          "type": "string",
+          "minLength": 1
+        },
+        "instrument_group": {
+          "type": "string",
+          "minLength": 1
+        },
+        "metric": {
+          "type": "string",
+          "minLength": 1
+        },
+        "session": {
+          "const": "next_completed_regular_session"
+        },
+        "precision_required": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "validationObligation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "obligation_id",
+        "source_episode_date",
+        "hypothesis_reference",
+        "question",
+        "observation_target",
+        "strengthen_condition",
+        "weaken_condition",
+        "max_observation_sessions",
+        "importance",
+        "status",
+        "watch_next_display_text"
+      ],
+      "properties": {
+        "obligation_id": {
+          "type": "string",
+          "pattern": "^VO-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2,}$"
+        },
+        "source_episode_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "hypothesis_reference": {
+          "type": "string",
+          "minLength": 1
+        },
+        "question": {
+          "type": "string",
+          "minLength": 1
+        },
+        "observation_target": {
+          "$ref": "#/$defs/observationTarget"
+        },
+        "strengthen_condition": {
+          "type": "string",
+          "minLength": 1
+        },
+        "weaken_condition": {
+          "type": "string",
+          "minLength": 1
+        },
+        "max_observation_sessions": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "importance": {
+          "enum": [
+            "material",
+            "monitoring"
+          ]
+        },
+        "status": {
+          "const": "open"
+        },
+        "watch_next_display_text": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "temporalUsage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "carryover_results",
+        "cross_market",
+        "validation_obligations"
+      ],
+      "properties": {
+        "carryover_results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "obligation_id",
+              "mode",
+              "scene_id",
+              "visual_need_ids"
+            ],
+            "properties": {
+              "obligation_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "mode": {
+                "enum": [
+                  "spoken",
+                  "internal_only"
+                ]
+              },
+              "scene_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "visual_need_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^TVE-[0-9]{2,}$"
+                },
+                "uniqueItems": true
+              }
+            }
+          }
+        },
+        "cross_market": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "scene_id",
+            "visual_need_ids"
+          ],
+          "properties": {
+            "mode": {
+              "enum": [
+                "spoken",
+                "internal_only"
+              ]
+            },
+            "scene_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "visual_need_ids": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^TVE-[0-9]{2,}$"
+              },
+              "uniqueItems": true
+            }
+          }
+        },
+        "validation_obligations": {
+          "type": "array",
+          "maxItems": 2,
+          "items": {
+            "$ref": "#/$defs/storyValidationObligation"
+          }
+        }
+      }
+    },
+    "storyValidationObligation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "obligation_id",
+        "source_episode_date",
+        "hypothesis_reference",
+        "question",
+        "observation_target",
+        "strengthen_condition",
+        "weaken_condition",
+        "max_observation_sessions",
+        "importance",
+        "status",
+        "watch_next_display_text",
+        "candidate_id",
+        "mode",
+        "scene_id",
+        "visual_need_ids"
+      ],
+      "properties": {
+        "obligation_id": {
+          "type": "string",
+          "pattern": "^VO-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2,}$"
+        },
+        "source_episode_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "hypothesis_reference": {
+          "type": "string",
+          "minLength": 1
+        },
+        "question": {
+          "type": "string",
+          "minLength": 1
+        },
+        "observation_target": {
+          "$ref": "#/$defs/observationTarget"
+        },
+        "strengthen_condition": {
+          "type": "string",
+          "minLength": 1
+        },
+        "weaken_condition": {
+          "type": "string",
+          "minLength": 1
+        },
+        "max_observation_sessions": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "importance": {
+          "enum": [
+            "material",
+            "monitoring"
+          ]
+        },
+        "status": {
+          "const": "open"
+        },
+        "watch_next_display_text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "candidate_id": {
+          "type": "string",
+          "pattern": "^VC-[0-9]{2,}$"
+        },
+        "mode": {
+          "enum": [
+            "spoken",
+            "internal_only"
+          ]
+        },
+        "scene_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "visual_need_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^TVE-[0-9]{2,}$"
+          },
+          "uniqueItems": true
+        }
       }
     }
   }

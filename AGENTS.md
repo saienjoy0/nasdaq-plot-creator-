@@ -106,6 +106,17 @@ The fox may refer to a previous episode only when a corresponding daily/thread/c
 - Record `difference_from_previous` when a past claim is used for comparison or current revalidation.
 - `reason_unknown`, `unresolved`, and `not_used` are valid outcomes.
 
+## Temporal Evidence Loop v1.2
+
+Before using Memory or Cross-Market interpretation, construct the current overnight contradiction candidates from Current Evidence only. Then reconcile approved open Validation Obligations and run the cross-market materiality screen.
+
+- `source_pack.json` remains the Collector machine source of truth; `collector_source_pack` is an optional SHA-bound manifest input.
+- Candidate Pool / Discovery Coverage never become Evidence merely because they were collected.
+- Carryover is replayed from approved `current_revision` publication history; production gaps do not close an open VO.
+- Structured Validation Obligations are authoritative; `watch_next` is only their human-readable projection plus optional general monitoring points.
+- Earlier market is chronology evidence, not automatic causality.
+- No Temporal DB, new Daily Production state, new Scene system, or second Research Engine is introduced.
+
 ## Mandatory execution gates
 
 Production-facing execution begins with:

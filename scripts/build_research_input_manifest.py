@@ -153,6 +153,7 @@ def verify_retrieval_lineage(
     repo_root: Path,
     editorial_contracts_dir: Path,
     retrieval_runner: RetrievalRunner = retrieve,
+    include_temporal_carryover: bool = True,
 ) -> None:
     """Replay deterministic retrieval and compare Context and Report bytes."""
     report = load_json(memory_retrieval_report)
@@ -168,12 +169,19 @@ def verify_retrieval_lineage(
         tmp_root = Path(tmp)
         replay_context = tmp_root / "context.md"
         replay_report = tmp_root / "report.json"
+        runner_kwargs = {
+            "repo_root": repo_root,
+            "contracts_dir": editorial_contracts_dir,
+        }
+        # New manifests require Mandatory Temporal Carryover. Frozen pre-v1.1
+        # manifests must replay the exact legacy bytes they originally bound.
+        if not include_temporal_carryover:
+            runner_kwargs["include_temporal_carryover"] = False
         retrieval_runner(
             memory_query_plan,
             replay_context,
             replay_report,
-            repo_root=repo_root,
-            contracts_dir=editorial_contracts_dir,
+            **runner_kwargs,
         )
         if replay_context.read_bytes() != memory_context.read_bytes():
             raise ManifestBuildError(
@@ -192,6 +200,7 @@ def build_manifest(
     timezone: str,
     information_cutoff: str,
     daily_source_package: Path,
+    collector_source_pack: Path | None = None,
     memory_query_plan: Path,
     memory_context: Path,
     memory_retrieval_report: Path,
@@ -213,6 +222,10 @@ def build_manifest(
             memory_retrieval_report, repo_root, "memory_retrieval_report"
         ),
     }
+    if collector_source_pack is not None:
+        paths["collector_source_pack"] = ensure_repo_path(
+            collector_source_pack, repo_root, "collector_source_pack"
+        )
     output = ensure_repo_path(output, repo_root, "output", must_exist=False)
     contracts_dir = ensure_repo_path(
         contracts_dir / "research_input_manifest.schema.json",
@@ -265,7 +278,7 @@ def build_manifest(
     )
 
     manifest = {
-        "contract_version": "1.0.0",
+        "contract_version": "1.1.0",
         "episode_date": episode_date,
         "session": {
             "market_date": market_date,
@@ -302,6 +315,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--timezone", required=True)
     parser.add_argument("--information-cutoff", required=True)
     parser.add_argument("--daily-source-package", type=Path, required=True)
+    parser.add_argument("--collector-source-pack", type=Path)
     parser.add_argument("--memory-query-plan", type=Path, required=True)
     parser.add_argument("--memory-context", type=Path, required=True)
     parser.add_argument("--memory-retrieval-report", type=Path, required=True)
@@ -324,6 +338,7 @@ def main() -> int:
             timezone=args.timezone,
             information_cutoff=args.information_cutoff,
             daily_source_package=args.daily_source_package,
+            collector_source_pack=args.collector_source_pack,
             memory_query_plan=args.memory_query_plan,
             memory_context=args.memory_context,
             memory_retrieval_report=args.memory_retrieval_report,

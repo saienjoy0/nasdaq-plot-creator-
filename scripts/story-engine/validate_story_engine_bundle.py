@@ -149,6 +149,10 @@ def validate_review(review:dict, errors:list[str]):
         if finding.get('issue_type') in HARD_NARRATIVE_FINDINGS and finding.get('severity') == 'minor':
             errors.append(f"{finding.get('finding_id')}: {finding.get('issue_type')} must be major or critical")
 
+    for finding in review.get('findings',[]):
+        if finding.get('issue_type') == 'FALSE_TEMPORAL_CAUSALITY' and finding.get('severity') != 'critical':
+            errors.append(f"{finding.get('finding_id')}: FALSE_TEMPORAL_CAUSALITY must be critical")
+
     severe=any(f['severity']=='critical' for f in review['findings'])
     major=any(f['severity']=='major' for f in review['findings'])
     if review['immediate_failures'] or severe:
