@@ -68,7 +68,7 @@
           "metricId": "metric.s03.ap.market-close",
           "label": "AP",
           "role": "supporting",
-          "valueText": "NASDAQ -0.60% / Brent +1.4% / $88.91",
+          "valueText": "NASDAQ -0.60%\nBrent +1.4% / $88.91",
           "numericValue": null,
           "unit": null,
           "currency": null,
