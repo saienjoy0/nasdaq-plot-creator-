@@ -1,0 +1,52 @@
+{
+  "scenePatches": [
+    {
+      "sceneNumber": 4,
+      "set": {
+        "formalRole": "expected_actual_gap"
+      }
+    },
+    {
+      "sceneNumber": 5,
+      "set": {
+        "formalRole": "global_context",
+        "storyRole": "context",
+        "connector": "therefore"
+      }
+    },
+    {
+      "sceneNumber": 6,
+      "set": {
+        "formalRole": "market_reaction",
+        "storyRole": "test",
+        "connector": "but"
+      }
+    },
+    {
+      "sceneNumber": 7,
+      "set": {
+        "formalRole": "entity_divergence",
+        "storyRole": "comparison"
+      }
+    },
+    {
+      "sceneNumber": 8,
+      "set": {
+        "formalRole": "validation_points",
+        "storyRole": "verification",
+        "continuationReason": ""
+      }
+    },
+    {
+      "sceneNumber": 9,
+      "set": {
+        "formalRole": "fixed_closing",
+        "storyRole": "closing",
+        "newEvidenceIds": [],
+        "newMeaning": "",
+        "continuationReason": "",
+        "connector": "closing"
+      }
+    }
+  ]
+}
