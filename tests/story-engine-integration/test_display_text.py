@@ -31,7 +31,13 @@ def test_finance_style_spoken_numbers_become_display_numbers() -> None:
     )
 
 
+def test_story_projection_uses_repository_wide_viewer_surface_policy() -> None:
+    module = load_module()
+    text = "経路は四段です。通常取引の最初の一分から十五時五十九分まで確認します。"
+    assert module.to_display_text(text) == "経路は4段です。通常取引の最初の1分から15:59まで確認します。"
+
+
 def test_non_financial_japanese_prose_is_unchanged() -> None:
     module = load_module()
-    text = "ここで一度、この説明を壊しにいきます。次の四半期も確認します。"
+    text = "ここで一度、この説明を壊しにいきます。次の四半期も確認します。十分な材料を見ます。"
     assert module.to_display_text(text) == text
