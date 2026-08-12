@@ -1,0 +1,15 @@
+{
+  "beatPatches": [
+    {
+      "sceneNumber": 7,
+      "beatNumber": 2,
+      "set": {
+        "visualTemplate": "evidence-boundary",
+        "grammarId": "evidence",
+        "visualMode": "verification-points",
+        "screenState": "Data",
+        "variant": "confirmed-vs-unconfirmed"
+      }
+    }
+  ]
+}
