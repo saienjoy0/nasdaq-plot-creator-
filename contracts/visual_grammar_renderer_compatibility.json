@@ -213,10 +213,10 @@
       "allowedGrammarIds": [
         "verification"
       ],
-      "appearanceClass": "verification-gates",
-      "dominantSurface": "matrix",
-      "stageShell": "VerificationGateStage",
-      "motionLanguage": "verification-gates"
+      "appearanceClass": "metric-board",
+      "dominantSurface": "card-board",
+      "stageShell": "MetricBoardStage",
+      "motionLanguage": "metric-board"
     },
     {
       "visualTemplateId": "verification-matrix",
