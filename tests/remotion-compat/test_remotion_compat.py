@@ -28,6 +28,14 @@ projection = load_module("remotion_projection_test", SCRIPTS / "remotion_240_pro
 template_data = load_module("remotion_template_data_test", SCRIPTS / "remotion_template_data.py")
 sequence = load_module("remotion_sequence_test", SCRIPTS / "remotion_sequence_policy.py")
 
+# Historical production artifacts stay immutable. The 2026-08-06 Scene 8 package
+# explicitly presents "強まる条件 / 弱まる条件", so its compatibility fixture has a
+# known two-lane verification meaning. Supply that meaning at the test adapter boundary
+# instead of weakening the production normalizer or rewriting the archived daily spec.
+HISTORICAL_EXPLICIT_VARIANTS = {
+    ("scene-08", "vb-08-01"): "strengthen-vs-weaken",
+}
+
 
 class RemotionCompatibilityTests(unittest.TestCase):
     date = "2026-08-06"
@@ -68,6 +76,17 @@ class RemotionCompatibilityTests(unittest.TestCase):
                 renderer_compatibility_path=files[2],
             )
 
+    def _bind_historical_explicit_variants(self, render):
+        for scene in render["scenes"]:
+            scene_id = scene["sceneId"]
+            for beat in scene["visualBeats"]:
+                variant = HISTORICAL_EXPLICIT_VARIANTS.get((scene_id, beat["beatId"]))
+                if variant is None:
+                    continue
+                self.assertEqual("verification-matrix", beat["visualTemplate"])
+                beat["templateConfig"]["variant"] = variant
+                beat["templateVariant"] = variant
+
     def canonical(self):
         render = self.strict()
         projection.canonicalize_render_spec(
@@ -79,6 +98,7 @@ class RemotionCompatibilityTests(unittest.TestCase):
             render,
             terminal_binding=self.terminal_binding,
         )
+        self._bind_historical_explicit_variants(render)
         sequence.resolve_sequence_policies(render)
         return render
 
@@ -172,6 +192,9 @@ class RemotionCompatibilityTests(unittest.TestCase):
             },
             beat["templateConfig"]["reactionTimeline"],
         )
+        historical_verification = render["scenes"][7]["visualBeats"][0]
+        self.assertEqual("strengthen-vs-weaken", historical_verification["templateVariant"])
+        self.assertEqual("strengthen-vs-weaken", historical_verification["templateConfig"]["variant"])
         terminal = render["scenes"][8]
         self.assertEqual({"type": "none", "durationMs": 0}, terminal["transition"])
         self.assertEqual("closing-recap-sendoff-goodnight", terminal["sceneRole"])

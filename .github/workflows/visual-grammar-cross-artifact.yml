@@ -34,7 +34,7 @@ jobs:
           from pathlib import Path
           from urllib.request import urlopen
 
-          commit = "dd028591a08de8cf061c32550351478363221bb4"
+          commit = "6a44cdeb04d401dc45379783862e279a5c2f04a5"
           root = (
               "https://raw.githubusercontent.com/saienjoy0/"
               f"saienjoy0-nasdaq-cafe-remotion/{commit}"

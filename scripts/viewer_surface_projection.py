@@ -2,8 +2,9 @@
 """Project approved NASDAQ Cafe authoring into viewer-facing display text.
 
 This module never changes speech meaning. It only converts deterministic numeric
-surface forms for captions/telops and fails closed when numeric Japanese remains
-ambiguous. Speech/TTS text is intentionally kept byte-identical.
+surface forms and fixed UI vocabulary for captions/telops and fails closed when
+viewer-facing Japanese remains ambiguous. Speech/TTS text is intentionally kept
+byte-identical.
 """
 from __future__ import annotations
 
@@ -42,6 +43,20 @@ DURATION_RE = re.compile(
 # characters, so ordinary Japanese words such as 一方 / 四半期 remain untouched.
 STANDALONE_DECIMAL_RE = re.compile(
     rf"(?<![{NUM_CHARS}])([{NUM_CHARS}]+・[{KANJI_DIGIT_CHARS}]+)(?![{NUM_CHARS}])"
+)
+
+# Expected / Actual / Gap remain valid machine concepts and schema values, but they
+# are production jargon for Japanese viewers. Convert only standalone ASCII tokens;
+# Japanese text may follow immediately (for example "Gapは何か"), so Unicode \b is
+# intentionally not used here.
+FIXED_UI_LABELS = {
+    "expected": "予想",
+    "actual": "実際",
+    "gap": "差分",
+}
+FIXED_UI_TERM_RE = re.compile(
+    r"(?<![A-Za-z0-9_])(expected|actual|gap)(?![A-Za-z0-9_])",
+    re.IGNORECASE,
 )
 
 
@@ -115,6 +130,14 @@ def _apply_regex(text: str, pattern: re.Pattern[str], repl, rule_id: str, path: 
 def normalize_viewer_text(value: str, *, path: str, conversions: list[Conversion]) -> str:
     text = value
     text = _apply_regex(
+        text,
+        FIXED_UI_TERM_RE,
+        lambda match: FIXED_UI_LABELS[match.group(1).lower()],
+        "fixed-ui-japanese",
+        path,
+        conversions,
+    )
+    text = _apply_regex(
         text, PERCENT_RE,
         lambda match: f"{normalize_numeric_token(match.group(1))}%",
         "percent", path, conversions,
@@ -174,7 +197,7 @@ def assert_viewer_text_safe(value: str, path: str) -> None:
         raise ViewerSurfaceError(f"E_VIEWER_NUMERIC_KANJI_REMAINS:{path}:{value}")
     if re.search(rf"[{NUM_CHARS}]+・[{NUM_CHARS}]+", value):
         raise ViewerSurfaceError(f"E_VIEWER_NUMERIC_AMBIGUOUS:{path}:{value}")
-    if re.match(r"^(?:EXPECTED|ACTUAL|GAP)(?:$|｜)", value):
+    if FIXED_UI_TERM_RE.search(value):
         raise ViewerSurfaceError(f"E_VIEWER_FIXED_UI_ENGLISH:{path}:{value}")
 
 

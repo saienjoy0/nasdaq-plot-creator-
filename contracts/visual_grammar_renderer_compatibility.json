@@ -226,7 +226,16 @@
       "appearanceClass": "verification-gates",
       "dominantSurface": "matrix",
       "stageShell": "VerificationGateStage",
-      "motionLanguage": "verification-gates"
+      "motionLanguage": "verification-gates",
+      "variantOverrides": [
+        {
+          "variant": "reported-sequence",
+          "appearanceClass": "verification-gates",
+          "dominantSurface": "card-board",
+          "stageShell": "VerificationGateStage",
+          "motionLanguage": "verification-gates"
+        }
+      ]
     },
     {
       "visualTemplateId": "analogy-steps",
