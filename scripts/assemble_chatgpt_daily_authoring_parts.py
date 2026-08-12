@@ -4,8 +4,8 @@
 Fragments are editorially complete inputs created by ChatGPT. This script only performs
 a deterministic deep merge, applies explicit ChatGPT-authored Beat patches, binds the
 exact daily-source SHA required by lineage, exposes approved review scores under legacy
-field names, and activates exact Renderer 2.4 compatibility aliases. It makes no market
-or creative decisions of its own.
+field names, activates exact Renderer 2.4 compatibility aliases, and validates authored
+Financial Visual binding closure. It makes no market or creative decisions of its own.
 """
 from __future__ import annotations
 
@@ -14,6 +14,8 @@ import hashlib
 import json
 from pathlib import Path
 from typing import Any
+
+import validate_chatgpt_daily_authoring_closure as authoring_closure
 
 
 def merge(left: Any, right: Any, path: str = "$") -> Any:
@@ -154,13 +156,21 @@ def main() -> int:
     daily_sha = bind_daily_source_lineage(value, root, args.date)
     activate_renderer_240_financial_scope(root)
     mode_aliases = normalize_renderer_visual_modes(value)
+    registry = authoring_closure.load_json(
+        root / "contracts" / "financial_recipe_registry.json",
+        "financial recipe registry",
+    )
+    try:
+        authoring_closure.validate_or_raise(value, registry)
+    except authoring_closure.AuthoringClosureError as exc:
+        raise SystemExit(f"daily authoring renderer closure failed:\n{exc}") from exc
     output = root / "daily-authoring" / f"{args.date}.json"
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(
         f"ASSEMBLED {len(parts)} authoring parts -> {output}; daily_sha256={daily_sha}; "
         f"beat_patches={patch_count}; renderer_financial_scope=2.4; "
-        f"source_receipt_mode_aliases={mode_aliases}"
+        f"source_receipt_mode_aliases={mode_aliases}; authoring_closure=PASS"
     )
     return 0
 
