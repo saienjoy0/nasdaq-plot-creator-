@@ -18,7 +18,7 @@ import subprocess
 from pathlib import Path
 
 
-RENDERER_COMMIT = "3cf026698fcea2943c8eef93af8eb7d3f74a48a7"
+RENDERER_COMMIT = "f2b416b8d43f35a4c24310440eb7f520cebfebc0"
 RENDERER_CONTRACT_VERSION = "2.4.0"
 
 
