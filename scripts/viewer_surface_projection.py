@@ -21,15 +21,17 @@ NUM_CHARS = "〇零一二三四五六七八九十百千万億兆"
 COEFF_CHARS = "〇零一二三四五六七八九十百千"
 NUM_TOKEN = rf"[{NUM_CHARS}]+(?:・[{NUM_CHARS}]+)?"
 COEFF_TOKEN = rf"[{COEFF_CHARS}]+(?:・[〇零一二三四五六七八九]+)?"
+# A Japanese magnitude character immediately following an Arabic coefficient is a
+# display unit (for example 5,000億ドル), not an unconverted Japanese number.
 CONTEXT_RE = re.compile(
-    rf"(?:第)?{NUM_TOKEN}(?=(?:パーセント|%|億ドル|万ドル|ドル|円|時|分|秒|年|月|日|回|件|社|人|位|番目|段|つ|分足))"
+    rf"(?<![0-9,.])(?:第)?{NUM_TOKEN}(?=(?:パーセント|%|億ドル|万ドル|ドル|円|時|分|秒|年|月|日|回|件|社|人|位|番目|段|つ|分足))"
 )
 PERCENT_RE = re.compile(rf"({NUM_TOKEN})パーセント")
 TIME_RE = re.compile(rf"({NUM_TOKEN})時({NUM_TOKEN})分")
 PREFIX_RE = re.compile(rf"第({NUM_TOKEN})")
 FINANCIAL_MAGNITUDE_RE = re.compile(rf"({COEFF_TOKEN})(億|万)(ドル|円)")
 UNIT_RE = re.compile(
-    rf"({NUM_TOKEN})(ドル|円|分足|番目|年|月|日|回|件|社|人|位|段|つ)"
+    rf"(?<![0-9,.])({NUM_TOKEN})(ドル|円|分足|番目|年|月|日|回|件|社|人|位|段|つ)"
 )
 STANDALONE_DECIMAL_RE = re.compile(rf"({NUM_TOKEN})(?=[、。・\s]|$)")
 
