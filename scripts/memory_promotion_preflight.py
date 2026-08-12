@@ -5,6 +5,8 @@ import re
 from pathlib import Path
 from typing import Any, Mapping
 
+from temporal_evidence import TemporalEvidenceError, validate_publication_temporal
+
 from memory_promotion_common import (
     CONTRACT_VERSION, APPROVED_STATUSES, ArtifactDigest, PreflightError, digest_file,
     read_json, resolve_repo_path, validate_json_schema, validator_passes,
@@ -62,6 +64,10 @@ def source_preflight(
     record_path = resolve_repo_path(str(record_path), repo_root)
     record = read_json(record_path)
     validate_json_schema(record, contracts_dir / "publication_record.schema.json")
+    try:
+        validate_publication_temporal(record, repo_root)
+    except TemporalEvidenceError as exc:
+        raise PreflightError(f"temporal evidence validation failed: {exc}") from exc
 
     approval = record.get("approval", {})
     status = approval.get("status") if isinstance(approval, Mapping) else None
@@ -117,6 +123,7 @@ def source_preflight(
             "declared_hashes": "pass",
             "validator_report": "pass",
             "episode_date_consistency": "pass",
+            "temporal_evidence": "pass",
         },
         "generated_at": utc_now(),
     }

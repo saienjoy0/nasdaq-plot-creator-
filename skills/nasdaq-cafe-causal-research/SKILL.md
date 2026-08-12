@@ -1,7 +1,7 @@
 ---
 name: nasdaq-cafe-causal-research
 description: Build an evidence-grounded causal research dossier from a daily NASDAQ source package before editorial selection and script writing, with bounded targeted acquisition when material evidence is missing.
-version: 0.3.0
+version: 0.4.0
 ---
 
 # NASDAQ Cafe Causal Research
@@ -32,6 +32,7 @@ Required:
 - `working/memory_context_YYYY-MM-DD.md`
 - `working/memory_retrieval_report_YYYY-MM-DD.json`
 - `research/YYYY-MM-DD/research_input_manifest.json`
+- optional SHA-bound `collector_source_pack` / `source_pack.json` lineage when present
 - current market session/date and information cutoff
 - `source-of-truth/02_editorial_bible.md`
 - available primary sources and market data
@@ -93,6 +94,8 @@ Identify up to three candidate contradictions that require explanation, for exam
 - strong AI demand but diverging supplier reactions
 - a major headline with little index response
 
+**Current Evidence First is mandatory.** Stage 1 may use current overnight US market data, current official/major reporting, current rates/FX/oil, earnings/company facts, and confirmed timestamps. It must not use a past episode conclusion, the meaning of an open VO, a remembered claim, or an interpretation that Asia caused the US move to create or rank the initial contradiction. A raw Cross-Market Snapshot may exist in the intake, but its causal meaning is deferred to Stages 3-4.
+
 Rank candidates by:
 
 1. explanatory power for the overnight session
@@ -105,7 +108,40 @@ Output a provisional lead only. Final selection remains under 02.
 
 Past memory may suggest questions or comparison points, but it may not raise a candidate's rank without current-session evidence.
 
-### Stage 2 — Perspective-guided question generation
+### Stage 2 — Mandatory Temporal Carryover Reconciliation
+
+Replay approved episode revision history, select only each date's `current_revision`, and carry forward only open, unexpired Structured Validation Obligations. Production gaps do not close an obligation. Draft, rejected, superseded, or non-current revisions are not eligible.
+
+Evaluate each open VO against **Current Evidence**. Allowed results are `supports`, `weakens`, `contradicts`, `inconclusive`, `not_observed`, or `expired`. `supports`, `weakens`, and `contradicts` require Current Evidence IDs. A market holiday or missing completed regular session is `not_observed`, not `expired`. Expiry is based on completed observation sessions and the original `max_observation_sessions`.
+
+Carryover is a hypothesis test, not a lead-selection rule. A prior VO may remain internal-only when it does not materially update today's NASDAQ explanation.
+
+### Stage 3 — Cross-Market Materiality Screen
+
+Only after Stage 1 has produced the current-day contradiction candidates, ask whether earlier Asia / Cross-Market evidence could materially change the explanation model for those contradictions. Classify the result as:
+
+```text
+material
+not_material
+unresolved
+```
+
+`not_material` ends the cross-market deep test and does not force Asia into the episode.
+
+### Stage 4 — Cross-Market Alternative Test
+
+Run this stage only when Stage 3 is `material`. Compare all four alternatives:
+
+```text
+H1 Asia→US Transmission
+H2 Shared Global Driver
+H3 US-specific Driver
+H4 Unresolved
+```
+
+Check event timestamp, Asia regular session, US premarket and regular session, peers/sectors, rates, FX, oil, company-specific events, and policy timing as relevant. **Earlier market ≠ cause.** A market moving first is chronology evidence, not causal proof.
+
+### Stage 5A — Perspective-guided question generation
 
 Use the STORM pattern: discover distinct perspectives before searching deeply.
 
@@ -137,7 +173,7 @@ Past memory
 
 It must not become an answer by itself.
 
-### Stage 3 — Parallel specialist research
+### Stage 5B — Parallel specialist research
 
 Use a supervisor/researcher pattern inspired by Open Deep Research.
 
@@ -169,7 +205,7 @@ Recommended research roles:
 
 Researchers return evidence items and memory revalidation findings, not polished narrative.
 
-### Stage 3.5 — Research Acquisition Bridge
+### Stage 5C — Research Acquisition Bridge
 
 Use targeted acquisition only when the existing research has identified a **material evidence gap** that prevents or materially weakens a required check.
 
@@ -270,7 +306,7 @@ this company event caused the NASDAQ move
 
 Causal attribution still requires the full 02 checks, alternatives, related assets, and source evidence.
 
-### Stage 4 — Evidence normalization
+### Stage 6 — Evidence normalization
 
 Every material evidence item must record:
 
@@ -294,7 +330,7 @@ Acquired evidence is current evidence only when its exact bytes are declared by 
 
 Every Evidence ID referenced from research questions, Expected / Actual, timeline, causal edges, alternative hypotheses, contrary evidence, or memory revalidation must exist in the dossier.
 
-### Stage 5 — Memory revalidation
+### Stage 6B — General Memory revalidation
 
 Every selected non-core item in the retrieval report must receive exactly one result. The manifest must preserve the exact Report metadata and place each selected item in exactly one permitted bucket.
 
@@ -332,7 +368,7 @@ Rules:
 
 Core procedural memory is classified in the research input manifest and is not repeated as an editorial claim revalidation entry.
 
-### Stage 6 — Dynamic causal map
+### Stage 7 — Main / Counter Hypothesis and Dynamic causal map
 
 Build a causal map rather than a news list.
 
@@ -361,7 +397,7 @@ Do not keep an edge only because it makes the story smoother.
 
 Memory IDs and memory paths cannot appear as causal-edge evidence. A NASDAQ-wide edge must have current tier-1 or tier-2 evidence and cannot be supported only by historical context.
 
-### Stage 7 — Expected / Actual / Gap
+### Stage 8 — Expected / Actual / Gap
 
 Expected must use one of the categories defined by 02:
 
@@ -380,7 +416,7 @@ Gap explains what changed in the market's understanding, not merely whether a nu
 
 Editorial memory may identify what was discussed in a prior episode, but it cannot be the sole evidence for Expected, Actual, or Gap.
 
-### Stage 8 — Timeline and alternative-cause test
+### Stage 9 — Timeline and alternative-cause test
 
 Before connecting a story to price:
 
@@ -400,7 +436,7 @@ Classify factors as:
 
 If Stage 8 reveals a genuinely new material evidence gap that could not have been known before wave 1, a second and final acquisition wave may be used. Otherwise do not reopen collection.
 
-### Stage 9 — Research compression
+### Stage 9B — Research compression
 
 Compress specialist findings before editorial synthesis.
 
@@ -422,7 +458,18 @@ Preserve:
 - one or more headline-beyond discoveries
 - material differences from prior remembered claims
 
-### Stage 10 — Editorial handoff
+### Stage 10 — Validation Candidates / Temporal Visual Evidence Need / Editorial handoff
+
+Before handoff, add the v0.3 Temporal fields:
+
+- `carryover_results`: Current-Evidence results for eligible open VOs;
+- `cross_market_assessment`: materiality plus H1/H2/H3/H4 only when material;
+- `validation_candidates`: research candidates only, not final editorial VOs;
+- `visual_evidence_needs`: what information must be visibly checked, not the renderer surface/template.
+
+A Validation Candidate states one hypothesis, one observation target, strengthen and weaken conditions, `next_completed_regular_session`, max observation sessions, importance, and the human `watch_next_display_text`. Research does **not** create more than one target inside a candidate and does not finalize which 0-2 candidates become episode VOs; that decision belongs to 02.
+
+For each Temporal Visual Evidence Need, state only `claim_reference`, current Evidence IDs, `presentation_need`, and `required_information`. Do not choose `timeline-track`, split comparison, renderer template, Visual Grammar ID, or capture method here.
 
 The dossier must end with:
 
@@ -477,7 +524,7 @@ Return an incomplete dossier rather than inventing content when:
 
 ## Validation
 
-Run the v0.2 dossier validator before handing off to 02.
+Run the v0.3 dossier validator for new Temporal episodes before handing off to 02. The validator remains backward-readable for v0.2 legacy dossiers.
 
 When targeted acquisition was used, also require a PASS from:
 
@@ -507,5 +554,10 @@ A dossier fails validation when it lacks or violates:
 - prohibition on memory-only Expected or NASDAQ-wide causal edges
 - prohibition on invalidated/resolved memory as a current premise
 - valid append-only supplement lineage for every acquired evidence file used by the dossier
+- Current Evidence First ordering for contradiction discovery
+- Current Evidence IDs for supports/weakens/contradicts carryover results
+- one-target Validation Candidates with strengthen/weaken conditions
+- H1/H2/H3/H4 comparison only for material Cross-Market assessment
+- no Candidate Pool / Discovery Coverage item promoted to Evidence without normalization
 
 Passing validation means the research artifact is structurally complete and memory/additional-evidence provenance is controlled. It does not prove that the market interpretation is true.

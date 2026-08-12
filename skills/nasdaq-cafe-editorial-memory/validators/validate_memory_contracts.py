@@ -237,6 +237,29 @@ def main() -> int:
             except Exception as exc:  # noqa: BLE001
                 failures.append(f"fixture failed for {name}: {exc}")
 
+        # Publication 1.1 Temporal contract must remain additive and backward-readable.
+        if "publication_record.schema.json" in schemas:
+            legacy_publication = copy.deepcopy(fixture_set["publication_record.schema.json"])
+            temporal_publication = copy.deepcopy(legacy_publication)
+            temporal_publication["contract_version"] = "1.1.0"
+            temporal_publication["temporal_evidence"] = {
+                "carryover_results": [],
+                "validation_obligations": [],
+            }
+            try:
+                publication_validator = jsonschema.Draft202012Validator(
+                    schemas["publication_record.schema.json"],
+                    format_checker=jsonschema.FormatChecker(),
+                )
+                publication_validator.validate(legacy_publication)
+                publication_validator.validate(temporal_publication)
+                missing_temporal = copy.deepcopy(temporal_publication)
+                missing_temporal.pop("temporal_evidence")
+                if not list(publication_validator.iter_errors(missing_temporal)):
+                    failures.append("publication 1.1 accepted missing temporal_evidence")
+            except Exception as exc:  # noqa: BLE001
+                failures.append(f"publication temporal compatibility fixture failed: {exc}")
+
         alias_seed = ROOT / "editorial-memory" / "entity_aliases.json"
         if alias_seed.exists() and "entity_aliases.schema.json" in schemas:
             try:

@@ -1,6 +1,6 @@
 # 朝のNASDAQカフェ｜編集バイブル
 
-<!-- nasdaq-cafe-contract-version: 2.4.2 -->
+<!-- nasdaq-cafe-contract-version: 2.5.0 -->
 
 この文書は、「朝のNASDAQカフェ」で何を主役にし、どこまで市場の因果として説明し、何を断定しないかを定義する編集基準です。
 
@@ -544,6 +544,23 @@ Gapは、根拠のあるExpectedとActualの間にだけ設定します。Expect
 
 ---
 
+## Temporal Causality Boundary
+
+Episodeは毎回単独で理解できる形を維持しつつ、市場モデルは前回から継続します。ただし過去の結論をCurrent Evidenceへ押し付けません。
+
+1. **Current Evidence First**: 昨夜のNASDAQの矛盾候補は、MemoryやCross-Market解釈より先に当日のEvidenceだけで作る。
+2. **Earlier market ≠ cause**: 先に動いた市場は時系列の証拠であり、自動的な原因ではない。
+3. Cross-Marketがmaterialな場合だけ、H1 Asia→US Transmission / H2 Shared Global Driver / H3 US-specific Driver / H4 Unresolvedを比較する。
+4. Current EvidenceはMemoryより強い。MemoryはCurrent Evidenceを書き換えない。
+5. Carryover Resultや過去のVOは、その日のLeadを強制しない。
+6. `research_candidate_pool`と`discovery_coverage`はEvidenceではない。
+7. Validation Obligationは価格予測ではなく、現在仮説を強める／弱める観測条件を残すfalsification契約である。
+8. `reason_unknown`では0 VOを許可する。新規VOは0〜2、同時openは最大3。
+9. **1 VO = 1 hypothesis × 1 observation target**。異なる市場の混合結果を一つのstatusへ潰さない。
+10. VOのStructured dataを意味正本とし、`watch_next`はhuman-readable projectionとして扱う。
+
+Leadの定義は変えない。主役は、昨夜の重要なNASDAQ矛盾を最もよく説明する出来事またはテーマであり、Asiaや前回VOを調べたという理由だけで主役へ昇格させない。
+
 ## 11. 表現の原則
 
 番組の基本トーンは、**知的だが、少しひりつく**です。
@@ -618,6 +635,15 @@ Gapは、根拠のあるExpectedとActualの間にだけ設定します。Expect
 ---
 
 ## 13. 最終チェック
+
+- 昨夜のContradiction候補をMemory/Cross-Market解釈より先にCurrent Evidenceだけで作ったか
+- Earlier marketをEvidenceなしで原因化していないか
+- Cross-Marketがmaterialな場合、Transmission / Shared Driver / US-specific / Unresolvedを比較したか
+- Candidate Pool / Discovery CoverageをEvidence扱いしていないか
+- Carryoverや前回VOが今日のLeadを汚染していないか
+- Validation Obligationは0〜2で、1 VO = 1 targetになっているか
+- VOのstrengthen/weaken条件が両方あり、予測文になっていないか
+- `watch_next`とStructured VOの意味が矛盾していないか
 
 - 主役ニュースは原則一つか
 - 一つに絞れない理由がある場合だけ主役テーマにしているか

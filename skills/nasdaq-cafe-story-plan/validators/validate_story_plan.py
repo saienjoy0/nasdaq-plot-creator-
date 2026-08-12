@@ -348,6 +348,67 @@ def validate_story_plan(
     if len(angles) < 3:
         errors.append("at least three angle candidates are required")
 
+
+    if dossier.get("contract_version") == "0.3.0":
+        usage = plan.get("temporal_usage")
+        if not isinstance(usage, dict):
+            errors.append("Temporal dossier 0.3 requires story_plan.temporal_usage")
+        else:
+            result_ids = {item.get("obligation_id") for item in dossier.get("carryover_results", [])}
+            need_ids = {item.get("need_id") for item in dossier.get("visual_evidence_needs", [])}
+            for index, item in enumerate(usage.get("carryover_results", [])):
+                if item.get("obligation_id") not in result_ids:
+                    errors.append(f"temporal_usage.carryover_results[{index}]: unknown obligation_id")
+                mode = item.get("mode")
+                scene_id = item.get("scene_id")
+                if mode == "spoken" and scene_id not in {f"scene-{n:02d}" for n in range(2, 8)}:
+                    errors.append(f"temporal_usage.carryover_results[{index}]: spoken carryover must be Scene 2-7")
+                if mode == "internal_only" and scene_id is not None:
+                    errors.append(f"temporal_usage.carryover_results[{index}]: internal_only must not claim a Scene")
+                unknown = set(item.get("visual_need_ids", [])) - need_ids
+                if unknown:
+                    errors.append(f"temporal_usage.carryover_results[{index}]: unknown visual need ids {sorted(unknown)}")
+
+            cross = usage.get("cross_market", {})
+            cross_materiality = dossier.get("cross_market_assessment", {}).get("materiality")
+            if cross.get("mode") == "spoken":
+                if cross_materiality != "material":
+                    errors.append("cross-market may be spoken only when dossier materiality=material")
+                if cross.get("scene_id") not in {"scene-05", "scene-06", "scene-07"}:
+                    errors.append("spoken cross-market must be in Scene 5-7")
+            elif cross.get("scene_id") is not None:
+                errors.append("internal_only cross-market must not claim a Scene")
+            unknown = set(cross.get("visual_need_ids", [])) - need_ids
+            if unknown:
+                errors.append(f"temporal_usage.cross_market: unknown visual need ids {sorted(unknown)}")
+
+            candidates = {item.get("candidate_id"): item for item in dossier.get("validation_candidates", [])}
+            obligations = usage.get("validation_obligations", [])
+            if len(obligations) > 2:
+                errors.append("story_plan may select at most 2 Validation Obligations")
+            for index, obligation in enumerate(obligations):
+                candidate = candidates.get(obligation.get("candidate_id"))
+                if candidate is None:
+                    errors.append(f"temporal_usage.validation_obligations[{index}]: unknown candidate_id")
+                else:
+                    for key in (
+                        "hypothesis_reference", "question", "observation_target",
+                        "strengthen_condition", "weaken_condition", "max_observation_sessions",
+                        "importance", "watch_next_display_text",
+                    ):
+                        if obligation.get(key) != candidate.get(key):
+                            errors.append(f"temporal_usage.validation_obligations[{index}]: Story Engine changed dossier {key}")
+                if obligation.get("source_episode_date") != plan.get("episode_date"):
+                    errors.append(f"temporal_usage.validation_obligations[{index}]: source_episode_date mismatch")
+                if obligation.get("mode") == "spoken":
+                    if obligation.get("scene_id") != "scene-08":
+                        errors.append(f"temporal_usage.validation_obligations[{index}]: spoken VO belongs in Scene 8")
+                elif obligation.get("scene_id") is not None:
+                    errors.append(f"temporal_usage.validation_obligations[{index}]: internal_only must not claim a Scene")
+                unknown = set(obligation.get("visual_need_ids", [])) - need_ids
+                if unknown:
+                    errors.append(f"temporal_usage.validation_obligations[{index}]: unknown visual need ids {sorted(unknown)}")
+
     return ValidationResult(sorted(set(errors)), sorted(set(warnings)))
 
 

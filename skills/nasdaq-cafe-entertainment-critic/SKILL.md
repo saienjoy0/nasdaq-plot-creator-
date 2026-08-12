@@ -1,7 +1,7 @@
 ---
 name: nasdaq-cafe-entertainment-critic
 description: Review a NASDAQ Cafe story for interest, clarity, understanding progression, fox voice, and late payoff while preserving the frozen causal contract.
-version: 1.2.0
+version: 1.3.0
 ---
 
 # NASDAQ Cafe Entertainment Critic
@@ -294,6 +294,32 @@ Detect especially:
 - abstract editorial language replaces human explanation
 - generic narrator voice replaces the fox
 
+## Temporal Evidence Loop diagnostics
+
+Run these after normal causal truth has been frozen. They may improve interest and clarity, but may not change Current Evidence, chronology, causal scope, counterevidence, confidence, VO meaning, or Cross-Market status.
+
+### `TEMPORAL_RECAP_OVERLOAD`
+
+Past-episode explanation is long enough that today's Current Evidence and contradiction arrive late. Compress the recap; do not delete a material carryover result.
+
+### `TEMPORAL_CONTINUITY_WITHOUT_PAYOFF`
+
+The script mentions a prior VO/episode, but Current Evidence does not update, narrow, weaken, contradict, or otherwise improve today's explanation. Keep it internal-only or remove the spoken recap.
+
+### `CROSS_MARKET_DECORATION`
+
+Asia/Cross-Market material is shown because it exists, not because it changes the NASDAQ explanation. `not_material` Cross-Market evidence must not be forced into the story.
+
+### `TEMPORAL_VISUAL_EVIDENCE_MISSING`
+
+A material Temporal claim is adopted as spoken/on-screen, but the reviewed Visual Evidence Plan does not bind the required `TVE-*` information need to an existing Visual Source/Financial Visual path.
+
+### `FALSE_TEMPORAL_CAUSALITY`
+
+The story treats an earlier market move as the cause merely because it happened first, or skips the material H1/H2/H3/H4 alternative test. This is **Critical** and returns to Causal Research / 02; never repair it as surface wording alone.
+
+Temporal continuity is mandatory internally but optional on-screen. Scene 8 may state a falsification condition as closure; do not turn it into “明日の動画で答え合わせします”.
+
 ## Finding vocabulary
 
 Use the schema vocabulary, including:
@@ -315,6 +341,10 @@ FACT_STACKING
 LOW_INFORMATION_GAIN
 PAYOFF_DROUGHT
 WEAK_SURPRISE
+TEMPORAL_RECAP_OVERLOAD
+TEMPORAL_CONTINUITY_WITHOUT_PAYOFF
+CROSS_MARKET_DECORATION
+TEMPORAL_VISUAL_EVIDENCE_MISSING
 ```
 
 Legacy `NO_MIDPOINT_TURN` may be used only when the Story Plan lacks any nominated upgrade at all. Prefer `NO_UNDERSTANDING_UPGRADE` when an upgrade exists structurally but does not actually change the explanatory model.
@@ -326,6 +356,7 @@ CAUSALITY_DRIFT
 COUNTEREVIDENCE_REMOVED
 TIMELINE_DRIFT
 NASDAQ_SCOPE_OVERREACH
+FALSE_TEMPORAL_CAUSALITY
 ```
 
 If a factual/causal issue appears, return upstream instead of disguising it as a style fix.

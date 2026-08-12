@@ -30,6 +30,7 @@ import resolve_visual_sources
 import select_visual_sources
 import visual_evidence_quality_gate
 import visual_source_contract
+from temporal_evidence import TemporalEvidenceError, validate_temporal_visual_intents
 
 
 class PrepareVisualSourceError(ValueError):
@@ -105,6 +106,11 @@ def main(argv: list[str] | None = None) -> int:
         json.JSONDecodeError,
         visual_source_contract.VisualSourceContractError,
     ) as exc:
+        return _print_failure(str(exc))
+
+    try:
+        validate_temporal_visual_intents(root, episode_date=date, visual_sources=visual_sources)
+    except TemporalEvidenceError as exc:
         return _print_failure(str(exc))
 
     # Preserve the established explicit-not-required contract for tiny unit

@@ -196,14 +196,60 @@ jobs:
           )
           PY
 
-      - name: Verify dry-run, apply, provenance, and no-op
+      - name: Verify dry-run, apply, provenance, no-op, or immutable refusal
         run: |
           set -euo pipefail
           ACCEPTANCE_DIR="working/real-episode-acceptance/2026-07-31"
           RUN1="working/memory-promotion/acceptance-2026-07-31"
           RUN2="working/memory-promotion/acceptance-2026-07-31-noop"
+          EXISTING_INDEX="editorial-memory/episodes/2026-07-31/index.json"
 
           git diff --exit-code -- editorial-memory
+
+          # This acceptance fixture predates durable promotion of 2026-07-31.
+          # On a fresh memory tree we still prove first apply -> no-op. Once the
+          # immutable v001 already exists on main, the correct safety behavior is
+          # to refuse a different source fingerprint without an explicit revision.
+          if [[ -f "$EXISTING_INDEX" ]]; then
+            set +e
+            python scripts/plan_memory_promotion.py \
+              "$ACCEPTANCE_DIR/publication_record_2026-07-31.json" \
+              --output "$RUN1" | tee /tmp/plan.log
+            plan_code=${PIPESTATUS[0]}
+            set -e
+
+            test "$plan_code" -eq 3
+            grep -F "SAFE_TO_APPLY false" /tmp/plan.log
+            grep -F "NOOP false" /tmp/plan.log
+            grep -F "OPERATIONS 0" /tmp/plan.log
+
+            python - <<'PY'
+          import json
+          from pathlib import Path
+
+          run = Path("working/memory-promotion/acceptance-2026-07-31")
+          preflight = json.loads((run / "source_preflight.json").read_text())
+          conflicts = json.loads((run / "conflict_report.json").read_text())
+          plan = json.loads((run / "promotion_plan.json").read_text())
+          index = json.loads(Path("editorial-memory/episodes/2026-07-31/index.json").read_text())
+
+          assert preflight["status"] == "pass"
+          assert preflight["checks"]["validator_report"] == "pass"
+          assert preflight["checks"]["episode_date_consistency"] == "pass"
+          assert preflight["checks"]["temporal_evidence"] == "pass"
+          assert conflicts["safe_to_apply"] is False
+          assert conflicts["unresolved_count"] >= 1
+          assert any(item.get("type") == "immutable_episode_exists" for item in conflicts["blockers"])
+          assert plan["safe_to_apply"] is False
+          assert plan["noop"] is False
+          assert plan["operations"] == []
+          assert index["current_revision"] == "v001"
+          PY
+
+            git diff --exit-code -- editorial-memory
+            exit 0
+          fi
+
           python scripts/plan_memory_promotion.py \
             "$ACCEPTANCE_DIR/publication_record_2026-07-31.json" \
             --output "$RUN1" | tee /tmp/plan.log
@@ -221,6 +267,7 @@ jobs:
           assert preflight["status"] == "pass"
           assert preflight["checks"]["validator_report"] == "pass"
           assert preflight["checks"]["episode_date_consistency"] == "pass"
+          assert preflight["checks"]["temporal_evidence"] == "pass"
           assert conflicts["unresolved_count"] == 0
           assert plan["revision"] == "v001"
           assert plan["safe_to_apply"] is True

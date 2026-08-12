@@ -1,6 +1,6 @@
 ---
 name: nasdaq-cafe-story-engine
-version: 1.3.3
+version: 1.4.0
 description: Turn a validated causal dossier into a reviewed 9-Scene episode package by chaining viewer understanding without changing market causality, then hand the reviewed story to explicit Visual Evidence Planning.
 ---
 
@@ -62,6 +62,20 @@ It may not change:
 Factual or causal defects return to Causal Research / 02.
 
 ---
+
+## Temporal Evidence Loop v1.2 boundary
+
+Temporal continuity is mandatory internally and optional on-screen. Use Current Evidence before Memory or Cross-Market interpretation.
+
+- Carry forward questions, not conclusions.
+- A Carryover Result never forces the lead.
+- Earlier market timing is chronology evidence, never automatic causality. Compare H1 transmission, H2 shared global driver, H3 US-specific driver, and H4 unresolved only when cross-market materiality is `material`.
+- Candidate Pool and Discovery Coverage are not Evidence.
+- Story Engine may only choose `spoken` vs `internal_only`; it must not rewrite VO question, observation target, strengthen/weaken conditions, session window, carryover result, or cross-market status.
+- `0` Validation Obligations is valid, especially for `reason_unknown`.
+- One Validation Obligation is one hypothesis times one observation target.
+- Scene 8 uses a falsification condition as closure, not a promise of a future episode.
+- The default three-act rhythm (Scenes 1-3 / 4-7 / 8-9) is an editorial diagnostic only; it is not a schema or validator gate.
 
 ## Pass A — Story Discovery
 
@@ -469,6 +483,10 @@ PAYOFF_DROUGHT
 WEAK_SURPRISE
 FOX_VOICE_ABSENT
 ABSTRACT_EDITORIAL_LANGUAGE
+TEMPORAL_RECAP_OVERLOAD
+TEMPORAL_CONTINUITY_WITHOUT_PAYOFF
+CROSS_MARKET_DECORATION
+TEMPORAL_VISUAL_EVIDENCE_MISSING
 ```
 
 The following may not be downgraded to minor merely to preserve a PASS:
@@ -489,6 +507,7 @@ CAUSALITY_DRIFT
 COUNTEREVIDENCE_REMOVED
 TIMELINE_DRIFT
 NASDAQ_SCOPE_OVERREACH
+FALSE_TEMPORAL_CAUSALITY
 ```
 
 ## Pass E — Targeted Rewrite
@@ -547,6 +566,8 @@ existing asset
 ```
 
 Prefer original evidence when the viewer needs to see the evidence itself. Prefer Financial Visual when the job is to understand numbers, comparison, Gap, transmission, or verified price timing. A social post is preferred only when the post itself is materially part of the story.
+
+For Temporal Evidence, Causal Research defines only the `visual_evidence_needs` information requirement. Visual Evidence Planning chooses the existing surface. A Temporal need is mandatory only when the corresponding Temporal item is `material` and adopted as `spoken`; internal-only Temporal results do not force source acquisition or a new Visual Grammar.
 
 ## Mandatory planning artifact
 
