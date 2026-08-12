@@ -59,6 +59,23 @@ jobs:
           python -m pip install --disable-pip-version-check jsonschema pytest pillow
           npm --prefix .renderer ci
 
+      - name: Materialize packed Research Acquisition evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import base64, hashlib, os, zlib
+          from pathlib import Path
+          date = os.environ["EPISODE_DATE"]
+          evidence_dir = Path("research") / date / "evidence"
+          if evidence_dir.is_dir():
+              for packed in sorted(evidence_dir.glob("*.json.zlib.b64")):
+                  raw = zlib.decompress(base64.b64decode(packed.read_text(encoding="ascii").strip(), validate=True))
+                  target = Path(str(packed)[:-len(".zlib.b64")])
+                  target.write_bytes(raw)
+                  print(f"materialized {target} sha256={hashlib.sha256(raw).hexdigest()}")
+          PY
+
       - name: Expand approved ChatGPT authoring
         run: |
           python scripts/assemble_chatgpt_daily_authoring_parts.py --date "$EPISODE_DATE" --repo-root .
