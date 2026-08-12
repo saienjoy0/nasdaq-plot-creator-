@@ -7,7 +7,7 @@
         "visualTemplate": "source-receipt",
         "grammarId": "evidence",
         "visualMode": "news-media",
-        "screenState": "News",
+        "screenState": "Data",
         "variant": "receipt"
       }
     }
@@ -53,7 +53,7 @@
         "recipeId": "source-receipt",
         "visualTemplateId": "source-receipt",
         "templateVariant": "receipt",
-        "screenState": "News",
+        "screenState": "Data",
         "metricIds": [
           "metric.s05.hormuz.reopening-risk"
         ],
