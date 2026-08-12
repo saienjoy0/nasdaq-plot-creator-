@@ -22,17 +22,19 @@ KANJI_DIGIT_CHARS = "〇零一二三四五六七八九"
 COEFF_CHARS = "〇零一二三四五六七八九十百千"
 NUM_TOKEN = rf"[{NUM_CHARS}]+(?:・[{NUM_CHARS}]+)?"
 COEFF_TOKEN = rf"[{COEFF_CHARS}]+(?:・[{KANJI_DIGIT_CHARS}]+)?"
-# A Japanese magnitude character immediately following an Arabic coefficient is a
-# display unit (for example 5,000億ドル), not an unconverted Japanese number.
-CONTEXT_RE = re.compile(
-    rf"(?<![0-9,.])(?:第)?{NUM_TOKEN}(?=(?:パーセント|%|億ドル|万ドル|ドル|円|時|分|秒|年|月|日|回|件|社|人|位|番目|段|つ|分足))"
-)
 PERCENT_RE = re.compile(rf"({NUM_TOKEN})パーセント")
 TIME_RE = re.compile(rf"({NUM_TOKEN})時({NUM_TOKEN})分")
 PREFIX_RE = re.compile(rf"第({NUM_TOKEN})")
 FINANCIAL_MAGNITUDE_RE = re.compile(rf"({COEFF_TOKEN})(億|万)(ドル|円)")
 UNIT_RE = re.compile(
     rf"(?<![0-9,.])({NUM_TOKEN})(ドル|円|分足|番目|年|月|日|回|件|社|人|位|段|つ)"
+)
+# Bare 分 is lexically ambiguous in Japanese (for example 十分な), so duration
+# conversion requires a following duration boundary. 時間 and 秒 share this rule to
+# keep the detector and converter intentionally narrow and deterministic.
+DURATION_RE = re.compile(
+    rf"(?<![0-9,.])({NUM_TOKEN})(時間|分|秒)"
+    rf"(?=(?:から|まで|間|前|後|以内|以上|以下|未満|程度|ほど|くらい|ぐらい|ごと|おき|の|で|を|に|、|。|\s|$))"
 )
 # The middle dot is an explicit decimal marker in the TTS surface. Once unit-specific
 # rules have run, convert it regardless of whether Japanese prose follows immediately
@@ -140,6 +142,11 @@ def normalize_viewer_text(value: str, *, path: str, conversions: list[Conversion
         "numeric-unit", path, conversions,
     )
     text = _apply_regex(
+        text, DURATION_RE,
+        lambda match: f"{normalize_numeric_token(match.group(1))}{match.group(2)}",
+        "duration-unit", path, conversions,
+    )
+    text = _apply_regex(
         text,
         STANDALONE_DECIMAL_RE,
         lambda match: normalize_numeric_token(match.group(1)),
@@ -151,7 +158,19 @@ def normalize_viewer_text(value: str, *, path: str, conversions: list[Conversion
 
 
 def assert_viewer_text_safe(value: str, path: str) -> None:
-    if CONTEXT_RE.search(value):
+    # Use the same narrowly-scoped recognizers as projection. This prevents the
+    # fail-closed detector from treating ordinary words such as 十分な or 一分野 as
+    # numeric display text while still stopping any convertible Japanese number that
+    # escaped projection.
+    remaining_patterns = (
+        PERCENT_RE,
+        TIME_RE,
+        PREFIX_RE,
+        FINANCIAL_MAGNITUDE_RE,
+        UNIT_RE,
+        DURATION_RE,
+    )
+    if any(pattern.search(value) for pattern in remaining_patterns):
         raise ViewerSurfaceError(f"E_VIEWER_NUMERIC_KANJI_REMAINS:{path}:{value}")
     if re.search(rf"[{NUM_CHARS}]+・[{NUM_CHARS}]+", value):
         raise ViewerSurfaceError(f"E_VIEWER_NUMERIC_AMBIGUOUS:{path}:{value}")
