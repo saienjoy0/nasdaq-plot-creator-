@@ -1,7 +1,7 @@
 {
   "contractVersion": "1.0.0",
   "episodeDate": "2026-08-12",
-  "candidateCatalogSha256": "529b157fe0c433bb20f17034714d6de3b72e72da5d36e9c9e631ba56f5a43e11",
+  "candidateCatalogSha256": "c397cf6a20f3d7655a83263235850749dfcec29be650669ddb5668b1fbc68e7f",
   "selections": [
     {"visualBeatId": "vb-01-01", "candidateId": "vc-vb-01-01-02"},
     {"visualBeatId": "vb-01-02", "candidateId": "vc-vb-01-02-01"},
