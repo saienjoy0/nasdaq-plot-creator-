@@ -108,6 +108,17 @@ jobs:
           {
             python scripts/materialize_daily_episode.py --date "$EPISODE_DATE" --repo-root .
             python scripts/materialize_financial_contract_1_0.py --date "$EPISODE_DATE" --repo-root .
+            SUPPLEMENT="research/$EPISODE_DATE/research_evidence_supplement_manifest.json"
+            if [ -f "$SUPPLEMENT" ]; then
+              echo "validating bounded Research Acquisition lineage: $SUPPLEMENT"
+              python skills/nasdaq-cafe-causal-research/validators/validate_causal_research_with_supplement.py \
+                "research/$EPISODE_DATE/causal_research_dossier_$EPISODE_DATE.json" \
+                --research-input-manifest "research/$EPISODE_DATE/research_input_manifest.json" \
+                --memory-retrieval-report "working/$EPISODE_DATE/memory_retrieval_report_$EPISODE_DATE.json" \
+                --research-evidence-supplement-manifest "$SUPPLEMENT" \
+                --repo-root . \
+                --json-output "research/$EPISODE_DATE/causal_dossier_validation.json"
+            fi
           } 2>&1 | tee "verification/$EPISODE_DATE/materializer.log"
 
       - name: Initialize deterministic daily state
