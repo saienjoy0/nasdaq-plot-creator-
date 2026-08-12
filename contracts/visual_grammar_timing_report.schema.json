@@ -46,9 +46,18 @@
     "thresholds": {"$ref": "#/$defs/thresholds"},
     "metrics": {"$ref": "#/$defs/metrics"},
     "staticState": {"$ref": "#/$defs/staticState"},
+    "visualStagnation": {"$ref": "#/$defs/visualStagnation"},
     "beats": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/beat"}},
     "failures": {"type": "array", "items": {"$ref": "#/$defs/failure"}},
-    "warnings": {"type": "array", "items": {"$ref": "#/$defs/warning"}}
+    "warnings": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {"$ref": "#/$defs/warning"},
+          {"$ref": "#/$defs/stagnationWarning"}
+        ]
+      }
+    }
   },
   "$defs": {
     "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
@@ -160,6 +169,22 @@
         "failureCandidates": {"type": "array", "items": {"$ref": "#/$defs/staticFinding"}}
       }
     },
+    "visualStagnation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status", "thresholdMs", "longestRunMs", "longestRunBeatIds",
+        "longestRunSignature", "warningCount"
+      ],
+      "properties": {
+        "status": {"enum": ["clear", "warning"]},
+        "thresholdMs": {"const": 8000},
+        "longestRunMs": {"type": "number", "minimum": 0},
+        "longestRunBeatIds": {"type": "array", "items": {"type": "string"}},
+        "longestRunSignature": {"type": ["string", "null"]},
+        "warningCount": {"type": "integer", "minimum": 0}
+      }
+    },
     "beat": {
       "type": "object", "additionalProperties": false,
       "required": [
@@ -209,6 +234,17 @@
         "durationMs": {"type": "number", "minimum": 0},
         "recommendedMinMs": {"const": 5000},
         "recommendedMaxMs": {"const": 8000}
+      }
+    },
+    "stagnationWarning": {
+      "type": "object", "additionalProperties": false,
+      "required": ["code", "beatIds", "durationMs", "thresholdMs", "signature"],
+      "properties": {
+        "code": {"const": "W_VISUAL_STAGNATION"},
+        "beatIds": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "durationMs": {"type": "number", "minimum": 0},
+        "thresholdMs": {"const": 8000},
+        "signature": {"type": "string", "minLength": 1}
       }
     }
   }
