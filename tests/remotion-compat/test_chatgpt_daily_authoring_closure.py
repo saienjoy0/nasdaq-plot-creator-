@@ -40,15 +40,26 @@ def nine_scene_authoring(template: str = "opening-contradiction"):
     for index in range(1, 10):
         scenes.append(
             {
-                "chunks": [{"text": f"scene {index}"}],
+                "chunks": [
+                    {"text": f"scene {index} beat 1"},
+                    {"text": f"scene {index} beat 2"},
+                ],
                 "beats": [
                     {
                         "visualTemplate": template if index == 1 else "opening-contradiction",
-                    }
+                    },
+                    {
+                        "visualTemplate": "opening-contradiction",
+                    },
                 ],
             }
         )
-    return {"scenes": scenes, "financialBindings": []}
+    return {
+        "durationMode": "standard",
+        "shortenedReason": None,
+        "scenes": scenes,
+        "financialBindings": [],
+    }
 
 
 def test_unbound_financial_templates_are_reported_together():
