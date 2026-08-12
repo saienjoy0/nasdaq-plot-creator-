@@ -2,10 +2,11 @@
 """Assemble split ChatGPT-authored JSON fragments into one daily authoring file.
 
 Fragments are editorially complete inputs created by ChatGPT. This script only performs
-a deterministic deep merge, applies explicit ChatGPT-authored Beat patches, binds the
-exact daily-source SHA required by lineage, exposes approved review scores under legacy
-field names, activates exact Renderer 2.4 compatibility aliases, and validates authored
-Financial Visual binding closure. It makes no market or creative decisions of its own.
+a deterministic deep merge, applies explicit ChatGPT-authored Scene/Beat patches, binds
+the exact daily-source SHA required by lineage, exposes approved review scores under
+legacy field names, activates exact Renderer 2.4 compatibility aliases, and validates
+authored Financial Visual binding closure. It makes no market or creative decisions of
+its own.
 """
 from __future__ import annotations
 
@@ -69,6 +70,36 @@ def activate_renderer_240_financial_scope(root: Path) -> None:
         path.write_text(text, encoding="utf-8")
     elif renderer_240 not in text:
         raise SystemExit("cannot activate Renderer 2.4 financial template scope")
+
+
+def apply_explicit_scene_patches(value: dict[str, Any]) -> int:
+    """Apply scene-level fields explicitly authored in daily input without inference."""
+    patches = value.pop("scenePatches", [])
+    if not isinstance(patches, list):
+        raise SystemExit("scenePatches must be an array")
+    scenes = value.get("scenes")
+    if not isinstance(scenes, list):
+        raise SystemExit("assembled authoring scenes must be an array")
+    applied = 0
+    seen: set[int] = set()
+    for row in patches:
+        if not isinstance(row, dict):
+            raise SystemExit("scenePatches entries must be objects")
+        scene_number = row.get("sceneNumber")
+        fields = row.get("set")
+        if not isinstance(scene_number, int) or not 1 <= scene_number <= len(scenes):
+            raise SystemExit(f"scene patch sceneNumber invalid: {scene_number}")
+        if not isinstance(fields, dict) or not fields:
+            raise SystemExit("scene patch set must be a non-empty object")
+        if scene_number in seen:
+            raise SystemExit(f"duplicate scene patch target: scene={scene_number}")
+        seen.add(scene_number)
+        target = scenes[scene_number - 1]
+        if not isinstance(target, dict):
+            raise SystemExit(f"scene patch target is not an object: scene={scene_number}")
+        target.update(fields)
+        applied += 1
+    return applied
 
 
 def apply_explicit_beat_patches(value: dict[str, Any]) -> int:
@@ -154,7 +185,8 @@ def main() -> int:
         value = merge(value, piece)
     if value.get("episodeDate") != args.date:
         raise SystemExit("assembled authoring episodeDate mismatch")
-    patch_count = apply_explicit_beat_patches(value)
+    scene_patch_count = apply_explicit_scene_patches(value)
+    beat_patch_count = apply_explicit_beat_patches(value)
     review = value.get("review")
     if isinstance(review, dict) and "scores" not in review:
         story_scores = review.get("storyScores")
@@ -177,8 +209,9 @@ def main() -> int:
     output.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(
         f"ASSEMBLED {len(parts)} authoring parts -> {output}; daily_sha256={daily_sha}; "
-        f"beat_patches={patch_count}; renderer_financial_scope=2.4; "
-        f"source_receipt_mode_aliases={mode_aliases}; authoring_closure=PASS"
+        f"scene_patches={scene_patch_count}; beat_patches={beat_patch_count}; "
+        f"renderer_financial_scope=2.4; source_receipt_mode_aliases={mode_aliases}; "
+        f"authoring_closure=PASS"
     )
     return 0
 
