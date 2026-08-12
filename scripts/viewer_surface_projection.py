@@ -46,14 +46,18 @@ STANDALONE_DECIMAL_RE = re.compile(
 )
 
 # Expected / Actual / Gap remain valid machine concepts and schema values, but they
-# are production jargon for Japanese viewers. Convert only standalone viewer tokens;
-# internal keys such as expectedBasisType and role="expected" are never touched here.
+# are production jargon for Japanese viewers. Convert only standalone ASCII tokens;
+# Japanese text may follow immediately (for example "Gapは何か"), so Unicode \b is
+# intentionally not used here.
 FIXED_UI_LABELS = {
     "expected": "予想",
     "actual": "実際",
     "gap": "差分",
 }
-FIXED_UI_TERM_RE = re.compile(r"\b(expected|actual|gap)\b", re.IGNORECASE)
+FIXED_UI_TERM_RE = re.compile(
+    r"(?<![A-Za-z0-9_])(expected|actual|gap)(?![A-Za-z0-9_])",
+    re.IGNORECASE,
+)
 
 
 class ViewerSurfaceError(ValueError):
