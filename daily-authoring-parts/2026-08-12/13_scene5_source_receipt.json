@@ -67,9 +67,9 @@
         ]
       },
       "fallback": {
-        "recipeId": "source-receipt",
-        "visualTemplateId": "source-receipt",
-        "templateVariant": "receipt",
+        "recipeId": "news-media",
+        "visualTemplateId": "news-media",
+        "templateVariant": "default",
         "screenState": "News",
         "metricIds": [
           "metric.s05.hormuz.reopening-risk"
