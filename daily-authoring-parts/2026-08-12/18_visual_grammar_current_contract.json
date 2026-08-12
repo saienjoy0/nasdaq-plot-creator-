@@ -1,0 +1,182 @@
+{
+  "beatPatches": [
+    {
+      "sceneNumber": 2,
+      "beatNumber": 2,
+      "set": {
+        "visualTemplate": "text-focus",
+        "grammarId": "bridge-text",
+        "transitionRole": "continuation",
+        "variant": "default"
+      }
+    },
+    {
+      "sceneNumber": 3,
+      "beatNumber": 2,
+      "set": {
+        "variant": "strengthen-vs-weaken"
+      }
+    },
+    {
+      "sceneNumber": 4,
+      "beatNumber": 1,
+      "set": {
+        "visualTemplate": "expected-actual-bullet",
+        "grammarId": "gap",
+        "variant": "default",
+        "metrics": [
+          {
+            "label": "Brent",
+            "value": "+1.4%",
+            "numericValue": 1.4,
+            "precision": 1,
+            "unit": "%",
+            "tone": "negative",
+            "comparison": "2026-08-11 close"
+          }
+        ]
+      }
+    },
+    {
+      "sceneNumber": 5,
+      "beatNumber": 1,
+      "set": {
+        "visualTemplate": "causal-lane",
+        "grammarId": "causal",
+        "variant": "left-to-right",
+        "nodes": [
+          {"label": "ホルムズ不確実性", "tone": "neutral"},
+          {"label": "原油高", "tone": "negative"},
+          {"label": "CPI/Fed不確実性", "tone": "negative"},
+          {"label": "NASDAQの重し候補", "tone": "negative"}
+        ],
+        "edges": [
+          {"from": 1, "to": 2, "label": "供給不安"},
+          {"from": 2, "to": 3, "label": "インフレ懸念"},
+          {"from": 3, "to": 4, "label": "政策見通し"}
+        ]
+      }
+    },
+    {
+      "sceneNumber": 5,
+      "beatNumber": 2,
+      "set": {
+        "variant": "strengthen-vs-weaken"
+      }
+    },
+    {
+      "sceneNumber": 6,
+      "beatNumber": 1,
+      "set": {
+        "visualTemplate": "index-return-bars",
+        "grammarId": "reaction",
+        "variant": "zero-baseline",
+        "screenState": "Chart",
+        "primaryElement": "NVDA -2.10% / SOXX -0.69%",
+        "viewerTexts": [
+          "NVDA 222.17→217.50（約-2.10%）",
+          "SOXX 537.91→534.20（約-0.69%）",
+          "通常取引 09:30→15:59 ET"
+        ],
+        "metrics": [
+          {
+            "label": "NVDA",
+            "value": "-2.10%",
+            "numericValue": -2.101994,
+            "precision": 2,
+            "unit": "%",
+            "tone": "negative",
+            "comparison": "09:30 open→15:59 close ET"
+          },
+          {
+            "label": "SOXX",
+            "value": "-0.69%",
+            "numericValue": -0.689706,
+            "precision": 2,
+            "unit": "%",
+            "tone": "negative",
+            "comparison": "09:30 open→15:59 close ET"
+          }
+        ]
+      }
+    },
+    {
+      "sceneNumber": 6,
+      "beatNumber": 2,
+      "set": {
+        "visualTemplate": "evidence-boundary",
+        "grammarId": "evidence",
+        "variant": "confirmed-vs-unconfirmed",
+        "screenState": "Data",
+        "screenQuestion": "どこまで確認できた？",
+        "primaryElement": "確認済み：NVDA / SOXX　未取得：QQQ",
+        "viewerTexts": [
+          "確認済み：NVDA / SOXX fresh 1分足",
+          "未取得：QQQ fresh historical",
+          "1分足はタイミング確認 ≠ 因果証明"
+        ]
+      }
+    },
+    {
+      "sceneNumber": 7,
+      "beatNumber": 2,
+      "set": {
+        "variant": "two-lane",
+        "metrics": [
+          {
+            "label": "Q2売上",
+            "value": "$2.58B",
+            "numericValue": 2.58,
+            "precision": 2,
+            "unit": "$B",
+            "tone": "neutral",
+            "comparison": "CoreWeave Q2"
+          },
+          {
+            "label": "backlog",
+            "value": "$104.2B",
+            "numericValue": 104.2,
+            "precision": 1,
+            "unit": "$B",
+            "tone": "neutral",
+            "comparison": "different measure; after close"
+          }
+        ]
+      }
+    },
+    {
+      "sceneNumber": 8,
+      "beatNumber": 1,
+      "set": {
+        "variant": "strengthen-vs-weaken"
+      }
+    },
+    {
+      "sceneNumber": 8,
+      "beatNumber": 2,
+      "set": {
+        "visualTemplate": "verification-checklist",
+        "grammarId": "verification",
+        "variant": "default"
+      }
+    },
+    {
+      "sceneNumber": 9,
+      "beatNumber": 1,
+      "set": {
+        "grammarId": "assembly",
+        "variant": "default"
+      }
+    },
+    {
+      "sceneNumber": 9,
+      "beatNumber": 2,
+      "set": {
+        "visualTemplate": "conclusion-card",
+        "grammarId": "assembly",
+        "transitionRole": "closing",
+        "variant": "default"
+      }
+    }
+  ]
+}
