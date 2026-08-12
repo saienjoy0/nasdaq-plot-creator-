@@ -54,7 +54,12 @@ def normalize_single_variant_templates(render_spec: dict[str, Any]) -> None:
                 continue
             config_variant = config.get("variant")
             beat_variant = beat.get("templateVariant")
-            if config_variant != beat_variant or config_variant not in allowed_variants:
+            if config_variant not in allowed_variants:
                 raise TemplateVariantError(
-                    f"{scene.get('sceneId')}/{beat.get('beatId')}: {template} requires an explicit matching variant from {sorted(allowed_variants)}"
+                    f"{scene.get('sceneId')}/{beat.get('beatId')}: {template} requires explicit templateConfig.variant from {sorted(allowed_variants)}"
                 )
+            if beat_variant is not None and beat_variant != config_variant:
+                raise TemplateVariantError(
+                    f"{scene.get('sceneId')}/{beat.get('beatId')}: templateVariant must match templateConfig.variant"
+                )
+            beat["templateVariant"] = config_variant
