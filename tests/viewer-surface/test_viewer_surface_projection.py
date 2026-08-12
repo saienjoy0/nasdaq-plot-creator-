@@ -35,6 +35,22 @@ def test_caption_numeric_projection(speech: str, expected: str) -> None:
 
 
 @pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        ("Expected / Actual / Gapは何か", "予想 / 実際 / 差分は何か"),
+        ("EXPECTED｜市場が置いていた基準", "予想｜市場が置いていた基準"),
+        ("Expected：再開・供給不安緩和", "予想：再開・供給不安緩和"),
+        ("Actual：閉鎖条件", "実際：閉鎖条件"),
+        ("GAP：マクロ不安", "差分：マクロ不安"),
+    ],
+)
+def test_fixed_ui_terms_are_japanese_on_viewer_surfaces(source: str, expected: str) -> None:
+    projected, conversions = viewer.project_caption_text(source)
+    assert projected == expected
+    assert all(not viewer.FIXED_UI_TERM_RE.search(item.after) for item in conversions)
+
+
+@pytest.mark.parametrize(
     "text",
     ["一方で四半期売上は増加", "唯一の反対材料", "三菱を確認", "十分な材料", "一分野を確認"],
 )
@@ -49,13 +65,13 @@ def test_authoring_projection_never_changes_speech_source() -> None:
         "scenes": [
             {
                 "headline": "七月CPIを確認",
-                "supportingTexts": ["一分足"],
-                "chunks": [{"text": "NVIDIAは二・〇五パーセント下落"}],
+                "supportingTexts": ["Expected：一分足"],
+                "chunks": [{"text": "ExpectedはNVIDIA二・〇五パーセント下落より前の市場予想"}],
                 "beats": [
                     {
-                        "screenQuestion": "十五時五十九分までどう動いたか",
+                        "screenQuestion": "Expected / Actual / Gapは何か",
                         "primaryElement": "三つの資産",
-                        "viewerTexts": ["二十一時三十分 CPI"],
+                        "viewerTexts": ["Actual：二十一時三十分 CPI", "Gap：差を確認"],
                     }
                 ],
             }
@@ -65,11 +81,12 @@ def test_authoring_projection_never_changes_speech_source() -> None:
     projected, report = viewer.project_authoring_viewer_surfaces(authoring)
     assert projected["scenes"][0]["chunks"][0]["text"] == original["scenes"][0]["chunks"][0]["text"]
     assert projected["scenes"][0]["headline"] == "7月CPIを確認"
-    assert projected["scenes"][0]["supportingTexts"] == ["1分足"]
-    assert projected["scenes"][0]["beats"][0]["screenQuestion"] == "15:59までどう動いたか"
+    assert projected["scenes"][0]["supportingTexts"] == ["予想：1分足"]
+    assert projected["scenes"][0]["beats"][0]["screenQuestion"] == "予想 / 実際 / 差分は何か"
     assert projected["scenes"][0]["beats"][0]["primaryElement"] == "3つの資産"
-    assert projected["scenes"][0]["beats"][0]["viewerTexts"] == ["21:30 CPI"]
+    assert projected["scenes"][0]["beats"][0]["viewerTexts"] == ["実際：21:30 CPI", "差分：差を確認"]
     assert report["speechTextChanged"] is False
+    assert any(item["rule_id"] == "fixed-ui-japanese" for item in report["conversions"])
 
 
 def test_qualitative_financial_metric_projects_to_card() -> None:
