@@ -12,6 +12,7 @@ import argparse
 import copy
 import hashlib
 import json
+import math
 import re
 import subprocess
 import sys
@@ -37,7 +38,10 @@ VISUAL_MODE_MAP = {
     "verification": "verification-points",
     "closing-recap": "conclusion-card",
 }
-FINANCIAL_TEMPLATES = {"market-pulse-grid", "dual-asset-split"}
+FINANCIAL_TEMPLATES = {
+    "market-pulse-grid", "earnings-surprise", "dual-asset-split",
+    "macro-pressure", "source-receipt",
+}
 
 class RendererSourceError(ValueError):
     pass
@@ -195,16 +199,52 @@ def _find_render_beat(render: dict[str, Any], canonical_id: str) -> tuple[dict[s
     raise RendererSourceError(f"target Beat not found: {canonical_id}")
 
 def _metric_to_number(metric: dict[str, Any]) -> dict[str, Any]:
+    value = metric.get("numericValue")
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+        raise RendererSourceError(f"{metric.get('metricId')}: numeric renderer object requires finite numericValue")
     return {
         "numberId": metric["metricId"],
         "label": metric["label"],
         "value": metric["valueText"],
-        "numericValue": metric.get("numericValue"),
+        "numericValue": value,
         "precision": metric.get("precision", 2),
         "unit": metric.get("unit") or "",
         "comparison": None,
         "tone": metric.get("tone", "neutral"),
     }
+
+def _metric_to_card(metric: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "cardId": metric["metricId"],
+        "role": None,
+        "title": metric["label"],
+        "lines": [{
+            "label": "確認",
+            "value": metric["valueText"],
+            "tone": metric.get("tone", "neutral"),
+        }],
+    }
+
+def _project_metric_objects(scene: dict[str, Any], metrics_raw: list[dict[str, Any]], source_beat_id: str) -> None:
+    scene_numbers = scene.setdefault("numbers", [])
+    scene_cards = scene.setdefault("cards", [])
+    existing_number_ids = {item.get("numberId") for item in scene_numbers}
+    existing_card_ids = {item.get("cardId") for item in scene_cards}
+    if existing_number_ids & existing_card_ids:
+        raise RendererSourceError(f"{source_beat_id}: renderer object IDs collide across numbers/cards")
+    for metric in metrics_raw:
+        metric_id = metric["metricId"]
+        if metric_id in existing_number_ids or metric_id in existing_card_ids:
+            continue
+        numeric_value = metric.get("numericValue")
+        if numeric_value is None:
+            scene_cards.append(_metric_to_card(metric))
+            existing_card_ids.add(metric_id)
+        elif isinstance(numeric_value, bool) or not isinstance(numeric_value, (int, float)) or not math.isfinite(numeric_value):
+            raise RendererSourceError(f"{source_beat_id}/{metric_id}: numericValue must be finite number or null")
+        else:
+            scene_numbers.append(_metric_to_number(metric))
+            existing_number_ids.add(metric_id)
 
 def _plan(*, plan_id: str, intent_id: str, path: str, recipe_id: str, template_id: str,
           variant: str, scene_id: str, beat_id: str, screen_state: str,
@@ -270,12 +310,7 @@ def _financial_contract(*, render: dict[str, Any], bindings: dict[str, Any],
         metric_ids = [metric["metricId"] for metric in metrics]
         if len(metric_ids) != len(set(metric_ids)):
             raise RendererSourceError(f"{source_beat_id}: duplicate metricId")
-        scene_numbers = scene.setdefault("numbers", [])
-        existing_number_ids = {item.get("numberId") for item in scene_numbers}
-        for metric in metrics_raw:
-            if metric["metricId"] not in existing_number_ids:
-                scene_numbers.append(_metric_to_number(metric))
-                existing_number_ids.add(metric["metricId"])
+        _project_metric_objects(scene, metrics_raw, source_beat_id)
         intent_id = row["intentId"]
         preferred = row["preferred"]
         fallback = row["fallback"]
