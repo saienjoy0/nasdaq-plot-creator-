@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Run the 2026-08-10 Golden render through the real pinned Visual Director."""
+"""Run historical 2026-08-10 semantics through the current Visual Director.
+
+The committed historical render_spec stays byte-for-byte unchanged. This acceptance
+creates an in-memory test copy, binds only the Renderer-owned compatibility SHA to
+the current Renderer checkout, and then requires the current strict compiler to
+validate every Grammar/Template pair before the identity plan can pass.
+"""
 
 from __future__ import annotations
 
@@ -59,14 +65,36 @@ def identity_plan(spec: dict, catalog: dict) -> dict:
     }
 
 
+def current_renderer_compatibility_sha(renderer_root: Path) -> str:
+    registry = renderer_root / "contracts/visual_grammar_renderer_compatibility.json"
+    if not registry.is_file():
+        raise AssertionError(f"current Renderer compatibility registry missing: {registry}")
+    return hashlib.sha256(registry.read_bytes()).hexdigest()
+
+
+def current_contract_copy(historical: dict, renderer_root: Path) -> dict:
+    rebound = json.loads(json.dumps(historical, ensure_ascii=False))
+    root = rebound.get("visualGrammarContract")
+    if not isinstance(root, dict):
+        raise AssertionError("historical Golden lacks Visual Grammar root contract")
+    root["rendererCompatibilitySha256"] = current_renderer_compatibility_sha(renderer_root)
+    return rebound
+
+
 def run(renderer_root: Path) -> dict:
     renderer_root = renderer_root.resolve()
     date = "2026-08-10"
-    spec = json.loads(
-        (renderer_root / f"render-specs/{date}/render_spec.json").read_text(
-            encoding="utf-8"
-        )
-    )
+    historical_path = renderer_root / f"render-specs/{date}/render_spec.json"
+    historical_bytes = historical_path.read_bytes()
+    historical = json.loads(historical_bytes.decode("utf-8"))
+    spec = current_contract_copy(historical, renderer_root)
+    if historical_path.read_bytes() != historical_bytes:
+        raise AssertionError("historical Golden artifact was modified during test binding")
+    old_sha = historical["visualGrammarContract"]["rendererCompatibilitySha256"]
+    new_sha = spec["visualGrammarContract"]["rendererCompatibilitySha256"]
+    if old_sha == new_sha:
+        raise AssertionError("historical Golden must exercise a stale Renderer registry binding")
+
     commit = subprocess.run(
         ["git", "rev-parse", "HEAD"],
         cwd=renderer_root,
@@ -105,15 +133,20 @@ def run(renderer_root: Path) -> dict:
             expected_renderer_commit=commit,
         )
         if result["render"] != spec:
-            raise AssertionError("Golden identity selection changed render bytes semantically")
+            raise AssertionError("Golden identity selection changed rebound render semantically")
         report = json.loads(result["report_path"].read_text(encoding="utf-8"))
         if report.get("semanticDiff") != "PASS":
             raise AssertionError("Golden Protected Semantic Diff did not PASS")
+        if historical_path.read_bytes() != historical_bytes:
+            raise AssertionError("historical Golden artifact changed after current-contract acceptance")
         return {
             "status": "PASS",
             "candidateCount": len(catalog["candidates"]),
             "selectionCount": len(plan["selections"]),
             "warningCount": len(report.get("warnings", [])),
+            "historicalRegistrySha256": old_sha,
+            "currentRegistrySha256": new_sha,
+            "historicalArtifactUnchanged": True,
         }
 
 
