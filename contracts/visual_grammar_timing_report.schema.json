@@ -20,12 +20,13 @@
     "unresolvedStateCount",
     "thresholds",
     "metrics",
+    "staticState",
     "beats",
     "failures",
     "warnings"
   ],
   "properties": {
-    "contractVersion": {"const": "1.0.0"},
+    "contractVersion": {"const": "1.1.0"},
     "status": {"enum": ["PASS", "FAIL"]},
     "timingBasis": {"const": "post-tts-production-data"},
     "episodeId": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
@@ -44,6 +45,7 @@
     "unresolvedStateCount": {"const": 0},
     "thresholds": {"$ref": "#/$defs/thresholds"},
     "metrics": {"$ref": "#/$defs/metrics"},
+    "staticState": {"$ref": "#/$defs/staticState"},
     "beats": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/beat"}},
     "failures": {"type": "array", "items": {"$ref": "#/$defs/failure"}},
     "warnings": {"type": "array", "items": {"$ref": "#/$defs/warning"}}
@@ -111,6 +113,51 @@
         "bridgeTextRatio": {"type": "number", "minimum": 0, "maximum": 1},
         "appearanceDurationMs": {"$ref": "#/$defs/durationMap"},
         "dominantSurfaceDurationMs": {"$ref": "#/$defs/durationMap"}
+      }
+    },
+    "boundaryKind": {
+      "enum": [
+        "scene-boundary", "beat-boundary", "shot-boundary",
+        "show", "hide", "highlight", "unhighlight",
+        "main-stage-placement-change"
+      ]
+    },
+    "staticFinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sceneId", "beatId", "startMs", "endMs", "durationMs",
+        "startBoundaryKinds", "endBoundaryKinds"
+      ],
+      "properties": {
+        "sceneId": {"type": "string", "pattern": "^scene-0[1-8]$"},
+        "beatId": {"type": ["string", "null"]},
+        "startMs": {"type": "number", "minimum": 0},
+        "endMs": {"type": "number", "minimum": 0},
+        "durationMs": {"type": "number", "minimum": 0},
+        "startBoundaryKinds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/boundaryKind"}},
+        "endBoundaryKinds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/boundaryKind"}}
+      }
+    },
+    "staticState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode", "warningThresholdMs", "failureCandidateThresholdMs",
+        "longestStaticStateMs", "longestStaticStateSceneId", "longestStaticStateBeatId",
+        "warningCount", "failureCandidateCount", "warnings", "failureCandidates"
+      ],
+      "properties": {
+        "mode": {"const": "report-only"},
+        "warningThresholdMs": {"const": 8000},
+        "failureCandidateThresholdMs": {"const": 16000},
+        "longestStaticStateMs": {"type": "number", "minimum": 0},
+        "longestStaticStateSceneId": {"type": ["string", "null"]},
+        "longestStaticStateBeatId": {"type": ["string", "null"]},
+        "warningCount": {"type": "integer", "minimum": 0},
+        "failureCandidateCount": {"type": "integer", "minimum": 0},
+        "warnings": {"type": "array", "items": {"$ref": "#/$defs/staticFinding"}},
+        "failureCandidates": {"type": "array", "items": {"$ref": "#/$defs/staticFinding"}}
       }
     },
     "beat": {
