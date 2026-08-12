@@ -18,9 +18,10 @@ KANJI_DIGITS = {"〇": 0, "零": 0, "一": 1, "二": 2, "三": 3, "四": 4, "五
 SMALL_UNITS = {"十": 10, "百": 100, "千": 1000}
 BIG_UNITS = {"万": 10_000, "億": 100_000_000, "兆": 1_000_000_000_000}
 NUM_CHARS = "〇零一二三四五六七八九十百千万億兆"
+KANJI_DIGIT_CHARS = "〇零一二三四五六七八九"
 COEFF_CHARS = "〇零一二三四五六七八九十百千"
 NUM_TOKEN = rf"[{NUM_CHARS}]+(?:・[{NUM_CHARS}]+)?"
-COEFF_TOKEN = rf"[{COEFF_CHARS}]+(?:・[〇零一二三四五六七八九]+)?"
+COEFF_TOKEN = rf"[{COEFF_CHARS}]+(?:・[{KANJI_DIGIT_CHARS}]+)?"
 # A Japanese magnitude character immediately following an Arabic coefficient is a
 # display unit (for example 5,000億ドル), not an unconverted Japanese number.
 CONTEXT_RE = re.compile(
@@ -33,7 +34,13 @@ FINANCIAL_MAGNITUDE_RE = re.compile(rf"({COEFF_TOKEN})(億|万)(ドル|円)")
 UNIT_RE = re.compile(
     rf"(?<![0-9,.])({NUM_TOKEN})(ドル|円|分足|番目|年|月|日|回|件|社|人|位|段|つ)"
 )
-STANDALONE_DECIMAL_RE = re.compile(rf"({NUM_TOKEN})(?=[、。・\s]|$)")
+# The middle dot is an explicit decimal marker in the TTS surface. Once unit-specific
+# rules have run, convert it regardless of whether Japanese prose follows immediately
+# (for example "二万六千...・四五でした"). Boundaries only exclude adjacent numeral
+# characters, so ordinary Japanese words such as 一方 / 四半期 remain untouched.
+STANDALONE_DECIMAL_RE = re.compile(
+    rf"(?<![{NUM_CHARS}])([{NUM_CHARS}]+・[{KANJI_DIGIT_CHARS}]+)(?![{NUM_CHARS}])"
+)
 
 
 class ViewerSurfaceError(ValueError):
@@ -132,14 +139,14 @@ def normalize_viewer_text(value: str, *, path: str, conversions: list[Conversion
         lambda match: f"{normalize_numeric_token(match.group(1))}{match.group(2)}",
         "numeric-unit", path, conversions,
     )
-    # TTS often spells decimal/index values without a following unit. Convert only
-    # explicit decimal forms; ordinary words such as 一方 / 四半期 are untouched.
-    def decimal_only(match: re.Match[str]) -> str:
-        token = match.group(1)
-        if "・" not in token:
-            return token
-        return normalize_numeric_token(token)
-    text = _apply_regex(text, STANDALONE_DECIMAL_RE, decimal_only, "standalone-decimal", path, conversions)
+    text = _apply_regex(
+        text,
+        STANDALONE_DECIMAL_RE,
+        lambda match: normalize_numeric_token(match.group(1)),
+        "standalone-decimal",
+        path,
+        conversions,
+    )
     return text
 
 
