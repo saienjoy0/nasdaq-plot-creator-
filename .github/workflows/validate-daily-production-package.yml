@@ -3,44 +3,33 @@ name: Validate Daily Production Package
 on:
   pull_request:
     paths:
+      - "daily-authoring-parts/**"
+      - "daily-authoring/**"
       - "daily-inputs/**"
-      - "working/**/memory_query_plan.json"
-      - "working/**/financial_visual_bindings.json"
-      - "working/**/terminal_assembly_bindings.json"
-      - "working/**/visual_source_intents.json"
-      - "working/**/visual_source_selection.json"
-      - "working/**/story-engine/**"
+      - "working/**"
       - "research/**"
       - "episodes/**"
       - "render-specs/**"
       - "daily-assets/**"
-      - "contracts/final_episode_contract.schema.json"
-      - "contracts/financial_visual_compatibility.json"
-      - "contracts/financial_visual_compatibility_2_4.json"
-      - "contracts/visual_grammar_*.json"
+      - "contracts/**"
+      - "scripts/assemble_chatgpt_daily_authoring_parts.py"
+      - "scripts/materialize_chatgpt_daily_authoring.py"
+      - "scripts/viewer_surface_projection.py"
+      - "scripts/fixup_chatgpt_daily_materialization.py"
+      - "scripts/validate_chatgpt_daily_authoring_closure.py"
+      - "scripts/run_daily_renderer_closure.py"
       - "scripts/materialize_daily_episode.py"
       - "scripts/materialize_renderer_sources.py"
       - "scripts/materialize_financial_contract_1_0.py"
-      - "scripts/financial_final_episode_contract_1_0.py"
-      - "scripts/prepare_visual_sources.py"
-      - "scripts/visual_source_contract.py"
-      - "scripts/resolve_visual_sources.py"
-      - "scripts/select_visual_sources.py"
-      - "scripts/visual_source_projection.py"
-      - "scripts/pre_tts_visual_gate.py"
-      - "scripts/story-engine/**"
-      - "scripts/remotion_template_data.py"
-      - "scripts/finalize_renderer_package.py"
-      - "scripts/finalize_renderer_package_compat.py"
-      - "scripts/build_final_production_package_hardened.py"
-      - "scripts/build_renderer_handoff_240.py"
-      - "scripts/build_renderer_handoff_hardened.py"
-      - "scripts/record_visual_source_baseline.py"
+      - "scripts/finalize_renderer_package*.py"
+      - "scripts/remotion_*.py"
+      - "scripts/visual_director_bridge.py"
       - "scripts/run_daily_production_hardened.py"
-      - "scripts/run_daily_production_story_engine_v1_1.py"
+      - "scripts/story-engine/**"
       - "tests/daily-production-hardening/**"
       - "tests/story-engine-integration/**"
       - "tests/remotion-compat/**"
+      - "tests/viewer-surface/**"
       - "tests/visual-source-baseline/**"
       - "tests/visual-source/**"
       - ".github/workflows/validate-daily-production-package.yml"
@@ -59,14 +48,61 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      # PR validation follows the current-contract canary. Historical daily artifacts
-      # remain immutable and can still be checked explicitly via workflow_dispatch.
-      EPISODE_DATE: ${{ inputs.episode_date || '2026-08-12' }}
       RENDERER_COMMIT: 6a44cdeb04d401dc45379783862e279a5c2f04a5
       RENDERER_CONTRACT_VERSION: 2.4.0
       NASDAQ_CAFE_RENDERER_ROOT: ${{ github.workspace }}/.renderer
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve exact validation episode date
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            EPISODE_DATE="${{ inputs.episode_date }}"
+          else
+            git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" > /tmp/changed-files.txt
+            EPISODE_DATE="$(python - <<'PY'
+          import re
+          from pathlib import Path
+
+          dates = set()
+          patterns = (
+              r"^daily-authoring-parts/(\d{4}-\d{2}-\d{2})/",
+              r"^daily-authoring/(\d{4}-\d{2}-\d{2})\.json$",
+              r"^daily-inputs/(\d{4}-\d{2}-\d{2})/",
+              r"^working/(\d{4}-\d{2}-\d{2})/",
+              r"^research/(\d{4}-\d{2}-\d{2})/",
+              r"^episodes/(\d{4}-\d{2}-\d{2})/",
+              r"^render-specs/(\d{4}-\d{2}-\d{2})/",
+              r"^daily-assets/(\d{4}-\d{2}-\d{2})/",
+          )
+          for line in Path('/tmp/changed-files.txt').read_text(encoding='utf-8').splitlines():
+              for pattern in patterns:
+                  match = re.match(pattern, line)
+                  if match:
+                      dates.add(match.group(1))
+          if len(dates) > 1:
+              raise SystemExit('validation PR must target exactly one episode date: ' + ','.join(sorted(dates)))
+          if dates:
+              print(next(iter(dates)))
+          else:
+              root = Path('daily-authoring-parts')
+              candidates = sorted(
+                  p.name for p in root.iterdir()
+                  if p.is_dir() and re.fullmatch(r'\d{4}-\d{2}-\d{2}', p.name)
+              ) if root.is_dir() else []
+              if not candidates:
+                  raise SystemExit('no daily episode is available as validation canary')
+              print(candidates[-1])
+          PY
+          )"
+          fi
+          [[ "$EPISODE_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
+          echo "EPISODE_DATE=$EPISODE_DATE" >> "$GITHUB_ENV"
+          echo "Package validation target: $EPISODE_DATE"
 
       - name: Checkout pinned Remotion renderer
         uses: actions/checkout@v4
@@ -86,244 +122,45 @@ jobs:
           cache: npm
           cache-dependency-path: .renderer/package-lock.json
 
-      - name: Install pinned renderer dependencies
-        working-directory: .renderer
-        run: npm ci
-
-      - name: Verify committed daily inputs
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import json
-          import re
-          from pathlib import Path
-
-          date = "${{ env.EPISODE_DATE }}"
-          if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date):
-              raise SystemExit("EPISODE_DATE must be YYYY-MM-DD")
-          root = Path.cwd().resolve()
-          required = [
-              root / f"daily-inputs/{date}/daily_source_package_{date}.md",
-              root / f"working/{date}/memory_query_plan.json",
-              root / f"working/{date}/financial_visual_bindings.json",
-              root / f"working/{date}/terminal_assembly_bindings.json",
-              root / f"working/{date}/visual_source_intents.json",
-              root / f"working/{date}/story-engine/templates/story_plan.template.json",
-              root / f"working/{date}/story-engine/templates/story_script.template.json",
-              root / f"working/{date}/story-engine/templates/creative_review.template.json",
-              root / f"working/{date}/story-engine/story_production_bindings.json",
-              root / f"episodes/{date}/episode_package_public_{date}.md",
-              root / f"render-specs/{date}/render_spec.json",
-              root / f"research/{date}/causal_research_dossier.template.json",
-              root / "contracts/financial_visual_compatibility_2_4.json",
-              root / "contracts/visual_grammar_semantics.json",
-              root / "contracts/visual_grammar_renderer_compatibility.json",
-              root / "scripts/pre_tts_visual_gate.py",
-              root / "scripts/materialize_daily_episode.py",
-              root / "scripts/materialize_renderer_sources.py",
-              root / "scripts/story-engine/materialize_story_engine.py",
-              root / "scripts/story-engine/project_story_script_to_production.py",
-              root / "scripts/materialize_financial_contract_1_0.py",
-              root / "scripts/financial_final_episode_contract_1_0.py",
-              root / "scripts/remotion_template_data.py",
-              root / "scripts/finalize_renderer_package_compat.py",
-          ]
-          for path in required:
-              resolved = path.resolve()
-              if resolved != root and root not in resolved.parents:
-                  raise SystemExit(f"Input path escapes repository: {path}")
-              if not resolved.is_file() or resolved.stat().st_size == 0:
-                  raise SystemExit(f"Missing or empty required input: {path.relative_to(root)}")
-          for path in (
-              root / f"working/{date}/memory_query_plan.json",
-              root / f"working/{date}/financial_visual_bindings.json",
-              root / f"working/{date}/terminal_assembly_bindings.json",
-              root / f"working/{date}/visual_source_intents.json",
-              root / f"working/{date}/story-engine/templates/story_plan.template.json",
-              root / f"working/{date}/story-engine/templates/story_script.template.json",
-              root / f"working/{date}/story-engine/templates/creative_review.template.json",
-              root / f"working/{date}/story-engine/story_production_bindings.json",
-              root / f"render-specs/{date}/render_spec.json",
-              root / f"research/{date}/causal_research_dossier.template.json",
-              root / "contracts/financial_visual_compatibility_2_4.json",
-          ):
-              value = json.loads(path.read_text(encoding="utf-8"))
-              if not isinstance(value, dict):
-                  raise SystemExit(f"JSON root must be an object: {path.relative_to(root)}")
-          query = json.loads((root / f"working/{date}/memory_query_plan.json").read_text(encoding="utf-8"))
-          if query.get("episode_date") != date:
-              raise SystemExit("memory query plan date mismatch")
-          story_binding = json.loads((root / f"working/{date}/story-engine/story_production_bindings.json").read_text(encoding="utf-8"))
-          if story_binding.get("episode_date") != date:
-              raise SystemExit("Story production bindings date mismatch")
-          bindings = json.loads((root / f"working/{date}/financial_visual_bindings.json").read_text(encoding="utf-8"))
-          if bindings.get("episodeDate") != date:
-              raise SystemExit("financial visual bindings date mismatch")
-          terminal = json.loads((root / f"working/{date}/terminal_assembly_bindings.json").read_text(encoding="utf-8"))
-          if terminal.get("episodeDate") != date:
-              raise SystemExit("terminal assembly bindings date mismatch")
-          spec = json.loads((root / f"render-specs/{date}/render_spec.json").read_text(encoding="utf-8"))
-          episode = spec.get("episode", {})
-          if episode.get("id") != date or episode.get("targetDate") != date:
-              raise SystemExit("render spec date mismatch")
-
-          intent_path = root / f"working/{date}/visual_source_intents.json"
-          intent = json.loads(intent_path.read_text(encoding="utf-8"))
-          if intent.get("contractVersion") != "1.0.0" or intent.get("episodeDate") != date:
-              raise SystemExit("Visual Source intent contract/date mismatch")
-          intents = intent.get("intents")
-          if not isinstance(intents, list):
-              raise SystemExit("Visual Source intents must be an array")
-          selection_path = root / f"working/{date}/visual_source_selection.json"
-          if intents:
-              if not selection_path.is_file():
-                  raise SystemExit("visual_source_selection.json is required when Visual Source intents are non-empty")
-              selection = json.loads(selection_path.read_text(encoding="utf-8"))
-              if not isinstance(selection, dict) or selection.get("episodeDate") != date:
-                  raise SystemExit("Visual Source selection date mismatch")
-          elif selection_path.is_file():
-              raise SystemExit("visual_source_selection.json must not remain when Visual Source intents are explicitly empty")
-          print("direct daily inputs verified")
-          PY
-
-      - name: Install validator and Visual Source dependencies
+      - name: Install validation dependencies
         run: |
           python -m pip install --disable-pip-version-check jsonschema pytest pillow
           sudo apt-get update
           sudo apt-get install -y poppler-utils
+          npm --prefix .renderer ci
 
-      - name: Run compatibility and hardening regression tests
+      - name: Run compatibility and hardening regressions
+        env:
+          PYTHONPATH: scripts
         run: |
           python tests/remotion-compat/test_remotion_compat.py
           python tests/daily-production-hardening/test_daily_production_hardening.py
-          python -m pytest -q tests/story-engine-integration tests/visual-source-baseline tests/visual-source
-          python -m py_compile \
-            scripts/pre_tts_visual_gate.py \
-            scripts/materialize_renderer_sources.py \
-            scripts/materialize_daily_episode.py \
-            scripts/prepare_visual_sources.py \
-            scripts/visual_source_contract.py \
-            scripts/resolve_visual_sources.py \
-            scripts/select_visual_sources.py \
-            scripts/visual_source_projection.py \
-            scripts/story-engine/materialize_story_engine.py \
-            scripts/story-engine/project_story_script_to_production.py \
-            scripts/story-engine/validate_story_engine_bundle.py \
-            scripts/materialize_financial_contract_1_0.py \
-            scripts/financial_final_episode_contract_1_0.py \
-            scripts/remotion_template_data.py \
-            scripts/finalize_renderer_package.py \
-            scripts/finalize_renderer_package_compat.py \
-            scripts/build_final_production_package_hardened.py \
-            scripts/build_renderer_handoff_240.py \
-            scripts/record_visual_source_baseline.py \
-            scripts/run_daily_production_hardened.py \
-            scripts/run_daily_production_story_engine_v1_1.py
+          python -m pytest -q \
+            tests/story-engine-integration \
+            tests/visual-source-baseline \
+            tests/visual-source \
+            tests/remotion-compat/test_chatgpt_daily_authoring_closure.py \
+            tests/remotion-compat/test_fox_expression_projection.py \
+            tests/remotion-compat/test_visual_director_bridge.py \
+            tests/remotion-compat/test_remotion_template_variant.py \
+            tests/viewer-surface/test_viewer_surface_projection.py
 
-      - name: Validate authored Visual Grammar before production projection
+      - name: Run exact-day Renderer 2.4 production closure
         run: |
-          mkdir -p "verification/$EPISODE_DATE"
-          python scripts/pre_tts_visual_gate.py \
-            --render-spec "render-specs/$EPISODE_DATE/render_spec.json" \
-            --story-bindings "working/$EPISODE_DATE/story-engine/story_production_bindings.json" \
-            --output "verification/$EPISODE_DATE/pre_tts_visual_gate.json"
-
-      - name: Prepare explicit Visual Source candidates and selection
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p "verification/$EPISODE_DATE"
-          python scripts/prepare_visual_sources.py \
+          python scripts/run_daily_renderer_closure.py \
             --date "$EPISODE_DATE" \
             --repo-root . \
-            | tee "verification/$EPISODE_DATE/visual-source-prepare.log"
-
-      - name: Materialize lineage-bound episode package
-        shell: bash
-        run: |
-          set -o pipefail
-          mkdir -p "verification/$EPISODE_DATE"
-          {
-            python scripts/materialize_daily_episode.py --date "$EPISODE_DATE" --repo-root .
-            python scripts/materialize_financial_contract_1_0.py --date "$EPISODE_DATE" --repo-root .
-          } 2>&1 | tee "verification/$EPISODE_DATE/materializer.log"
-
-      - name: Initialize deterministic daily state
-        run: |
-          python scripts/run_daily_production_hardened.py --workspace . init \
-            --episode-date "$EPISODE_DATE" \
-            --daily-source-package "daily-inputs/$EPISODE_DATE/daily_source_package_$EPISODE_DATE.md" \
-            --requested-scope preview \
-            --renderer-commit "$RENDERER_COMMIT" \
-            --renderer-contract-version "$RENDERER_CONTRACT_VERSION"
-
-      - name: Advance validated editorial stages
-        run: |
-          STORY="working/$EPISODE_DATE/story-engine"
-          ACCEPT="$STORY/story_engine_acceptance.json"
-          python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state research_inputs_bound --evidence "research/$EPISODE_DATE/research_input_manifest.json"
-          python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state causal_dossier_valid --evidence "research/$EPISODE_DATE/causal_research_dossier_$EPISODE_DATE.json" "research/$EPISODE_DATE/causal_dossier_validation.json"
-          python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state episode_package_final --evidence "episodes/$EPISODE_DATE/episode_package_$EPISODE_DATE.md" "$ACCEPT" "$STORY/story_projection_report.json" "verification/$EPISODE_DATE/pre_tts_visual_gate.json"
-          python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state memory_usage_valid --evidence "research/$EPISODE_DATE/causal_dossier_validation.json"
-          python scripts/run_daily_production_hardened.py --workspace . advance --episode-date "$EPISODE_DATE" --state assets_resolved --evidence "verification/$EPISODE_DATE/asset_resolution_log.json" "verification/$EPISODE_DATE/image_generation_log.json"
-
-      - name: Activate isolated Remotion 2.4 compatibility tuple
-        run: cp contracts/financial_visual_compatibility_2_4.json contracts/financial_visual_compatibility.json
-
-      - name: Build, convert and validate production package
-        shell: bash
-        run: |
-          set -o pipefail
-          mkdir -p "verification/$EPISODE_DATE"
-          {
-            python scripts/run_daily_production_hardened.py --workspace . build-production \
-              --episode-date "$EPISODE_DATE" \
-              --episode-package "episodes/$EPISODE_DATE/episode_package_$EPISODE_DATE.md"
-            python scripts/run_daily_production_hardened.py --workspace . status --episode-date "$EPISODE_DATE"
-          } 2>&1 | tee "verification/$EPISODE_DATE/build-production.log"
+            --renderer-root .renderer
 
       - name: Build immutable preview handoff
         shell: bash
         run: |
           set -o pipefail
-          mkdir -p "verification/$EPISODE_DATE"
           python scripts/run_daily_production_hardened.py --workspace . build-handoff \
             --episode-date "$EPISODE_DATE" \
             --bundle-root production-bundles \
             --plot-commit "${{ github.event.pull_request.head.sha || github.sha }}" \
             2>&1 | tee "verification/$EPISODE_DATE/build-handoff.log"
-
-      - name: Record immutable Visual Source baseline when no Visual Source intent is active
-        id: baseline
-        shell: bash
-        run: |
-          set -euo pipefail
-          INTENT_COUNT="$(python -c 'import json,sys; print(len(json.load(open(sys.argv[1], encoding="utf-8"))["intents"]))' "working/$EPISODE_DATE/visual_source_intents.json")"
-          if [[ "$INTENT_COUNT" != "0" ]]; then
-            echo "Visual Source active; preimplementation baseline recording skipped"
-            exit 0
-          fi
-          BASELINE="verification/$EPISODE_DATE/visual_source_baseline.json"
-          python scripts/record_visual_source_baseline.py \
-            --repo-root . \
-            --episode-date "$EPISODE_DATE" \
-            --plot-commit "${{ github.event.pull_request.head.sha || github.sha }}" \
-            --renderer-commit "$RENDERER_COMMIT" \
-            --renderer-contract-version "$RENDERER_CONTRACT_VERSION" \
-            --bundle-root production-bundles \
-            --output "$BASELINE"
-          BUNDLE_ID="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["handoff"]["bundle_id"])' "$BASELINE")"
-          MANIFEST_SHA="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["handoff"]["manifest_sha256"])' "$BASELINE")"
-          echo "bundle_id=$BUNDLE_ID" >> "$GITHUB_OUTPUT"
-          echo "manifest_sha256=$MANIFEST_SHA" >> "$GITHUB_OUTPUT"
-          {
-            echo "### Visual Source explicit not-required baseline"
-            echo "- Episode: \`$EPISODE_DATE\`"
-            echo "- Renderer: \`$RENDERER_COMMIT\` / \`$RENDERER_CONTRACT_VERSION\`"
-            echo "- Handoff bundle ID: \`$BUNDLE_ID\`"
-            echo "- Handoff manifest SHA-256: \`$MANIFEST_SHA\`"
-            echo "- Final authorized: \`false\`"
-          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload immutable renderer handoff
         if: success()
