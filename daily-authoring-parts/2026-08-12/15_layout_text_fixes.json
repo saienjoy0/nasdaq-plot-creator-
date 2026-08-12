@@ -1,0 +1,40 @@
+{
+  "scenePatches": [
+    {
+      "sceneNumber": 3,
+      "set": {
+        "headline": "NASDAQ -0.60%・Brent +1.4%"
+      }
+    },
+    {
+      "sceneNumber": 5,
+      "set": {
+        "headline": "ホルムズ→原油→CPI/Fed不安→大型テック"
+      }
+    },
+    {
+      "sceneNumber": 6,
+      "set": {
+        "headline": "NVDA -2.05%・QQQ -0.67%"
+      }
+    },
+    {
+      "sceneNumber": 7,
+      "set": {
+        "supportingTexts": [
+          "Nvidia：$500B資金構想",
+          "CoreWeave 売上$2.58B・受注残$104B"
+        ]
+      }
+    }
+  ],
+  "beatPatches": [
+    {
+      "sceneNumber": 1,
+      "beatNumber": 1,
+      "set": {
+        "primaryElement": "NASDAQ安でもAI需要は崩れず"
+      }
+    }
+  ]
+}
