@@ -56,10 +56,14 @@ jobs:
           fetch-depth: 0
 
       - name: Resolve canonical Renderer binding
+        id: renderer_binding
         shell: bash
         run: |
           set -euo pipefail
-          python scripts/renderer_binding.py --repo-root . --github-env "$GITHUB_ENV"
+          python scripts/renderer_binding.py \
+            --repo-root . \
+            --github-env "$GITHUB_ENV" \
+            --github-output "$GITHUB_OUTPUT"
 
       - name: Resolve exact episode date or synthetic-only mode
         shell: bash
@@ -113,8 +117,8 @@ jobs:
       - name: Checkout exact Preview renderer
         uses: actions/checkout@v4
         with:
-          repository: saienjoy0/saienjoy0-nasdaq-cafe-remotion
-          ref: ${{ env.RENDERER_COMMIT }}
+          repository: ${{ steps.renderer_binding.outputs.renderer_repository }}
+          ref: ${{ steps.renderer_binding.outputs.renderer_commit }}
           path: .renderer
           persist-credentials: false
 
