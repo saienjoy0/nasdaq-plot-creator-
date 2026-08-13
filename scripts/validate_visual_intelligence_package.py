@@ -40,7 +40,8 @@ def validate(*, root: Path, date: str, renderer_root: Path) -> dict[str, Any]:
     if package.get("episodeDate") != date:
         raise VisualIntelligencePackageError("Visual Intelligence episodeDate mismatch")
 
-    requirements = load(vi / "visual_requirements.json", "Visual Requirements")
+    requirements_path = vi / "visual_requirements.json"
+    requirements = load(requirements_path, "Visual Requirements")
     if package.get("intent") != requirements.get("intent"):
         raise VisualIntelligencePackageError("Visual Intent drifted after requirements planning")
     if package.get("provisionalDirection") != requirements.get("provisionalDirection"):
@@ -55,6 +56,8 @@ def validate(*, root: Path, date: str, renderer_root: Path) -> dict[str, Any]:
         "registrySnapshotSha256": sha256_file(renderer_root / binding["renderer"]["registrySnapshotPath"]),
         "recentVisualPatternContextSha256": sha256_file(vi / "recent_visual_pattern_context.json"),
         "visualEditorialPrinciplesSha256": sha256_file(root / "skills/nasdaq-cafe-visual-intelligence/references/VISUAL_EDITORIAL_INTELLIGENCE.md"),
+        "visualRequirementsSha256": sha256_file(requirements_path),
+        "capabilityHintsSha256": sha256_file(vi / "visual_capability_hints.json"),
     }
     if inputs != expected_inputs:
         raise VisualIntelligencePackageError("Visual Intelligence input lineage mismatch")
@@ -95,6 +98,8 @@ def validate(*, root: Path, date: str, renderer_root: Path) -> dict[str, Any]:
         "episodeDate": date,
         "packageSha256": sha256_file(package_path),
         "compiledVisualSha256": expected_final["compiledVisualSha256"],
+        "visualRequirementsSha256": expected_inputs["visualRequirementsSha256"],
+        "capabilityHintsSha256": expected_inputs["capabilityHintsSha256"],
     }
 
 
