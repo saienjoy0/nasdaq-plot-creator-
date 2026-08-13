@@ -44,23 +44,15 @@
         "visualTemplate": "causal-lane",
         "grammarId": "causal",
         "variant": "left-to-right",
-        "nodes": [
-          {"label": "ホルムズ不確実性", "tone": "neutral"},
-          {"label": "原油高", "tone": "negative"},
-          {"label": "CPI/Fed不確実性", "tone": "negative"},
-          {"label": "NASDAQの重し候補", "tone": "negative"}
+        "viewerTexts": [
+          "ホルムズ不確実性",
+          "原油高",
+          "CPI/Fed不確実性",
+          "NASDAQの重し候補"
         ],
-        "edges": [
-          {"from": 1, "to": 2, "label": "供給不安"},
-          {"from": 2, "to": 3, "label": "インフレ懸念"},
-          {"from": 3, "to": 4, "label": "政策見通し"}
-        ],
-        "visualEvents": [
-          {"action": "show", "targetId": "scene-05-node-01-01", "offsetMs": 0},
-          {"action": "show", "targetId": "scene-05-node-01-02", "offsetMs": 600},
-          {"action": "show", "targetId": "scene-05-node-01-03", "offsetMs": 1200},
-          {"action": "show", "targetId": "scene-05-node-01-04", "offsetMs": 1800}
-        ]
+        "nodes": [],
+        "edges": [],
+        "visualEvents": null
       }
     },
     {
