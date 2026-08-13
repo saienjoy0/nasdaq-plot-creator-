@@ -4,6 +4,7 @@
 Machine responsibilities only:
 - freeze Story semantics into an editorial snapshot
 - verify asset resolution / fallback completion
+- project AI-B-authored evidence-mode preferences into Renderer capability hints
 - invoke Renderer vNext Candidate Builder
 - validate an AI-B-authored candidate decision
 - compile only selected legal Candidate IDs
@@ -29,6 +30,16 @@ FROZEN_INTERFACE_SHA256 = renderer_binding.FROZEN_INTERFACE_SHA256
 CRITIC_STATUSES = {"PASS", "REVISE", "RETURN_TO_STORY", "BLOCKED"}
 REALITY_PREFERENCES = {"required", "preferred", "neutral", "avoid"}
 IMAGE_REQUIREMENTS = {"required", "possible", "not-required"}
+EVIDENCE_CAPABILITIES = {
+    "source-document", "quote-social", "time-series", "comparison-set", "gap",
+    "causal-graph", "entity", "image-media", "verification", "text-only",
+}
+EVIDENCE_MODE_ALIASES = {
+    "comparison": "comparison-set",
+    "causal": "causal-graph",
+    "source": "source-document",
+    "text": "text-only",
+}
 
 
 class VisualIntelligenceBridgeError(ValueError):
@@ -76,12 +87,7 @@ def _beat_ids(render: dict[str, Any]) -> list[str]:
 
 
 def build_editorial_snapshot(render: dict[str, Any]) -> dict[str, Any]:
-    """Create a Visual-independent Story snapshot used for invalidation.
-
-    Visual selection/materialization fields are intentionally excluded. Story,
-    narration, evidence, uncertainty and Beat semantic cues remain bound.
-    """
-
+    """Create a Visual-independent Story snapshot used for invalidation."""
     scenes: list[dict[str, Any]] = []
     for scene_index, scene in enumerate(render.get("scenes", []), start=1):
         beats: list[dict[str, Any]] = []
@@ -89,24 +95,11 @@ def build_editorial_snapshot(render: dict[str, Any]) -> dict[str, Any]:
             beats.append({
                 key: beat.get(key)
                 for key in (
-                    "beatId",
-                    "startChunkId",
-                    "endChunkId",
-                    "narrationStartCue",
-                    "narrationEndCue",
-                    "primaryFunction",
-                    "contentType",
-                    "screenQuestion",
-                    "primaryElement",
-                    "viewerTexts",
-                    "changeCue",
-                    "returnScreenState",
-                    "evidenceSourceIds",
-                    "expressionChange",
-                    "fallback",
-                    "financialReturnTarget",
-                    "entity",
-                    "pictureBook",
+                    "beatId", "startChunkId", "endChunkId", "narrationStartCue",
+                    "narrationEndCue", "primaryFunction", "contentType",
+                    "screenQuestion", "primaryElement", "viewerTexts", "changeCue",
+                    "returnScreenState", "evidenceSourceIds", "expressionChange",
+                    "fallback", "financialReturnTarget", "entity", "pictureBook",
                 )
                 if key in beat
             })
@@ -136,9 +129,6 @@ def _asset_resolution_state(output_root: Path, date: str) -> dict[str, Any]:
         logged_date = value.get("episode_date") or value.get("episodeDate")
         if logged_date is not None and logged_date != date:
             raise VisualIntelligenceBridgeError("E_VISUAL_ASSET_RESOLUTION_UNRESOLVED")
-
-        # Current resolver writes a flat record. Keep legacy nested `selection`
-        # compatibility during migration, but normalize both to one frozen state.
         selection = value.get("selection")
         if isinstance(selection, dict):
             if selection.get("status") != "resolved" or selection.get("unresolved_count") != 0:
@@ -150,17 +140,13 @@ def _asset_resolution_state(output_root: Path, date: str) -> dict[str, Any]:
                 raise VisualIntelligenceBridgeError("E_VISUAL_ASSET_RESOLUTION_UNRESOLVED")
             selected_path = value.get("selected_path")
             intent_routes = value.get("intent_routes", {})
-
         if not isinstance(selected_path, str) or not selected_path.strip():
             raise VisualIntelligenceBridgeError("E_VISUAL_ASSET_RESOLUTION_UNRESOLVED")
         if not isinstance(intent_routes, dict):
             raise VisualIntelligenceBridgeError("E_VISUAL_ASSET_RESOLUTION_UNRESOLVED")
         return {
-            "contractVersion": "1.0.0",
-            "episodeDate": date,
-            "status": "resolved",
-            "selectedPath": selected_path,
-            "intentRoutes": intent_routes,
+            "contractVersion": "1.0.0", "episodeDate": date, "status": "resolved",
+            "selectedPath": selected_path, "intentRoutes": intent_routes,
             "assetResolutionLogSha256": sha256_file(audit),
         }
 
@@ -168,28 +154,21 @@ def _asset_resolution_state(output_root: Path, date: str) -> dict[str, Any]:
     if not intents_path.is_file():
         raise VisualIntelligenceBridgeError("E_VISUAL_ASSET_RESOLUTION_MISSING")
     intents = load_json(intents_path, "Visual Source intents")
-    items = intents.get("intents")
-    if items != []:
+    if intents.get("intents") != []:
         raise VisualIntelligenceBridgeError(
             "E_VISUAL_ASSET_RESOLUTION_MISSING: non-empty Primary/Fallback plan requires resolved audit"
         )
     return {
-        "contractVersion": "1.0.0",
-        "episodeDate": date,
-        "status": "not-required",
-        "selectedPath": "not-required",
-        "intentRoutes": {},
+        "contractVersion": "1.0.0", "episodeDate": date, "status": "not-required",
+        "selectedPath": "not-required", "intentRoutes": {},
         "planningSha256": sha256_file(intents_path),
     }
 
 
 def _phase1_recent_context(date: str) -> dict[str, Any]:
     return {
-        "contractVersion": "1.0.0",
-        "episodeDate": date,
-        "mode": "phase-1",
-        "approvedEpisodes": [],
-        "status": "unassessed",
+        "contractVersion": "1.0.0", "episodeDate": date, "mode": "phase-1",
+        "approvedEpisodes": [], "status": "unassessed",
         "reason": "Phase 1 does not infer success from unapproved previews",
     }
 
@@ -204,38 +183,64 @@ def _verify_renderer(plot_root: Path, renderer_root: Path, expected_renderer_com
     return binding
 
 
-def _run_renderer(
-    *,
-    runner: Callable[..., subprocess.CompletedProcess[str]],
-    renderer_root: Path,
-    command: list[str],
-) -> None:
-    completed = runner(
-        command,
-        cwd=renderer_root,
-        check=False,
-        capture_output=True,
-        text=True,
-    )
+def _run_renderer(*, runner: Callable[..., subprocess.CompletedProcess[str]], renderer_root: Path, command: list[str]) -> None:
+    completed = runner(command, cwd=renderer_root, check=False, capture_output=True, text=True)
     if completed.returncode != 0:
         detail = (completed.stderr or completed.stdout or "Renderer Visual Intelligence command failed").strip()
         raise VisualIntelligenceBridgeError(detail)
 
 
-def _validate_decision(
-    *,
-    decision: dict[str, Any],
-    date: str,
-    beat_ids: list[str],
-    catalog: dict[str, Any],
-) -> None:
+def _normalize_evidence_mode(value: Any, *, beat_id: str) -> str:
+    if not isinstance(value, str):
+        raise VisualIntelligenceBridgeError(f"{beat_id}: evidence mode must be a string")
+    normalized = EVIDENCE_MODE_ALIASES.get(value, value)
+    if normalized not in EVIDENCE_CAPABILITIES:
+        raise VisualIntelligenceBridgeError(f"{beat_id}: unsupported evidence mode {value!r}")
+    return normalized
+
+
+def _build_capability_hints(*, requirements: dict[str, Any], render: dict[str, Any], date: str) -> dict[str, Any]:
+    if requirements.get("episodeDate") != date:
+        raise VisualIntelligenceBridgeError("Visual Requirements episodeDate mismatch")
+    intent_rows = requirements.get("intent", {}).get("beats")
+    direction_rows = requirements.get("provisionalDirection", {}).get("requirements")
+    if not isinstance(intent_rows, list) or not isinstance(direction_rows, list):
+        raise VisualIntelligenceBridgeError("Visual Requirements intent/provisionalDirection missing")
+    beat_ids = _beat_ids(render)
+    if len(intent_rows) != len(beat_ids) or len(direction_rows) != len(beat_ids):
+        raise VisualIntelligenceBridgeError("Visual Requirements must cover every projected Beat")
+    hints = []
+    for index, beat_id in enumerate(beat_ids):
+        intent = intent_rows[index]
+        direction = direction_rows[index]
+        if not isinstance(intent, dict) or not isinstance(direction, dict):
+            raise VisualIntelligenceBridgeError(f"{beat_id}: invalid Visual Requirements row")
+        modes = [
+            *intent.get("preferredEvidenceModes", []),
+            *direction.get("requiredModes", []),
+        ]
+        capabilities: list[str] = []
+        for value in modes:
+            normalized = _normalize_evidence_mode(value, beat_id=beat_id)
+            if normalized not in capabilities:
+                capabilities.append(normalized)
+        if not capabilities:
+            raise VisualIntelligenceBridgeError(f"{beat_id}: no AI-B evidence capability declared")
+        hints.append({"visualBeatId": beat_id, "capabilities": capabilities})
+    return {
+        "contractVersion": "1.0.0",
+        "episodeDate": date,
+        "beats": hints,
+    }
+
+
+def _validate_decision(*, decision: dict[str, Any], date: str, beat_ids: list[str], catalog: dict[str, Any]) -> None:
     if decision.get("contractVersion") != "1.0.0":
         raise VisualIntelligenceBridgeError("Visual Intelligence decision contractVersion must be 1.0.0")
     if decision.get("bridgeContractVersion") != BRIDGE_CONTRACT_VERSION:
         raise VisualIntelligenceBridgeError("Visual Intelligence decision bridgeContractVersion mismatch")
     if decision.get("episodeDate") != date:
         raise VisualIntelligenceBridgeError("Visual Intelligence decision episodeDate mismatch")
-
     intent = decision.get("intent")
     if not isinstance(intent, dict) or not isinstance(intent.get("beats"), list):
         raise VisualIntelligenceBridgeError("Visual Intelligence decision intent.beats missing")
@@ -251,7 +256,6 @@ def _validate_decision(
             raise VisualIntelligenceBridgeError(f"{item.get('visualBeatId')}: invalid realityAnchorPreference")
         if not isinstance(item.get("preferredEvidenceModes"), list):
             raise VisualIntelligenceBridgeError(f"{item.get('visualBeatId')}: preferredEvidenceModes must be an array")
-
     provisional = decision.get("provisionalDirection")
     if not isinstance(provisional, dict) or not isinstance(provisional.get("requirements"), list):
         raise VisualIntelligenceBridgeError("Visual Intelligence provisionalDirection.requirements missing")
@@ -263,7 +267,6 @@ def _validate_decision(
             raise VisualIntelligenceBridgeError(f"{item.get('visualBeatId')}: invalid imageRequirement")
         if not isinstance(item.get("requiredModes"), list) or not isinstance(item.get("reason"), str):
             raise VisualIntelligenceBridgeError(f"{item.get('visualBeatId')}: invalid Provisional Direction")
-
     director = decision.get("director")
     if not isinstance(director, dict) or not isinstance(director.get("selections"), list):
         raise VisualIntelligenceBridgeError("Visual Intelligence director.selections missing")
@@ -295,7 +298,6 @@ def _validate_decision(
                 raise VisualIntelligenceBridgeError(f"{beat_id}: strongest alternative is invalid")
         if not isinstance(selection.get("whySelected"), str) or not isinstance(selection.get("whyNotAlternative"), str):
             raise VisualIntelligenceBridgeError(f"{beat_id}: Director rationale fields missing")
-
     rounds = decision.get("reviewRounds")
     if not isinstance(rounds, list) or not 1 <= len(rounds) <= 2:
         raise VisualIntelligenceBridgeError("Visual Critic requires one or two review rounds")
@@ -311,16 +313,9 @@ def _validate_decision(
         raise VisualIntelligenceBridgeError("Visual Critic has unresolved findings")
 
 
-def prepare_and_compile(
-    *,
-    render: dict[str, Any],
-    output_root: Path,
-    date: str,
-    renderer_root: Path,
-    expected_renderer_commit: str,
-    plot_root: Path | None = None,
-    runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
-) -> dict[str, Any]:
+def prepare_and_compile(*, render: dict[str, Any], output_root: Path, date: str, renderer_root: Path,
+                        expected_renderer_commit: str, plot_root: Path | None = None,
+                        runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run) -> dict[str, Any]:
     output_root = output_root.resolve()
     renderer_root = renderer_root.resolve()
     plot_root = (plot_root or Path(__file__).resolve().parents[1]).resolve()
@@ -336,6 +331,7 @@ def prepare_and_compile(
     editorial_snapshot_path = vi_dir / "editorial_snapshot.json"
     candidate_input_path = vi_dir / "visual_candidate_input.json"
     capability_inventory_path = vi_dir / "visual_capability_inventory.json"
+    capability_hints_path = vi_dir / "visual_capability_hints.json"
     catalog_path = vi_dir / "visual_candidate_catalog.json"
     asset_state_path = vi_dir / "asset_resolution_state.json"
     financial_provider_path = vi_dir / "financial_candidate_provider.json"
@@ -356,13 +352,18 @@ def prepare_and_compile(
     financial_provider = financial_candidate_provider.build(render)
     write_json(financial_provider_path, financial_provider)
     write_json(recent_context_path, _phase1_recent_context(date))
+    requirements_path = vi_dir / "visual_requirements.json"
+    if not requirements_path.is_file():
+        raise VisualIntelligenceBridgeError("E_VISUAL_REQUIREMENTS_MISSING")
+    requirements = load_json(requirements_path, "Visual Requirements")
+    capability_hints = _build_capability_hints(requirements=requirements, render=render, date=date)
+    write_json(capability_hints_path, capability_hints)
     write_json(input_render, render)
 
     build_command = [
         "node", "--import", "tsx", "scripts/visual-director-cli.ts", "build",
-        "--spec", str(input_render),
-        "--catalog", str(catalog_path),
-        "--candidate-builder", "vnext",
+        "--spec", str(input_render), "--catalog", str(catalog_path),
+        "--candidate-builder", "vnext", "--hints", str(capability_hints_path),
         "--editorial-snapshot-sha256", editorial_snapshot_sha,
         "--candidate-input", str(candidate_input_path),
         "--capability-inventory", str(capability_inventory_path),
@@ -371,7 +372,6 @@ def prepare_and_compile(
     catalog = load_json(catalog_path, "Visual Candidate Catalog")
     if catalog.get("episodeDate") != date:
         raise VisualIntelligenceBridgeError("Visual Candidate Catalog episodeDate mismatch")
-
     if not decision_path.is_file():
         raise VisualIntelligenceBridgeError(
             "E_VISUAL_INTELLIGENCE_DECISION_REQUIRED: Candidate Catalog is ready; AI-B must author visual_intelligence_decision.json"
@@ -381,48 +381,28 @@ def prepare_and_compile(
     _validate_decision(decision=decision, date=date, beat_ids=beat_ids, catalog=catalog)
 
     catalog_sha = canonical_sha(catalog)
-    selections = [
-        {
-            "visualBeatId": item["visualBeatId"],
-            "candidateId": item["selectedCandidateId"],
-        }
-        for item in decision["director"]["selections"]
-    ]
-    plan = {
-        "contractVersion": "1.0.0",
-        "episodeDate": date,
-        "candidateCatalogSha256": catalog_sha,
-        "selections": selections,
-    }
+    selections = [{"visualBeatId": item["visualBeatId"], "candidateId": item["selectedCandidateId"]}
+                  for item in decision["director"]["selections"]]
+    plan = {"contractVersion": "1.0.0", "episodeDate": date,
+            "candidateCatalogSha256": catalog_sha, "selections": selections}
     write_json(plan_path, plan)
     compile_command = [
         "node", "--import", "tsx", "scripts/visual-director-cli.ts", "compile",
-        "--spec", str(input_render),
-        "--catalog", str(catalog_path),
-        "--plan", str(plan_path),
-        "--output", str(compiled_path),
+        "--spec", str(input_render), "--catalog", str(catalog_path),
+        "--plan", str(plan_path), "--output", str(compiled_path),
         "--report", str(compile_report_path),
     ]
     _run_renderer(runner=runner, renderer_root=renderer_root, command=compile_command)
     compile_report = load_json(compile_report_path, "Visual Direction compile report")
     if compile_report.get("semanticDiff") != "PASS":
         raise VisualIntelligenceBridgeError("E_VISUAL_SEMANTIC_DIFF_FAIL")
-    compiled = load_json(compiled_path, "compiled render")
 
     warning_report = {
-        "contractVersion": "1.0.0",
-        "episodeDate": date,
+        "contractVersion": "1.0.0", "episodeDate": date,
         "classification": "editorial-warning-shadow",
         "sourceCompileReportSha256": sha256_file(compile_report_path),
-        "warnings": [
-            {
-                **item,
-                "severity": "warning",
-                "legacy": {"wouldFail": False},
-            }
-            for item in compile_report.get("warnings", [])
-            if isinstance(item, dict)
-        ],
+        "warnings": [{**item, "severity": "warning", "legacy": {"wouldFail": False}}
+                     for item in compile_report.get("warnings", []) if isinstance(item, dict)],
     }
     write_json(warning_report_path, warning_report)
     review = decision["reviewRounds"][-1]
@@ -435,8 +415,7 @@ def prepare_and_compile(
     recent_sha = sha256_file(recent_context_path)
     principles_sha = sha256_file(principles_path)
     package = {
-        "contractVersion": "1.0.0",
-        "bridgeContractVersion": BRIDGE_CONTRACT_VERSION,
+        "contractVersion": "1.0.0", "bridgeContractVersion": BRIDGE_CONTRACT_VERSION,
         "episodeDate": date,
         "inputs": {
             "editorialSnapshotSha256": editorial_snapshot_sha,
@@ -444,18 +423,15 @@ def prepare_and_compile(
             "registrySnapshotSha256": sha256_file(registry_snapshot_path),
             "recentVisualPatternContextSha256": recent_sha,
             "visualEditorialPrinciplesSha256": principles_sha,
+            "capabilityHintsSha256": sha256_file(capability_hints_path),
         },
-        "intent": decision["intent"],
-        "provisionalDirection": decision["provisionalDirection"],
+        "intent": decision["intent"], "provisionalDirection": decision["provisionalDirection"],
         "assetResolution": {"sha256": sha256_file(asset_state_path)},
-        "director": {
-            "candidateCatalogSha256": catalog_sha,
-            "selections": decision["director"]["selections"],
-        },
+        "director": {"candidateCatalogSha256": catalog_sha,
+                     "selections": decision["director"]["selections"]},
         "reviewRounds": decision["reviewRounds"],
         "final": {
-            "status": "PASS",
-            "visualDirectionPlanSha256": sha256_file(plan_path),
+            "status": "PASS", "visualDirectionPlanSha256": sha256_file(plan_path),
             "compiledVisualSha256": sha256_file(compiled_path),
             "warningReportSha256": sha256_file(warning_report_path),
             "recentVisualPatternContextSha256": recent_sha,
@@ -465,13 +441,11 @@ def prepare_and_compile(
     }
     write_json(package_path, package)
     return {
-        "render": compiled,
-        "package_path": package_path,
-        "catalog_path": catalog_path,
+        "render": load_json(compiled_path, "compiled render"),
+        "package_path": package_path, "catalog_path": catalog_path,
         "candidate_input_path": candidate_input_path,
         "capability_inventory_path": capability_inventory_path,
-        "compile_report_path": compile_report_path,
-        "warning_report_path": warning_report_path,
+        "compile_report_path": compile_report_path, "warning_report_path": warning_report_path,
         "financial_provider_path": financial_provider_path,
         "editorial_snapshot_path": editorial_snapshot_path,
     }
