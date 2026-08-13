@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Execute the machine half of visual-intelligence-bridge/1.2.0.
 
-The first invocation is expected to stop with DECISION_REQUIRED after producing
-CandidateInput/Capability/Catalog when AI-B has not authored its decision yet.
-Once the AI-B decision exists, this command compiles, runs the strict package
-validator, and writes the evidence used by `visual_intelligence_valid`.
+The first invocation stops at DECISION_REQUIRED after Candidate generation.
+With an AI-B Director selection present, the second invocation compiles the actual
+visual output and warning report, then stops at REVIEW_REQUIRED. Only after AI-B
+Critic reviews those exact outputs and records a bound PASS may the final package
+validator run and produce visual_intelligence_valid evidence.
 """
 from __future__ import annotations
 
@@ -14,7 +15,7 @@ from pathlib import Path
 
 import renderer_binding
 import validate_visual_intelligence_package
-import visual_intelligence_bridge
+import visual_intelligence_bridge_staged
 import visual_intelligence_intraday_evidence
 import visual_intelligence_renderer_projection
 
@@ -52,7 +53,7 @@ def main() -> int:
                 date=args.date,
             )
         )
-        result = visual_intelligence_bridge.prepare_and_compile(
+        result = visual_intelligence_bridge_staged.prepare_and_compile(
             render=candidate_render,
             output_root=root,
             date=args.date,
@@ -70,20 +71,43 @@ def main() -> int:
             "bridgeContractVersion": renderer_binding.BRIDGE_CONTRACT_VERSION,
             "candidateCatalog": str(result["catalog_path"].relative_to(root)),
             "compiledVisual": str(
-                (root / "working" / args.date / "visual-intelligence" / "visual_direction_compiled_render.json").relative_to(root)
+                (
+                    root
+                    / "working"
+                    / args.date
+                    / "visual-intelligence"
+                    / "visual_direction_compiled_render.json"
+                ).relative_to(root)
             ),
         }
         code = 0
-    except visual_intelligence_bridge.VisualIntelligenceBridgeError as exc:
+    except visual_intelligence_bridge_staged.VisualIntelligenceStageError as exc:
         text = str(exc)
-        status = "DECISION_REQUIRED" if "E_VISUAL_INTELLIGENCE_DECISION_REQUIRED" in text else "FAIL"
+        if "E_VISUAL_INTELLIGENCE_DECISION_REQUIRED" in text:
+            status = "DECISION_REQUIRED"
+            code = 3
+        elif "E_VISUAL_INTELLIGENCE_REVIEW_REQUIRED" in text:
+            status = "REVIEW_REQUIRED"
+            code = 4
+        else:
+            status = "FAIL"
+            code = 2
         report = {
             "status": status,
             "episodeDate": args.date,
             "bridgeContractVersion": renderer_binding.BRIDGE_CONTRACT_VERSION,
             "errors": [text],
         }
-        code = 3 if status == "DECISION_REQUIRED" else 2
+        if status == "REVIEW_REQUIRED":
+            vi = root / "working" / args.date / "visual-intelligence"
+            compiled = vi / "visual_direction_compiled_render.json"
+            warnings = vi / "visual_editorial_warning_report.json"
+            if compiled.is_file():
+                report["compiledVisual"] = str(compiled.relative_to(root))
+                report["compiledVisualSha256"] = visual_intelligence_bridge_staged.base.sha256_file(compiled)
+            if warnings.is_file():
+                report["warningReport"] = str(warnings.relative_to(root))
+                report["warningReportSha256"] = visual_intelligence_bridge_staged.base.sha256_file(warnings)
     except (
         OSError,
         ValueError,
