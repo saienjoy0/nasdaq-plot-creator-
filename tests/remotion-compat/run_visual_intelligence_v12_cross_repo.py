@@ -3,9 +3,10 @@
 
 This test never makes an editorial recommendation. It uses the Renderer's current
 synthetic fixture and an identity-preserving test selection solely to prove the
-machine contract: candidate generation pauses for AI-B, frozen artifacts are
-emitted, a legal authored decision compiles, Protected Semantic Diff passes, and
-the final package validator accepts the exact Renderer/Registry lineage.
+machine contract: AI-B requirements exist before Candidate generation, candidate
+generation pauses for AI-B, frozen artifacts are emitted, a legal authored decision
+compiles, Protected Semantic Diff passes, and the final package validator accepts the
+exact Renderer/Registry lineage.
 """
 from __future__ import annotations
 
@@ -44,22 +45,13 @@ def generate_current_fixture(renderer_root: Path) -> dict:
 
 
 def beat_ids(spec: dict) -> list[str]:
-    return [
-        beat["beatId"]
-        for scene in spec["scenes"]
-        for beat in scene["visualBeats"]
-    ]
+    return [beat["beatId"] for scene in spec["scenes"] for beat in scene["visualBeats"]]
 
 
 def identity_candidate(beat: dict, candidates: list[dict]) -> dict:
     keys = (
-        "visualTemplate",
-        "templateVariant",
-        "screenState",
-        "visualMode",
-        "templateConfig",
-        "objectIds",
-        "assetPlacementIds",
+        "visualTemplate", "templateVariant", "screenState", "visualMode",
+        "templateConfig", "objectIds", "assetPlacementIds",
     )
     matches = [candidate for candidate in candidates if all(candidate.get(key) == beat.get(key) for key in keys)]
     if not matches:
@@ -67,16 +59,38 @@ def identity_candidate(beat: dict, candidates: list[dict]) -> dict:
     return matches[0]
 
 
+def requirement_rows(spec: dict, *, mode_for_beat=None) -> tuple[list[dict], list[dict]]:
+    intents = []
+    requirements = []
+    for beat in [item for scene in spec["scenes"] for item in scene["visualBeats"]]:
+        beat_id = beat["beatId"]
+        mode = mode_for_beat(beat) if mode_for_beat else "text-only"
+        intents.append({
+            "visualBeatId": beat_id,
+            "purpose": "synthetic machine acceptance",
+            "audienceBeliefBefore": "synthetic before",
+            "audienceBeliefAfter": "synthetic after",
+            "visualInformationGain": "synthetic machine-contract check",
+            "preferredEvidenceModes": [mode],
+            "realityAnchorPreference": "neutral",
+            "editorialReason": "fixture-only requirement; not a production editorial judgment",
+        })
+        requirements.append({
+            "visualBeatId": beat_id,
+            "requiredModes": [mode],
+            "imageRequirement": "not-required",
+            "reason": "synthetic fixture requires no generated image",
+        })
+    return intents, requirements
+
+
 def run(renderer_root: Path) -> dict:
     renderer_root = renderer_root.resolve()
     spec = generate_current_fixture(renderer_root)
     date = spec["episode"]["targetDate"]
     expected_commit = subprocess.run(
-        ["git", "rev-parse", "HEAD"],
-        cwd=renderer_root,
-        check=True,
-        capture_output=True,
-        text=True,
+        ["git", "rev-parse", "HEAD"], cwd=renderer_root, check=True,
+        capture_output=True, text=True,
     ).stdout.strip()
 
     with tempfile.TemporaryDirectory(prefix="nasdaq-visual-intelligence-v12-") as temp:
@@ -95,15 +109,24 @@ def run(renderer_root: Path) -> dict:
             json.dumps({"contractVersion": "1.0.0", "episodeDate": date, "intents": []}, indent=2) + "\n",
             encoding="utf-8",
         )
+        vi = working / "visual-intelligence"
+        vi.mkdir(parents=True)
+        pre_intents, pre_requirements = requirement_rows(spec)
+        pre_doc = {
+            "contractVersion": "1.0.0",
+            "bridgeContractVersion": bridge.BRIDGE_CONTRACT_VERSION,
+            "episodeDate": date,
+            "intent": {"beats": pre_intents},
+            "provisionalDirection": {"requirements": pre_requirements},
+        }
+        (vi / "visual_requirements.json").write_text(
+            json.dumps(pre_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
 
         try:
             bridge.prepare_and_compile(
-                render=spec,
-                output_root=root,
-                date=date,
-                renderer_root=renderer_root,
-                expected_renderer_commit=expected_commit,
-                plot_root=root,
+                render=spec, output_root=root, date=date, renderer_root=renderer_root,
+                expected_renderer_commit=expected_commit, plot_root=root,
             )
         except bridge.VisualIntelligenceBridgeError as exc:
             if "E_VISUAL_INTELLIGENCE_DECISION_REQUIRED" not in str(exc):
@@ -111,13 +134,10 @@ def run(renderer_root: Path) -> dict:
         else:
             raise AssertionError("Visual Intelligence machine bridge must pause before AI-B decision")
 
-        vi = working / "visual-intelligence"
         for name in (
-            "editorial_snapshot.json",
-            "financial_candidate_provider.json",
-            "visual_candidate_input.json",
-            "visual_capability_inventory.json",
-            "visual_candidate_catalog.json",
+            "editorial_snapshot.json", "financial_candidate_provider.json",
+            "visual_candidate_input.json", "visual_capability_inventory.json",
+            "visual_capability_hints.json", "visual_candidate_catalog.json",
             "recent_visual_pattern_context.json",
         ):
             if not (vi / name).is_file():
@@ -168,31 +188,23 @@ def run(renderer_root: Path) -> dict:
             "provisionalDirection": {"requirements": requirements},
         }
         (vi / "visual_requirements.json").write_text(
-            json.dumps(requirements_doc, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
+            json.dumps(requirements_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
         decision = {
             **requirements_doc,
             "director": {"selections": selections},
             "reviewRounds": [{
-                "round": 1,
-                "status": "PASS",
-                "findings": [],
+                "round": 1, "status": "PASS", "findings": [],
                 "note": "synthetic fixture-only critic pass",
             }],
         }
         (vi / "visual_intelligence_decision.json").write_text(
-            json.dumps(decision, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
+            json.dumps(decision, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
 
         compiled = bridge.prepare_and_compile(
-            render=spec,
-            output_root=root,
-            date=date,
-            renderer_root=renderer_root,
-            expected_renderer_commit=expected_commit,
-            plot_root=root,
+            render=spec, output_root=root, date=date, renderer_root=renderer_root,
+            expected_renderer_commit=expected_commit, plot_root=root,
         )
         if compiled["render"] != spec:
             raise AssertionError("identity acceptance changed the synthetic RenderSpec")
@@ -203,13 +215,9 @@ def run(renderer_root: Path) -> dict:
         if report.get("semanticDiff") != "PASS":
             raise AssertionError("Protected Semantic Diff did not PASS")
         return {
-            "status": "PASS",
-            "episodeDate": date,
-            "rendererCommit": expected_commit,
-            "candidateCount": len(catalog["candidates"]),
-            "beatCount": len(beat_ids(spec)),
-            "semanticDiff": report["semanticDiff"],
-            "machinePausedBeforeDecision": True,
+            "status": "PASS", "episodeDate": date, "rendererCommit": expected_commit,
+            "candidateCount": len(catalog["candidates"]), "beatCount": len(beat_ids(spec)),
+            "semanticDiff": report["semanticDiff"], "machinePausedBeforeDecision": True,
             "packageValidation": validation["status"],
         }
 
