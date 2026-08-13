@@ -5,16 +5,19 @@ on:
     paths:
       - "contracts/renderer_binding.json"
       - "contracts/human_preview_review.schema.json"
+      - "contracts/final_render_authorization.schema.json"
       - "scripts/renderer_binding.py"
       - "scripts/financial_candidate_provider.py"
       - "scripts/visual_intelligence_*.py"
       - "scripts/run_visual_intelligence_v12.py"
       - "scripts/validate_visual_intelligence_package.py"
       - "scripts/write_human_preview_review.py"
+      - "scripts/build_final_render_authorization_v12.py"
       - "scripts/run_daily_production_v12.py"
       - "scripts/run_daily_renderer_closure_v12.py"
       - "scripts/build_final_production_package_v12.py"
       - "tests/remotion-compat/*visual_intelligence*.py"
+      - "tests/remotion-compat/test_final_render_authorization_v12.py"
       - ".github/workflows/visual-intelligence-v12-ci.yml"
       - ".github/workflows/visual-intelligence-real-day-canary.yml"
   workflow_dispatch:
@@ -62,6 +65,9 @@ jobs:
         working-directory: renderer
         run: npm ci
 
+      - name: Ensure Python contract dependency
+        run: python3 -m pip install --disable-pip-version-check jsonschema
+
       - name: Python syntax gate
         run: |
           python3 -m py_compile \
@@ -74,6 +80,7 @@ jobs:
             scripts/run_visual_intelligence_v12.py \
             scripts/validate_visual_intelligence_package.py \
             scripts/write_human_preview_review.py \
+            scripts/build_final_render_authorization_v12.py \
             scripts/run_daily_production_v12.py \
             scripts/run_daily_renderer_closure_v12.py \
             scripts/build_final_production_package_v12.py \
@@ -82,7 +89,8 @@ jobs:
             tests/remotion-compat/test_visual_intelligence_asset_fallback.py \
             tests/remotion-compat/test_visual_intelligence_asset_plan.py \
             tests/remotion-compat/test_visual_intelligence_requirements.py \
-            tests/remotion-compat/test_visual_intelligence_preflight_binding.py
+            tests/remotion-compat/test_visual_intelligence_preflight_binding.py \
+            tests/remotion-compat/test_final_render_authorization_v12.py
 
       - name: Run v1.2 requirements acceptance
         env:
@@ -108,6 +116,11 @@ jobs:
         env:
           PYTHONPATH: scripts
         run: python3 tests/remotion-compat/test_visual_intelligence_preflight_binding.py
+
+      - name: Run explicit Final authorization lineage acceptance
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/remotion-compat/test_final_render_authorization_v12.py
 
       - name: Verify Renderer binding and Registry snapshot
         run: |
