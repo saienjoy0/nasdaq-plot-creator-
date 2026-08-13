@@ -14,13 +14,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      RENDERER_COMMIT: 6a44cdeb04d401dc45379783862e279a5c2f04a5
-      RENDERER_CONTRACT_VERSION: 2.4.0
       NASDAQ_CAFE_RENDERER_ROOT: ${{ github.workspace }}/.renderer
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
+
+      - name: Resolve canonical Renderer binding
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/renderer_binding.py --repo-root . --github-env "$GITHUB_ENV"
 
       - name: Resolve requested episode date
         shell: bash
@@ -33,6 +37,10 @@ jobs:
           test "$CONFIRMATION" = "PREVIEW"
           test -d "daily-authoring-parts/$EPISODE_DATE"
           test -f "daily-inputs/$EPISODE_DATE/daily_source_package_$EPISODE_DATE.md"
+          test -f "working/$EPISODE_DATE/visual-intelligence/visual_intent.json"
+          test -f "working/$EPISODE_DATE/visual-intelligence/provisional_visual_direction.json"
+          test -f "working/$EPISODE_DATE/visual-intelligence/visual_editorial_selection.json"
+          test -f "working/$EPISODE_DATE/visual-intelligence/visual_direction_review.json"
           echo "EPISODE_DATE=$EPISODE_DATE" >> "$GITHUB_ENV"
           echo "REQUEST_PATH=$REQUEST" >> "$GITHUB_ENV"
 
@@ -175,6 +183,16 @@ jobs:
               --episode-package "episodes/$EPISODE_DATE/episode_package_$EPISODE_DATE.md"
             python scripts/run_daily_production_hardened.py --workspace . status --episode-date "$EPISODE_DATE"
           } 2>&1 | tee "verification/$EPISODE_DATE/build-production.log"
+
+      - name: Validate Visual Intelligence convergence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/validate_visual_intelligence_package.py \
+            --repo-root . \
+            --date "$EPISODE_DATE" \
+            --renderer-root .renderer \
+            --json-output "verification/$EPISODE_DATE/visual_intelligence_validation.json"
 
       - name: Build immutable preview handoff
         shell: bash
