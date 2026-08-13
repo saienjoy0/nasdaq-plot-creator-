@@ -12,7 +12,8 @@
     {
       "sceneNumber": 4,
       "set": {
-        "formalRole": "expected_actual_gap"
+        "formalRole": "expected_actual_gap",
+        "visualMode": "expected-actual-gap"
       }
     },
     {
@@ -43,6 +44,7 @@
       "set": {
         "formalRole": "validation_points",
         "storyRole": "verification",
+        "visualMode": "verification-points",
         "continuationReason": ""
       }
     },
