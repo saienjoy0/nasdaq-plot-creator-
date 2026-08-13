@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Execute the machine half of visual-intelligence-bridge/1.2.0.
+"""Execute the staged machine half of visual-intelligence-bridge/1.2.0.
 
-The first invocation is expected to stop with DECISION_REQUIRED after producing
-CandidateInput/Capability/Catalog when AI-B has not authored its decision yet.
-Once the AI-B decision exists, this command compiles, runs the strict package
-validator, and writes the evidence used by `visual_intelligence_valid`.
+Stages are data-driven by artifact presence:
+1. no Director decision -> Candidate Catalog then DECISION_REQUIRED (exit 3)
+2. Director decision, no final Critic PASS -> compile + warnings then REVIEW_REQUIRED (exit 4)
+3. final Critic PASS -> package validation PASS (exit 0)
 """
 from __future__ import annotations
 
@@ -14,7 +14,8 @@ from pathlib import Path
 
 import renderer_binding
 import validate_visual_intelligence_package
-import visual_intelligence_bridge
+import visual_intelligence_bridge_staged as staged
+import visual_intelligence_renderer_input
 
 
 def load_json(path: Path) -> dict:
@@ -37,8 +38,13 @@ def main() -> int:
     report_path.parent.mkdir(parents=True, exist_ok=True)
     try:
         binding = renderer_binding.verify_renderer_checkout(root, renderer_root)
-        result = visual_intelligence_bridge.prepare_and_compile(
+        canonical = visual_intelligence_renderer_input.canonicalize_for_visual_director(
             render=load_json(args.render_spec),
+            output_root=root,
+            date=args.date,
+        )
+        result = staged.prepare_and_compile(
+            render=canonical,
             output_root=root,
             date=args.date,
             renderer_root=renderer_root,
@@ -59,16 +65,20 @@ def main() -> int:
             ),
         }
         code = 0
-    except visual_intelligence_bridge.VisualIntelligenceBridgeError as exc:
+    except staged.VisualIntelligenceStageError as exc:
         text = str(exc)
-        status = "DECISION_REQUIRED" if "E_VISUAL_INTELLIGENCE_DECISION_REQUIRED" in text else "FAIL"
+        if "E_VISUAL_INTELLIGENCE_DECISION_REQUIRED" in text:
+            status, code = "DECISION_REQUIRED", 3
+        elif "E_VISUAL_INTELLIGENCE_REVIEW_REQUIRED" in text:
+            status, code = "REVIEW_REQUIRED", 4
+        else:
+            status, code = "FAIL", 2
         report = {
             "status": status,
             "episodeDate": args.date,
             "bridgeContractVersion": renderer_binding.BRIDGE_CONTRACT_VERSION,
             "errors": [text],
         }
-        code = 3 if status == "DECISION_REQUIRED" else 2
     except (
         OSError,
         ValueError,
