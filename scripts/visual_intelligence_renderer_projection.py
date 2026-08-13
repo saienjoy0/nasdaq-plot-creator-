@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
-"""Project producer RenderSpec 2.4 into strict Renderer input for Visual Intelligence.
+"""Project approved producer RenderSpec into strict 18-Beat Renderer input for Visual Intelligence.
 
-This is a machine compatibility boundary only. It MUST NOT change Story meaning,
-narration, evidence, viewer text, Beat order, or Beat count. Producer-only fields are
-removed by the lightweight strict Renderer projection. Unknown visual modes fail
-closed rather than being guessed.
+The Visual Intelligence boundary consumes the deterministic Renderer intermediate
+already produced by `materialize_renderer_sources.py`, applies the already-compiled
+Financial Recipe Plan, then removes producer-only schema extensions. It MUST NOT
+change Story meaning, narration, viewer text, Scene/Beat order, or Beat count.
+Renderer-only structural IDs, fixed Scene roles, reviewed visualMode aliases and
+financial trace metadata are compatibility data, not editorial decisions.
 """
 from __future__ import annotations
 
 import copy
+import hashlib
+import json
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +35,32 @@ RENDERER_VISUAL_MODES = {
     "verification-points",
     "text-focus",
 }
+
+SEMANTIC_BEAT_FIELDS = (
+    "screenQuestion",
+    "primaryElement",
+    "viewerTexts",
+    "narrationStartCue",
+    "narrationEndCue",
+)
+
+
+def _load_json_object(path: Path, label: str) -> dict[str, Any]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise VisualIntelligenceRendererProjectionError(
+            f"E_VISUAL_RENDERER_INPUT_INVALID:{label}:{exc}"
+        ) from exc
+    if not isinstance(value, dict):
+        raise VisualIntelligenceRendererProjectionError(
+            f"E_VISUAL_RENDERER_INPUT_INVALID:{label}:root must be object"
+        )
+    return value
+
+
+def _sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _require_known_mode(value: Any, *, path: str) -> None:
@@ -78,10 +108,120 @@ def _validate_mode_vocabulary(render_spec: dict[str, Any]) -> None:
             )
 
 
+def _assert_semantic_alignment(
+    producer: dict[str, Any],
+    candidate: dict[str, Any],
+    *,
+    stage: str,
+) -> None:
+    producer_scenes = producer.get("scenes")
+    candidate_scenes = candidate.get("scenes")
+    if not isinstance(producer_scenes, list) or not isinstance(candidate_scenes, list):
+        raise VisualIntelligenceRendererProjectionError(
+            f"E_VISUAL_RENDERER_PROJECTION_INVALID:{stage}:scenes"
+        )
+    if len(producer_scenes) != len(candidate_scenes):
+        raise VisualIntelligenceRendererProjectionError(
+            f"E_VISUAL_RENDERER_PROJECTION_SCENE_COUNT_CHANGED:{stage}"
+        )
+    for scene_index, (producer_scene, candidate_scene) in enumerate(
+        zip(producer_scenes, candidate_scenes, strict=True)
+    ):
+        if producer_scene.get("narrationChunks") != candidate_scene.get("narrationChunks"):
+            raise VisualIntelligenceRendererProjectionError(
+                f"E_VISUAL_RENDERER_PROJECTION_NARRATION_CHANGED:{stage}:scene={scene_index + 1}"
+            )
+        producer_beats = producer_scene.get("visualBeats", [])
+        candidate_beats = candidate_scene.get("visualBeats", [])
+        if len(producer_beats) != len(candidate_beats):
+            raise VisualIntelligenceRendererProjectionError(
+                f"E_VISUAL_RENDERER_PROJECTION_BEAT_COUNT_CHANGED:{stage}:scene={scene_index + 1}"
+            )
+        for beat_index, (producer_beat, candidate_beat) in enumerate(
+            zip(producer_beats, candidate_beats, strict=True)
+        ):
+            for field in SEMANTIC_BEAT_FIELDS:
+                if producer_beat.get(field) != candidate_beat.get(field):
+                    raise VisualIntelligenceRendererProjectionError(
+                        "E_VISUAL_RENDERER_PROJECTION_SEMANTIC_FIELD_CHANGED:"
+                        f"{stage}:scene={scene_index + 1}:beat={beat_index + 1}:field={field}"
+                    )
+
+
+def _renderer_intermediate(
+    producer: dict[str, Any], *, repo_root: Path, date: str
+) -> dict[str, Any]:
+    path = repo_root / "working" / date / "render_spec_intermediate.json"
+    if not path.is_file():
+        # Synthetic/unit callers may exercise the projection before the daily
+        # materializer has created an intermediate. Real-day closure always has it.
+        return copy.deepcopy(producer)
+    intermediate = _load_json_object(path, "renderer intermediate")
+    if intermediate.get("schemaVersion") != "2.4.0":
+        raise VisualIntelligenceRendererProjectionError(
+            "E_VISUAL_RENDERER_INPUT_INVALID: intermediate must be render_spec 2.4.0"
+        )
+    _assert_semantic_alignment(producer, intermediate, stage="intermediate")
+    return intermediate
+
+
+def _apply_financial_recipe_plan(
+    candidate: dict[str, Any], *, repo_root: Path, date: str
+) -> dict[str, Any]:
+    financial_contract_path = (
+        repo_root / "working" / date / "financial_final_episode_contract.json"
+    )
+    recipe_plan_path = repo_root / "working" / date / "financial_recipe_plan.json"
+    if not financial_contract_path.is_file() and not recipe_plan_path.is_file():
+        return candidate
+    if not financial_contract_path.is_file() or not recipe_plan_path.is_file():
+        raise VisualIntelligenceRendererProjectionError(
+            "E_VISUAL_FINANCIAL_PROJECTION_INCOMPLETE: financial contract/recipe plan pair required"
+        )
+
+    financial_contract = _load_json_object(
+        financial_contract_path, "financial Final Episode Contract"
+    )
+    recipe_plan = _load_json_object(recipe_plan_path, "Financial Recipe Plan")
+    if recipe_plan.get("episodeDate") != date:
+        raise VisualIntelligenceRendererProjectionError(
+            "E_VISUAL_FINANCIAL_PROJECTION_STALE: recipe plan episodeDate mismatch"
+        )
+    expected_contract_sha = recipe_plan.get("finalEpisodeContract", {}).get("sha256")
+    actual_contract_sha = _sha256_file(financial_contract_path)
+    if expected_contract_sha != actual_contract_sha:
+        raise VisualIntelligenceRendererProjectionError(
+            "E_VISUAL_FINANCIAL_PROJECTION_STALE: Final Episode Contract SHA mismatch"
+        )
+
+    # Lazy import keeps the schema-only projection lightweight for synthetic callers.
+    try:
+        import financial_visual_cross_artifact as financial_cross
+    except ImportError as exc:
+        raise VisualIntelligenceRendererProjectionError(
+            f"E_VISUAL_FINANCIAL_PROJECTION_DEPENDENCY:{exc}"
+        ) from exc
+
+    projected = copy.deepcopy(candidate)
+    try:
+        financial_cross.apply_selected_plans(
+            financial_contract,
+            recipe_plan,
+            _sha256_file(recipe_plan_path),
+            projected,
+            "2.4.0",
+        )
+    except (KeyError, financial_cross.CrossArtifactError) as exc:
+        raise VisualIntelligenceRendererProjectionError(
+            f"E_VISUAL_FINANCIAL_PROJECTION_INVALID:{exc}"
+        ) from exc
+    return projected
+
+
 def project_visual_intelligence_renderer_input(
     render_spec: dict[str, Any], *, repo_root: Path, date: str
 ) -> dict[str, Any]:
-    """Return strict Renderer input without mutating the approved producer RenderSpec."""
+    """Return strict 18-Beat Renderer input without mutating approved producer data."""
     repo_root = repo_root.resolve()
     if render_spec.get("schemaVersion") != "2.4.0":
         raise VisualIntelligenceRendererProjectionError(
@@ -93,10 +233,14 @@ def project_visual_intelligence_renderer_input(
         )
 
     source_before = copy.deepcopy(render_spec)
-    _validate_mode_vocabulary(render_spec)
+    candidate = _renderer_intermediate(render_spec, repo_root=repo_root, date=date)
+    candidate = _apply_financial_recipe_plan(candidate, repo_root=repo_root, date=date)
+    _assert_semantic_alignment(render_spec, candidate, stage="financialized-intermediate")
+    _validate_mode_vocabulary(candidate)
+
     try:
         strict = renderer_strict_projection.strict_renderer_projection(
-            render_spec,
+            candidate,
             final_contract_path=(
                 repo_root / "working" / date / "final_episode_contract.json"
             ),
@@ -112,57 +256,16 @@ def project_visual_intelligence_renderer_input(
         raise VisualIntelligenceRendererProjectionError(
             "E_VISUAL_RENDERER_PROJECTION_MUTATED_SOURCE"
         )
+    _assert_semantic_alignment(render_spec, strict, stage="strict")
 
-    source_beat_ids = [
-        beat.get("beatId")
-        for scene in render_spec.get("scenes", [])
-        for beat in scene.get("visualBeats", [])
-        if isinstance(beat, dict)
-    ]
-    projected_beat_ids = [
-        beat.get("beatId")
-        for scene in strict.get("scenes", [])
-        for beat in scene.get("visualBeats", [])
-        if isinstance(beat, dict)
-    ]
-    if projected_beat_ids != source_beat_ids:
+    producer_beat_count = sum(
+        len(scene.get("visualBeats", [])) for scene in render_spec.get("scenes", [])
+    )
+    strict_beat_count = sum(
+        len(scene.get("visualBeats", [])) for scene in strict.get("scenes", [])
+    )
+    if strict_beat_count != producer_beat_count:
         raise VisualIntelligenceRendererProjectionError(
-            "E_VISUAL_RENDERER_PROJECTION_BEAT_ORDER_CHANGED"
+            "E_VISUAL_RENDERER_PROJECTION_BEAT_COUNT_CHANGED"
         )
-
-    source_scenes = render_spec.get("scenes", [])
-    projected_scenes = strict.get("scenes", [])
-    if len(source_scenes) != len(projected_scenes):
-        raise VisualIntelligenceRendererProjectionError(
-            "E_VISUAL_RENDERER_PROJECTION_SCENE_COUNT_CHANGED"
-        )
-    for scene_index, (source_scene, projected_scene) in enumerate(
-        zip(source_scenes, projected_scenes, strict=True)
-    ):
-        if source_scene.get("narrationChunks") != projected_scene.get("narrationChunks"):
-            raise VisualIntelligenceRendererProjectionError(
-                f"E_VISUAL_RENDERER_PROJECTION_NARRATION_CHANGED:scene={scene_index + 1}"
-            )
-        source_beats = source_scene.get("visualBeats", [])
-        projected_beats = projected_scene.get("visualBeats", [])
-        if len(source_beats) != len(projected_beats):
-            raise VisualIntelligenceRendererProjectionError(
-                f"E_VISUAL_RENDERER_PROJECTION_BEAT_COUNT_CHANGED:scene={scene_index + 1}"
-            )
-        for beat_index, (source_beat, projected_beat) in enumerate(
-            zip(source_beats, projected_beats, strict=True)
-        ):
-            for field in (
-                "screenQuestion",
-                "primaryElement",
-                "viewerTexts",
-                "evidenceSourceIds",
-                "narrationStartCue",
-                "narrationEndCue",
-            ):
-                if source_beat.get(field) != projected_beat.get(field):
-                    raise VisualIntelligenceRendererProjectionError(
-                        "E_VISUAL_RENDERER_PROJECTION_SEMANTIC_FIELD_CHANGED:"
-                        f"scene={scene_index + 1}:beat={beat_index + 1}:field={field}"
-                    )
     return strict
