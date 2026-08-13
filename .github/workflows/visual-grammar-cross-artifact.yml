@@ -5,8 +5,10 @@ name: Visual Grammar Cross Artifact
 on:
   pull_request:
     paths:
+      - "contracts/renderer_binding.json"
       - "contracts/visual_grammar_*.json"
       - "contracts/final_episode_contract.schema.json"
+      - "scripts/renderer_binding.py"
       - "scripts/visual_grammar_cross_artifact.py"
       - "scripts/visual_grammar_report_recompute.py"
       - "scripts/visual_grammar_contract_closure.py"
@@ -28,13 +30,20 @@ jobs:
           python-version: "3.12"
       - name: Install validator dependencies
         run: python -m pip install --disable-pip-version-check jsonschema==4.25.0
+      - name: Resolve canonical Renderer binding
+        run: python scripts/renderer_binding.py --repo-root . --github-env "$GITHUB_ENV"
       - name: Verify renderer contract mirrors are byte-identical
         run: |
           python - <<'PY'
+          import json
+          import os
           from pathlib import Path
           from urllib.request import urlopen
 
-          commit = "6a44cdeb04d401dc45379783862e279a5c2f04a5"
+          binding = json.loads(Path("contracts/renderer_binding.json").read_text(encoding="utf-8"))
+          commit = binding["rendererCommit"]
+          if commit != os.environ["RENDERER_COMMIT"]:
+              raise SystemExit("canonical Renderer binding environment mismatch")
           root = (
               "https://raw.githubusercontent.com/saienjoy0/"
               f"saienjoy0-nasdaq-cafe-remotion/{commit}"
