@@ -3,8 +3,8 @@
 
 This is a machine compatibility boundary only. It MUST NOT change Story meaning,
 narration, evidence, viewer text, Beat order, or Beat count. Producer-only fields are
-removed by the existing strict Renderer projection, while only explicitly known
-legacy visualMode aliases are normalized. Unknown modes fail closed.
+removed by the lightweight strict Renderer projection. Unknown visual modes fail
+closed rather than being guessed.
 """
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ import copy
 from pathlib import Path
 from typing import Any
 
-import finalize_renderer_package as renderer_finalizer
+import renderer_strict_projection
 
 
 class VisualIntelligenceRendererProjectionError(ValueError):
@@ -32,33 +32,23 @@ RENDERER_VISUAL_MODES = {
     "text-focus",
 }
 
-# Closed compatibility vocabulary. These are producer aliases, not editorial choices.
-VISUAL_MODE_ALIASES = {
-    "verification": "verification-points",
-    "closing-recap": "conclusion-card",
-    "causal-chain": "causal-diagram",
-    "intraday-comparison": "number-comparison",
-}
 
-
-def _normalize_mode(value: Any, *, path: str) -> Any:
+def _require_known_mode(value: Any, *, path: str) -> None:
     if value is None:
-        return value
+        return
     if not isinstance(value, str):
         raise VisualIntelligenceRendererProjectionError(
             f"E_VISUAL_MODE_INVALID:{path}: visualMode must be a string"
         )
-    normalized = VISUAL_MODE_ALIASES.get(value, value)
+    normalized = renderer_strict_projection.VISUAL_MODE_MAP.get(value, value)
     if normalized not in RENDERER_VISUAL_MODES:
         raise VisualIntelligenceRendererProjectionError(
             f"E_VISUAL_MODE_UNMAPPED:{path}:{value}"
         )
-    return normalized
 
 
-def _normalize_known_modes(render_spec: dict[str, Any]) -> dict[str, Any]:
-    projected = copy.deepcopy(render_spec)
-    scenes = projected.get("scenes")
+def _validate_mode_vocabulary(render_spec: dict[str, Any]) -> None:
+    scenes = render_spec.get("scenes")
     if not isinstance(scenes, list):
         raise VisualIntelligenceRendererProjectionError(
             "E_VISUAL_RENDERER_INPUT_INVALID: scenes must be an array"
@@ -68,10 +58,9 @@ def _normalize_known_modes(render_spec: dict[str, Any]) -> dict[str, Any]:
             raise VisualIntelligenceRendererProjectionError(
                 f"E_VISUAL_RENDERER_INPUT_INVALID: scenes[{scene_index}] must be an object"
             )
-        if "visualMode" in scene:
-            scene["visualMode"] = _normalize_mode(
-                scene.get("visualMode"), path=f"$.scenes[{scene_index}].visualMode"
-            )
+        _require_known_mode(
+            scene.get("visualMode"), path=f"$.scenes[{scene_index}].visualMode"
+        )
         beats = scene.get("visualBeats")
         if not isinstance(beats, list):
             raise VisualIntelligenceRendererProjectionError(
@@ -83,12 +72,10 @@ def _normalize_known_modes(render_spec: dict[str, Any]) -> dict[str, Any]:
                     "E_VISUAL_RENDERER_INPUT_INVALID: "
                     f"scenes[{scene_index}].visualBeats[{beat_index}] must be an object"
                 )
-            if "visualMode" in beat:
-                beat["visualMode"] = _normalize_mode(
-                    beat.get("visualMode"),
-                    path=f"$.scenes[{scene_index}].visualBeats[{beat_index}].visualMode",
-                )
-    return projected
+            _require_known_mode(
+                beat.get("visualMode"),
+                path=f"$.scenes[{scene_index}].visualBeats[{beat_index}].visualMode",
+            )
 
 
 def project_visual_intelligence_renderer_input(
@@ -106,10 +93,10 @@ def project_visual_intelligence_renderer_input(
         )
 
     source_before = copy.deepcopy(render_spec)
-    normalized = _normalize_known_modes(render_spec)
+    _validate_mode_vocabulary(render_spec)
     try:
-        strict = renderer_finalizer._strict_renderer_projection(
-            normalized,
+        strict = renderer_strict_projection.strict_renderer_projection(
+            render_spec,
             final_contract_path=(
                 repo_root / "working" / date / "final_episode_contract.json"
             ),
@@ -118,7 +105,7 @@ def project_visual_intelligence_renderer_input(
                 repo_root / "contracts" / "visual_grammar_renderer_compatibility.json"
             ),
         )
-    except (OSError, renderer_finalizer.RendererFinalizationError) as exc:
+    except (OSError, renderer_strict_projection.StrictRendererProjectionError) as exc:
         raise VisualIntelligenceRendererProjectionError(str(exc)) from exc
 
     if render_spec != source_before:
