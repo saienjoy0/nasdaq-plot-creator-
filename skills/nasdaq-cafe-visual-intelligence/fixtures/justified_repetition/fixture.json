@@ -1,0 +1,8 @@
+{
+  "id":"justified_repetition",
+  "storyState":"Expected, Actual, and post-release reaction must be compared in one stable frame.",
+  "candidateState":"A single chart can remain on screen while annotations update; alternate cards would reset the comparison frame.",
+  "directorSelection":"Keep the same chart across consecutive Beats.",
+  "expectedCritic":{"status":"PASS","mustNotFind":["UNJUSTIFIED_REPETITION","UNNECESSARY_VISUAL_CHANGE"]},
+  "reason":"Stable coordinates are the information gain."
+}
