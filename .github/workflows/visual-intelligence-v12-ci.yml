@@ -74,6 +74,7 @@ jobs:
             scripts/renderer_binding.py \
             scripts/financial_candidate_provider.py \
             scripts/visual_intelligence_bridge.py \
+            scripts/visual_intelligence_renderer_projection.py \
             scripts/visual_intelligence_requirements.py \
             scripts/visual_intelligence_story_context.py \
             scripts/visual_intelligence_asset_plan.py \
@@ -90,6 +91,7 @@ jobs:
             tests/remotion-compat/test_visual_intelligence_asset_plan.py \
             tests/remotion-compat/test_visual_intelligence_requirements.py \
             tests/remotion-compat/test_visual_intelligence_preflight_binding.py \
+            tests/remotion-compat/test_visual_intelligence_renderer_projection.py \
             tests/remotion-compat/test_final_render_authorization_v12.py
 
       - name: Run v1.2 requirements acceptance
@@ -106,6 +108,11 @@ jobs:
         env:
           PYTHONPATH: scripts
         run: python3 tests/remotion-compat/test_visual_intelligence_asset_fallback.py
+
+      - name: Run Renderer candidate projection acceptance
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/remotion-compat/test_visual_intelligence_renderer_projection.py
 
       - name: Run v1.2 state hard-gate acceptance
         env:
