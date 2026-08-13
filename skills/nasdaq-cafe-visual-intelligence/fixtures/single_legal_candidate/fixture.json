@@ -1,0 +1,7 @@
+{
+  "id":"single_legal_candidate",
+  "candidateState":{"legalCandidateIds":["vc-vb-03-01-01"]},
+  "expectedDirector":{"selectedCandidateId":"vc-vb-03-01-01","strongestAlternativeCandidateId":null,"whySelected":"only legal candidate","whyNotAlternative":""},
+  "expectedCritic":{"status":"PASS"},
+  "rule":"Do not invent a candidate or call Candidate Builder deficient merely because one legal choice exists."
+}
