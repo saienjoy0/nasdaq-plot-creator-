@@ -215,6 +215,8 @@ def _build_capability_hints(*, requirements: dict[str, Any], render: dict[str, A
         direction = direction_rows[index]
         if not isinstance(intent, dict) or not isinstance(direction, dict):
             raise VisualIntelligenceBridgeError(f"{beat_id}: invalid Visual Requirements row")
+        if intent.get("visualBeatId") != beat_id or direction.get("visualBeatId") != beat_id:
+            raise VisualIntelligenceBridgeError(f"{beat_id}: Visual Requirements Beat order mismatch")
         modes = [
             *intent.get("preferredEvidenceModes", []),
             *direction.get("requiredModes", []),
@@ -423,6 +425,7 @@ def prepare_and_compile(*, render: dict[str, Any], output_root: Path, date: str,
             "registrySnapshotSha256": sha256_file(registry_snapshot_path),
             "recentVisualPatternContextSha256": recent_sha,
             "visualEditorialPrinciplesSha256": principles_sha,
+            "visualRequirementsSha256": sha256_file(requirements_path),
             "capabilityHintsSha256": sha256_file(capability_hints_path),
         },
         "intent": decision["intent"], "provisionalDirection": decision["provisionalDirection"],
