@@ -1,7 +1,7 @@
 {
   "contractVersion": "1.0.0",
   "episodeDate": "2026-08-12",
-  "candidateCatalogSha256": "0db42affef4d2f8eaf29578120b5510dce334ffb4c0741d29b4d6aaf8f5bed9b",
+  "candidateCatalogSha256": "71365380975a8dadf7f350fa579c6a6ae44ddc44ac4ce3b7129825948c3c0eb2",
   "selections": [
     {"visualBeatId": "vb-01-01", "candidateId": "vc-vb-01-01-01"},
     {"visualBeatId": "vb-01-02", "candidateId": "vc-vb-01-02-01"},
@@ -13,7 +13,6 @@
     {"visualBeatId": "vb-04-02", "candidateId": "vc-vb-04-02-01"},
     {"visualBeatId": "vb-05-01", "candidateId": "vc-vb-05-01-01"},
     {"visualBeatId": "vb-05-02", "candidateId": "vc-vb-05-02-01"},
-    {"visualBeatId": "vb-05-03", "candidateId": "vc-vb-05-03-01"},
     {"visualBeatId": "vb-06-01", "candidateId": "vc-vb-06-01-01"},
     {"visualBeatId": "vb-06-02", "candidateId": "vc-vb-06-02-01"},
     {"visualBeatId": "vb-07-01", "candidateId": "vc-vb-07-01-01"},
