@@ -2,9 +2,9 @@
 """Lightweight producer RenderSpec -> strict Renderer 2.4 schema projection.
 
 This module is the single compatibility source for removing producer-only fields,
-flattening Visual Grammar metadata, and normalizing reviewed schema aliases. It has
-no Financial/Story runtime imports so pre-Visual-Intelligence use cannot accidentally
-depend on unrelated production packages.
+flattening Visual Grammar metadata, normalizing reviewed schema aliases, and
+projecting the fixed nine-scene structural roles required by Renderer. It has no
+Financial/Story runtime imports.
 """
 from __future__ import annotations
 
@@ -54,6 +54,14 @@ def sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _fixed_scene_role(index: int) -> str:
+    if index == 0:
+        return "opening-hook-market-direction-greeting-conclusion"
+    if index == 8:
+        return "closing-recap-sendoff-goodnight"
+    return "editorial-body"
+
+
 def strict_renderer_projection(
     render_spec: dict[str, Any],
     *,
@@ -67,10 +75,14 @@ def strict_renderer_projection(
         raise StrictRendererProjectionError(
             "renderer projection requires schemaVersion 2.4.0"
         )
+    source_scenes = source.get("scenes", [])
+    if not isinstance(source_scenes, list) or len(source_scenes) != 9:
+        raise StrictRendererProjectionError("renderer projection requires exactly 9 scenes")
     scenes: list[dict[str, Any]] = []
     beat_count = 0
-    for scene in source.get("scenes", []):
+    for scene_index, scene in enumerate(source_scenes):
         projected_scene = {key: scene[key] for key in SCENE_ALLOWED if key in scene}
+        projected_scene["sceneRole"] = _fixed_scene_role(scene_index)
         projected_scene["visualMode"] = VISUAL_MODE_MAP.get(
             projected_scene.get("visualMode"), projected_scene.get("visualMode")
         )
