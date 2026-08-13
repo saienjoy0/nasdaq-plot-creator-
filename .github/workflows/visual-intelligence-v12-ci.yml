@@ -68,6 +68,8 @@ jobs:
             scripts/renderer_binding.py \
             scripts/financial_candidate_provider.py \
             scripts/visual_intelligence_bridge.py \
+            scripts/visual_intelligence_bridge_staged.py \
+            scripts/visual_intelligence_renderer_input.py \
             scripts/visual_intelligence_requirements.py \
             scripts/visual_intelligence_story_context.py \
             scripts/visual_intelligence_asset_plan.py \
@@ -82,7 +84,13 @@ jobs:
             tests/remotion-compat/test_visual_intelligence_asset_fallback.py \
             tests/remotion-compat/test_visual_intelligence_asset_plan.py \
             tests/remotion-compat/test_visual_intelligence_requirements.py \
-            tests/remotion-compat/test_visual_intelligence_preflight_binding.py
+            tests/remotion-compat/test_visual_intelligence_preflight_binding.py \
+            tests/remotion-compat/test_visual_intelligence_renderer_input.py
+
+      - name: Run producer-to-Renderer normalization acceptance
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/remotion-compat/test_visual_intelligence_renderer_input.py
 
       - name: Run v1.2 requirements acceptance
         env:
@@ -118,7 +126,7 @@ jobs:
           print(value['renderer']['commit'])
           PY
 
-      - name: Run Visual Intelligence cross-repo acceptance
+      - name: Run staged Visual Intelligence cross-repo acceptance
         env:
           PYTHONPATH: scripts
         run: python3 tests/remotion-compat/run_visual_intelligence_v12_cross_repo.py --renderer-root renderer
