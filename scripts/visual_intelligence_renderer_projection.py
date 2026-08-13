@@ -3,8 +3,9 @@
 
 The Visual Intelligence boundary consumes the deterministic Renderer intermediate
 already produced by `materialize_renderer_sources.py`, applies the already-compiled
-Financial Recipe Plan, then removes producer-only schema extensions. It MUST NOT
-change Story meaning, narration, viewer text, Scene/Beat order, or Beat count.
+Financial Recipe Plan, reuses the established Renderer 2.4 object canonicalizers,
+then removes producer-only schema extensions. It MUST NOT change Story meaning,
+narration, viewer text, Scene/Beat order, or Beat count.
 Authoring Beat IDs remain the stable AI-facing identity even when the deterministic
 Renderer intermediate temporarily uses canonical `vb-*` IDs.
 """
@@ -16,6 +17,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+import remotion_240_projection
 import renderer_strict_projection
 
 
@@ -151,14 +153,6 @@ def _assert_semantic_alignment(
 def _restore_authoring_beat_ids(
     producer: dict[str, Any], candidate: dict[str, Any]
 ) -> dict[str, Any]:
-    """Keep one stable AI-facing Beat identity across producer and vNext.
-
-    `materialize_renderer_sources.py` may temporarily rewrite Beat IDs to `vb-*` for
-    renderer-side financial planning. Both ID forms are legal Renderer 2.4 IDs. The
-    Visual Intelligence contract is authored against the producer IDs, so before
-    Candidate generation we restore those IDs by the already-validated Scene/Beat
-    order. No semantic field, object ID, or Financial trace content is rewritten.
-    """
     restored = copy.deepcopy(candidate)
     producer_scenes = producer.get("scenes", [])
     candidate_scenes = restored.get("scenes", [])
@@ -260,6 +254,44 @@ def _apply_financial_recipe_plan(
     return projected
 
 
+def _materialize_vnext_object_inventory(candidate: dict[str, Any]) -> dict[str, Any]:
+    """Reuse established Renderer 2.4 object projections without changing Beat semantics.
+
+    Visual Intelligence must see the same Renderer-native object inventory that final
+    rendering sees. In particular, legacy producer Expected/Actual/Gap data is one
+    three-line card, while `expected-actual-gap-flow` legally requires three role
+    cards. The established Remotion 2.4 projection already performs this exact
+    lossless split and rewrites its show events. Reuse it here instead of duplicating
+    template semantics.
+    """
+    projected = copy.deepcopy(candidate)
+    used_event_ids = {
+        event["eventId"]
+        for scene in projected.get("scenes", [])
+        for event in scene.get("visualEvents", [])
+        if isinstance(event, dict) and isinstance(event.get("eventId"), str)
+    }
+    for scene in projected.get("scenes", []):
+        if not isinstance(scene, dict):
+            continue
+        for beat in scene.get("visualBeats", []):
+            if not isinstance(beat, dict):
+                continue
+            if (
+                beat.get("visualMode") == "expected-actual-gap"
+                and beat.get("visualTemplate") == "expected-actual-gap-flow"
+            ):
+                try:
+                    remotion_240_projection._materialize_expected_actual_gap(
+                        scene, beat, used_event_ids
+                    )
+                except remotion_240_projection.ProjectionError as exc:
+                    raise VisualIntelligenceRendererProjectionError(
+                        f"E_VISUAL_OBJECT_INVENTORY_INVALID:{exc}"
+                    ) from exc
+    return projected
+
+
 def project_visual_intelligence_renderer_input(
     render_spec: dict[str, Any], *, repo_root: Path, date: str
 ) -> dict[str, Any]:
@@ -279,6 +311,8 @@ def project_visual_intelligence_renderer_input(
     candidate = _apply_financial_recipe_plan(candidate, repo_root=repo_root, date=date)
     _assert_semantic_alignment(render_spec, candidate, stage="financialized-intermediate")
     candidate = _restore_authoring_beat_ids(render_spec, candidate)
+    candidate = _materialize_vnext_object_inventory(candidate)
+    _assert_semantic_alignment(render_spec, candidate, stage="renderer-object-inventory")
     _validate_mode_vocabulary(candidate)
 
     try:
