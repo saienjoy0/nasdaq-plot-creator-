@@ -1,0 +1,190 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nasdaq-cafe.local/contracts/visual_intelligence_package.schema.json",
+  "title": "NASDAQ Cafe Visual Intelligence Package 1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contractVersion",
+    "bridgeContractVersion",
+    "episodeDate",
+    "inputs",
+    "intent",
+    "provisionalDirection",
+    "assetResolution",
+    "director",
+    "reviewRounds",
+    "final"
+  ],
+  "properties": {
+    "contractVersion": {"const": "1.0.0"},
+    "bridgeContractVersion": {"const": "visual-intelligence-bridge/1.2.0"},
+    "episodeDate": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "editorialSnapshotSha256",
+        "rendererCommit",
+        "registrySnapshotSha256",
+        "recentVisualPatternContextSha256",
+        "visualEditorialPrinciplesSha256"
+      ],
+      "properties": {
+        "editorialSnapshotSha256": {"$ref": "#/$defs/sha256"},
+        "rendererCommit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "registrySnapshotSha256": {"$ref": "#/$defs/sha256"},
+        "recentVisualPatternContextSha256": {"$ref": "#/$defs/sha256"},
+        "visualEditorialPrinciplesSha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "intent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["beats"],
+      "properties": {
+        "beats": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/visualIntent"}
+        }
+      }
+    },
+    "provisionalDirection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requirements"],
+      "properties": {
+        "requirements": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/provisionalRequirement"}
+        }
+      }
+    },
+    "assetResolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256"],
+      "properties": {"sha256": {"$ref": "#/$defs/sha256"}}
+    },
+    "director": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidateCatalogSha256", "selections"],
+      "properties": {
+        "candidateCatalogSha256": {"$ref": "#/$defs/sha256"},
+        "selections": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/directorSelection"}
+        }
+      }
+    },
+    "reviewRounds": {
+      "type": "array",
+      "maxItems": 2,
+      "items": {"$ref": "#/$defs/reviewRound"}
+    },
+    "final": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "visualDirectionPlanSha256",
+        "compiledVisualSha256",
+        "warningReportSha256",
+        "recentVisualPatternContextSha256",
+        "visualEditorialPrinciplesSha256",
+        "reviewSha256"
+      ],
+      "properties": {
+        "status": {"const": "PASS"},
+        "visualDirectionPlanSha256": {"$ref": "#/$defs/sha256"},
+        "compiledVisualSha256": {"$ref": "#/$defs/sha256"},
+        "warningReportSha256": {"$ref": "#/$defs/sha256"},
+        "recentVisualPatternContextSha256": {"$ref": "#/$defs/sha256"},
+        "visualEditorialPrinciplesSha256": {"$ref": "#/$defs/sha256"},
+        "reviewSha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "visualIntent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "visualBeatId",
+        "purpose",
+        "audienceBeliefBefore",
+        "audienceBeliefAfter",
+        "visualInformationGain",
+        "preferredEvidenceModes",
+        "realityAnchorPreference",
+        "editorialReason"
+      ],
+      "properties": {
+        "visualBeatId": {"type": "string", "minLength": 1},
+        "purpose": {"type": "string", "minLength": 1},
+        "audienceBeliefBefore": {"type": "string", "minLength": 1},
+        "audienceBeliefAfter": {"type": "string", "minLength": 1},
+        "visualInformationGain": {"type": "string", "minLength": 1},
+        "preferredEvidenceModes": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        },
+        "realityAnchorPreference": {
+          "enum": ["required", "preferred", "neutral", "avoid"]
+        },
+        "editorialReason": {"type": "string", "minLength": 1}
+      }
+    },
+    "provisionalRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["visualBeatId", "requiredModes", "imageRequirement", "reason"],
+      "properties": {
+        "visualBeatId": {"type": "string", "minLength": 1},
+        "requiredModes": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        },
+        "imageRequirement": {"enum": ["required", "possible", "not-required"]},
+        "reason": {"type": "string", "minLength": 1}
+      }
+    },
+    "directorSelection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "visualBeatId",
+        "selectedCandidateId",
+        "strongestAlternativeCandidateId",
+        "whySelected",
+        "whyNotAlternative"
+      ],
+      "properties": {
+        "visualBeatId": {"type": "string", "minLength": 1},
+        "selectedCandidateId": {"type": "string", "minLength": 1},
+        "strongestAlternativeCandidateId": {
+          "anyOf": [
+            {"type": "string", "minLength": 1},
+            {"type": "null"}
+          ]
+        },
+        "whySelected": {"type": "string", "minLength": 1},
+        "whyNotAlternative": {"type": "string"}
+      }
+    },
+    "reviewRound": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["round", "status", "reviewSha256"],
+      "properties": {
+        "round": {"type": "integer", "minimum": 1, "maximum": 2},
+        "status": {"enum": ["PASS", "REVISE", "RETURN_TO_STORY", "BLOCKED"]},
+        "reviewSha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}
