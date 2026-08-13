@@ -122,20 +122,42 @@
       "sceneNumber": 7,
       "beatNumber": 2,
       "set": {
-        "visualTemplate": "evidence-boundary",
-        "visualMode": "verification-points",
-        "grammarId": "evidence",
-        "variant": "confirmed-vs-unconfirmed",
+        "visualTemplate": "split-comparison",
+        "visualMode": "number-comparison",
+        "grammarId": "comparison",
+        "variant": "two-lane",
         "screenState": "Data",
-        "screenQuestion": "AI需要材料は残る？",
-        "primaryElement": "CoreWeave Q2 after close",
+        "screenQuestion": "AI需要は予想を超えた？",
+        "primaryElement": "CoreWeave Q2 revenue actual vs LSEG estimate",
         "viewerTexts": [
-          "Q2売上 25.8億ドル",
-          "backlog 1042億ドル",
-          "引け後 → 通常取引原因ではない"
+          "Q2売上 Actual $2.58B",
+          "LSEG予想 $2.56B",
+          "backlog $104.2B / 引け後 → 通常取引原因ではない"
         ],
-        "metrics": [],
-        "visualEvents": null
+        "metrics": [
+          {
+            "label": "Q2売上 Actual",
+            "value": "$2.58B",
+            "numericValue": 2.58,
+            "precision": 2,
+            "unit": "$B",
+            "tone": "positive",
+            "comparison": "CoreWeave Q2 revenue vs LSEG estimate"
+          },
+          {
+            "label": "LSEG予想",
+            "value": "$2.56B",
+            "numericValue": 2.56,
+            "precision": 2,
+            "unit": "$B",
+            "tone": "neutral",
+            "comparison": "CoreWeave Q2 revenue vs LSEG estimate"
+          }
+        ],
+        "visualEvents": [
+          {"action": "show", "targetId": "scene-07-number-02-01", "offsetMs": 0},
+          {"action": "show", "targetId": "scene-07-number-02-02", "offsetMs": 600}
+        ]
       }
     },
     {
