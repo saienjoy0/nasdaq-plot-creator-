@@ -23,7 +23,9 @@ on:
       - "scripts/materialize_financial_contract_1_0.py"
       - "scripts/finalize_renderer_package*.py"
       - "scripts/remotion_*.py"
+      - "scripts/renderer_binding.py"
       - "scripts/visual_director_bridge.py"
+      - "scripts/validate_visual_intelligence_package.py"
       - "scripts/run_daily_production_hardened.py"
       - "scripts/story-engine/**"
       - "tests/daily-production-hardening/**"
@@ -48,23 +50,28 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      RENDERER_COMMIT: 6a44cdeb04d401dc45379783862e279a5c2f04a5
-      RENDERER_CONTRACT_VERSION: 2.4.0
       NASDAQ_CAFE_RENDERER_ROOT: ${{ github.workspace }}/.renderer
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Resolve exact validation episode date
+      - name: Resolve canonical Renderer binding
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/renderer_binding.py --repo-root . --github-env "$GITHUB_ENV"
+
+      - name: Resolve validation mode
         shell: bash
         run: |
           set -euo pipefail
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             EPISODE_DATE="${{ inputs.episode_date }}"
+            RUN_REAL_DAY=true
           else
             git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" > /tmp/changed-files.txt
-            EPISODE_DATE="$(python - <<'PY'
+            RESULT="$(python - <<'PY'
           import re
           from pathlib import Path
 
@@ -85,24 +92,24 @@ jobs:
                   if match:
                       dates.add(match.group(1))
           if len(dates) > 1:
-              raise SystemExit('validation PR must target exactly one episode date: ' + ','.join(sorted(dates)))
-          if dates:
-              print(next(iter(dates)))
-          else:
-              root = Path('daily-authoring-parts')
-              candidates = sorted(
-                  p.name for p in root.iterdir()
-                  if p.is_dir() and re.fullmatch(r'\d{4}-\d{2}-\d{2}', p.name)
-              ) if root.is_dir() else []
-              if not candidates:
-                  raise SystemExit('no daily episode is available as validation canary')
-              print(candidates[-1])
+              raise SystemExit('validation PR must target at most one episode date: ' + ','.join(sorted(dates)))
+          print(next(iter(dates)) if dates else 'NONE')
           PY
           )"
+            if [[ "$RESULT" == "NONE" ]]; then
+              EPISODE_DATE=""
+              RUN_REAL_DAY=false
+            else
+              EPISODE_DATE="$RESULT"
+              RUN_REAL_DAY=true
+            fi
           fi
-          [[ "$EPISODE_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
-          echo "EPISODE_DATE=$EPISODE_DATE" >> "$GITHUB_ENV"
-          echo "Package validation target: $EPISODE_DATE"
+          if [[ "$RUN_REAL_DAY" == "true" ]]; then
+            [[ "$EPISODE_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
+            echo "EPISODE_DATE=$EPISODE_DATE" >> "$GITHUB_ENV"
+          fi
+          echo "RUN_REAL_DAY=$RUN_REAL_DAY" >> "$GITHUB_ENV"
+          echo "Package validation real-day=$RUN_REAL_DAY date=${EPISODE_DATE:-synthetic-current}"
 
       - name: Checkout pinned Remotion renderer
         uses: actions/checkout@v4
@@ -129,7 +136,7 @@ jobs:
           sudo apt-get install -y poppler-utils
           npm --prefix .renderer ci
 
-      - name: Run compatibility and hardening regressions
+      - name: Run current-contract compatibility and hardening regressions
         env:
           PYTHONPATH: scripts
         run: |
@@ -142,10 +149,13 @@ jobs:
             tests/remotion-compat/test_chatgpt_daily_authoring_closure.py \
             tests/remotion-compat/test_fox_expression_projection.py \
             tests/remotion-compat/test_visual_director_bridge.py \
+            tests/remotion-compat/test_visual_intelligence_convergence.py \
             tests/remotion-compat/test_remotion_template_variant.py \
             tests/viewer-surface/test_viewer_surface_projection.py
+          npm --prefix .renderer run test:visual-director
 
       - name: Run exact-day Renderer 2.4 production closure
+        if: env.RUN_REAL_DAY == 'true'
         run: |
           python scripts/run_daily_renderer_closure.py \
             --date "$EPISODE_DATE" \
@@ -153,6 +163,7 @@ jobs:
             --renderer-root .renderer
 
       - name: Build immutable preview handoff
+        if: env.RUN_REAL_DAY == 'true'
         shell: bash
         run: |
           set -o pipefail
@@ -163,7 +174,7 @@ jobs:
             2>&1 | tee "verification/$EPISODE_DATE/build-handoff.log"
 
       - name: Upload immutable renderer handoff
-        if: success()
+        if: success() && env.RUN_REAL_DAY == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: nasdaq-cafe-handoff-${{ env.EPISODE_DATE }}-${{ github.run_id }}
@@ -173,7 +184,7 @@ jobs:
           compression-level: 0
 
       - name: Upload validation outputs
-        if: always()
+        if: always() && env.RUN_REAL_DAY == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: nasdaq-cafe-production-${{ env.EPISODE_DATE }}
