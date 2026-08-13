@@ -37,10 +37,47 @@ def _requirements(vi_dir: Path, *, date: str, snapshot_sha: str) -> dict[str, An
     return value
 
 
+def _requirements_rows(requirements: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    intents = requirements.get("intent", {}).get("beats")
+    directions = requirements.get("provisionalDirection", {}).get("requirements")
+    if not isinstance(intents, list) or not all(isinstance(item, dict) for item in intents):
+        raise VisualIntelligenceStageError("Visual Requirements intent.beats missing")
+    if not isinstance(directions, list) or not all(isinstance(item, dict) for item in directions):
+        raise VisualIntelligenceStageError("Visual Requirements provisionalDirection.requirements missing")
+    return intents, directions
+
+
+def _validate_catalog_coverage(*, requirements: dict[str, Any], catalog: dict[str, Any]) -> None:
+    """Fail before AI-B selection when the Catalog cannot satisfy AI-B required modes."""
+    _, directions = _requirements_rows(requirements)
+    candidates = catalog.get("candidates")
+    if not isinstance(candidates, list):
+        raise VisualIntelligenceStageError("Visual Candidate Catalog candidates missing")
+    by_beat: dict[str, list[dict[str, Any]]] = {}
+    for candidate in candidates:
+        if isinstance(candidate, dict) and isinstance(candidate.get("visualBeatId"), str):
+            by_beat.setdefault(candidate["visualBeatId"], []).append(candidate)
+    for row in directions:
+        beat_id = row.get("visualBeatId")
+        required_modes = row.get("requiredModes")
+        if not isinstance(beat_id, str) or not isinstance(required_modes, list) or not required_modes:
+            raise VisualIntelligenceStageError(f"{beat_id}: invalid requiredModes")
+        legal = [
+            candidate
+            for candidate in by_beat.get(beat_id, [])
+            if candidate.get("capability") in required_modes
+        ]
+        if not legal:
+            raise VisualIntelligenceStageError(
+                f"E_VISUAL_REQUIRED_MODE_UNAVAILABLE:{beat_id}:required={','.join(str(item) for item in required_modes)}"
+            )
+
+
 def _validate_director(
     *,
     decision: dict[str, Any],
     requirements: dict[str, Any],
+    requirements_sha: str,
     date: str,
     snapshot_sha: str,
     beat_ids: list[str],
@@ -54,10 +91,25 @@ def _validate_director(
         raise VisualIntelligenceStageError("Visual Intelligence decision episodeDate mismatch")
     if decision.get("editorialSnapshotSha256") != snapshot_sha:
         raise VisualIntelligenceStageError("E_VISUAL_DECISION_STALE: editorial snapshot mismatch")
-    if decision.get("intent") != requirements.get("intent"):
+    if decision.get("visualRequirementsSha256") != requirements_sha:
+        raise VisualIntelligenceStageError("E_VISUAL_DECISION_STALE: Visual Requirements SHA mismatch")
+    # Backward-compatible duplicated fields are allowed only when byte-for-byte semantic
+    # equivalents of the frozen Requirements. New decisions should bind by SHA instead.
+    if "intent" in decision and decision.get("intent") != requirements.get("intent"):
         raise VisualIntelligenceStageError("Visual Intent drifted after requirements planning")
-    if decision.get("provisionalDirection") != requirements.get("provisionalDirection"):
+    if (
+        "provisionalDirection" in decision
+        and decision.get("provisionalDirection") != requirements.get("provisionalDirection")
+    ):
         raise VisualIntelligenceStageError("Provisional Direction drifted after requirements planning")
+
+    intents, directions = _requirements_rows(requirements)
+    intent_by_beat = {item.get("visualBeatId"): item for item in intents}
+    direction_by_beat = {item.get("visualBeatId"): item for item in directions}
+    if [item.get("visualBeatId") for item in intents] != beat_ids:
+        raise VisualIntelligenceStageError("Visual Intent must cover every Beat in Story order")
+    if [item.get("visualBeatId") for item in directions] != beat_ids:
+        raise VisualIntelligenceStageError("Provisional Direction must cover every Beat in Story order")
 
     director = decision.get("director")
     selections = director.get("selections") if isinstance(director, dict) else None
@@ -75,6 +127,8 @@ def _validate_director(
         if isinstance(candidate, dict) and isinstance(candidate.get("visualBeatId"), str):
             by_beat.setdefault(candidate["visualBeatId"], []).append(candidate)
 
+    selected_by_beat: dict[str, dict[str, Any]] = {}
+    selection_by_beat: dict[str, dict[str, Any]] = {}
     for selection in selections:
         if not isinstance(selection, dict):
             raise VisualIntelligenceStageError("Director selection must be an object")
@@ -83,6 +137,11 @@ def _validate_director(
         candidate = by_id.get(selected_id)
         if not isinstance(candidate, dict) or candidate.get("visualBeatId") != beat_id:
             raise VisualIntelligenceStageError(f"{beat_id}: selectedCandidateId is not a legal Candidate")
+        required_modes = direction_by_beat.get(beat_id, {}).get("requiredModes")
+        if not isinstance(required_modes, list) or candidate.get("capability") not in required_modes:
+            raise VisualIntelligenceStageError(
+                f"E_VISUAL_SELECTED_MODE_NOT_REQUIRED:{beat_id}:{candidate.get('capability')}"
+            )
         alternatives = by_beat.get(beat_id, [])
         strongest = selection.get("strongestAlternativeCandidateId")
         if len(alternatives) == 1:
@@ -100,6 +159,36 @@ def _validate_director(
             raise VisualIntelligenceStageError(f"{beat_id}: whySelected missing")
         if not isinstance(selection.get("whyNotAlternative"), str):
             raise VisualIntelligenceStageError(f"{beat_id}: whyNotAlternative missing")
+        selected_by_beat[beat_id] = candidate
+        selection_by_beat[beat_id] = selection
+
+    index_by_beat = {beat_id: index for index, beat_id in enumerate(beat_ids)}
+    for beat_id in beat_ids:
+        intent = intent_by_beat.get(beat_id, {})
+        if intent.get("realityAnchorPreference") != "required":
+            continue
+        candidate = selected_by_beat[beat_id]
+        selection = selection_by_beat[beat_id]
+        if candidate.get("realityAnchor") is True:
+            continue
+        dependency_id = selection.get("realityAnchorDependencyBeatId")
+        if not isinstance(dependency_id, str) or not dependency_id:
+            raise VisualIntelligenceStageError(
+                f"E_VISUAL_REQUIRED_REALITY_ANCHOR_MISSING:{beat_id}"
+            )
+        dependency = selected_by_beat.get(dependency_id)
+        if not isinstance(dependency, dict) or dependency.get("realityAnchor") is not True:
+            raise VisualIntelligenceStageError(
+                f"E_VISUAL_REALITY_ANCHOR_DEPENDENCY_INVALID:{beat_id}:{dependency_id}"
+            )
+        if index_by_beat.get(dependency_id, 10**9) >= index_by_beat[beat_id]:
+            raise VisualIntelligenceStageError(
+                f"E_VISUAL_REALITY_ANCHOR_DEPENDENCY_NOT_PRIOR:{beat_id}:{dependency_id}"
+            )
+        if dependency_id.rsplit("-beat-", 1)[0] != beat_id.rsplit("-beat-", 1)[0]:
+            raise VisualIntelligenceStageError(
+                f"E_VISUAL_REALITY_ANCHOR_DEPENDENCY_CROSS_SCENE:{beat_id}:{dependency_id}"
+            )
 
 
 def _validate_review(
@@ -175,6 +264,8 @@ def prepare_and_compile(
         base.write_json(editorial_snapshot_path, base.build_editorial_snapshot(render))
     snapshot_sha = base.sha256_file(editorial_snapshot_path)
     requirements = _requirements(vi_dir, date=date, snapshot_sha=snapshot_sha)
+    requirements_path = vi_dir / "visual_requirements.json"
+    requirements_sha = base.sha256_file(requirements_path)
 
     input_render = vi_dir / "visual_direction_input.json"
     candidate_input_path = vi_dir / "visual_candidate_input.json"
@@ -216,6 +307,7 @@ def prepare_and_compile(
         ],
     )
     catalog = base.load_json(catalog_path, "Visual Candidate Catalog")
+    _validate_catalog_coverage(requirements=requirements, catalog=catalog)
     if not decision_path.is_file():
         raise VisualIntelligenceStageError(
             "E_VISUAL_INTELLIGENCE_DECISION_REQUIRED: Candidate Catalog is ready; AI-B must author visual_intelligence_decision.json"
@@ -226,6 +318,7 @@ def prepare_and_compile(
     _validate_director(
         decision=decision,
         requirements=requirements,
+        requirements_sha=requirements_sha,
         date=date,
         snapshot_sha=snapshot_sha,
         beat_ids=beat_ids,
@@ -290,7 +383,6 @@ def prepare_and_compile(
     principles_path = plot_root / "skills/nasdaq-cafe-visual-intelligence/references/VISUAL_EDITORIAL_INTELLIGENCE.md"
     recent_sha = base.sha256_file(recent_context_path)
     principles_sha = base.sha256_file(principles_path)
-    requirements_path = vi_dir / "visual_requirements.json"
     package = {
         "contractVersion": "1.0.0",
         "bridgeContractVersion": BRIDGE_CONTRACT_VERSION,
@@ -301,7 +393,7 @@ def prepare_and_compile(
             "registrySnapshotSha256": base.sha256_file(registry_snapshot_path),
             "recentVisualPatternContextSha256": recent_sha,
             "visualEditorialPrinciplesSha256": principles_sha,
-            "visualRequirementsSha256": base.sha256_file(requirements_path),
+            "visualRequirementsSha256": requirements_sha,
             "capabilityHintsSha256": base.sha256_file(capability_hints_path),
         },
         "intent": requirements["intent"],
