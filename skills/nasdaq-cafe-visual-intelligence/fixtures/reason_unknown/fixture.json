@@ -1,0 +1,9 @@
+{
+  "id":"reason_unknown",
+  "storyState":"Timing is confirmed, two simple explanations are weakened, peers diverge, and no single cause reaches the confidence threshold.",
+  "visualIntent":{"purpose":"Make the confirmed/unknown boundary visible without implying a clean causal chain."},
+  "candidateState":"Legal timeline, peer divergence, and confirmed-vs-unconfirmed boundary candidates exist.",
+  "expectedDirector":"Choose candidates that expose chronology, divergence, and uncertainty boundary; do not choose a causal arrow graph implying unsupported attribution.",
+  "expectedCritic":{"status":"PASS"},
+  "rule":"Reason unknown is a valid visual payoff."
+}
