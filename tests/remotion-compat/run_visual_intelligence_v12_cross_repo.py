@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 """Synthetic cross-repo acceptance for visual-intelligence-bridge/1.2.0.
 
-This test never makes an editorial recommendation. It uses the Renderer's current
-synthetic fixture and an identity-preserving test selection solely to prove the
-machine contract: AI-B requirements exist before Candidate generation, candidate
-generation pauses for AI-B, frozen artifacts are emitted, a legal authored decision
-compiles, Protected Semantic Diff passes, and the final package validator accepts the
-exact Renderer/Registry lineage.
+This test makes no editorial recommendation. It uses the Renderer's current synthetic
+fixture and an identity-preserving authored selection only to prove the frozen order:
+requirements -> Candidate generation -> Director -> Compile/Warnings -> Critic -> PASS.
 """
 from __future__ import annotations
 
@@ -22,7 +19,8 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import validate_visual_intelligence_package as package_validator  # noqa: E402
-import visual_intelligence_bridge as bridge  # noqa: E402
+import visual_intelligence_bridge as base_bridge  # noqa: E402
+import visual_intelligence_bridge_staged as staged_bridge  # noqa: E402
 
 
 def generate_current_fixture(renderer_root: Path) -> dict:
@@ -59,29 +57,32 @@ def identity_candidate(beat: dict, candidates: list[dict]) -> dict:
     return matches[0]
 
 
-def requirement_rows(spec: dict, *, mode_for_beat=None) -> tuple[list[dict], list[dict]]:
+def requirement_rows(spec: dict) -> tuple[list[dict], list[dict]]:
     intents = []
     requirements = []
     for beat in [item for scene in spec["scenes"] for item in scene["visualBeats"]]:
         beat_id = beat["beatId"]
-        mode = mode_for_beat(beat) if mode_for_beat else "text-only"
         intents.append({
             "visualBeatId": beat_id,
             "purpose": "synthetic machine acceptance",
             "audienceBeliefBefore": "synthetic before",
             "audienceBeliefAfter": "synthetic after",
             "visualInformationGain": "synthetic machine-contract check",
-            "preferredEvidenceModes": [mode],
+            "preferredEvidenceModes": ["text-only"],
             "realityAnchorPreference": "neutral",
             "editorialReason": "fixture-only requirement; not a production editorial judgment",
         })
         requirements.append({
             "visualBeatId": beat_id,
-            "requiredModes": [mode],
+            "requiredModes": ["text-only"],
             "imageRequirement": "not-required",
             "reason": "synthetic fixture requires no generated image",
         })
     return intents, requirements
+
+
+def write_json(path: Path, value: dict) -> None:
+    path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def run(renderer_root: Path) -> dict:
@@ -105,34 +106,38 @@ def run(renderer_root: Path) -> dict:
         )
         working = root / "working" / date
         working.mkdir(parents=True)
-        (working / "visual_source_intents.json").write_text(
-            json.dumps({"contractVersion": "1.0.0", "episodeDate": date, "intents": []}, indent=2) + "\n",
-            encoding="utf-8",
+        write_json(
+            working / "visual_source_intents.json",
+            {"contractVersion": "1.0.0", "episodeDate": date, "intents": []},
         )
         vi = working / "visual-intelligence"
         vi.mkdir(parents=True)
+
+        editorial_snapshot = base_bridge.build_editorial_snapshot(spec)
+        base_bridge.write_json(vi / "editorial_snapshot.json", editorial_snapshot)
+        snapshot_sha = base_bridge.sha256_file(vi / "editorial_snapshot.json")
         pre_intents, pre_requirements = requirement_rows(spec)
-        pre_doc = {
+        requirements_doc = {
             "contractVersion": "1.0.0",
-            "bridgeContractVersion": bridge.BRIDGE_CONTRACT_VERSION,
+            "bridgeContractVersion": base_bridge.BRIDGE_CONTRACT_VERSION,
             "episodeDate": date,
+            "editorialSnapshotSha256": snapshot_sha,
             "intent": {"beats": pre_intents},
             "provisionalDirection": {"requirements": pre_requirements},
         }
-        (vi / "visual_requirements.json").write_text(
-            json.dumps(pre_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-        )
+        write_json(vi / "visual_requirements.json", requirements_doc)
 
+        # Stage 1: Machine produces Candidates and must stop before any Director choice.
         try:
-            bridge.prepare_and_compile(
+            staged_bridge.prepare_and_compile(
                 render=spec, output_root=root, date=date, renderer_root=renderer_root,
                 expected_renderer_commit=expected_commit, plot_root=root,
             )
-        except bridge.VisualIntelligenceBridgeError as exc:
+        except staged_bridge.VisualIntelligenceStageError as exc:
             if "E_VISUAL_INTELLIGENCE_DECISION_REQUIRED" not in str(exc):
                 raise
         else:
-            raise AssertionError("Visual Intelligence machine bridge must pause before AI-B decision")
+            raise AssertionError("machine bridge must pause before AI-B Director decision")
 
         for name in (
             "editorial_snapshot.json", "financial_candidate_provider.json",
@@ -147,8 +152,6 @@ def run(renderer_root: Path) -> dict:
         by_beat: dict[str, list[dict]] = {}
         for candidate in catalog["candidates"]:
             by_beat.setdefault(candidate["visualBeatId"], []).append(candidate)
-        intents = []
-        requirements = []
         selections = []
         spec_beats = [beat for scene in spec["scenes"] for beat in scene["visualBeats"]]
         for beat in spec_beats:
@@ -156,22 +159,6 @@ def run(renderer_root: Path) -> dict:
             legal = by_beat[beat_id]
             selected = identity_candidate(beat, legal)
             alternative = next((item for item in legal if item["candidateId"] != selected["candidateId"]), None)
-            intents.append({
-                "visualBeatId": beat_id,
-                "purpose": "synthetic identity acceptance",
-                "audienceBeliefBefore": "synthetic before",
-                "audienceBeliefAfter": "synthetic after",
-                "visualInformationGain": "synthetic machine-contract check",
-                "preferredEvidenceModes": [selected["capability"]],
-                "realityAnchorPreference": "neutral",
-                "editorialReason": "fixture-only identity selection; not a production editorial judgment",
-            })
-            requirements.append({
-                "visualBeatId": beat_id,
-                "requiredModes": [selected["capability"]],
-                "imageRequirement": "not-required",
-                "reason": "synthetic fixture requires no generated image",
-            })
             selections.append({
                 "visualBeatId": beat_id,
                 "selectedCandidateId": selected["candidateId"],
@@ -180,29 +167,48 @@ def run(renderer_root: Path) -> dict:
                 "whyNotAlternative": "fixture validates machinery, not editorial preference" if alternative else "",
             })
 
-        requirements_doc = {
-            "contractVersion": "1.0.0",
-            "bridgeContractVersion": bridge.BRIDGE_CONTRACT_VERSION,
-            "episodeDate": date,
-            "intent": {"beats": intents},
-            "provisionalDirection": {"requirements": requirements},
-        }
-        (vi / "visual_requirements.json").write_text(
-            json.dumps(requirements_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-        )
-        decision = {
+        # Stage 2: Director-only decision is legal, but Critic must not be pre-baked.
+        director_decision = {
             **requirements_doc,
             "director": {"selections": selections},
+        }
+        write_json(vi / "visual_intelligence_decision.json", director_decision)
+        try:
+            staged_bridge.prepare_and_compile(
+                render=spec, output_root=root, date=date, renderer_root=renderer_root,
+                expected_renderer_commit=expected_commit, plot_root=root,
+            )
+        except staged_bridge.VisualIntelligenceStageError as exc:
+            if "E_VISUAL_INTELLIGENCE_REVIEW_REQUIRED" not in str(exc):
+                raise
+        else:
+            raise AssertionError("Director-only decision must stop for post-compile AI-B Critic review")
+
+        compiled_path = vi / "visual_direction_compiled_render.json"
+        warning_path = vi / "visual_editorial_warning_report.json"
+        compile_report_path = vi / "visual_direction_compile_report.json"
+        if not compiled_path.is_file() or not warning_path.is_file() or not compile_report_path.is_file():
+            raise AssertionError("REVIEW_REQUIRED must be emitted only after compile/warning artifacts exist")
+        report = json.loads(compile_report_path.read_text(encoding="utf-8"))
+        if report.get("semanticDiff") != "PASS":
+            raise AssertionError("Protected Semantic Diff did not PASS before Critic")
+        compiled_sha = base_bridge.sha256_file(compiled_path)
+        warning_sha = base_bridge.sha256_file(warning_path)
+
+        # Stage 3: only a Critic PASS bound to these exact outputs may finalize the package.
+        reviewed_decision = {
+            **director_decision,
             "reviewRounds": [{
-                "round": 1, "status": "PASS", "findings": [],
-                "note": "synthetic fixture-only critic pass",
+                "round": 1,
+                "status": "PASS",
+                "findings": [],
+                "note": "synthetic fixture-only critic pass after actual compile",
+                "compiledVisualSha256": compiled_sha,
+                "warningReportSha256": warning_sha,
             }],
         }
-        (vi / "visual_intelligence_decision.json").write_text(
-            json.dumps(decision, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-        )
-
-        compiled = bridge.prepare_and_compile(
+        write_json(vi / "visual_intelligence_decision.json", reviewed_decision)
+        compiled = staged_bridge.prepare_and_compile(
             render=spec, output_root=root, date=date, renderer_root=renderer_root,
             expected_renderer_commit=expected_commit, plot_root=root,
         )
@@ -211,13 +217,16 @@ def run(renderer_root: Path) -> dict:
         validation = package_validator.validate(root=root, date=date, renderer_root=renderer_root)
         if validation["status"] != "PASS":
             raise AssertionError("Visual Intelligence package validator did not PASS")
-        report = json.loads((vi / "visual_direction_compile_report.json").read_text(encoding="utf-8"))
-        if report.get("semanticDiff") != "PASS":
-            raise AssertionError("Protected Semantic Diff did not PASS")
         return {
-            "status": "PASS", "episodeDate": date, "rendererCommit": expected_commit,
-            "candidateCount": len(catalog["candidates"]), "beatCount": len(beat_ids(spec)),
-            "semanticDiff": report["semanticDiff"], "machinePausedBeforeDecision": True,
+            "status": "PASS",
+            "episodeDate": date,
+            "rendererCommit": expected_commit,
+            "candidateCount": len(catalog["candidates"]),
+            "beatCount": len(beat_ids(spec)),
+            "semanticDiff": report["semanticDiff"],
+            "machinePausedBeforeDecision": True,
+            "machinePausedBeforeCritic": True,
+            "criticBoundToCompiledVisual": True,
             "packageValidation": validation["status"],
         }
 
