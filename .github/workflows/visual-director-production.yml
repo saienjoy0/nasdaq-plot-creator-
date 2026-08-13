@@ -10,6 +10,7 @@ on:
       - "scripts/run_daily_production.py"
       - "skills/nasdaq-cafe-daily-production/contracts/production_request.schema.json"
       - "tests/remotion-compat/test_visual_director_bridge.py"
+      - "tests/remotion-compat/test_visual_director_handoff.py"
       - "tests/remotion-compat/run_visual_director_cross_repo.py"
       - ".github/workflows/visual-director-production.yml"
   push:
@@ -19,6 +20,7 @@ on:
       - "scripts/finalize_renderer_package_compat.py"
       - "scripts/build_renderer_handoff_240.py"
       - "tests/remotion-compat/**visual_director*"
+      - ".github/workflows/visual-director-production.yml"
   workflow_dispatch:
 
 permissions:
@@ -30,14 +32,26 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Resolve canonical Renderer binding
+        id: renderer
+        shell: bash
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          from pathlib import Path
+          value=json.loads(Path('contracts/renderer_binding.json').read_text(encoding='utf-8'))
+          print('commit='+value['renderer']['commit'])
+          PY
       - name: Checkout Remotion Visual Director
         uses: actions/checkout@v4
         with:
           repository: saienjoy0/saienjoy0-nasdaq-cafe-remotion
-          ref: main
+          ref: ${{ steps.renderer.outputs.commit }}
           path: .renderer
       - uses: actions/setup-node@v4
         with:
@@ -56,9 +70,32 @@ jobs:
             scripts/build_final_production_package_hardened.py \
             scripts/build_renderer_handoff_240.py \
             tests/remotion-compat/run_visual_director_cross_repo.py
-      - name: Run bridge unit tests
+      - name: Run bridge and handoff unit tests
         env:
           PYTHONPATH: scripts
-        run: python -m pytest -q tests/remotion-compat/test_visual_director_bridge.py
-      - name: Run 2026-08-10 Golden cross-repository acceptance
+        run: |
+          python -m pytest -q \
+            tests/remotion-compat/test_visual_director_bridge.py \
+            tests/remotion-compat/test_visual_director_handoff.py
+      - name: Determine legacy Visual Director scope
+        id: scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            HEAD="${{ github.event.pull_request.head.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+            HEAD="${{ github.sha }}"
+          fi
+          CHANGED="$(git diff --name-only "$BASE" "$HEAD" || true)"
+          printf '%s\n' "$CHANGED"
+          if printf '%s\n' "$CHANGED" | grep -Eq '^(scripts/visual_director_bridge\.py|scripts/finalize_renderer_package_compat\.py|scripts/build_final_production_package_hardened\.py|scripts/run_daily_production\.py|skills/nasdaq-cafe-daily-production/contracts/production_request\.schema\.json|tests/remotion-compat/test_visual_director_bridge\.py|tests/remotion-compat/run_visual_director_cross_repo\.py)$'; then
+            echo "legacy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "legacy=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Run legacy Golden cross-repository acceptance
+        if: steps.scope.outputs.legacy == 'true'
         run: python tests/remotion-compat/run_visual_director_cross_repo.py --renderer-root .renderer
