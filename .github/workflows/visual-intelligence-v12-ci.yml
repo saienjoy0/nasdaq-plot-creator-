@@ -1,0 +1,128 @@
+name: Visual Intelligence v1.2
+
+on:
+  pull_request:
+    paths:
+      - "contracts/renderer_binding.json"
+      - "contracts/human_preview_review.schema.json"
+      - "scripts/renderer_binding.py"
+      - "scripts/financial_candidate_provider.py"
+      - "scripts/visual_intelligence_*.py"
+      - "scripts/run_visual_intelligence_v12.py"
+      - "scripts/validate_visual_intelligence_package.py"
+      - "scripts/write_human_preview_review.py"
+      - "scripts/run_daily_production_v12.py"
+      - "scripts/run_daily_renderer_closure_v12.py"
+      - "scripts/build_final_production_package_v12.py"
+      - "tests/remotion-compat/*visual_intelligence*.py"
+      - ".github/workflows/visual-intelligence-v12-ci.yml"
+      - ".github/workflows/visual-intelligence-real-day-canary.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cross-repo:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Plot
+        uses: actions/checkout@v4
+
+      - name: Resolve canonical Renderer binding
+        id: binding
+        shell: bash
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          from pathlib import Path
+          value=json.loads(Path('contracts/renderer_binding.json').read_text())
+          print('commit='+value['renderer']['commit'])
+          print('repository='+value['renderer']['repository'])
+          print('contract='+value['renderer']['contractVersion'])
+          print('bridge='+value['bridgeContractVersion'])
+          PY
+
+      - name: Checkout pinned Renderer
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.binding.outputs.repository }}
+          ref: ${{ steps.binding.outputs.commit }}
+          path: renderer
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: renderer/package-lock.json
+
+      - name: Install Renderer dependencies
+        working-directory: renderer
+        run: npm ci
+
+      - name: Python syntax gate
+        run: |
+          python3 -m py_compile \
+            scripts/renderer_binding.py \
+            scripts/financial_candidate_provider.py \
+            scripts/visual_intelligence_bridge.py \
+            scripts/visual_intelligence_requirements.py \
+            scripts/visual_intelligence_story_context.py \
+            scripts/visual_intelligence_asset_plan.py \
+            scripts/run_visual_intelligence_v12.py \
+            scripts/validate_visual_intelligence_package.py \
+            scripts/write_human_preview_review.py \
+            scripts/run_daily_production_v12.py \
+            scripts/run_daily_renderer_closure_v12.py \
+            scripts/build_final_production_package_v12.py \
+            tests/remotion-compat/run_visual_intelligence_v12_cross_repo.py \
+            tests/remotion-compat/test_visual_intelligence_v12_state.py \
+            tests/remotion-compat/test_visual_intelligence_asset_fallback.py \
+            tests/remotion-compat/test_visual_intelligence_asset_plan.py \
+            tests/remotion-compat/test_visual_intelligence_requirements.py
+
+      - name: Run v1.2 requirements acceptance
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/remotion-compat/test_visual_intelligence_requirements.py
+
+      - name: Run two-pass asset plan acceptance
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/remotion-compat/test_visual_intelligence_asset_plan.py
+
+      - name: Run fallback-aware asset acceptance
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/remotion-compat/test_visual_intelligence_asset_fallback.py
+
+      - name: Run v1.2 state hard-gate acceptance
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/remotion-compat/test_visual_intelligence_v12_state.py
+
+      - name: Verify Renderer binding and Registry snapshot
+        run: |
+          PYTHONPATH=scripts python3 - <<'PY'
+          from pathlib import Path
+          import renderer_binding
+          value=renderer_binding.verify_renderer_checkout(Path('.'), Path('renderer'))
+          print(value['renderer']['commit'])
+          PY
+
+      - name: Run Visual Intelligence cross-repo acceptance
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/remotion-compat/run_visual_intelligence_v12_cross_repo.py --renderer-root renderer
+
+      - name: Verify AI-B owned skill was not modified by architecture branch
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          git fetch --no-tags --depth=1 origin ${{ github.event.pull_request.base.sha }}
+          git diff --exit-code ${{ github.event.pull_request.base.sha }} HEAD -- skills/nasdaq-cafe-visual-intelligence/**
+
+      - name: Diff hygiene
+        run: git diff --check
