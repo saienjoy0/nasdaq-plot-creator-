@@ -4,8 +4,9 @@
 `prepare` regenerates the exact real-day machine inputs, resolves assets, produces
 vNext CandidateInput/Capability/Catalog, then requires the machine bridge to stop
 at DECISION_REQUIRED. `compile` repeats the same deterministic preparation with an
-AI-B-authored decision present, compiles it, validates Visual Intelligence, advances
-the contract-versioned production states and builds the validated production package.
+AI-B-authored Director decision present. Director-only decisions compile the actual
+visual output and warnings, then stop normally at REVIEW_REQUIRED. Only a Critic
+PASS bound to those exact outputs may advance the validated production states.
 
 Neither phase renders Preview or auto-requests Final.
 """
@@ -204,7 +205,6 @@ def prepare_common(
         env=env,
     )
 
-    story = f"working/{date}/story-engine"
     advance(
         root,
         date=date,
@@ -322,7 +322,41 @@ def main() -> int:
             raise VisualIntelligenceClosureError(
                 "compile phase requires AI-B visual_intelligence_decision.json"
             )
-        run(root, *vi_command, env=env)
+        code = run(root, *vi_command, env=env, ok_codes=(0, 4))
+        vi_report = load(verification / "visual_intelligence_validation.json")
+        if code == 4:
+            if vi_report.get("status") != "REVIEW_REQUIRED":
+                raise VisualIntelligenceClosureError(
+                    "compile phase exit 4 must correspond to REVIEW_REQUIRED"
+                )
+            result = {
+                "contractVersion": "1.0.0",
+                "bridgeContractVersion": binding["bridgeContractVersion"],
+                "episodeDate": date,
+                "rendererCommit": binding["renderer"]["commit"],
+                "status": "REVIEW_REQUIRED",
+                "compiledVisual": vi_report.get("compiledVisual"),
+                "compiledVisualSha256": vi_report.get("compiledVisualSha256"),
+                "warningReport": vi_report.get("warningReport"),
+                "warningReportSha256": vi_report.get("warningReportSha256"),
+                "previewRendered": False,
+                "finalRendered": False,
+            }
+            if not result["compiledVisualSha256"] or not result["warningReportSha256"]:
+                raise VisualIntelligenceClosureError(
+                    "REVIEW_REQUIRED must expose compiled visual and warning report SHA"
+                )
+            (verification / "renderer_closure_gate_v12.json").write_text(
+                json.dumps(result, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0
+        if vi_report.get("status") != "PASS":
+            raise VisualIntelligenceClosureError(
+                "compile phase may advance only after Visual Intelligence PASS"
+            )
+
         advance(
             root,
             date=date,

@@ -40,7 +40,8 @@ def validate(*, root: Path, date: str, renderer_root: Path) -> dict[str, Any]:
     if package.get("episodeDate") != date:
         raise VisualIntelligencePackageError("Visual Intelligence episodeDate mismatch")
 
-    requirements = load(vi / "visual_requirements.json", "Visual Requirements")
+    requirements_path = vi / "visual_requirements.json"
+    requirements = load(requirements_path, "Visual Requirements")
     if package.get("intent") != requirements.get("intent"):
         raise VisualIntelligencePackageError("Visual Intent drifted after requirements planning")
     if package.get("provisionalDirection") != requirements.get("provisionalDirection"):
@@ -55,6 +56,8 @@ def validate(*, root: Path, date: str, renderer_root: Path) -> dict[str, Any]:
         "registrySnapshotSha256": sha256_file(renderer_root / binding["renderer"]["registrySnapshotPath"]),
         "recentVisualPatternContextSha256": sha256_file(vi / "recent_visual_pattern_context.json"),
         "visualEditorialPrinciplesSha256": sha256_file(root / "skills/nasdaq-cafe-visual-intelligence/references/VISUAL_EDITORIAL_INTELLIGENCE.md"),
+        "visualRequirementsSha256": sha256_file(requirements_path),
+        "capabilityHintsSha256": sha256_file(vi / "visual_capability_hints.json"),
     }
     if inputs != expected_inputs:
         raise VisualIntelligencePackageError("Visual Intelligence input lineage mismatch")
@@ -86,15 +89,28 @@ def validate(*, root: Path, date: str, renderer_root: Path) -> dict[str, Any]:
         raise VisualIntelligencePackageError("Visual Intelligence final artifact lineage mismatch")
 
     review_rounds = package.get("reviewRounds")
-    if not isinstance(review_rounds, list) or not review_rounds or review_rounds[-1].get("status") != "PASS":
+    if not isinstance(review_rounds, list) or not review_rounds or len(review_rounds) > 2:
+        raise VisualIntelligencePackageError("Visual Critic requires one or two review rounds")
+    if review_rounds[-1].get("status") != "PASS":
         raise VisualIntelligencePackageError("Visual Critic PASS is missing")
     if any(item.get("status") in {"RETURN_TO_STORY", "BLOCKED"} for item in review_rounds if isinstance(item, dict)):
         raise VisualIntelligencePackageError("Visual Intelligence unresolved return/block state")
+    final_review = review_rounds[-1]
+    if final_review.get("compiledVisualSha256") != expected_final["compiledVisualSha256"]:
+        raise VisualIntelligencePackageError("Visual Critic PASS is stale for compiled visual")
+    if final_review.get("warningReportSha256") != expected_final["warningReportSha256"]:
+        raise VisualIntelligencePackageError("Visual Critic PASS is stale for warning report")
+    if load(vi / "visual_plan_review.json", "Visual Plan review") != final_review:
+        raise VisualIntelligencePackageError("Visual Plan review does not match final Critic round")
+
     return {
         "status": "PASS",
         "episodeDate": date,
         "packageSha256": sha256_file(package_path),
         "compiledVisualSha256": expected_final["compiledVisualSha256"],
+        "warningReportSha256": expected_final["warningReportSha256"],
+        "visualRequirementsSha256": expected_inputs["visualRequirementsSha256"],
+        "capabilityHintsSha256": expected_inputs["capabilityHintsSha256"],
     }
 
 

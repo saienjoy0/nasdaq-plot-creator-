@@ -8,6 +8,7 @@ on:
       - "contracts/final_render_authorization.schema.json"
       - "scripts/renderer_binding.py"
       - "scripts/financial_candidate_provider.py"
+      - "scripts/renderer_strict_projection.py"
       - "scripts/visual_intelligence_*.py"
       - "scripts/run_visual_intelligence_v12.py"
       - "scripts/validate_visual_intelligence_package.py"
@@ -16,6 +17,7 @@ on:
       - "scripts/run_daily_production_v12.py"
       - "scripts/run_daily_renderer_closure_v12.py"
       - "scripts/build_final_production_package_v12.py"
+      - "working/2026-08-12/visual-intelligence/visual_intelligence_decision.json"
       - "tests/remotion-compat/*visual_intelligence*.py"
       - "tests/remotion-compat/test_final_render_authorization_v12.py"
       - ".github/workflows/visual-intelligence-v12-ci.yml"
@@ -28,7 +30,7 @@ permissions:
 jobs:
   cross-repo:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Checkout Plot
         uses: actions/checkout@v4
@@ -54,6 +56,11 @@ jobs:
           ref: ${{ steps.binding.outputs.commit }}
           path: renderer
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
@@ -61,19 +68,22 @@ jobs:
           cache: npm
           cache-dependency-path: renderer/package-lock.json
 
-      - name: Install Renderer dependencies
-        working-directory: renderer
-        run: npm ci
-
-      - name: Ensure Python contract dependency
-        run: python3 -m pip install --disable-pip-version-check jsonschema
+      - name: Install test and canary dependencies
+        run: |
+          python -m pip install --disable-pip-version-check 'jsonschema>=4.18' referencing pytest pillow
+          npm --prefix renderer ci
 
       - name: Python syntax gate
         run: |
           python3 -m py_compile \
             scripts/renderer_binding.py \
             scripts/financial_candidate_provider.py \
+            scripts/renderer_strict_projection.py \
             scripts/visual_intelligence_bridge.py \
+            scripts/visual_intelligence_bridge_staged.py \
+            scripts/visual_intelligence_intraday_evidence.py \
+            scripts/visual_intelligence_object_references.py \
+            scripts/visual_intelligence_renderer_projection.py \
             scripts/visual_intelligence_requirements.py \
             scripts/visual_intelligence_story_context.py \
             scripts/visual_intelligence_asset_plan.py \
@@ -90,6 +100,10 @@ jobs:
             tests/remotion-compat/test_visual_intelligence_asset_plan.py \
             tests/remotion-compat/test_visual_intelligence_requirements.py \
             tests/remotion-compat/test_visual_intelligence_preflight_binding.py \
+            tests/remotion-compat/test_visual_intelligence_object_references.py \
+            tests/remotion-compat/test_visual_intelligence_renderer_projection.py \
+            tests/remotion-compat/test_visual_intelligence_gap_projection.py \
+            tests/remotion-compat/test_visual_intelligence_post_pass_authority.py \
             tests/remotion-compat/test_final_render_authorization_v12.py
 
       - name: Run v1.2 requirements acceptance
@@ -106,6 +120,26 @@ jobs:
         env:
           PYTHONPATH: scripts
         run: python3 tests/remotion-compat/test_visual_intelligence_asset_fallback.py
+
+      - name: Run object reference reconciliation acceptance
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/remotion-compat/test_visual_intelligence_object_references.py
+
+      - name: Run Renderer candidate projection acceptance
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/remotion-compat/test_visual_intelligence_renderer_projection.py
+
+      - name: Run Expected Actual Gap projection acceptance
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/remotion-compat/test_visual_intelligence_gap_projection.py
+
+      - name: Run post-Critic immutable authority acceptance
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/remotion-compat/test_visual_intelligence_post_pass_authority.py
 
       - name: Run v1.2 state hard-gate acceptance
         env:
@@ -135,6 +169,94 @@ jobs:
         env:
           PYTHONPATH: scripts
         run: python3 tests/remotion-compat/run_visual_intelligence_v12_cross_repo.py --renderer-root renderer
+
+      - name: Resolve fresh real-day canary stage
+        id: canary
+        shell: bash
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          from pathlib import Path
+          path=Path('working/2026-08-12/visual-intelligence/visual_intelligence_decision.json')
+          if not path.is_file():
+              print('phase=prepare')
+              print('expected_closure=PREPARED')
+              print('expected_vi=DECISION_REQUIRED')
+          else:
+              value=json.loads(path.read_text(encoding='utf-8'))
+              rounds=value.get('reviewRounds')
+              final_pass=(
+                  isinstance(rounds, list) and rounds and isinstance(rounds[-1], dict)
+                  and rounds[-1].get('status') == 'PASS'
+                  and isinstance(rounds[-1].get('compiledVisualSha256'), str)
+                  and isinstance(rounds[-1].get('warningReportSha256'), str)
+              )
+              print('phase=compile')
+              print('expected_closure=' + ('PASS' if final_pass else 'REVIEW_REQUIRED'))
+              print('expected_vi=' + ('PASS' if final_pass else 'REVIEW_REQUIRED'))
+          PY
+
+      - name: Fresh real-day 2026-08-12 staged canary
+        env:
+          PYTHONPATH: scripts
+        run: |
+          python3 scripts/run_daily_renderer_closure_v12.py \
+            --phase ${{ steps.canary.outputs.phase }} \
+            --date 2026-08-12 \
+            --repo-root . \
+            --renderer-root renderer
+          EXPECTED_CLOSURE='${{ steps.canary.outputs.expected_closure }}' \
+          EXPECTED_VI='${{ steps.canary.outputs.expected_vi }}' \
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+
+          def beat_identity(value):
+              return [
+                  (scene['sceneId'], beat['beatId'])
+                  for scene in value.get('scenes', [])
+                  for beat in scene.get('visualBeats', [])
+              ]
+
+          closure=json.loads(Path('verification/2026-08-12/renderer_closure_gate_v12.json').read_text())
+          vi=json.loads(Path('verification/2026-08-12/visual_intelligence_validation.json').read_text())
+          assert closure['status'] == os.environ['EXPECTED_CLOSURE'], closure
+          assert vi['status'] == os.environ['EXPECTED_VI'], vi
+          catalog=json.loads(Path('working/2026-08-12/visual-intelligence/visual_candidate_catalog.json').read_text())
+          assert catalog['episodeDate'] == '2026-08-12', catalog
+          assert len(catalog.get('candidates', [])) > 0, catalog
+          if vi['status'] == 'REVIEW_REQUIRED':
+              assert Path(vi['compiledVisual']).is_file(), vi
+              assert Path(vi['warningReport']).is_file(), vi
+              assert vi.get('compiledVisualSha256') and vi.get('warningReportSha256'), vi
+          if vi['status'] == 'PASS':
+              state=json.loads(Path('working/2026-08-12/production_state.json').read_text())
+              assert state['current_state'] == 'production_package_valid', state
+              integrity=json.loads(Path('verification/2026-08-12/visual_intelligence_post_pass_integrity.json').read_text())
+              assert integrity['status'] == 'PASS', integrity
+              assert integrity['sceneCount'] == 9, integrity
+              assert integrity['beatCount'] == 18, integrity
+              assert integrity['secondDirectorInvoked'] is False, integrity
+              approved=json.loads(Path('working/2026-08-12/visual-intelligence/visual_direction_compiled_render.json').read_text())
+              final=json.loads(Path('render-specs/2026-08-12/render_spec.json').read_text())
+              assert beat_identity(approved) == beat_identity(final), (beat_identity(approved), beat_identity(final))
+              assert len(beat_identity(final)) == 18, beat_identity(final)
+          print('REAL_DAY_V12_STAGE_PASS', vi['status'], 'candidates=', len(catalog['candidates']))
+          PY
+
+      - name: Upload fresh real-day Visual Intelligence evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-intelligence-v12-real-day-2026-08-12
+          path: |
+            working/2026-08-12/visual-intelligence/
+            verification/2026-08-12/
+            render-specs/2026-08-12/render_spec.json
+            working/2026-08-12/production_request.json
+            working/2026-08-12/production_state.json
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Verify AI-B owned skill was not modified by architecture branch
         if: github.event_name == 'pull_request'
