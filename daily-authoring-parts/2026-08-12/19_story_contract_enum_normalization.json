@@ -10,6 +10,12 @@
   },
   "scenePatches": [
     {
+      "sceneNumber": 3,
+      "set": {
+        "headline": "NASDAQ -0.60%｜Brent +1.4%"
+      }
+    },
+    {
       "sceneNumber": 4,
       "set": {
         "formalRole": "expected_actual_gap",
@@ -21,7 +27,8 @@
       "set": {
         "formalRole": "global_context",
         "storyRole": "context",
-        "connector": "therefore"
+        "connector": "therefore",
+        "headline": "ホルムズ→原油→CPI/Fed不安→NASDAQ"
       }
     },
     {
@@ -29,7 +36,8 @@
       "set": {
         "formalRole": "market_reaction",
         "storyRole": "test",
-        "connector": "but"
+        "connector": "but",
+        "headline": "NVDA -2.10%｜SOXX -0.69%"
       }
     },
     {
