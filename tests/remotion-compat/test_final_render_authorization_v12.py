@@ -14,7 +14,6 @@ import build_final_render_authorization_v12 as final_auth  # noqa: E402
 
 DATE = "2099-04-04"
 RUN_ID = "123456789"
-PREVIEW_SHA = "a" * 64
 
 
 def write(path: Path, value: dict) -> Path:
@@ -23,7 +22,7 @@ def write(path: Path, value: dict) -> Path:
     return path
 
 
-def fixture(root: Path) -> tuple[Path, Path]:
+def fixture(root: Path) -> tuple[Path, Path, Path]:
     (root / "contracts").mkdir(parents=True, exist_ok=True)
     shutil.copy2(
         ROOT / "contracts/final_render_authorization.schema.json",
@@ -43,30 +42,34 @@ def fixture(root: Path) -> tuple[Path, Path]:
         "episodeDate": DATE,
         "packageSha256": final_auth.sha256_file(package),
     })
+    mp4 = root / "downloaded/preview.mp4"
+    mp4.parent.mkdir(parents=True, exist_ok=True)
+    mp4.write_bytes(b"synthetic-preview-bytes")
+    preview_sha = final_auth.sha256_file(mp4)
     review = write(root / f"verification/{DATE}/human_preview_review.json", {
         "contractVersion": "1.0.0",
         "episodeDate": DATE,
-        "previewSha256": PREVIEW_SHA,
+        "previewSha256": preview_sha,
         "status": "approved",
         "reviewedAt": "2099-04-04T12:00:00Z",
     })
-    delivery = write(root / "downloaded/delivery_manifest.json", {
-        "status": "handoff-preview-delivery-ready",
-        "runId": RUN_ID,
-        "episodeDate": DATE,
-        "specSha256": final_auth.sha256_file(spec),
-        "previewSha256": PREVIEW_SHA,
+    technical = write(root / "downloaded/technical_report.json", {
+        "status": "preview-generated",
+        "episodeId": DATE,
+        "inputSpecSha256": final_auth.sha256_file(spec),
+        "previewPath": "renders/preview/synthetic.mp4",
     })
-    return review, delivery
+    return review, mp4, technical
 
 
-def expect_failure(root: Path, review: Path, delivery: Path, needle: str, *, explicit: bool = True) -> None:
+def expect_failure(root: Path, review: Path, mp4: Path, technical: Path, needle: str, *, explicit: bool = True) -> None:
     try:
         final_auth.build_authorization(
             root=root,
             date=DATE,
             preview_run_id=RUN_ID,
-            preview_delivery_manifest=delivery,
+            preview_mp4=mp4,
+            preview_technical_report=technical,
             human_preview_review=review,
             explicit_final=explicit,
         )
@@ -80,38 +83,39 @@ def expect_failure(root: Path, review: Path, delivery: Path, needle: str, *, exp
 def main() -> int:
     with tempfile.TemporaryDirectory(prefix="nasdaq-final-auth-") as temp:
         root = Path(temp)
-        review, delivery = fixture(root)
+        review, mp4, technical = fixture(root)
         result = final_auth.build_authorization(
             root=root,
             date=DATE,
             preview_run_id=RUN_ID,
-            preview_delivery_manifest=delivery,
+            preview_mp4=mp4,
+            preview_technical_report=technical,
             human_preview_review=review,
             explicit_final=True,
         )
         assert result["status"] == "approved"
         assert result["final_requested"] is True
-        assert result["previewSha256"] == PREVIEW_SHA
-        assert result["renderSpecSha256"] == json.loads(delivery.read_text())["specSha256"]
+        assert result["previewSha256"] == final_auth.sha256_file(mp4)
+        assert result["renderSpecSha256"] == json.loads(technical.read_text())["inputSpecSha256"]
+        assert result["previewTechnicalReportSha256"] == final_auth.sha256_file(technical)
         assert result["humanPreviewReviewSha256"] == final_auth.sha256_file(review)
 
-        expect_failure(root, review, delivery, "--explicit-final", explicit=False)
+        expect_failure(root, review, mp4, technical, "--explicit-final", explicit=False)
 
-        value = json.loads(delivery.read_text())
-        value["previewSha256"] = "b" * 64
-        write(delivery, value)
-        expect_failure(root, review, delivery, "actual Preview SHA")
+        mp4.write_bytes(b"different-preview")
+        expect_failure(root, review, mp4, technical, "actual Preview MP4 SHA")
 
-        value["previewSha256"] = PREVIEW_SHA
-        value["specSha256"] = "c" * 64
-        write(delivery, value)
-        expect_failure(root, review, delivery, "current render_spec SHA")
+        mp4.write_bytes(b"synthetic-preview-bytes")
+        value = json.loads(technical.read_text())
+        value["inputSpecSha256"] = "c" * 64
+        write(technical, value)
+        expect_failure(root, review, mp4, technical, "current render_spec SHA")
 
-        value["specSha256"] = final_auth.sha256_file(root / f"render-specs/{DATE}/render_spec.json")
-        write(delivery, value)
+        value["inputSpecSha256"] = final_auth.sha256_file(root / f"render-specs/{DATE}/render_spec.json")
+        write(technical, value)
         state = root / f"working/{DATE}/production_state.json"
         write(state, {"episode_date": DATE, "current_state": "user_review_pending"})
-        expect_failure(root, review, delivery, "user_preview_approved")
+        expect_failure(root, review, mp4, technical, "user_preview_approved")
 
     print("final render authorization v1.2 tests passed")
     return 0
