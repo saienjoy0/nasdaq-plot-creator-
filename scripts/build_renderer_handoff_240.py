@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Extend the hardened handoff with Remotion 2.4 validation lineage."""
+"""Extend the hardened handoff with Remotion 2.4 + Visual Intelligence lineage."""
 
 from __future__ import annotations
 
@@ -22,14 +22,28 @@ EXTRA_ROLES = {
     "renderer_validation_report": "verification/{date}/renderer_validation_report.json",
 }
 
-VISUAL_DIRECTOR_ROLES = {
-    "visual_candidate_catalog": "working/{date}/visual_candidate_catalog.json",
-    "visual_direction_plan": "working/{date}/visual_direction_plan.json",
-    "visual_direction_compile_report": "verification/{date}/visual_direction_compile_report.json",
+VISUAL_INTELLIGENCE_ROLES = {
+    "visual_intelligence_package": "working/{date}/visual-intelligence/visual_intelligence_package.json",
+    "visual_editorial_snapshot": "working/{date}/visual-intelligence/editorial_snapshot.json",
+    "visual_intent": "working/{date}/visual-intelligence/visual_intent.json",
+    "provisional_visual_direction": "working/{date}/visual-intelligence/provisional_visual_direction.json",
+    "visual_candidate_input": "working/{date}/visual-intelligence/visual_candidate_input.json",
+    "visual_capability_inventory": "working/{date}/visual-intelligence/visual_capability_inventory.json",
+    "visual_candidate_catalog": "working/{date}/visual-intelligence/visual_candidate_catalog.json",
+    "visual_editorial_selection": "working/{date}/visual-intelligence/visual_editorial_selection.json",
+    "visual_direction_plan": "working/{date}/visual-intelligence/visual_direction_plan.json",
+    "visual_direction_compiled_render": "working/{date}/visual-intelligence/visual_direction_compiled_render.json",
+    "visual_direction_compile_report": "working/{date}/visual-intelligence/visual_direction_compile_report.json",
+    "visual_editorial_warning_report": "working/{date}/visual-intelligence/visual_editorial_warning_report.json",
+    "visual_direction_review": "working/{date}/visual-intelligence/visual_direction_review.json",
+    "recent_visual_pattern_context": "working/{date}/visual-intelligence/recent_visual_pattern_context.json",
+    "visual_intelligence_validation": "verification/{date}/visual_intelligence_validation.json",
 }
+
 
 class RendererHandoff240Error(ValueError):
     pass
+
 
 def _load_module(name: str, path: Path):
     spec = importlib.util.spec_from_file_location(name, path)
@@ -40,6 +54,7 @@ def _load_module(name: str, path: Path):
     spec.loader.exec_module(module)
     return module
 
+
 def _base_hardened(**kwargs):
     module = _load_module(
         "renderer_handoff_hardened_base",
@@ -47,11 +62,14 @@ def _base_hardened(**kwargs):
     )
     return module.build_handoff_hardened(**kwargs)
 
+
 def canonical_json(value: Any) -> bytes:
     return (json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode()
 
+
 def sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
 
 def safe_file(root: Path, relative: str, label: str) -> Path:
     path = Path(relative)
@@ -62,6 +80,7 @@ def safe_file(root: Path, relative: str, label: str) -> Path:
         raise RendererHandoff240Error(f"{label} is missing: {relative}")
     return resolved
 
+
 def load_json(path: Path, label: str) -> dict[str, Any]:
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
@@ -71,8 +90,12 @@ def load_json(path: Path, label: str) -> dict[str, Any]:
         raise RendererHandoff240Error(f"{label} must be an object")
     return value
 
+
 def _validate_renderer_evidence(
-    *, source_root: Path, date: str, renderer_commit: str,
+    *,
+    source_root: Path,
+    date: str,
+    renderer_commit: str,
     renderer_contract_version: str,
 ) -> dict[str, Path]:
     role_paths = dict(EXTRA_ROLES)
@@ -85,7 +108,7 @@ def _validate_renderer_evidence(
         "production request",
     )
     if request.get("visual_director") is not None:
-        role_paths.update(VISUAL_DIRECTOR_ROLES)
+        role_paths.update(VISUAL_INTELLIGENCE_ROLES)
     extras = {
         role: safe_file(source_root, template.format(date=date), role)
         for role, template in role_paths.items()
@@ -107,6 +130,7 @@ def _validate_renderer_evidence(
         raise RendererHandoff240Error("renderer validation render spec SHA mismatch")
     if report.get("unresolvedStateCount") != 0:
         raise RendererHandoff240Error("renderer validation has unresolved state")
+
     preflight = load_json(
         safe_file(
             source_root,
@@ -124,7 +148,23 @@ def _validate_renderer_evidence(
         extras["renderer_validation_report"]
     ):
         raise RendererHandoff240Error("preflight renderer report SHA mismatch")
-    if "visual_direction_compile_report" in extras:
+
+    if "visual_intelligence_package" in extras:
+        validation = load_json(
+            extras["visual_intelligence_validation"],
+            "Visual Intelligence validation",
+        )
+        if validation.get("status") != "PASS":
+            raise RendererHandoff240Error("Visual Intelligence validation must PASS")
+        if validation.get("episodeDate") != date:
+            raise RendererHandoff240Error("Visual Intelligence validation episodeDate mismatch")
+        if validation.get("rendererCommit") != renderer_commit:
+            raise RendererHandoff240Error("Visual Intelligence validation Renderer SHA mismatch")
+        if validation.get("packageSha256") != sha256_file(
+            extras["visual_intelligence_package"]
+        ):
+            raise RendererHandoff240Error("Visual Intelligence validation package SHA mismatch")
+
         direction = load_json(
             extras["visual_direction_compile_report"],
             "Visual Direction compile report",
@@ -144,9 +184,14 @@ def _validate_renderer_evidence(
             )
     return extras
 
+
 def _extend_bundle(
-    *, base_result: dict[str, Any], extras: dict[str, Path],
-    source_root: Path, bundle_root: Path, date: str,
+    *,
+    base_result: dict[str, Any],
+    extras: dict[str, Path],
+    source_root: Path,
+    bundle_root: Path,
+    date: str,
 ) -> dict[str, Any]:
     base_bundle = Path(str(base_result["bundle_path"]))
     base_manifest_path = Path(str(base_result["manifest_path"]))
@@ -159,20 +204,24 @@ def _extend_bundle(
         if destination in destinations:
             raise RendererHandoff240Error(f"duplicate destination: {destination}")
         destinations.add(destination)
-        files.append({
-            "role": role,
-            "source_path": source.relative_to(source_root).as_posix(),
-            "destination_path": destination,
-            "sha256": sha256_file(source),
-            "size": source.stat().st_size,
-            "required": True,
-        })
+        files.append(
+            {
+                "role": role,
+                "source_path": source.relative_to(source_root).as_posix(),
+                "destination_path": destination,
+                "sha256": sha256_file(source),
+                "size": source.stat().st_size,
+                "required": True,
+            }
+        )
     manifest["files"] = sorted(
         files, key=lambda item: (item["role"], item["destination_path"])
     )
     validation = dict(manifest.get("validation", {}))
     validation["renderer_contract"] = "pass"
     validation["remotion_official_validator"] = "pass"
+    if "visual_intelligence_package" in extras:
+        validation["visual_intelligence"] = "pass"
     manifest["validation"] = validation
     bundle_id = hashlib.sha256(canonical_json(manifest)).hexdigest()
     final_manifest = {
@@ -186,7 +235,8 @@ def _extend_bundle(
         if existing != final_manifest:
             raise RendererHandoff240Error("existing 2.4 bundle differs")
         return {
-            "status": "noop", "bundle_id": bundle_id,
+            "status": "noop",
+            "bundle_id": bundle_id,
             "bundle_path": str(target),
             "manifest_path": str(target / "handoff_manifest.json"),
         }
@@ -210,43 +260,66 @@ def _extend_bundle(
         shutil.rmtree(staging, ignore_errors=True)
         raise
     return {
-        "status": "created", "bundle_id": bundle_id,
+        "status": "created",
+        "bundle_id": bundle_id,
         "bundle_path": str(target),
         "manifest_path": str(target / "handoff_manifest.json"),
     }
 
+
 def build_handoff_hardened(
-    *, source_root: Path, bundle_root: Path, date: str, mode: str,
-    plot_commit: str, renderer_commit: str, renderer_contract_version: str,
+    *,
+    source_root: Path,
+    bundle_root: Path,
+    date: str,
+    mode: str,
+    plot_commit: str,
+    renderer_commit: str,
+    renderer_contract_version: str,
     approval_path: Path | None = None,
     base_builder: Callable[..., dict[str, Any]] = _base_hardened,
 ) -> dict[str, Any]:
     if renderer_contract_version != "2.4.0":
         return base_builder(
-            source_root=source_root, bundle_root=bundle_root, date=date,
-            mode=mode, plot_commit=plot_commit, renderer_commit=renderer_commit,
+            source_root=source_root,
+            bundle_root=bundle_root,
+            date=date,
+            mode=mode,
+            plot_commit=plot_commit,
+            renderer_commit=renderer_commit,
             renderer_contract_version=renderer_contract_version,
             approval_path=approval_path,
         )
     source_root = source_root.resolve()
     bundle_root = bundle_root.resolve()
     extras = _validate_renderer_evidence(
-        source_root=source_root, date=date, renderer_commit=renderer_commit,
+        source_root=source_root,
+        date=date,
+        renderer_commit=renderer_commit,
         renderer_contract_version=renderer_contract_version,
     )
     temporary_root = bundle_root / ".base-2.4"
     try:
         base = base_builder(
-            source_root=source_root, bundle_root=temporary_root, date=date,
-            mode=mode, plot_commit=plot_commit, renderer_commit=renderer_commit,
+            source_root=source_root,
+            bundle_root=temporary_root,
+            date=date,
+            mode=mode,
+            plot_commit=plot_commit,
+            renderer_commit=renderer_commit,
             renderer_contract_version=renderer_contract_version,
             approval_path=approval_path,
         )
         result = _extend_bundle(
-            base_result=base, extras=extras, source_root=source_root,
-            bundle_root=bundle_root, date=date,
+            base_result=base,
+            extras=extras,
+            source_root=source_root,
+            bundle_root=bundle_root,
+            date=date,
         )
         result["renderer_validation"] = "pass"
+        if "visual_intelligence_package" in extras:
+            result["visual_intelligence"] = "pass"
         return result
     finally:
         shutil.rmtree(temporary_root, ignore_errors=True)
