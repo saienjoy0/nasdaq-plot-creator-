@@ -235,6 +235,64 @@ def _earlier_display_texts(render_spec: dict[str, Any]) -> set[str]:
     return values
 
 
+def _collapse_two_beat_terminal_scene(scene: dict[str, Any]) -> None:
+    """Project the authored two-Beat closing into the Renderer's one assembly Beat.
+
+    Daily authoring intentionally keeps two narration/visual Beats per Scene (18 total).
+    Renderer 2.4 intentionally accepts one terminal assembly Beat. This projection keeps
+    both narration chunks and only collapses their visual shell; it makes no editorial
+    choice and introduces no new display text.
+    """
+    beats = scene.get("visualBeats", [])
+    if len(beats) != 2:
+        return
+    first, last = beats
+    cards = [item for item in scene.get("cards", []) if isinstance(item, dict)]
+    first_object_ids = set(first.get("objectIds", []))
+    first_cards = [
+        card for card in cards
+        if isinstance(card.get("cardId"), str) and card["cardId"] in first_object_ids
+    ]
+    if len(first_cards) != 1:
+        raise TemplateDataError(
+            "Scene 9 two-Beat projection requires one approved card on the first Beat"
+        )
+    keep_card = first_cards[0]
+    keep_card_id = keep_card["cardId"]
+    removed_card_ids = {
+        card.get("cardId")
+        for card in cards
+        if isinstance(card.get("cardId"), str) and card.get("cardId") != keep_card_id
+    }
+
+    first["endChunkId"] = last.get("endChunkId", first.get("endChunkId"))
+    first["narrationEndCue"] = last.get(
+        "narrationEndCue", first.get("narrationEndCue")
+    )
+    first["finalHoldMs"] = last.get("finalHoldMs", first.get("finalHoldMs", 500))
+    first["returnScreenState"] = None
+    first["objectIds"] = [keep_card_id]
+    first["evidenceSourceIds"] = list(
+        dict.fromkeys(
+            [
+                *first.get("evidenceSourceIds", []),
+                *last.get("evidenceSourceIds", []),
+            ]
+        )
+    )
+
+    scene["visualBeats"] = [first]
+    scene["cards"] = [keep_card]
+    scene["visualEvents"] = [
+        event
+        for event in scene.get("visualEvents", [])
+        if not (
+            isinstance(event, dict)
+            and event.get("targetId") in removed_card_ids
+        )
+    ]
+
+
 def _normalize_terminal_scene(
     render_spec: dict[str, Any], terminal_binding: dict[str, Any]
 ) -> None:
@@ -259,6 +317,8 @@ def _normalize_terminal_scene(
         raise TemplateDataError(
             f"terminal assembly binding contains text not introduced earlier: {missing}"
         )
+
+    _collapse_two_beat_terminal_scene(scene)
     beats = scene.get("visualBeats", [])
     if len(beats) != 1:
         raise TemplateDataError("Scene 9 requires exactly one final assembly Beat")
