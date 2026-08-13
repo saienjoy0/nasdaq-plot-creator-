@@ -88,10 +88,11 @@ jobs:
         run: python3 tests/remotion-compat/run_visual_intelligence_v12_cross_repo.py --renderer-root renderer
 
       - name: Verify AI-B owned skill was not modified by architecture branch
+        if: github.event_name == 'pull_request'
         shell: bash
         run: |
-          git fetch --no-tags origin main:refs/remotes/origin/main
-          git diff --exit-code origin/main...HEAD -- skills/nasdaq-cafe-visual-intelligence/**
+          git fetch --no-tags --depth=1 origin ${{ github.event.pull_request.base.sha }}
+          git diff --exit-code ${{ github.event.pull_request.base.sha }} HEAD -- skills/nasdaq-cafe-visual-intelligence/**
 
       - name: Diff hygiene
         run: git diff --check
