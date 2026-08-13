@@ -44,6 +44,66 @@ def _is_v12_request(request: dict[str, Any]) -> bool:
     }
 
 
+def _persist_visual_intelligence_preflight_binding(
+    *,
+    output_root: Path,
+    date: str,
+    repo_root: Path,
+    validation: dict[str, Any],
+) -> dict[str, Any]:
+    """Bind the exact Visual Intelligence PASS into the official preview preflight.
+
+    This augments only v1.2 preflight lineage. Existing episode-memory hardening
+    fields are preserved byte-semantically, and no editorial judgment is added.
+    """
+
+    preflight_path = output_root / "verification" / date / "official_execution_preflight.json"
+    package_path = output_root / "working" / date / "visual-intelligence" / "visual_intelligence_package.json"
+    try:
+        preflight = json.loads(preflight_path.read_text(encoding="utf-8"))
+        package = json.loads(package_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise VisualIntelligenceFinalBuildError(f"Visual Intelligence preflight binding input invalid: {exc}") from exc
+    if not isinstance(preflight, dict) or not isinstance(package, dict):
+        raise VisualIntelligenceFinalBuildError("Visual Intelligence preflight/package roots must be objects")
+    if validation.get("status") != "PASS":
+        raise VisualIntelligenceFinalBuildError("Visual Intelligence validation must PASS before preflight binding")
+    inputs = package.get("inputs")
+    final = package.get("final")
+    if not isinstance(inputs, dict) or not isinstance(final, dict) or final.get("status") != "PASS":
+        raise VisualIntelligenceFinalBuildError("Visual Intelligence package is not final PASS")
+    binding = renderer_binding.load_binding(repo_root)
+    expected_renderer = binding["renderer"]["commit"]
+    expected_registry_sha = binding["renderer"]["registrySnapshotSha256"]
+    if inputs.get("rendererCommit") != expected_renderer:
+        raise VisualIntelligenceFinalBuildError("Visual Intelligence package Renderer SHA drift before preflight")
+    if inputs.get("registrySnapshotSha256") != expected_registry_sha:
+        raise VisualIntelligenceFinalBuildError("Visual Intelligence package Registry SHA drift before preflight")
+    if validation.get("packageSha256") != hardened._load_module(
+        "visual_intelligence_preflight_sha_v12",
+        ROOT / "scripts/validate_visual_intelligence_package.py",
+    ).sha256_file(package_path):
+        raise VisualIntelligenceFinalBuildError("Visual Intelligence package SHA drift before preflight")
+
+    record = {
+        "contractVersion": "1.0.0",
+        "bridgeContractVersion": renderer_binding.BRIDGE_CONTRACT_VERSION,
+        "frozenInterfaceSha256": renderer_binding.FROZEN_INTERFACE_SHA256,
+        "status": "PASS",
+        "packageSha256": validation["packageSha256"],
+        "compiledVisualSha256": validation["compiledVisualSha256"],
+        "editorialSnapshotSha256": inputs.get("editorialSnapshotSha256"),
+        "rendererCommit": expected_renderer,
+        "registrySnapshotSha256": expected_registry_sha,
+    }
+    preflight["visual_intelligence"] = record
+    text = json.dumps(preflight, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    tmp = preflight_path.with_name(preflight_path.name + ".visual-intelligence.tmp")
+    tmp.write_text(text, encoding="utf-8")
+    tmp.replace(preflight_path)
+    return record
+
+
 def _renderer_finalizer_v12(*, output_root: Path, date: str, renderer_root: Path):
     module = hardened._load_module(
         "renderer_package_finalizer_compat_v12",
@@ -172,5 +232,12 @@ def build_hardened_v12(
             date=date,
             renderer_root=Path(renderer_root_value),
         )
+        preflight_record = _persist_visual_intelligence_preflight_binding(
+            output_root=output_root.resolve(),
+            date=date,
+            repo_root=repo_root.resolve(),
+            validation=validation,
+        )
         result["visual_intelligence"] = validation
+        result["visual_intelligence_preflight"] = preflight_record
     return result
