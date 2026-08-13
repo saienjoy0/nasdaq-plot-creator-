@@ -1,0 +1,209 @@
+#!/usr/bin/env python3
+"""Unit acceptance for v1.2 state ordering and hard-gate preservation."""
+from __future__ import annotations
+
+import hashlib
+import json
+import sys
+import tempfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "scripts"))
+
+import run_daily_production_v12 as v12  # noqa: E402
+
+
+class FakeDailyProductionError(ValueError):
+    def __init__(self, code: str, message: str):
+        super().__init__(f"{code}: {message}")
+        self.code = code
+        self.message = message
+
+
+class FakeModule:
+    DailyProductionError = FakeDailyProductionError
+    ERROR_CODES = {
+        "stale": "E_STALE_INPUT",
+        "episode": "E_EPISODE_NOT_FINAL",
+        "package": "E_PACKAGE_MISMATCH",
+        "render": "E_RENDER_SPEC_INVALID",
+        "date": "E_DATE_MISMATCH",
+        "inquisition": "E_INQUISITION_UNRESOLVED",
+    }
+
+    @staticmethod
+    def load_json(path: Path, label: str):
+        value = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(value, dict):
+            raise FakeDailyProductionError("E_STALE_INPUT", f"{label} must be object")
+        return value
+
+    @staticmethod
+    def sha256_file(path: Path) -> str:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def write(path: Path, value) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if isinstance(value, str):
+        path.write_text(value, encoding="utf-8")
+    else:
+        path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return path
+
+
+def expect_error(code: str, fn) -> None:
+    try:
+        fn()
+    except FakeDailyProductionError as exc:
+        if exc.code != code:
+            raise AssertionError(f"expected {code}, got {exc.code}: {exc}") from exc
+    else:
+        raise AssertionError(f"expected {code}")
+
+
+def main() -> int:
+    expected_prefix = [
+        "research_inputs_bound",
+        "causal_dossier_valid",
+        "editorial_snapshot_valid",
+        "visual_requirements_planned",
+        "assets_resolved",
+        "visual_intelligence_valid",
+        "episode_package_final",
+        "memory_usage_valid",
+    ]
+    if v12.VI_STATES[1:9] != expected_prefix:
+        raise AssertionError(f"v1.2 state order drifted: {v12.VI_STATES[1:9]}")
+
+    module = FakeModule()
+    date = "2099-03-03"
+    with tempfile.TemporaryDirectory(prefix="nasdaq-v12-state-") as temp:
+        root = Path(temp)
+        vi = root / "working" / date / "visual-intelligence"
+        snapshot = write(vi / "editorial_snapshot.json", {
+            "contractVersion": "1.0.0",
+            "episodeDate": date,
+        })
+        snapshot_sha = module.sha256_file(snapshot)
+        requirements = write(vi / "visual_requirements.json", {
+            "contractVersion": "1.0.0",
+            "bridgeContractVersion": "visual-intelligence-bridge/1.2.0",
+            "episodeDate": date,
+            "editorialSnapshotSha256": snapshot_sha,
+            "intent": {"beats": []},
+            "provisionalDirection": {"requirements": []},
+        })
+        requirements_report = write(vi / "visual_requirements_validation.json", {
+            "status": "PASS",
+            "episodeDate": date,
+            "beatCount": 0,
+            "editorialSnapshotSha256": snapshot_sha,
+        })
+
+        v12._validate_vi_transition(
+            module=module,
+            workspace=root,
+            date=date,
+            new_state="editorial_snapshot_valid",
+            evidence_paths=[snapshot],
+        )
+        v12._validate_vi_transition(
+            module=module,
+            workspace=root,
+            date=date,
+            new_state="visual_requirements_planned",
+            evidence_paths=[requirements, requirements_report],
+        )
+
+        package = vi / "visual_intelligence_package.json"
+        write(package, {
+            "contractVersion": "1.0.0",
+            "bridgeContractVersion": "visual-intelligence-bridge/1.2.0",
+            "episodeDate": date,
+            "inputs": {"editorialSnapshotSha256": snapshot_sha},
+            "final": {"status": "PASS"},
+        })
+        validation = vi / "visual_intelligence_validation.json"
+        write(validation, {
+            "status": "PASS",
+            "episodeDate": date,
+            "packageSha256": module.sha256_file(package),
+        })
+        v12._validate_vi_transition(
+            module=module,
+            workspace=root,
+            date=date,
+            new_state="visual_intelligence_valid",
+            evidence_paths=[package, validation],
+        )
+
+        write(snapshot, {"contractVersion": "1.0.0", "episodeDate": date, "storyRevision": 2})
+        expect_error(
+            "E_STALE_INPUT",
+            lambda: v12._validate_vi_transition(
+                module=module,
+                workspace=root,
+                date=date,
+                new_state="visual_requirements_planned",
+                evidence_paths=[requirements, requirements_report],
+            ),
+        )
+        expect_error(
+            "E_STALE_INPUT",
+            lambda: v12._validate_vi_transition(
+                module=module,
+                workspace=root,
+                date=date,
+                new_state="visual_intelligence_valid",
+                evidence_paths=[package, validation],
+            ),
+        )
+
+        # Recreate a matching snapshot for the Story-final hard-gate check.
+        write(snapshot, {"contractVersion": "1.0.0", "episodeDate": date})
+        acceptance = write(root / "working" / date / "story-engine/story_engine_acceptance.json", {"status": "pass"})
+        episode_package = write(root / "episodes" / date / f"episode_package_{date}.md", "# synthetic\n")
+        projection = write(root / "working" / date / "story-engine/story_projection_report.json", {
+            "episode_date": date,
+            "status": "pass",
+        })
+        pre_tts = write(root / "verification" / date / "pre_tts_visual_gate.json", {
+            "episodeDate": date,
+            "status": "PASS",
+            "violations": [],
+        })
+
+        original_loader = v12.hardened._load_module
+        class AcceptanceValidator:
+            @staticmethod
+            def validate_acceptance(*args, **kwargs):
+                return {"status": "pass", "errors": []}
+        v12.hardened._load_module = lambda *args, **kwargs: AcceptanceValidator
+        try:
+            v12._validate_story_final_gate(
+                module=module,
+                workspace=root,
+                date=date,
+                evidence_paths=[acceptance, episode_package, projection, pre_tts],
+            )
+            write(pre_tts, {"episodeDate": date, "status": "PASS", "violations": ["synthetic"]})
+            expect_error(
+                "E_RENDER_SPEC_INVALID",
+                lambda: v12._validate_story_final_gate(
+                    module=module,
+                    workspace=root,
+                    date=date,
+                    evidence_paths=[acceptance, episode_package, projection, pre_tts],
+                ),
+            )
+        finally:
+            v12.hardened._load_module = original_loader
+
+    print("visual intelligence v1.2 state tests passed")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
