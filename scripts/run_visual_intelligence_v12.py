@@ -19,6 +19,7 @@ import visual_intelligence_bridge_staged
 import visual_intelligence_intraday_evidence
 import visual_intelligence_object_references
 import visual_intelligence_renderer_projection
+import visual_intelligence_terminal_projection
 
 
 def load_json(path: Path) -> dict:
@@ -65,6 +66,9 @@ def main() -> int:
                 repo_root=root,
                 date=args.date,
             )
+        )
+        candidate_render = visual_intelligence_terminal_projection.normalize_terminal_transition(
+            candidate_render
         )
         candidate_render = (
             visual_intelligence_object_references.reconcile_projected_object_references(
@@ -157,6 +161,7 @@ def main() -> int:
         visual_intelligence_intraday_evidence.IntradayEvidenceBindingError,
         visual_intelligence_object_references.ObjectReferenceReconciliationError,
         visual_intelligence_renderer_projection.VisualIntelligenceRendererProjectionError,
+        visual_intelligence_terminal_projection.VisualIntelligenceTerminalProjectionError,
     ) as exc:
         report = {
             "status": "FAIL",
