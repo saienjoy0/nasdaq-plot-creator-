@@ -5,8 +5,8 @@ The Visual Intelligence boundary consumes the deterministic Renderer intermediat
 already produced by `materialize_renderer_sources.py`, applies the already-compiled
 Financial Recipe Plan, then removes producer-only schema extensions. It MUST NOT
 change Story meaning, narration, viewer text, Scene/Beat order, or Beat count.
-Renderer-only structural IDs, fixed Scene roles, reviewed visualMode aliases and
-financial trace metadata are compatibility data, not editorial decisions.
+Authoring Beat IDs remain the stable AI-facing identity even when the deterministic
+Renderer intermediate temporarily uses canonical `vb-*` IDs.
 """
 from __future__ import annotations
 
@@ -148,13 +148,56 @@ def _assert_semantic_alignment(
                     )
 
 
+def _restore_authoring_beat_ids(
+    producer: dict[str, Any], candidate: dict[str, Any]
+) -> dict[str, Any]:
+    """Keep one stable AI-facing Beat identity across producer and vNext.
+
+    `materialize_renderer_sources.py` may temporarily rewrite Beat IDs to `vb-*` for
+    renderer-side financial planning. Both ID forms are legal Renderer 2.4 IDs. The
+    Visual Intelligence contract is authored against the producer IDs, so before
+    Candidate generation we restore those IDs by the already-validated Scene/Beat
+    order. No semantic field, object ID, or Financial trace content is rewritten.
+    """
+    restored = copy.deepcopy(candidate)
+    producer_scenes = producer.get("scenes", [])
+    candidate_scenes = restored.get("scenes", [])
+    if len(producer_scenes) != len(candidate_scenes):
+        raise VisualIntelligenceRendererProjectionError(
+            "E_VISUAL_RENDERER_PROJECTION_SCENE_COUNT_CHANGED:beat-id-restore"
+        )
+    seen: set[str] = set()
+    for scene_index, (producer_scene, candidate_scene) in enumerate(
+        zip(producer_scenes, candidate_scenes, strict=True)
+    ):
+        producer_beats = producer_scene.get("visualBeats", [])
+        candidate_beats = candidate_scene.get("visualBeats", [])
+        if len(producer_beats) != len(candidate_beats):
+            raise VisualIntelligenceRendererProjectionError(
+                f"E_VISUAL_RENDERER_PROJECTION_BEAT_COUNT_CHANGED:beat-id-restore:scene={scene_index + 1}"
+            )
+        for beat_index, (producer_beat, candidate_beat) in enumerate(
+            zip(producer_beats, candidate_beats, strict=True)
+        ):
+            source_id = producer_beat.get("beatId")
+            if not isinstance(source_id, str) or not source_id:
+                raise VisualIntelligenceRendererProjectionError(
+                    f"E_VISUAL_RENDERER_INPUT_INVALID:missing producer beatId:scene={scene_index + 1}:beat={beat_index + 1}"
+                )
+            if source_id in seen:
+                raise VisualIntelligenceRendererProjectionError(
+                    f"E_VISUAL_RENDERER_INPUT_INVALID:duplicate producer beatId:{source_id}"
+                )
+            seen.add(source_id)
+            candidate_beat["beatId"] = source_id
+    return restored
+
+
 def _renderer_intermediate(
     producer: dict[str, Any], *, repo_root: Path, date: str
 ) -> dict[str, Any]:
     path = repo_root / "working" / date / "render_spec_intermediate.json"
     if not path.is_file():
-        # Synthetic/unit callers may exercise the projection before the daily
-        # materializer has created an intermediate. Real-day closure always has it.
         return copy.deepcopy(producer)
     intermediate = _load_json_object(path, "renderer intermediate")
     if intermediate.get("schemaVersion") != "2.4.0":
@@ -194,7 +237,6 @@ def _apply_financial_recipe_plan(
             "E_VISUAL_FINANCIAL_PROJECTION_STALE: Final Episode Contract SHA mismatch"
         )
 
-    # Lazy import keeps the schema-only projection lightweight for synthetic callers.
     try:
         import financial_visual_cross_artifact as financial_cross
     except ImportError as exc:
@@ -236,6 +278,7 @@ def project_visual_intelligence_renderer_input(
     candidate = _renderer_intermediate(render_spec, repo_root=repo_root, date=date)
     candidate = _apply_financial_recipe_plan(candidate, repo_root=repo_root, date=date)
     _assert_semantic_alignment(render_spec, candidate, stage="financialized-intermediate")
+    candidate = _restore_authoring_beat_ids(render_spec, candidate)
     _validate_mode_vocabulary(candidate)
 
     try:
@@ -258,14 +301,18 @@ def project_visual_intelligence_renderer_input(
         )
     _assert_semantic_alignment(render_spec, strict, stage="strict")
 
-    producer_beat_count = sum(
-        len(scene.get("visualBeats", [])) for scene in render_spec.get("scenes", [])
-    )
-    strict_beat_count = sum(
-        len(scene.get("visualBeats", [])) for scene in strict.get("scenes", [])
-    )
-    if strict_beat_count != producer_beat_count:
+    producer_beat_ids = [
+        beat.get("beatId")
+        for scene in render_spec.get("scenes", [])
+        for beat in scene.get("visualBeats", [])
+    ]
+    strict_beat_ids = [
+        beat.get("beatId")
+        for scene in strict.get("scenes", [])
+        for beat in scene.get("visualBeats", [])
+    ]
+    if strict_beat_ids != producer_beat_ids:
         raise VisualIntelligenceRendererProjectionError(
-            "E_VISUAL_RENDERER_PROJECTION_BEAT_COUNT_CHANGED"
+            "E_VISUAL_RENDERER_PROJECTION_BEAT_ID_DRIFT"
         )
     return strict
