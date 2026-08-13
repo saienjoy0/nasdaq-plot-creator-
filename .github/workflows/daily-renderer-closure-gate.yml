@@ -91,8 +91,31 @@ jobs:
           if [[ -n "$EPISODE_DATE" ]]; then
             [[ "$EPISODE_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
             echo "EPISODE_DATE=$EPISODE_DATE" >> "$GITHUB_ENV"
-            echo "RUN_EXACT_DAY=true" >> "$GITHUB_ENV"
-            echo "Renderer closure target: $EPISODE_DATE"
+            V12_OWNED="$(EPISODE_DATE="$EPISODE_DATE" python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path('working') / os.environ['EPISODE_DATE'] / 'production_request.json'
+          if not path.is_file():
+              print('false')
+              raise SystemExit(0)
+          value = json.loads(path.read_text(encoding='utf-8'))
+          binding = value.get('visual_intelligence')
+          print('true' if binding == {
+              'required': True,
+              'bridge_contract_version': 'visual-intelligence-bridge/1.2.0',
+              'frozen_interface_sha256': 'a9c54f2115f1d5a73251be64edcd5ff3f84c0940613ff7a6d7718f755581977f',
+          } else 'false')
+          PY
+          )"
+            if [[ "$V12_OWNED" == "true" ]]; then
+              echo "RUN_EXACT_DAY=false" >> "$GITHUB_ENV"
+              echo "Legacy exact-day closure skipped: $EPISODE_DATE is owned by visual-intelligence-bridge/1.2.0. Regression tests still run."
+            else
+              echo "RUN_EXACT_DAY=true" >> "$GITHUB_ENV"
+              echo "Legacy Renderer closure target: $EPISODE_DATE"
+            fi
           else
             echo "RUN_EXACT_DAY=false" >> "$GITHUB_ENV"
             echo "No daily episode artifact changed; running closure regressions only."
