@@ -22,6 +22,23 @@ import validate_visual_intelligence_package as package_validator  # noqa: E402
 import visual_intelligence_bridge as base_bridge  # noqa: E402
 import visual_intelligence_bridge_staged as staged_bridge  # noqa: E402
 
+# Exact enum from the pinned Renderer's visual_candidate_catalog.schema.json.
+# Synthetic acceptance is deliberately capability-broad: it validates machinery,
+# not a fake editorial preference that could accidentally outlaw the fixture's
+# authored identity Candidate.
+SUPPORTED_CAPABILITIES = [
+    "source-document",
+    "quote-social",
+    "time-series",
+    "comparison-set",
+    "gap",
+    "causal-graph",
+    "entity",
+    "image-media",
+    "verification",
+    "text-only",
+]
+
 
 def generate_current_fixture(renderer_root: Path) -> dict:
     script = (
@@ -68,15 +85,15 @@ def requirement_rows(spec: dict) -> tuple[list[dict], list[dict]]:
             "audienceBeliefBefore": "synthetic before",
             "audienceBeliefAfter": "synthetic after",
             "visualInformationGain": "synthetic machine-contract check",
-            "preferredEvidenceModes": ["text-only"],
+            "preferredEvidenceModes": list(SUPPORTED_CAPABILITIES),
             "realityAnchorPreference": "neutral",
             "editorialReason": "fixture-only requirement; not a production editorial judgment",
         })
         requirements.append({
             "visualBeatId": beat_id,
-            "requiredModes": ["text-only"],
+            "requiredModes": list(SUPPORTED_CAPABILITIES),
             "imageRequirement": "not-required",
-            "reason": "synthetic fixture requires no generated image",
+            "reason": "synthetic fixture accepts the pinned Renderer capability enum; no editorial ranking is encoded",
         })
     return intents, requirements
 
@@ -125,7 +142,9 @@ def run(renderer_root: Path) -> dict:
             "intent": {"beats": pre_intents},
             "provisionalDirection": {"requirements": pre_requirements},
         }
-        write_json(vi / "visual_requirements.json", requirements_doc)
+        requirements_path = vi / "visual_requirements.json"
+        write_json(requirements_path, requirements_doc)
+        requirements_sha = base_bridge.sha256_file(requirements_path)
 
         # Stage 1: Machine produces Candidates and must stop before any Director choice.
         try:
@@ -169,7 +188,11 @@ def run(renderer_root: Path) -> dict:
 
         # Stage 2: Director-only decision is legal, but Critic must not be pre-baked.
         director_decision = {
-            **requirements_doc,
+            "contractVersion": "1.0.0",
+            "bridgeContractVersion": base_bridge.BRIDGE_CONTRACT_VERSION,
+            "episodeDate": date,
+            "editorialSnapshotSha256": snapshot_sha,
+            "visualRequirementsSha256": requirements_sha,
             "director": {"selections": selections},
         }
         write_json(vi / "visual_intelligence_decision.json", director_decision)
