@@ -84,21 +84,19 @@ jobs:
               raise SystemExit('closure PR must target exactly one episode date: ' + ','.join(sorted(dates)))
           if dates:
               print(next(iter(dates)))
-          else:
-              root = Path('daily-authoring-parts')
-              candidates = sorted(
-                  p.name for p in root.iterdir()
-                  if p.is_dir() and re.fullmatch(r'\d{4}-\d{2}-\d{2}', p.name)
-              ) if root.is_dir() else []
-              if not candidates:
-                  raise SystemExit('no daily episode is available as closure canary')
-              print(candidates[-1])
           PY
           )"
           fi
-          [[ "$EPISODE_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
-          echo "EPISODE_DATE=$EPISODE_DATE" >> "$GITHUB_ENV"
-          echo "Renderer closure target: $EPISODE_DATE"
+
+          if [[ -n "$EPISODE_DATE" ]]; then
+            [[ "$EPISODE_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
+            echo "EPISODE_DATE=$EPISODE_DATE" >> "$GITHUB_ENV"
+            echo "RUN_EXACT_DAY=true" >> "$GITHUB_ENV"
+            echo "Renderer closure target: $EPISODE_DATE"
+          else
+            echo "RUN_EXACT_DAY=false" >> "$GITHUB_ENV"
+            echo "No daily episode artifact changed; running closure regressions only."
+          fi
 
       - name: Checkout exact Preview renderer
         uses: actions/checkout@v4
@@ -145,6 +143,7 @@ jobs:
             scripts/visual_director_bridge.py
 
       - name: Require exact-day Renderer 2.4 closure
+        if: env.RUN_EXACT_DAY == 'true'
         run: |
           python scripts/run_daily_renderer_closure.py \
             --date "$EPISODE_DATE" \
@@ -152,7 +151,7 @@ jobs:
             --renderer-root .renderer
 
       - name: Upload closure evidence
-        if: always()
+        if: always() && env.RUN_EXACT_DAY == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: daily-renderer-closure-${{ env.EPISODE_DATE }}
