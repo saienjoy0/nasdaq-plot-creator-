@@ -142,6 +142,19 @@ def main() -> int:
             "expectedConfirmed": True,
             "visualGrammarContractVersion": "legacy-producer-only",
         }
+        # This card is deliberately not Beat-owned at authoring time. Visual Intelligence
+        # may later select an object like this from Renderer-native inventory. It must be
+        # display-safe before Candidate Builder/Critic, not only after it becomes visible.
+        render["scenes"][0]["cards"].append({
+            "cardId": "metric.synthetic.third-party-funding",
+            "role": None,
+            "title": "Reuters",
+            "lines": [{
+                "label": "確認",
+                "value": "AIインフラ向け第三者資本5000億ドル超の動員を目指す",
+                "tone": "positive",
+            }],
+        })
         original = copy.deepcopy(render)
         strict = projection.project_visual_intelligence_renderer_input(
             render,
@@ -187,6 +200,16 @@ def main() -> int:
         for source_scene, projected_scene in zip(render["scenes"], strict["scenes"], strict=True):
             if projected_scene["narrationChunks"] != source_scene["narrationChunks"]:
                 raise AssertionError("narration changed")
+
+        projected_cards = {
+            item["cardId"]: item
+            for item in strict["scenes"][0]["cards"]
+        }
+        selectable = projected_cards["metric.synthetic.third-party-funding"]
+        if selectable["lines"][0]["value"] != "AIインフラ向け第3者資本5000億ドル超の動員を目指す":
+            raise AssertionError(f"selectable viewer inventory was not normalized: {selectable}")
+        if render["scenes"][0]["cards"][0]["lines"][0]["value"] != "AIインフラ向け第三者資本5000億ドル超の動員を目指す":
+            raise AssertionError("producer selectable inventory was mutated")
 
         # Simulate the real-day intermediate renaming every Beat to canonical vb-*.
         intermediate = copy.deepcopy(render)
