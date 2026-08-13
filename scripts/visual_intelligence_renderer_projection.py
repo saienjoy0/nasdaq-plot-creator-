@@ -292,6 +292,122 @@ def _materialize_vnext_object_inventory(candidate: dict[str, Any]) -> dict[str, 
     return projected
 
 
+def _synchronize_replaced_object_events(
+    producer: dict[str, Any], candidate: dict[str, Any]
+) -> dict[str, Any]:
+    """Keep deterministic Visual Events bound to the objects a projected Beat displays.
+
+    Financial/object projection may replace one producer object with one Renderer-native
+    object (for example, a source-receipt card with its typed metric receipt). In that
+    unambiguous 1->1 case, every scene event that targeted the removed producer object
+    is rebound to the replacement object. More complex cardinality changes are never
+    guessed here: an established specialized canonicalizer must already have authored
+    all required event targets, otherwise this boundary fails closed.
+    """
+    projected = copy.deepcopy(candidate)
+    producer_scenes = producer.get("scenes", [])
+    projected_scenes = projected.get("scenes", [])
+    if len(producer_scenes) != len(projected_scenes):
+        raise VisualIntelligenceRendererProjectionError(
+            "E_VISUAL_EVENT_BINDING_SCENE_COUNT_CHANGED"
+        )
+
+    for scene_index, (producer_scene, projected_scene) in enumerate(
+        zip(producer_scenes, projected_scenes, strict=True), start=1
+    ):
+        producer_beats = producer_scene.get("visualBeats", [])
+        projected_beats = projected_scene.get("visualBeats", [])
+        if len(producer_beats) != len(projected_beats):
+            raise VisualIntelligenceRendererProjectionError(
+                f"E_VISUAL_EVENT_BINDING_BEAT_COUNT_CHANGED:scene={scene_index}"
+            )
+        events = projected_scene.get("visualEvents", [])
+        if not isinstance(events, list):
+            raise VisualIntelligenceRendererProjectionError(
+                f"E_VISUAL_EVENT_BINDING_INVALID:scene={scene_index}:visualEvents"
+            )
+
+        all_projected_object_ids = [
+            object_id
+            for beat in projected_beats
+            if isinstance(beat, dict)
+            for object_id in beat.get("objectIds", [])
+            if isinstance(object_id, str)
+        ]
+
+        for beat_index, (producer_beat, projected_beat) in enumerate(
+            zip(producer_beats, projected_beats, strict=True), start=1
+        ):
+            old_ids = producer_beat.get("objectIds", [])
+            new_ids = projected_beat.get("objectIds", [])
+            if old_ids == new_ids:
+                continue
+            if not (
+                isinstance(old_ids, list)
+                and isinstance(new_ids, list)
+                and all(isinstance(value, str) for value in old_ids)
+                and all(isinstance(value, str) for value in new_ids)
+            ):
+                raise VisualIntelligenceRendererProjectionError(
+                    f"E_VISUAL_EVENT_BINDING_INVALID:scene={scene_index}:beat={beat_index}:objectIds"
+                )
+
+            producer_events = producer_scene.get("visualEvents", [])
+            source_targeted = {
+                event.get("targetId")
+                for event in producer_events
+                if isinstance(event, dict) and event.get("targetId") in old_ids
+            }
+
+            if len(old_ids) == 1 and len(new_ids) == 1:
+                old_id, new_id = old_ids[0], new_ids[0]
+                if old_id != new_id:
+                    # Rebinding is ambiguous if the old object still belongs to another
+                    # projected Beat. Do not steal shared display ownership.
+                    other_uses = sum(
+                        1
+                        for other_index, other_beat in enumerate(projected_beats)
+                        if other_index != beat_index - 1
+                        and old_id in other_beat.get("objectIds", [])
+                    )
+                    if other_uses:
+                        raise VisualIntelligenceRendererProjectionError(
+                            f"E_VISUAL_EVENT_BINDING_AMBIGUOUS:{old_id}"
+                        )
+                    for event in events:
+                        if isinstance(event, dict) and event.get("targetId") == old_id:
+                            event["targetId"] = new_id
+
+            # If the producer actually displayed the replaced object, the projected Beat
+            # must have a display-event reference for every replacement object. This is
+            # what validates specialized 1->N canonicalizers such as Expected/Actual/Gap.
+            if source_targeted:
+                projected_targets = {
+                    event.get("targetId")
+                    for event in events
+                    if isinstance(event, dict) and event.get("targetId") in new_ids
+                }
+                missing = [value for value in new_ids if value not in projected_targets]
+                if missing:
+                    raise VisualIntelligenceRendererProjectionError(
+                        "E_VISUAL_EVENT_BINDING_MISSING:"
+                        f"scene={scene_index}:beat={beat_index}:targets={','.join(missing)}"
+                    )
+
+            removed_ids = [value for value in old_ids if value not in new_ids]
+            for old_id in removed_ids:
+                if old_id in all_projected_object_ids:
+                    continue
+                if any(
+                    isinstance(event, dict) and event.get("targetId") == old_id
+                    for event in events
+                ):
+                    raise VisualIntelligenceRendererProjectionError(
+                        f"E_VISUAL_EVENT_BINDING_STALE:{old_id}"
+                    )
+    return projected
+
+
 def project_visual_intelligence_renderer_input(
     render_spec: dict[str, Any], *, repo_root: Path, date: str
 ) -> dict[str, Any]:
@@ -312,6 +428,7 @@ def project_visual_intelligence_renderer_input(
     _assert_semantic_alignment(render_spec, candidate, stage="financialized-intermediate")
     candidate = _restore_authoring_beat_ids(render_spec, candidate)
     candidate = _materialize_vnext_object_inventory(candidate)
+    candidate = _synchronize_replaced_object_events(render_spec, candidate)
     _assert_semantic_alignment(render_spec, candidate, stage="renderer-object-inventory")
     _validate_mode_vocabulary(candidate)
 
