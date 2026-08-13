@@ -96,17 +96,17 @@ jobs:
           import os
           from pathlib import Path
 
-          path = Path('working') / os.environ['EPISODE_DATE'] / 'production_request.json'
-          if not path.is_file():
+          date = os.environ['EPISODE_DATE']
+          decision_path = Path('working') / date / 'visual-intelligence' / 'visual_intelligence_decision.json'
+          if not decision_path.is_file():
               print('false')
               raise SystemExit(0)
-          value = json.loads(path.read_text(encoding='utf-8'))
-          binding = value.get('visual_intelligence')
-          print('true' if binding == {
-              'required': True,
-              'bridge_contract_version': 'visual-intelligence-bridge/1.2.0',
-              'frozen_interface_sha256': 'a9c54f2115f1d5a73251be64edcd5ff3f84c0940613ff7a6d7718f755581977f',
-          } else 'false')
+          value = json.loads(decision_path.read_text(encoding='utf-8'))
+          print('true' if (
+              value.get('contractVersion') == '1.0.0'
+              and value.get('bridgeContractVersion') == 'visual-intelligence-bridge/1.2.0'
+              and value.get('episodeDate') == date
+          ) else 'false')
           PY
           )"
             if [[ "$V12_OWNED" == "true" ]]; then
