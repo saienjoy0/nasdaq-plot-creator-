@@ -1,0 +1,11 @@
+{
+  "id":"candidate_01_bias",
+  "visualIntent":{"purpose":"Make Expected vs Actual Gap immediately legible."},
+  "candidates":[
+    {"candidateId":"vc-vb-04-01-01","function":"single-number card"},
+    {"candidateId":"vc-vb-04-01-02","function":"same-scale Expected/Actual comparison"}
+  ],
+  "expectedDirector":{"selectedCandidateId":"vc-vb-04-01-02","strongestAlternativeCandidateId":"vc-vb-04-01-01"},
+  "expectedCritic":{"status":"PASS"},
+  "rule":"Candidate ordinal has no recommendation meaning."
+}
