@@ -1,0 +1,8 @@
+{
+  "id":"boring_card_wall",
+  "storyState":"Scenes progress from contradiction to comparison to price test and scope boundary.",
+  "candidateState":"Every Beat has a generic stat-card candidate; several Beats also have comparison, chart, or source candidates.",
+  "directorSelection":"Generic stat-card selected for all Beats.",
+  "expectedCritic":{"statusOneOf":["REVISE","RETURN_TO_STORY"],"findingsAnyOf":["UNJUSTIFIED_REPETITION","NO_VISUAL_PROGRESS","VISUAL_RECEIPT_ONLY"]},
+  "safety":"Do not change narration or invent new Evidence."
+}
