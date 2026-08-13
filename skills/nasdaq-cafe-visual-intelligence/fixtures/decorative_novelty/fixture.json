@@ -1,0 +1,8 @@
+{
+  "id":"decorative_novelty",
+  "visualIntent":{"purpose":"Show a confirmed two-factor split."},
+  "candidateState":"A familiar comparison layout and a new animated component express the same facts; animation adds no comparison or verification ability.",
+  "directorSelection":"New animated component because it is new.",
+  "expectedCritic":{"statusOneOf":["REVISE","PASS"],"expectedFinding":"DECORATIVE_NOVELTY","severity":"minor-or-major-by-context"},
+  "rule":"Novelty is neutral."
+}
