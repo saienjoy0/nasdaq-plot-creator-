@@ -25,17 +25,13 @@
         "visualMode": "expected-actual-gap",
         "grammarId": "gap",
         "variant": "default",
-        "metrics": [
-          {
-            "label": "Brent",
-            "value": "+1.4%",
-            "numericValue": 1.4,
-            "precision": 1,
-            "unit": "%",
-            "tone": "negative",
-            "comparison": "2026-08-11 close"
-          }
-        ]
+        "primaryElement": "Expected / Actual / Gap",
+        "viewerTexts": [
+          "Expected：緊張緩和・再開",
+          "Actual：閉鎖条件・Brent +1.4%",
+          "Gap：安心材料が来ない"
+        ],
+        "metrics": []
       }
     },
     {
