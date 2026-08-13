@@ -21,10 +21,10 @@
       "sceneNumber": 4,
       "beatNumber": 1,
       "set": {
-        "visualTemplate": "expected-actual-bullet",
+        "visualTemplate": "expected-actual-gap-flow",
         "visualMode": "expected-actual-gap",
         "grammarId": "gap",
-        "variant": "default",
+        "variant": "left-to-right",
         "primaryElement": "Expected / Actual / Gap",
         "viewerTexts": [
           "Expected：緊張緩和・再開",
