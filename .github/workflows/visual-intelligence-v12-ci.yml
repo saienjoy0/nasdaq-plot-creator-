@@ -90,6 +90,7 @@ jobs:
       - name: Verify AI-B owned skill was not modified by architecture branch
         shell: bash
         run: |
+          git fetch --no-tags origin main:refs/remotes/origin/main
           git diff --exit-code origin/main...HEAD -- skills/nasdaq-cafe-visual-intelligence/**
 
       - name: Diff hygiene
