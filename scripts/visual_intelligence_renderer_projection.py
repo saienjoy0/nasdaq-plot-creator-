@@ -19,6 +19,7 @@ from typing import Any
 
 import remotion_240_projection
 import renderer_strict_projection
+import viewer_surface_projection
 
 
 class VisualIntelligenceRendererProjectionError(ValueError):
@@ -408,6 +409,60 @@ def _synchronize_replaced_object_events(
     return projected
 
 
+def _normalize_selectable_viewer_inventory(candidate: dict[str, Any]) -> dict[str, Any]:
+    """Normalize every object that Visual Intelligence may later make viewer-visible.
+
+    The first viewer-surface projection runs before Financial/Visual Intelligence object
+    inventory exists. A source receipt or other typed object can therefore be hidden at
+    authoring time and become visible only after AI-B selects its Candidate. Normalize
+    that selectable inventory before Candidate Builder so Critic and production see the
+    exact same display-safe text. Speech and Beat-authored viewer semantics are untouched.
+    """
+    projected = copy.deepcopy(candidate)
+    conversions: list[viewer_surface_projection.Conversion] = []
+
+    def normalize(container: dict[str, Any], key: str, path: str) -> None:
+        value = container.get(key)
+        if not isinstance(value, str):
+            return
+        normalized = viewer_surface_projection.normalize_viewer_text(
+            value,
+            path=path,
+            conversions=conversions,
+        )
+        viewer_surface_projection.assert_viewer_text_safe(normalized, path)
+        container[key] = normalized
+
+    for scene_index, scene in enumerate(projected.get("scenes", [])):
+        if not isinstance(scene, dict):
+            continue
+        base = f"$.scenes[{scene_index}]"
+        for card_index, card in enumerate(scene.get("cards", [])):
+            if not isinstance(card, dict):
+                continue
+            card_base = f"{base}.cards[{card_index}]"
+            normalize(card, "title", f"{card_base}.title")
+            for line_index, line in enumerate(card.get("lines", [])):
+                if not isinstance(line, dict):
+                    continue
+                line_base = f"{card_base}.lines[{line_index}]"
+                normalize(line, "label", f"{line_base}.label")
+                normalize(line, "value", f"{line_base}.value")
+        for number_index, number in enumerate(scene.get("numbers", [])):
+            if not isinstance(number, dict):
+                continue
+            number_base = f"{base}.numbers[{number_index}]"
+            for key in ("label", "value", "unit", "comparison"):
+                normalize(number, key, f"{number_base}.{key}")
+        for node_index, node in enumerate(scene.get("nodes", [])):
+            if isinstance(node, dict):
+                normalize(node, "label", f"{base}.nodes[{node_index}].label")
+        for arrow_index, arrow in enumerate(scene.get("arrows", [])):
+            if isinstance(arrow, dict):
+                normalize(arrow, "label", f"{base}.arrows[{arrow_index}].label")
+    return projected
+
+
 def project_visual_intelligence_renderer_input(
     render_spec: dict[str, Any], *, repo_root: Path, date: str
 ) -> dict[str, Any]:
@@ -429,6 +484,7 @@ def project_visual_intelligence_renderer_input(
     candidate = _restore_authoring_beat_ids(render_spec, candidate)
     candidate = _materialize_vnext_object_inventory(candidate)
     candidate = _synchronize_replaced_object_events(render_spec, candidate)
+    candidate = _normalize_selectable_viewer_inventory(candidate)
     _assert_semantic_alignment(render_spec, candidate, stage="renderer-object-inventory")
     _validate_mode_vocabulary(candidate)
 
