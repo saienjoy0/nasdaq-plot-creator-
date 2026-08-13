@@ -2,9 +2,9 @@
 """Run the exact daily package through the pre-Preview renderer closure boundary.
 
 This is an orchestration-only gate. It reuses the existing authoring/materialization,
-Visual Grammar, Financial Visual, Visual Director, and official Renderer validators.
-It does not render Preview, create a Preview request, choose a candidate, choose a
-fallback, or alter narration/market causality.
+Visual Grammar, Financial Visual, Visual Intelligence, and official Renderer
+validators. It does not render Preview, choose a candidate, choose a fallback, or
+alter narration/market causality.
 """
 from __future__ import annotations
 
@@ -17,9 +17,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
-
-RENDERER_COMMIT = "6a44cdeb04d401dc45379783862e279a5c2f04a5"
-RENDERER_CONTRACT_VERSION = "2.4.0"
+import renderer_binding
+import validate_visual_intelligence_package
 
 
 class ClosureError(RuntimeError):
@@ -76,7 +75,7 @@ def bind_legacy_materializer(root: Path, date: str) -> None:
     )
 
 
-def ensure_renderer(renderer_root: Path) -> None:
+def ensure_renderer(renderer_root: Path, expected_commit: str) -> None:
     if not (renderer_root / "scripts" / "spec-cli.ts").is_file():
         raise ClosureError(f"renderer checkout invalid: {renderer_root}")
     completed = subprocess.run(
@@ -87,9 +86,9 @@ def ensure_renderer(renderer_root: Path) -> None:
         check=False,
     )
     actual = completed.stdout.strip()
-    if completed.returncode != 0 or actual != RENDERER_COMMIT:
+    if completed.returncode != 0 or actual != expected_commit:
         raise ClosureError(
-            f"renderer SHA mismatch: expected={RENDERER_COMMIT} actual={actual or 'unavailable'}"
+            f"renderer SHA mismatch: expected={expected_commit} actual={actual or 'unavailable'}"
         )
 
 
@@ -122,7 +121,13 @@ def main() -> int:
         raise SystemExit("--date must be YYYY-MM-DD")
     root = args.repo_root.resolve()
     renderer_root = args.renderer_root.resolve()
-    ensure_renderer(renderer_root)
+    try:
+        binding = renderer_binding.load_renderer_binding(root)
+    except renderer_binding.RendererBindingError as exc:
+        raise SystemExit(str(exc)) from exc
+    renderer_commit = binding["rendererCommit"]
+    renderer_contract_version = binding["rendererContractVersion"]
+    ensure_renderer(renderer_root, renderer_commit)
 
     if not (root / "daily-authoring-parts" / date).is_dir():
         raise SystemExit(f"daily authoring parts missing for {date}")
@@ -180,18 +185,15 @@ def main() -> int:
             "--requested-scope",
             "preview",
             "--renderer-commit",
-            RENDERER_COMMIT,
+            renderer_commit,
             "--renderer-contract-version",
-            RENDERER_CONTRACT_VERSION,
+            renderer_contract_version,
             env=env,
         )
 
         story = f"working/{date}/story-engine"
         states = [
-            (
-                "research_inputs_bound",
-                [f"research/{date}/research_input_manifest.json"],
-            ),
+            ("research_inputs_bound", [f"research/{date}/research_input_manifest.json"]),
             (
                 "causal_dossier_valid",
                 [
@@ -208,10 +210,7 @@ def main() -> int:
                     f"verification/{date}/pre_tts_visual_gate.json",
                 ],
             ),
-            (
-                "memory_usage_valid",
-                [f"research/{date}/causal_dossier_validation.json"],
-            ),
+            ("memory_usage_valid", [f"research/{date}/causal_dossier_validation.json"]),
             (
                 "assets_resolved",
                 [
@@ -255,6 +254,16 @@ def main() -> int:
             f"episodes/{date}/episode_package_{date}.md",
             env=env,
         )
+
+        visual_result = validate_visual_intelligence_package.validate_package(
+            repo_root=root,
+            date=date,
+            renderer_root=renderer_root,
+        )
+        (verification / "visual_intelligence_validation.json").write_text(
+            json.dumps(visual_result, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
         run(
             root,
             "python",
@@ -266,12 +275,18 @@ def main() -> int:
             date,
             env=env,
         )
-    except ClosureError as exc:
+    except (
+        ClosureError,
+        validate_visual_intelligence_package.VisualIntelligenceValidationError,
+        renderer_binding.RendererBindingError,
+    ) as exc:
         report = {
-            "contractVersion": "1.0.0",
+            "contractVersion": "1.1.0",
             "episodeDate": date,
-            "rendererCommit": RENDERER_COMMIT,
-            "rendererContractVersion": RENDERER_CONTRACT_VERSION,
+            "rendererCommit": renderer_commit,
+            "rendererContractVersion": renderer_contract_version,
+            "visualIntelligenceBridge": binding["visualIntelligenceBridge"],
+            "candidateBuilder": binding["candidateBuilder"],
             "status": "FAIL",
             "error": str(exc),
         }
@@ -282,10 +297,13 @@ def main() -> int:
         return 2
 
     report = {
-        "contractVersion": "1.0.0",
+        "contractVersion": "1.1.0",
         "episodeDate": date,
-        "rendererCommit": RENDERER_COMMIT,
-        "rendererContractVersion": RENDERER_CONTRACT_VERSION,
+        "rendererCommit": renderer_commit,
+        "rendererContractVersion": renderer_contract_version,
+        "visualIntelligenceBridge": binding["visualIntelligenceBridge"],
+        "candidateBuilder": binding["candidateBuilder"],
+        "visualIntelligence": visual_result,
         "status": "PASS",
         "previewRendered": False,
         "finalRendered": False,
