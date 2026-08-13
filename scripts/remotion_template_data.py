@@ -343,6 +343,18 @@ def _normalize_terminal_scene(
     config["variant"] = "default"
 
 
+def _sync_visual_grammar_beat_count(render_spec: dict[str, Any]) -> None:
+    """Synchronize the derived Renderer beat count after terminal projection."""
+    contract = render_spec.get("visualGrammarContract")
+    if not isinstance(contract, dict):
+        raise TemplateDataError("visualGrammarContract must be an object")
+    contract["beatCount"] = sum(
+        len(scene.get("visualBeats", []))
+        for scene in render_spec.get("scenes", [])
+        if isinstance(scene, dict)
+    )
+
+
 def _normalize_impossible_major_shifts(render_spec: dict[str, Any]) -> None:
     previous: dict[str, Any] | None = None
     for scene in render_spec.get("scenes", []):
@@ -375,4 +387,5 @@ def materialize_template_data(
         if beats:
             scene["visualMode"] = beats[0]["visualMode"]
     _normalize_terminal_scene(render_spec, terminal_binding)
+    _sync_visual_grammar_beat_count(render_spec)
     _normalize_impossible_major_shifts(render_spec)
