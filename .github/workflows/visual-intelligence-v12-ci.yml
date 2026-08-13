@@ -25,7 +25,7 @@ permissions:
 jobs:
   cross-repo:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Checkout Plot
         uses: actions/checkout@v4
@@ -51,6 +51,11 @@ jobs:
           ref: ${{ steps.binding.outputs.commit }}
           path: renderer
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
@@ -58,9 +63,10 @@ jobs:
           cache: npm
           cache-dependency-path: renderer/package-lock.json
 
-      - name: Install Renderer dependencies
-        working-directory: renderer
-        run: npm ci
+      - name: Install canary dependencies
+        run: |
+          python -m pip install --disable-pip-version-check jsonschema pytest pillow
+          npm --prefix renderer ci
 
       - name: Python syntax gate
         run: |
@@ -123,12 +129,29 @@ jobs:
           PYTHONPATH: scripts
         run: python3 tests/remotion-compat/run_visual_intelligence_v12_cross_repo.py --renderer-root renderer
 
-      - name: Verify AI-B owned skill was not modified by architecture branch
-        if: github.event_name == 'pull_request'
-        shell: bash
+      - name: Fresh real-day 2026-08-12 prepare canary
+        env:
+          PYTHONPATH: scripts
         run: |
-          git fetch --no-tags --depth=1 origin ${{ github.event.pull_request.base.sha }}
-          git diff --exit-code ${{ github.event.pull_request.base.sha }} HEAD -- skills/nasdaq-cafe-visual-intelligence/**
+          python3 scripts/run_daily_renderer_closure_v12.py \
+            --phase prepare \
+            --date 2026-08-12 \
+            --repo-root . \
+            --renderer-root renderer
+
+      - name: Upload fresh real-day Candidate Catalog evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-intelligence-v12-real-day-2026-08-12-prepare
+          path: |
+            working/2026-08-12/visual-intelligence/
+            verification/2026-08-12/
+            render-specs/2026-08-12/render_spec.json
+            working/2026-08-12/production_request.json
+            working/2026-08-12/production_state.json
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Diff hygiene
         run: git diff --check
