@@ -20,22 +20,31 @@ def write_json(root: Path, relative: str, value: dict) -> Path:
     return path
 
 
-def fixture(root: Path) -> None:
-    write_json(
-        root,
-        f"working/{DATE}/production_request.json",
-        {
-            "renderer": {"commit": COMMIT, "contract_version": "2.4.0"},
-            "visual_director": {"required": True, "contract_version": "1.0.0"},
-        },
-    )
+def fixture(root: Path, *, visual_intelligence: bool = False) -> None:
+    request = {
+        "renderer": {"commit": COMMIT, "contract_version": "2.4.0"},
+        "visual_director": {"required": True, "contract_version": "1.0.0"},
+    }
+    if visual_intelligence:
+        request["visual_intelligence"] = {
+            "required": True,
+            "bridge_contract_version": "visual-intelligence-bridge/1.2.0",
+            "frozen_interface_sha256": "b" * 64,
+        }
+    write_json(root, f"working/{DATE}/production_request.json", request)
     for template in handoff.EXTRA_ROLES.values():
         write_json(root, template.format(date=DATE), {})
-    write_json(root, f"working/{DATE}/visual_candidate_catalog.json", {"catalog": True})
-    write_json(root, f"working/{DATE}/visual_direction_plan.json", {"plan": True})
+
+    roles = (
+        handoff.VISUAL_INTELLIGENCE_ROLES
+        if visual_intelligence
+        else handoff.VISUAL_DIRECTOR_ROLES
+    )
+    write_json(root, roles["visual_candidate_catalog"].format(date=DATE), {"catalog": True})
+    write_json(root, roles["visual_direction_plan"].format(date=DATE), {"plan": True})
     direction_path = write_json(
         root,
-        f"verification/{DATE}/visual_direction_compile_report.json",
+        roles["visual_direction_compile_report"].format(date=DATE),
         {"semanticDiff": "PASS"},
     )
     render_path = write_json(
@@ -62,9 +71,7 @@ def fixture(root: Path) -> None:
                 "report_sha256": handoff.sha256_file(renderer_report),
             },
             "artifacts": {
-                "visual_direction_compile_report": handoff.sha256_file(
-                    direction_path
-                )
+                "visual_direction_compile_report": handoff.sha256_file(direction_path)
             },
         },
     )
@@ -79,6 +86,23 @@ def test_visual_direction_evidence_enters_handoff(tmp_path: Path) -> None:
         renderer_contract_version="2.4.0",
     )
     assert set(handoff.VISUAL_DIRECTOR_ROLES).issubset(extras)
+
+
+def test_visual_intelligence_uses_v12_canonical_paths(tmp_path: Path) -> None:
+    fixture(tmp_path, visual_intelligence=True)
+    extras = handoff._validate_renderer_evidence(
+        source_root=tmp_path,
+        date=DATE,
+        renderer_commit=COMMIT,
+        renderer_contract_version="2.4.0",
+    )
+    assert set(handoff.VISUAL_INTELLIGENCE_ROLES).issubset(extras)
+    assert extras["visual_candidate_catalog"] == (
+        tmp_path / f"working/{DATE}/visual-intelligence/visual_candidate_catalog.json"
+    ).resolve()
+    assert extras["visual_direction_compile_report"] == (
+        tmp_path / f"working/{DATE}/visual-intelligence/visual_direction_compile_report.json"
+    ).resolve()
 
 
 def test_visual_direction_semantic_failure_blocks_handoff(tmp_path: Path) -> None:
