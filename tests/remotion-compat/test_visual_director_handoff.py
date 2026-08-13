@@ -6,7 +6,7 @@ from pathlib import Path
 import build_renderer_handoff_240 as handoff
 import pytest
 
-DATE = "2026-08-06"
+DATE = "2099-01-02"
 COMMIT = "a" * 40
 
 
@@ -31,11 +31,17 @@ def fixture(root: Path) -> None:
     )
     for template in handoff.EXTRA_ROLES.values():
         write_json(root, template.format(date=DATE), {})
-    write_json(root, f"working/{DATE}/visual_candidate_catalog.json", {"catalog": True})
-    write_json(root, f"working/{DATE}/visual_direction_plan.json", {"plan": True})
+    for template in handoff.VISUAL_INTELLIGENCE_ROLES.values():
+        write_json(root, template.format(date=DATE), {})
+
+    package_path = write_json(
+        root,
+        f"working/{DATE}/visual-intelligence/visual_intelligence_package.json",
+        {"bridgeContractVersion": "visual-intelligence-bridge/1.2.0"},
+    )
     direction_path = write_json(
         root,
-        f"verification/{DATE}/visual_direction_compile_report.json",
+        f"working/{DATE}/visual-intelligence/visual_direction_compile_report.json",
         {"semanticDiff": "PASS"},
     )
     render_path = write_json(
@@ -55,6 +61,16 @@ def fixture(root: Path) -> None:
     )
     write_json(
         root,
+        f"verification/{DATE}/visual_intelligence_validation.json",
+        {
+            "status": "PASS",
+            "episodeDate": DATE,
+            "rendererCommit": COMMIT,
+            "packageSha256": handoff.sha256_file(package_path),
+        },
+    )
+    write_json(
+        root,
         f"verification/{DATE}/official_execution_preflight.json",
         {
             "renderer_validation": {
@@ -62,15 +78,13 @@ def fixture(root: Path) -> None:
                 "report_sha256": handoff.sha256_file(renderer_report),
             },
             "artifacts": {
-                "visual_direction_compile_report": handoff.sha256_file(
-                    direction_path
-                )
+                "visual_direction_compile_report": handoff.sha256_file(direction_path)
             },
         },
     )
 
 
-def test_visual_direction_evidence_enters_handoff(tmp_path: Path) -> None:
+def test_visual_intelligence_evidence_enters_handoff(tmp_path: Path) -> None:
     fixture(tmp_path)
     extras = handoff._validate_renderer_evidence(
         source_root=tmp_path,
@@ -78,17 +92,40 @@ def test_visual_direction_evidence_enters_handoff(tmp_path: Path) -> None:
         renderer_commit=COMMIT,
         renderer_contract_version="2.4.0",
     )
-    assert set(handoff.VISUAL_DIRECTOR_ROLES).issubset(extras)
+    assert set(handoff.VISUAL_INTELLIGENCE_ROLES).issubset(extras)
+    assert extras["visual_intelligence_package"].is_file()
+    assert extras["visual_intelligence_validation"].is_file()
 
 
 def test_visual_direction_semantic_failure_blocks_handoff(tmp_path: Path) -> None:
     fixture(tmp_path)
     write_json(
         tmp_path,
-        f"verification/{DATE}/visual_direction_compile_report.json",
+        f"working/{DATE}/visual-intelligence/visual_direction_compile_report.json",
         {"semanticDiff": "FAIL"},
     )
     with pytest.raises(handoff.RendererHandoff240Error, match="Semantic Diff"):
+        handoff._validate_renderer_evidence(
+            source_root=tmp_path,
+            date=DATE,
+            renderer_commit=COMMIT,
+            renderer_contract_version="2.4.0",
+        )
+
+
+def test_visual_intelligence_package_sha_mismatch_blocks_handoff(tmp_path: Path) -> None:
+    fixture(tmp_path)
+    write_json(
+        tmp_path,
+        f"verification/{DATE}/visual_intelligence_validation.json",
+        {
+            "status": "PASS",
+            "episodeDate": DATE,
+            "rendererCommit": COMMIT,
+            "packageSha256": "b" * 64,
+        },
+    )
+    with pytest.raises(handoff.RendererHandoff240Error, match="package SHA mismatch"):
         handoff._validate_renderer_evidence(
             source_root=tmp_path,
             date=DATE,
