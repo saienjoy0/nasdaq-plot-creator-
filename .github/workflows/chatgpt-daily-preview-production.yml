@@ -91,6 +91,7 @@ jobs:
       - name: Run Visual Intelligence v1.2 production closure
         shell: bash
         run: |
+          mkdir -p "verification/$EPISODE_DATE"
           set -o pipefail
           python3 scripts/run_daily_renderer_closure_v12.py \
             --phase compile \
