@@ -1,6 +1,13 @@
 {
   "beatPatches": [
     {
+      "sceneNumber": 1,
+      "beatNumber": 1,
+      "set": {
+        "primaryElement": "NASDAQ安・金利低下・AI継続"
+      }
+    },
+    {
       "sceneNumber": 2,
       "beatNumber": 2,
       "set": {
@@ -52,6 +59,7 @@
         "visualTemplate": "causal-lane",
         "grammarId": "causal",
         "variant": "left-to-right",
+        "primaryElement": "ホルムズ→原油→CPI/Fed不安",
         "viewerTexts": [
           "ホルムズ不確実性",
           "原油高",
@@ -121,7 +129,7 @@
         "variant": "confirmed-vs-unconfirmed",
         "screenState": "Data",
         "screenQuestion": "どこまで確認できた？",
-        "primaryElement": "確認済み：NVDA / SOXX　未取得：QQQ",
+        "primaryElement": "NVDA/SOXX確認｜QQQ未取得",
         "viewerTexts": [
           "確認済み：NVDA / SOXX fresh 1分足",
           "未取得：QQQ fresh historical",
@@ -186,7 +194,8 @@
         "visualTemplate": "verification-checklist",
         "visualMode": "verification-points",
         "grammarId": "verification",
-        "variant": "default"
+        "variant": "default",
+        "primaryElement": "次回の確認ポイント"
       }
     },
     {
@@ -194,7 +203,8 @@
       "beatNumber": 1,
       "set": {
         "grammarId": "assembly",
-        "variant": "default"
+        "variant": "default",
+        "primaryElement": "マクロ逆風＋個別株弱さ"
       }
     },
     {
