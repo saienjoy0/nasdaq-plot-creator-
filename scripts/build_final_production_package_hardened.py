@@ -15,8 +15,10 @@ from typing import Any, Callable
 ROOT = Path(__file__).resolve().parents[1]
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
+
 class HardenedBuildError(ValueError):
     pass
+
 
 def _load_module(name: str, path: Path):
     spec = importlib.util.spec_from_file_location(name, path)
@@ -27,6 +29,7 @@ def _load_module(name: str, path: Path):
     spec.loader.exec_module(module)
     return module
 
+
 def _real_gate(repo_root: Path, package: Path, artifacts: list[Path]):
     module = _load_module(
         "episode_memory_hardening_gate",
@@ -36,11 +39,13 @@ def _real_gate(repo_root: Path, package: Path, artifacts: list[Path]):
         repo_root=repo_root, episode_package=package, public_artifacts=artifacts,
     )
 
+
 def _real_builder(package: Path, output_root: Path, schema: Path):
     module = _load_module(
         "final_production_base_builder", ROOT / "scripts/build_final_production_package.py"
     )
     return module.build(package, output_root, schema)
+
 
 def _real_renderer_finalizer(*, output_root: Path, date: str, renderer_root: Path):
     module = _load_module(
@@ -50,6 +55,10 @@ def _real_renderer_finalizer(*, output_root: Path, date: str, renderer_root: Pat
     intraday = _load_module(
         "renderer_intraday_series_attachment",
         ROOT / "scripts/remotion_intraday_series.py",
+    )
+    visual_intelligence_validator = _load_module(
+        "visual_intelligence_package_validator",
+        ROOT / "scripts/validate_visual_intelligence_package.py",
     )
     render_spec_path = output_root / "render-specs" / date / "render_spec.json"
     runtime_registry = module.base._build_validation_runtime_asset_registry(
@@ -89,19 +98,57 @@ def _real_renderer_finalizer(*, output_root: Path, date: str, renderer_root: Pat
         attachment_result.update(result)
 
     module.remotion_240_projection.canonicalize_render_spec = canonicalize_with_bound_intraday
+    validation_path = output_root / "verification" / date / "visual_intelligence_validation.json"
+    transaction_paths = module._transaction_paths(output_root, date) + [validation_path]
+    outer_snapshot = module._snapshot(transaction_paths)
     try:
         finalized = module.finalize(
             output_root=output_root, date=date, renderer_root=renderer_root
         )
+        visual_direction = finalized.get("visualDirection")
+        if isinstance(visual_direction, dict):
+            visual_validation = visual_intelligence_validator.validate_package(
+                repo_root=output_root,
+                date=date,
+                renderer_root=renderer_root,
+            )
+            module.base.write_atomic(validation_path, visual_validation)
+            package_path = (
+                output_root
+                / "working"
+                / date
+                / "visual-intelligence"
+                / "visual_intelligence_package.json"
+            )
+            preflight_path = output_root / "verification" / date / "official_execution_preflight.json"
+            preflight = module.base.load_json(preflight_path, "official execution preflight")
+            artifacts = preflight.setdefault("artifacts", {})
+            artifacts["visual_intelligence_package"] = module.base.sha256_file(package_path)
+            artifacts["visual_intelligence_validation"] = module.base.sha256_file(validation_path)
+            preflight["visual_intelligence_validation"] = {
+                "status": "pass",
+                "package_sha256": module.base.sha256_file(package_path),
+                "report_sha256": module.base.sha256_file(validation_path),
+            }
+            module.base.write_atomic(preflight_path, preflight)
+            finalized.setdefault("paths", {})["visual_intelligence_validation"] = str(validation_path)
+            finalized.setdefault("hashes", {})["visual_intelligence_package"] = module.base.sha256_file(package_path)
+            finalized["hashes"]["visual_intelligence_validation"] = module.base.sha256_file(validation_path)
+            finalized["hashes"]["preflight"] = module.base.sha256_file(preflight_path)
+            finalized["visualIntelligenceValidation"] = visual_validation
         if attachment_result:
             finalized["intradaySeriesAttachment"] = dict(attachment_result)
         return finalized
+    except Exception:
+        module._restore(outer_snapshot)
+        raise
     finally:
         module.remotion_240_projection.canonicalize_render_spec = original_canonicalize
         if previous_registry is None:
             os.environ.pop("NASDAQ_CAFE_RUNTIME_ASSET_REGISTRY", None)
         else:
             os.environ["NASDAQ_CAFE_RUNTIME_ASSET_REGISTRY"] = previous_registry
+
 
 def _errors(result: Any) -> list[str]:
     value = getattr(result, "errors", None)
@@ -112,12 +159,14 @@ def _errors(result: Any) -> list[str]:
         return list(errors) if isinstance(errors, list) else [str(errors)]
     return []
 
+
 def _safe_output_root(repo_root: Path, output_root: Path) -> Path:
     root = repo_root.resolve()
     output = output_root.resolve()
     if output != root and root not in output.parents:
         raise HardenedBuildError(f"output root escapes repository root: {output_root}")
     return output
+
 
 def _cleanup_generated(result: dict[str, Any]) -> None:
     paths = result.get("paths", {})
@@ -132,6 +181,7 @@ def _cleanup_generated(result: dict[str, Any]) -> None:
                 path.unlink()
         except OSError:
             pass
+
 
 def _persist_preflight_hardening(preflight_path: Path) -> None:
     try:
@@ -152,6 +202,7 @@ def _persist_preflight_hardening(preflight_path: Path) -> None:
     tmp.write_text(text, encoding="utf-8")
     tmp.replace(preflight_path)
 
+
 def _production_date(paths: dict[str, Any]) -> str:
     value = paths.get("render_spec")
     if not isinstance(value, str):
@@ -160,6 +211,7 @@ def _production_date(paths: dict[str, Any]) -> str:
     if not DATE_RE.fullmatch(date):
         raise HardenedBuildError(f"cannot derive episode date from {value}")
     return date
+
 
 def _merge_finalizer_result(result: dict[str, Any], finalized: dict[str, Any]) -> None:
     if not isinstance(finalized, dict) or finalized.get("status") != "pass":
@@ -180,6 +232,10 @@ def _merge_finalizer_result(result: dict[str, Any], finalized: dict[str, Any]) -
     visual_direction = finalized.get("visualDirection")
     if isinstance(visual_direction, dict):
         result["visual_direction"] = visual_direction
+    visual_intelligence_validation = finalized.get("visualIntelligenceValidation")
+    if isinstance(visual_intelligence_validation, dict):
+        result["visual_intelligence_validation"] = visual_intelligence_validation
+
 
 def build_hardened(
     package: Path,
@@ -264,6 +320,7 @@ def build_hardened(
     }
     return result
 
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--episode-package", required=True, type=Path)
@@ -290,6 +347,7 @@ def main(argv: list[str] | None = None) -> int:
     else:
         sys.stdout.write(text)
     return code
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
