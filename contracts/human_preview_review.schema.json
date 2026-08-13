@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nasdaq-cafe.local/contracts/human_preview_review.schema.json",
+  "title": "Human Preview Review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contractVersion", "episodeDate", "previewSha256", "status", "reviewedAt"],
+  "properties": {
+    "contractVersion": {"const": "1.0.0"},
+    "episodeDate": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+    "previewSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "status": {"const": "approved"},
+    "reviewedAt": {"type": "string", "minLength": 1}
+  }
+}
