@@ -72,7 +72,6 @@ def scene(scene_number: int, mode: str, beat_modes: list[str]) -> dict:
     return {
         "sceneId": scene_id,
         "sceneNumber": scene_number,
-        # Deliberately producer-generic for every Scene; strict projection must fix 1/9.
         "sceneRole": "editorial-body",
         "formalName": f"synthetic-{scene_number}",
         "purpose": "projection test",
@@ -173,6 +172,8 @@ def main() -> int:
                 raise AssertionError(
                     f"mode alias drifted: {source_beat['visualMode']} -> {projected_beat['visualMode']}"
                 )
+            if projected_beat["beatId"] != source_beat["beatId"]:
+                raise AssertionError("authoring Beat ID drifted")
             if projected_beat["viewerTexts"] != source_beat["viewerTexts"]:
                 raise AssertionError("viewer text changed")
             if projected_beat["screenQuestion"] != source_beat["screenQuestion"]:
@@ -186,6 +187,28 @@ def main() -> int:
         for source_scene, projected_scene in zip(render["scenes"], strict["scenes"], strict=True):
             if projected_scene["narrationChunks"] != source_scene["narrationChunks"]:
                 raise AssertionError("narration changed")
+
+        # Simulate the real-day intermediate renaming every Beat to canonical vb-*.
+        intermediate = copy.deepcopy(render)
+        for scene_index, item in enumerate(intermediate["scenes"], start=1):
+            for beat_index, item_beat in enumerate(item["visualBeats"], start=1):
+                item_beat["beatId"] = f"vb-{scene_index:02d}-{beat_index:02d}"
+        intermediate_path = root / "working" / date / "render_spec_intermediate.json"
+        write(intermediate_path, intermediate)
+        restored = projection.project_visual_intelligence_renderer_input(
+            render,
+            repo_root=root,
+            date=date,
+        )
+        restored_ids = [
+            item_beat["beatId"]
+            for item in restored["scenes"]
+            for item_beat in item["visualBeats"]
+        ]
+        producer_ids = [item["beatId"] for item in producer_beats]
+        if restored_ids != producer_ids:
+            raise AssertionError(f"canonical intermediate Beat IDs leaked: {restored_ids}")
+        intermediate_path.unlink()
 
         unknown = copy.deepcopy(render)
         unknown["scenes"][0]["visualMode"] = "future-unreviewed-mode"
