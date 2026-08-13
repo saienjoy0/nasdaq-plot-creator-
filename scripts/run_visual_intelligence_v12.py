@@ -15,6 +15,7 @@ from pathlib import Path
 import renderer_binding
 import validate_visual_intelligence_package
 import visual_intelligence_bridge
+import visual_intelligence_renderer_projection
 
 
 def load_json(path: Path) -> dict:
@@ -37,8 +38,16 @@ def main() -> int:
     report_path.parent.mkdir(parents=True, exist_ok=True)
     try:
         binding = renderer_binding.verify_renderer_checkout(root, renderer_root)
+        producer_render = load_json(args.render_spec)
+        candidate_render = (
+            visual_intelligence_renderer_projection.project_visual_intelligence_renderer_input(
+                producer_render,
+                repo_root=root,
+                date=args.date,
+            )
+        )
         result = visual_intelligence_bridge.prepare_and_compile(
-            render=load_json(args.render_spec),
+            render=candidate_render,
             output_root=root,
             date=args.date,
             renderer_root=renderer_root,
@@ -75,6 +84,7 @@ def main() -> int:
         json.JSONDecodeError,
         renderer_binding.RendererBindingError,
         validate_visual_intelligence_package.VisualIntelligencePackageError,
+        visual_intelligence_renderer_projection.VisualIntelligenceRendererProjectionError,
     ) as exc:
         report = {
             "status": "FAIL",
