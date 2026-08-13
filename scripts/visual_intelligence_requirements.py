@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -21,6 +22,10 @@ def load_json(path: Path) -> dict[str, Any]:
     return value
 
 
+def sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 def beat_ids(render: dict[str, Any]) -> list[str]:
     return [
         beat["beatId"]
@@ -29,13 +34,21 @@ def beat_ids(render: dict[str, Any]) -> list[str]:
     ]
 
 
-def validate(requirements: dict[str, Any], render: dict[str, Any], date: str) -> dict[str, Any]:
+def validate(
+    requirements: dict[str, Any],
+    render: dict[str, Any],
+    date: str,
+    *,
+    editorial_snapshot_sha256: str,
+) -> dict[str, Any]:
     if requirements.get("contractVersion") != "1.0.0":
         raise VisualRequirementsError("Visual Requirements contractVersion must be 1.0.0")
     if requirements.get("bridgeContractVersion") != renderer_binding.BRIDGE_CONTRACT_VERSION:
         raise VisualRequirementsError("Visual Requirements bridgeContractVersion mismatch")
     if requirements.get("episodeDate") != date:
         raise VisualRequirementsError("Visual Requirements episodeDate mismatch")
+    if requirements.get("editorialSnapshotSha256") != editorial_snapshot_sha256:
+        raise VisualRequirementsError("Visual Requirements editorialSnapshotSha256 mismatch")
     ids = beat_ids(render)
     intent = requirements.get("intent")
     provisional = requirements.get("provisionalDirection")
@@ -60,18 +73,29 @@ def validate(requirements: dict[str, Any], render: dict[str, Any], date: str) ->
             raise VisualRequirementsError(f"{item.get('visualBeatId')}: invalid imageRequirement")
         if not isinstance(item.get("requiredModes"), list) or not isinstance(item.get("reason"), str):
             raise VisualRequirementsError(f"{item.get('visualBeatId')}: invalid Provisional Direction")
-    return {"status": "PASS", "episodeDate": date, "beatCount": len(ids)}
+    return {
+        "status": "PASS",
+        "episodeDate": date,
+        "beatCount": len(ids),
+        "editorialSnapshotSha256": editorial_snapshot_sha256,
+    }
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--requirements", required=True, type=Path)
     parser.add_argument("--render-spec", required=True, type=Path)
+    parser.add_argument("--editorial-snapshot", required=True, type=Path)
     parser.add_argument("--date", required=True)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
     try:
-        result = validate(load_json(args.requirements), load_json(args.render_spec), args.date)
+        result = validate(
+            load_json(args.requirements),
+            load_json(args.render_spec),
+            args.date,
+            editorial_snapshot_sha256=sha256_file(args.editorial_snapshot),
+        )
         code = 0
     except (OSError, json.JSONDecodeError, VisualRequirementsError) as exc:
         result = {"status": "FAIL", "episodeDate": args.date, "errors": [str(exc)]}
