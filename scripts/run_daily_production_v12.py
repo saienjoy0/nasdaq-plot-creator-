@@ -2,8 +2,8 @@
 """Contract-versioned Daily Production path for Visual Intelligence v1.2.
 
 Legacy production remains on run_daily_production_hardened.py. Only requests
-explicitly bound to visual-intelligence-bridge/1.2.0 use the new forward-only
-state order. This keeps historical production artifacts and requests untouched.
+explicitly bound to visual-intelligence-bridge/1.2.0 use this forward-only state
+order. Existing Story/04/Renderer hard gates are preserved rather than bypassed.
 """
 from __future__ import annotations
 
@@ -12,9 +12,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import build_final_production_package_v12 as final_v12
 import renderer_binding
 import run_daily_production_hardened as hardened
 
+ROOT = Path(__file__).resolve().parents[1]
 VI_STATES = [
     "intake_ready",
     "research_inputs_bound",
@@ -53,14 +55,15 @@ def _is_vi_request(request: dict[str, Any]) -> bool:
 
 def _validate_vi_binding(module: Any, request: dict[str, Any]) -> None:
     binding = request.get("visual_intelligence")
-    if not isinstance(binding, dict):
-        raise module.DailyProductionError(module.ERROR_CODES["renderer"], "Visual Intelligence binding missing")
-    if binding != {
+    expected = {
         "required": True,
         "bridge_contract_version": renderer_binding.BRIDGE_CONTRACT_VERSION,
         "frozen_interface_sha256": renderer_binding.FROZEN_INTERFACE_SHA256,
-    }:
-        raise module.DailyProductionError(module.ERROR_CODES["renderer"], "Visual Intelligence binding mismatch")
+    }
+    if binding != expected:
+        raise module.DailyProductionError(
+            module.ERROR_CODES["renderer"], "Visual Intelligence binding mismatch"
+        )
 
 
 def _rebind_request_sha(module: Any, workspace: Path, date: str) -> None:
@@ -90,11 +93,19 @@ def init_request(
     visual_intelligence_bridge_version: str,
 ) -> dict[str, Any]:
     if visual_intelligence_bridge_version != renderer_binding.BRIDGE_CONTRACT_VERSION:
-        raise module.DailyProductionError(module.ERROR_CODES["renderer"], "unsupported Visual Intelligence bridge version")
+        raise module.DailyProductionError(
+            module.ERROR_CODES["renderer"], "unsupported Visual Intelligence bridge version"
+        )
     canonical = renderer_binding.load_binding(workspace)
     renderer = canonical["renderer"]
-    if renderer_commit != renderer["commit"] or renderer_contract_version != renderer["contractVersion"]:
-        raise module.DailyProductionError(module.ERROR_CODES["renderer"], "request Renderer does not match canonical binding")
+    if (
+        renderer_commit != renderer["commit"]
+        or renderer_contract_version != renderer["contractVersion"]
+    ):
+        raise module.DailyProductionError(
+            module.ERROR_CODES["renderer"],
+            "request Renderer does not match canonical binding",
+        )
     result = module.init_request(
         workspace=workspace,
         date=date,
@@ -124,8 +135,201 @@ def status(*, module: Any, workspace: Path, date: str) -> dict[str, Any]:
         return base
     _validate_vi_binding(module, request)
     current = base.get("current_state")
-    next_state = VI_STATES[VI_STATES.index(current) + 1] if current in VI_STATES and current != VI_STATES[-1] else None
-    return {**base, "next_state": next_state, "visual_intelligence_bridge": renderer_binding.BRIDGE_CONTRACT_VERSION}
+    next_state = (
+        VI_STATES[VI_STATES.index(current) + 1]
+        if current in VI_STATES and current != VI_STATES[-1]
+        else None
+    )
+    return {
+        **base,
+        "next_state": next_state,
+        "visual_intelligence_bridge": renderer_binding.BRIDGE_CONTRACT_VERSION,
+    }
+
+
+def _evidence_by_name(paths: list[Path]) -> dict[str, list[Path]]:
+    grouped: dict[str, list[Path]] = {}
+    for path in paths:
+        grouped.setdefault(path.name, []).append(path)
+    return grouped
+
+
+def _require_one(
+    *,
+    module: Any,
+    grouped: dict[str, list[Path]],
+    name: str,
+    code: str,
+    message: str,
+) -> Path:
+    matches = grouped.get(name, [])
+    if len(matches) != 1:
+        raise module.DailyProductionError(code, message)
+    return matches[0]
+
+
+def _validate_story_final_gate(
+    *, module: Any, workspace: Path, date: str, evidence_paths: list[Path]
+) -> None:
+    acceptance_paths = [p for p in evidence_paths if p.name == "story_engine_acceptance.json"]
+    package_paths = [
+        p
+        for p in evidence_paths
+        if p.name.startswith("episode_package_") and p.suffix == ".md"
+    ]
+    projection_paths = [p for p in evidence_paths if p.name == "story_projection_report.json"]
+    visual_gate_paths = [p for p in evidence_paths if p.name == "pre_tts_visual_gate.json"]
+    if len(acceptance_paths) != 1:
+        raise module.DailyProductionError(
+            module.ERROR_CODES["stale"],
+            "episode_package_final requires exactly one Story Engine v1.1 acceptance",
+        )
+    if len(package_paths) != 1:
+        raise module.DailyProductionError(
+            module.ERROR_CODES["episode"],
+            "episode_package_final requires exactly one final episode package",
+        )
+    if len(projection_paths) != 1:
+        raise module.DailyProductionError(
+            module.ERROR_CODES["package"],
+            "episode_package_final requires exactly one story_projection_report.json",
+        )
+    if len(visual_gate_paths) != 1:
+        raise module.DailyProductionError(
+            module.ERROR_CODES["render"],
+            "episode_package_final requires exactly one pre_tts_visual_gate.json",
+        )
+    acceptance_validator = hardened._load_module(
+        "story_engine_acceptance_v12_gate",
+        ROOT / "scripts/story-engine/validate_story_engine_acceptance_v1_1.py",
+    )
+    result = acceptance_validator.validate_acceptance(
+        acceptance_paths[0],
+        repo_root=workspace,
+        require_production=True,
+        allow_uncertified_production=True,
+    )
+    if result["status"] != "pass":
+        messages = "; ".join(
+            item.get("message", "Story Engine acceptance failed")
+            for item in result.get("errors", [])
+        )
+        raise module.DailyProductionError(
+            module.ERROR_CODES["inquisition"],
+            f"Story Engine v1.1 production gate failed: {messages}",
+        )
+    projection = module.load_json(projection_paths[0], "Story Engine projection report")
+    if projection.get("episode_date") != date or projection.get("status") != "pass":
+        raise module.DailyProductionError(
+            module.ERROR_CODES["package"],
+            "Story Engine projection report must be PASS for the same episode date",
+        )
+    visual_gate = module.load_json(visual_gate_paths[0], "Pre-TTS Visual Gate report")
+    if (
+        visual_gate.get("episodeDate") != date
+        or visual_gate.get("status") != "PASS"
+        or visual_gate.get("violations") != []
+    ):
+        raise module.DailyProductionError(
+            module.ERROR_CODES["render"],
+            "Pre-TTS Visual Gate must be PASS with zero violations for the same episode date",
+        )
+
+
+def _validate_vi_transition(
+    *,
+    module: Any,
+    workspace: Path,
+    date: str,
+    new_state: str,
+    evidence_paths: list[Path],
+) -> None:
+    grouped = _evidence_by_name(evidence_paths)
+    vi_dir = workspace / "working" / date / "visual-intelligence"
+    if new_state == "editorial_snapshot_valid":
+        snapshot = _require_one(
+            module=module,
+            grouped=grouped,
+            name="editorial_snapshot.json",
+            code=module.ERROR_CODES["stale"],
+            message="editorial_snapshot_valid requires exactly one editorial_snapshot.json",
+        )
+        value = module.load_json(snapshot, "editorial snapshot")
+        if value.get("episodeDate") != date:
+            raise module.DailyProductionError(
+                module.ERROR_CODES["date"], "editorial snapshot episodeDate mismatch"
+            )
+    elif new_state == "visual_requirements_planned":
+        requirements = _require_one(
+            module=module,
+            grouped=grouped,
+            name="visual_requirements.json",
+            code=module.ERROR_CODES["render"],
+            message="visual_requirements_planned requires visual_requirements.json",
+        )
+        report = _require_one(
+            module=module,
+            grouped=grouped,
+            name="visual_requirements_validation.json",
+            code=module.ERROR_CODES["render"],
+            message="visual_requirements_planned requires visual_requirements_validation.json",
+        )
+        validation = module.load_json(report, "Visual Requirements validation")
+        snapshot = vi_dir / "editorial_snapshot.json"
+        if validation.get("status") != "PASS" or validation.get("episodeDate") != date:
+            raise module.DailyProductionError(
+                module.ERROR_CODES["render"], "Visual Requirements validation must PASS"
+            )
+        if validation.get("editorialSnapshotSha256") != module.sha256_file(snapshot):
+            raise module.DailyProductionError(
+                module.ERROR_CODES["stale"], "Visual Requirements validation uses stale editorial snapshot"
+            )
+        requirement_doc = module.load_json(requirements, "Visual Requirements")
+        if requirement_doc.get("editorialSnapshotSha256") != module.sha256_file(snapshot):
+            raise module.DailyProductionError(
+                module.ERROR_CODES["stale"], "Visual Requirements are stale after Story change"
+            )
+    elif new_state == "visual_intelligence_valid":
+        package = _require_one(
+            module=module,
+            grouped=grouped,
+            name="visual_intelligence_package.json",
+            code=module.ERROR_CODES["render"],
+            message="visual_intelligence_valid requires visual_intelligence_package.json",
+        )
+        report = _require_one(
+            module=module,
+            grouped=grouped,
+            name="visual_intelligence_validation.json",
+            code=module.ERROR_CODES["render"],
+            message="visual_intelligence_valid requires visual_intelligence_validation.json",
+        )
+        validation = module.load_json(report, "Visual Intelligence validation")
+        if (
+            validation.get("status") != "PASS"
+            or validation.get("episodeDate") != date
+            or validation.get("packageSha256") != module.sha256_file(package)
+        ):
+            raise module.DailyProductionError(
+                module.ERROR_CODES["render"], "Visual Intelligence validation/package lineage mismatch"
+            )
+        package_value = module.load_json(package, "Visual Intelligence package")
+        snapshot = vi_dir / "editorial_snapshot.json"
+        if package_value.get("final", {}).get("status") != "PASS":
+            raise module.DailyProductionError(
+                module.ERROR_CODES["render"], "Visual Intelligence final status must be PASS"
+            )
+        if package_value.get("inputs", {}).get("editorialSnapshotSha256") != module.sha256_file(snapshot):
+            raise module.DailyProductionError(
+                module.ERROR_CODES["stale"], "Visual Intelligence PASS is stale after Story change"
+            )
+    elif new_state == "episode_package_final":
+        _validate_story_final_gate(
+            module=module,
+            workspace=workspace,
+            date=date,
+            evidence_paths=evidence_paths,
+        )
 
 
 def add_transition(
@@ -147,9 +351,14 @@ def add_transition(
         )
     current_status = status(module=module, workspace=workspace, date=date)
     if current_status["validation"]["status"] != "pass":
-        raise module.DailyProductionError(module.ERROR_CODES["stale"], "; ".join(current_status["validation"]["errors"]))
+        raise module.DailyProductionError(
+            module.ERROR_CODES["stale"],
+            "; ".join(current_status["validation"]["errors"]),
+        )
     if new_state not in VI_STATES:
-        raise module.DailyProductionError(module.ERROR_CODES["stale"], f"unknown Visual Intelligence state: {new_state}")
+        raise module.DailyProductionError(
+            module.ERROR_CODES["stale"], f"unknown Visual Intelligence state: {new_state}"
+        )
     st_path = module.state_path(workspace, date)
     state = module.load_json(st_path, "production state")
     current = state["current_state"]
@@ -158,40 +367,64 @@ def add_transition(
     if new_index <= current_index:
         if new_state == current:
             return {"status": "noop", "current_state": current}
-        raise module.DailyProductionError(module.ERROR_CODES["stale"], f"state regression is forbidden: {current} -> {new_state}")
+        raise module.DailyProductionError(
+            module.ERROR_CODES["stale"], f"state regression is forbidden: {current} -> {new_state}"
+        )
     if new_index != current_index + 1:
         raise module.DailyProductionError(
             module.ERROR_CODES["stale"],
             f"state must advance exactly one step: expected {VI_STATES[current_index + 1]}",
         )
-    evidence = []
-    for path in evidence_paths:
-        resolved = module.safe_path(workspace, path, f"{new_state} evidence")
-        evidence.append({
-            "path": resolved.relative_to(workspace.resolve()).as_posix(),
-            "sha256": module.sha256_file(resolved),
-        })
-    if not evidence:
-        raise module.DailyProductionError(module.ERROR_CODES["stale"], f"{new_state} requires evidence")
+    resolved_paths = [
+        module.safe_path(workspace, path, f"{new_state} evidence")
+        for path in evidence_paths
+    ]
+    if not resolved_paths:
+        raise module.DailyProductionError(
+            module.ERROR_CODES["stale"], f"{new_state} requires evidence"
+        )
+    _validate_vi_transition(
+        module=module,
+        workspace=workspace,
+        date=date,
+        new_state=new_state,
+        evidence_paths=resolved_paths,
+    )
+    evidence = [
+        {
+            "path": path.relative_to(workspace.resolve()).as_posix(),
+            "sha256": module.sha256_file(path),
+        }
+        for path in resolved_paths
+    ]
     state["current_state"] = new_state
     state["transitions"].append({"state": new_state, "evidence": evidence})
     module.write_atomic(st_path, state)
     return {"status": "advanced", "current_state": new_state, "state_path": str(st_path)}
 
 
-def build_production(*, module: Any, workspace: Path, date: str, episode_package: Path) -> dict[str, Any]:
+def build_production(
+    *, module: Any, workspace: Path, date: str, episode_package: Path
+) -> dict[str, Any]:
     request = _request(module, workspace, date)
     if not _is_vi_request(request):
-        return module.build_production(workspace=workspace, date=date, episode_package=episode_package)
+        return module.build_production(
+            workspace=workspace, date=date, episode_package=episode_package
+        )
     current = status(module=module, workspace=workspace, date=date)
     if current["current_state"] != "memory_usage_valid":
-        raise module.DailyProductionError(module.ERROR_CODES["package"], "Visual Intelligence build-production requires memory_usage_valid")
+        raise module.DailyProductionError(
+            module.ERROR_CODES["package"],
+            "Visual Intelligence build-production requires memory_usage_valid",
+        )
     package = module.safe_path(workspace, episode_package, "episode package")
     try:
-        built = module.final_builder.build(
+        built = final_v12.build_hardened_v12(
             package,
             workspace,
-            workspace / "skills/nasdaq-cafe-final-production/contracts/final_production_source_annex.schema.json",
+            workspace
+            / "skills/nasdaq-cafe-final-production/contracts/final_production_source_annex.schema.json",
+            repo_root=workspace,
         )
     except Exception as exc:
         raise module.DailyProductionError(module.ERROR_CODES["package"], str(exc)) from exc
@@ -210,6 +443,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", type=Path, default=Path.cwd())
     sub = parser.add_subparsers(dest="command", required=True)
+
     p_init = sub.add_parser("init")
     p_init.add_argument("--episode-date", required=True)
     p_init.add_argument("--daily-source-package", required=True, type=Path)
@@ -217,15 +451,38 @@ def main(argv: list[str] | None = None) -> int:
     p_init.add_argument("--renderer-commit", required=True)
     p_init.add_argument("--renderer-contract-version", required=True)
     p_init.add_argument("--visual-intelligence-bridge-version", required=True)
+
     p_status = sub.add_parser("status")
     p_status.add_argument("--episode-date", required=True)
+
     p_advance = sub.add_parser("advance")
     p_advance.add_argument("--episode-date", required=True)
     p_advance.add_argument("--state", required=True, choices=VI_STATES)
     p_advance.add_argument("--evidence", required=True, type=Path, nargs="+")
+
     p_build = sub.add_parser("build-production")
     p_build.add_argument("--episode-date", required=True)
     p_build.add_argument("--episode-package", required=True, type=Path)
+
+    p_handoff = sub.add_parser("build-handoff")
+    p_handoff.add_argument("--episode-date", required=True)
+    p_handoff.add_argument("--bundle-root", required=True, type=Path)
+    p_handoff.add_argument("--plot-commit", required=True)
+
+    p_preview = sub.add_parser("record-preview")
+    p_preview.add_argument("--episode-date", required=True)
+    p_preview.add_argument("--daily-source-root", required=True, type=Path)
+    p_preview.add_argument("--bundle-root", required=True, type=Path)
+    p_preview.add_argument("--handoff-manifest", required=True, type=Path)
+    p_preview.add_argument("--renderer-artifact-root", required=True, type=Path)
+    p_preview.add_argument("--technical-report", required=True, type=Path)
+    p_preview.add_argument("--user-review", type=Path)
+
+    p_final = sub.add_parser("request-final")
+    p_final.add_argument("--episode-date", required=True)
+    p_final.add_argument("--approval-record", required=True, type=Path)
+    p_final.add_argument("--explicit-final", action="store_true")
+
     args = parser.parse_args(argv)
     workspace = args.workspace.resolve()
     try:
@@ -257,8 +514,35 @@ def main(argv: list[str] | None = None) -> int:
                 date=args.episode_date,
                 episode_package=args.episode_package,
             )
+        elif args.command == "build-handoff":
+            result = module.build_handoff(
+                workspace=workspace,
+                date=args.episode_date,
+                bundle_root=args.bundle_root,
+                plot_commit=args.plot_commit,
+            )
+        elif args.command == "record-preview":
+            result = module.record_preview(
+                workspace=workspace,
+                date=args.episode_date,
+                daily_source_root=args.daily_source_root,
+                bundle_root=args.bundle_root,
+                handoff_manifest=args.handoff_manifest,
+                renderer_artifact_root=args.renderer_artifact_root,
+                technical_report=args.technical_report,
+                user_review=args.user_review,
+            )
+        elif args.command == "request-final":
+            result = module.request_final(
+                workspace=workspace,
+                date=args.episode_date,
+                approval_record=args.approval_record,
+                explicit_final=args.explicit_final,
+            )
         else:
-            raise module.DailyProductionError(module.ERROR_CODES["stale"], "unsupported Visual Intelligence command")
+            raise module.DailyProductionError(
+                module.ERROR_CODES["stale"], "unsupported Visual Intelligence command"
+            )
         code = 0
     except module.DailyProductionError as exc:
         result = {"status": "fail", "error_code": exc.code, "errors": [exc.message]}
