@@ -40,6 +40,14 @@ def load(path: Path) -> dict:
     return value
 
 
+def write_canonical(path: Path, value: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
 def bind_legacy_materializer(root: Path, date: str) -> None:
     authoring = load(root / "daily-authoring" / f"{date}.json")
     dossier = root / "research" / date / "causal_research_dossier.template.json"
@@ -260,10 +268,15 @@ def main() -> int:
             date=date,
             renderer_root=renderer_root,
         )
-        (verification / "visual_intelligence_validation.json").write_text(
-            json.dumps(visual_result, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
-        )
+        validation_path = verification / "visual_intelligence_validation.json"
+        if validation_path.is_file():
+            existing_validation = load(validation_path)
+            if existing_validation != visual_result:
+                raise ClosureError(
+                    "transactional Visual Intelligence validation differs from closure re-validation"
+                )
+        else:
+            write_canonical(validation_path, visual_result)
         run(
             root,
             "python",
@@ -290,10 +303,8 @@ def main() -> int:
             "status": "FAIL",
             "error": str(exc),
         }
-        (verification / "renderer_closure_gate.json").write_text(
-            json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-        )
-        print(json.dumps(report, ensure_ascii=False, indent=2), flush=True)
+        write_canonical(verification / "renderer_closure_gate.json", report)
+        print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True), flush=True)
         return 2
 
     report = {
@@ -308,10 +319,8 @@ def main() -> int:
         "previewRendered": False,
         "finalRendered": False,
     }
-    (verification / "renderer_closure_gate.json").write_text(
-        json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
-    print(json.dumps(report, ensure_ascii=False, indent=2), flush=True)
+    write_canonical(verification / "renderer_closure_gate.json", report)
+    print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True), flush=True)
     return 0
 
 
