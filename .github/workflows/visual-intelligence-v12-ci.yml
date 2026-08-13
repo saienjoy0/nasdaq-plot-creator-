@@ -81,7 +81,8 @@ jobs:
             tests/remotion-compat/test_visual_intelligence_v12_state.py \
             tests/remotion-compat/test_visual_intelligence_asset_fallback.py \
             tests/remotion-compat/test_visual_intelligence_asset_plan.py \
-            tests/remotion-compat/test_visual_intelligence_requirements.py
+            tests/remotion-compat/test_visual_intelligence_requirements.py \
+            tests/remotion-compat/test_visual_intelligence_preflight_binding.py
 
       - name: Run v1.2 requirements acceptance
         env:
@@ -102,6 +103,11 @@ jobs:
         env:
           PYTHONPATH: scripts
         run: python3 tests/remotion-compat/test_visual_intelligence_v12_state.py
+
+      - name: Run official preflight Visual Intelligence binding acceptance
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/remotion-compat/test_visual_intelligence_preflight_binding.py
 
       - name: Verify Renderer binding and Registry snapshot
         run: |

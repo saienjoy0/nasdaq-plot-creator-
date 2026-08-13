@@ -1,7 +1,7 @@
 ---
 name: nasdaq-cafe-daily-production
-version: 1.2.0
-description: Manage the deterministic daily production lifecycle after the user supplies a Nasdaq Cafe daily source package, including explicit Visual Evidence Planning before episode finalization.
+version: 1.3.0
+description: Manage the deterministic daily production lifecycle after the user supplies a Nasdaq Cafe daily source package, including Visual Intelligence v1.2 and explicit Visual Evidence Planning before preview.
 ---
 
 # Daily Production Operational Entry Point
@@ -10,25 +10,76 @@ description: Manage the deterministic daily production lifecycle after the user 
 
 Provide one safe command-line entry point for the mechanical parts of daily 朝のNASDAQカフェ production.
 
-The user supplies `daily_source_package_YYYY-MM-DD.md`. ChatGPT performs the research, editorial decision, fox narration, 9-Scene production, 04 inquisition, **Visual Evidence Planning**, and Primary/Fallback decision. This CLI records and validates the resulting artifacts, builds the production package and preview handoff, and records the preview result.
+The user supplies `daily_source_package_YYYY-MM-DD.md`. ChatGPT performs the research, editorial decision, fox narration, 9-Scene production, 04 inquisition, Visual Intelligence editorial judgment, **Visual Evidence Planning**, and Primary/Fallback decision. The CLI records and validates the resulting artifacts, builds the production package and preview handoff, and records the preview result.
 
-## Production entrypoint
+## Production entrypoints
 
-Use the hardening wrapper:
+Legacy production continues to use the hardening wrapper:
 
 ```bash
 python scripts/run_daily_production_hardened.py --workspace . <command> ...
 ```
 
-Do not use `scripts/run_daily_production.py` directly for production. The base script remains the deterministic state-machine implementation and unit-test target.
-
-The wrapper preserves the same state transitions and replaces only these dependencies:
+A new production request explicitly bound to:
 
 ```text
-build-production → hardened Final Production
-build-handoff    → hardened Renderer Handoff
-record-preview   → hardened Real-Day Acceptance
+visual-intelligence-bridge/1.2.0
 ```
+
+uses the contract-versioned wrapper instead:
+
+```bash
+python scripts/run_daily_production_v12.py --workspace . <command> ...
+```
+
+The Renderer SHA and Registry Snapshot SHA for the v1.2 path come only from:
+
+```text
+contracts/renderer_binding.json
+```
+
+Do not copy those values into another v1.2 script or workflow. Do not silently migrate a legacy request to v1.2.
+
+For the fresh real-day canary, use the two-stage closure:
+
+```bash
+python scripts/run_daily_renderer_closure_v12.py --phase prepare ...
+# ChatGPT/AI-B authors the exact decision from the resulting legal Candidate Catalog.
+python scripts/run_daily_renderer_closure_v12.py --phase compile ...
+```
+
+`prepare` must stop at `DECISION_REQUIRED` after Candidate generation. GitHub Actions does not select a Candidate. `compile` is legal only after ChatGPT has authored the Visual Director/Critic decision. Neither phase renders Preview or Final automatically.
+
+Do not use `scripts/run_daily_production.py` directly for production. The base script remains the deterministic legacy state-machine implementation and unit-test target.
+
+## Visual Intelligence responsibility boundary
+
+Before authoring `visual_requirements.json` or `visual_intelligence_decision.json`, read:
+
+```text
+skills/nasdaq-cafe-visual-intelligence/SKILL.md
+skills/nasdaq-cafe-visual-intelligence/references/VISUAL_EDITORIAL_INTELLIGENCE.md
+```
+
+The frozen division is:
+
+```text
+Machine = accident prevention, eligibility, references, SHA lineage, reproducibility
+LLM     = Visual Intent, Candidate selection, information gain, Critic judgment
+Human   = actual Preview quality and explicit approval
+```
+
+Machine code must not rank legal Candidates by novelty, variety, or interest. `Visual change is not editorial progress.` `Novelty is not editorial value.`
+
+The v1.2 machine artifacts live under:
+
+```text
+working/YYYY-MM-DD/visual-intelligence/
+```
+
+and include the current editorial snapshot, Financial Candidate Provider, VisualCandidateInput, Capability Inventory, Candidate Catalog, compile report, warning shadow report, review result, and final `visual_intelligence_package.json`.
+
+The final package must be bound to the same editorial snapshot, exact Renderer commit, exact Registry Snapshot SHA, asset-resolution state, Candidate Catalog, compiled visual, warnings and Critic PASS. A Story change invalidates the old Visual Intent, Candidate Catalog and PASS; restart from the new editorial snapshot.
 
 ## It does not do
 
@@ -39,11 +90,11 @@ record-preview   → hardened Real-Day Acceptance
 - decide whether a real source, Financial Visual, social post, photo, generated illustration, or existing asset best communicates a Visual Beat;
 - generate images or choose Primary/Fallback;
 - automatically start final rendering;
-- automatically approve publication or promote memory.
+- automatically approve publication, Preview quality, Component promotion, or memory promotion.
 
 ## Research acquisition boundary
 
-The existing Causal Research process may request bounded additional evidence from the Collector before `causal_dossier_valid`. This is an internal research loop, not a new Daily Production public state.
+The existing Causal Research process may request bounded additional evidence from the Collector before `causal_dossier_valid`. This is an internal research loop, not a second Research Engine.
 
 ```text
 research_inputs_bound
@@ -58,16 +109,22 @@ The original `research_input_manifest.json` remains immutable. Any acquired evid
 
 ## Visual Evidence Planning boundary
 
-After Story Engine Pass G / final 04 re-review succeeds and before `episode_package_final` is registered, ChatGPT must explicitly plan the medium for the final Visual Beats.
+For v1.2, after the Story snapshot is valid and before asset resolution, ChatGPT must author Visual Intent and Provisional Direction. Any Beat whose `imageRequirement` is `required` must already have an existing Visual Source Intent with Primary and Approved Fallback before asset resolution begins.
 
 ```text
 causal_dossier_valid
-→ Story Engine / 01 / 03 / 04
-→ Visual Evidence Planning
+→ editorial_snapshot_valid
+→ ChatGPT Visual Intent / Provisional Direction
+→ visual_requirements_planned
+→ Primary / Approved Fallback planning
+→ assets_resolved
+→ legal Candidate Catalog
+→ ChatGPT Final Visual Director / Visual Plan Critic
+→ visual_intelligence_valid
 → episode_package_final
 ```
 
-Every production attempt must contain:
+Every production attempt must still contain:
 
 ```text
 working/YYYY-MM-DD/visual_source_intents.json
@@ -85,21 +142,26 @@ A missing file means planning was skipped and is a production failure. If no Vis
 
 Therefore an empty intent list is a deliberate `not-required` decision; an absent file is not.
 
-Non-empty intents must reuse the existing Visual Source contract: exact locators, existing source/Beat IDs, Primary plus Approved Fallback, explicit rights status, and no new factual or causal meaning. Asset resolution remains mechanical and cannot rewrite the story.
+Non-empty intents must reuse the existing Visual Source contract: exact locators, existing source/Beat IDs, Primary plus Approved Fallback, explicit rights status, and no new factual or causal meaning. Asset resolution remains mechanical and cannot rewrite the story. A failed Primary with a legal Approved Fallback remains `resolved`; only exhaustion of legal alternatives may become `BLOCKED`.
 
 ## State behavior
 
 Every state transition is forward-only and requires SHA-bound evidence. The production request and original daily source are continuously rehashed. Any changed, missing, stale, or path-escaping evidence invalidates the state.
 
-The normal preview path remains:
+The legacy preview path remains unchanged.
+
+The v1.2 preview path is:
 
 ```text
 intake_ready
 → research_inputs_bound
 → causal_dossier_valid
+→ editorial_snapshot_valid
+→ visual_requirements_planned
+→ assets_resolved
+→ visual_intelligence_valid
 → episode_package_final
 → memory_usage_valid
-→ assets_resolved
 → production_package_valid
 → handoff_ready
 → preview_dispatched
@@ -108,11 +170,15 @@ intake_ready
 → user_preview_approved
 ```
 
-Research Acquisition and Visual Evidence Planning are mandatory/conditional work **inside existing boundaries** and do not add public lifecycle states.
+`episode_package_final` on the v1.2 path still re-runs the existing Story Engine v1.1 acceptance, Story projection, and Pre-TTS Visual Gate. Visual Intelligence does not weaken those hard gates.
 
-Final can only be requested after `user_preview_approved`, with an approval record and the explicit `--explicit-final` flag. The CLI records authorization only; it does not execute final.
+The v1.2 production build also persists the exact Visual Intelligence PASS, package SHA, compiled-visual SHA, editorial-snapshot SHA, Renderer commit and Registry Snapshot SHA into `official_execution_preflight.json`. Renderer handoff then carries that evidence into the immutable Preview bundle.
+
+Final can only be requested after `user_preview_approved`, with an approval record and the explicit `--explicit-final` flag. The approval record may be created only after the user explicitly approves the actual Preview. The CLI records authorization only; it does not execute final.
 
 ## Main commands
+
+Legacy:
 
 ```bash
 python scripts/run_daily_production_hardened.py --workspace . init ...
@@ -124,4 +190,16 @@ python scripts/run_daily_production_hardened.py --workspace . record-preview ...
 python scripts/run_daily_production_hardened.py --workspace . request-final --explicit-final ...
 ```
 
-The CLI emits machine-readable JSON and stable error codes. Stop reasons identify the failed lifecycle boundary rather than silently repairing inputs.
+Visual Intelligence v1.2:
+
+```bash
+python scripts/run_daily_production_v12.py --workspace . init ...
+python scripts/run_daily_production_v12.py --workspace . status ...
+python scripts/run_daily_production_v12.py --workspace . advance ...
+python scripts/run_daily_production_v12.py --workspace . build-production ...
+python scripts/run_daily_production_v12.py --workspace . build-handoff ...
+python scripts/run_daily_production_v12.py --workspace . record-preview ...
+python scripts/run_daily_production_v12.py --workspace . request-final --explicit-final ...
+```
+
+The CLIs emit machine-readable JSON and stable error codes. Stop reasons identify the failed lifecycle boundary rather than silently repairing inputs.
