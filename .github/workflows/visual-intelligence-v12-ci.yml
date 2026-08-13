@@ -103,6 +103,7 @@ jobs:
             tests/remotion-compat/test_visual_intelligence_object_references.py \
             tests/remotion-compat/test_visual_intelligence_renderer_projection.py \
             tests/remotion-compat/test_visual_intelligence_gap_projection.py \
+            tests/remotion-compat/test_visual_intelligence_post_pass_authority.py \
             tests/remotion-compat/test_final_render_authorization_v12.py
 
       - name: Run v1.2 requirements acceptance
@@ -134,6 +135,11 @@ jobs:
         env:
           PYTHONPATH: scripts
         run: python3 tests/remotion-compat/test_visual_intelligence_gap_projection.py
+
+      - name: Run post-Critic immutable authority acceptance
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/remotion-compat/test_visual_intelligence_post_pass_authority.py
 
       - name: Run v1.2 state hard-gate acceptance
         env:
@@ -204,6 +210,14 @@ jobs:
           python3 - <<'PY'
           import json, os
           from pathlib import Path
+
+          def beat_identity(value):
+              return [
+                  (scene['sceneId'], beat['beatId'])
+                  for scene in value.get('scenes', [])
+                  for beat in scene.get('visualBeats', [])
+              ]
+
           closure=json.loads(Path('verification/2026-08-12/renderer_closure_gate_v12.json').read_text())
           vi=json.loads(Path('verification/2026-08-12/visual_intelligence_validation.json').read_text())
           assert closure['status'] == os.environ['EXPECTED_CLOSURE'], closure
@@ -215,6 +229,18 @@ jobs:
               assert Path(vi['compiledVisual']).is_file(), vi
               assert Path(vi['warningReport']).is_file(), vi
               assert vi.get('compiledVisualSha256') and vi.get('warningReportSha256'), vi
+          if vi['status'] == 'PASS':
+              state=json.loads(Path('working/2026-08-12/production_state.json').read_text())
+              assert state['current_state'] == 'production_package_valid', state
+              integrity=json.loads(Path('verification/2026-08-12/visual_intelligence_post_pass_integrity.json').read_text())
+              assert integrity['status'] == 'PASS', integrity
+              assert integrity['sceneCount'] == 9, integrity
+              assert integrity['beatCount'] == 18, integrity
+              assert integrity['secondDirectorInvoked'] is False, integrity
+              approved=json.loads(Path('working/2026-08-12/visual-intelligence/visual_direction_compiled_render.json').read_text())
+              final=json.loads(Path('render-specs/2026-08-12/render_spec.json').read_text())
+              assert beat_identity(approved) == beat_identity(final), (beat_identity(approved), beat_identity(final))
+              assert len(beat_identity(final)) == 18, beat_identity(final)
           print('REAL_DAY_V12_STAGE_PASS', vi['status'], 'candidates=', len(catalog['candidates']))
           PY
 
