@@ -21,10 +21,14 @@ jobs:
           fetch-depth: 2
 
       - name: Resolve canonical Renderer binding
+        id: renderer_binding
         shell: bash
         run: |
           set -euo pipefail
-          python scripts/renderer_binding.py --repo-root . --github-env "$GITHUB_ENV"
+          python scripts/renderer_binding.py \
+            --repo-root . \
+            --github-env "$GITHUB_ENV" \
+            --github-output "$GITHUB_OUTPUT"
 
       - name: Resolve requested episode date
         shell: bash
@@ -47,8 +51,8 @@ jobs:
       - name: Checkout pinned Remotion renderer
         uses: actions/checkout@v4
         with:
-          repository: saienjoy0/saienjoy0-nasdaq-cafe-remotion
-          ref: ${{ env.RENDERER_COMMIT }}
+          repository: ${{ steps.renderer_binding.outputs.renderer_repository }}
+          ref: ${{ steps.renderer_binding.outputs.renderer_commit }}
           path: .renderer
           persist-credentials: false
 
