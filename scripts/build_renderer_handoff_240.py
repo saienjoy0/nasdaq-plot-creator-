@@ -28,6 +28,12 @@ VISUAL_DIRECTOR_ROLES = {
     "visual_direction_compile_report": "verification/{date}/visual_direction_compile_report.json",
 }
 
+VISUAL_INTELLIGENCE_ROLES = {
+    "visual_candidate_catalog": "working/{date}/visual-intelligence/visual_candidate_catalog.json",
+    "visual_direction_plan": "working/{date}/visual-intelligence/visual_direction_plan.json",
+    "visual_direction_compile_report": "working/{date}/visual-intelligence/visual_direction_compile_report.json",
+}
+
 class RendererHandoff240Error(ValueError):
     pass
 
@@ -84,7 +90,10 @@ def _validate_renderer_evidence(
         ),
         "production request",
     )
-    if request.get("visual_director") is not None:
+    visual_intelligence = request.get("visual_intelligence")
+    if isinstance(visual_intelligence, dict) and visual_intelligence.get("required") is True:
+        role_paths.update(VISUAL_INTELLIGENCE_ROLES)
+    elif request.get("visual_director") is not None:
         role_paths.update(VISUAL_DIRECTOR_ROLES)
     extras = {
         role: safe_file(source_root, template.format(date=date), role)
@@ -214,7 +223,6 @@ def _extend_bundle(
         "bundle_path": str(target),
         "manifest_path": str(target / "handoff_manifest.json"),
     }
-
 def build_handoff_hardened(
     *, source_root: Path, bundle_root: Path, date: str, mode: str,
     plot_commit: str, renderer_commit: str, renderer_contract_version: str,
