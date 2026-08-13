@@ -8,11 +8,12 @@ on:
       - "scripts/renderer_binding.py"
       - "scripts/financial_candidate_provider.py"
       - "scripts/visual_intelligence_*.py"
+      - "scripts/run_visual_intelligence_v12.py"
       - "scripts/validate_visual_intelligence_package.py"
       - "scripts/write_human_preview_review.py"
       - "scripts/run_daily_production_v12.py"
       - "scripts/build_final_production_package_v12.py"
-      - "tests/remotion-compat/*visual_intelligence_v12*.py"
+      - "tests/remotion-compat/*visual_intelligence*.py"
       - ".github/workflows/visual-intelligence-v12-ci.yml"
   workflow_dispatch:
 
@@ -67,12 +68,25 @@ jobs:
             scripts/visual_intelligence_bridge.py \
             scripts/visual_intelligence_requirements.py \
             scripts/visual_intelligence_story_context.py \
+            scripts/run_visual_intelligence_v12.py \
             scripts/validate_visual_intelligence_package.py \
             scripts/write_human_preview_review.py \
             scripts/run_daily_production_v12.py \
             scripts/build_final_production_package_v12.py \
             tests/remotion-compat/run_visual_intelligence_v12_cross_repo.py \
-            tests/remotion-compat/test_visual_intelligence_v12_state.py
+            tests/remotion-compat/test_visual_intelligence_v12_state.py \
+            tests/remotion-compat/test_visual_intelligence_asset_fallback.py \
+            tests/remotion-compat/test_visual_intelligence_requirements.py
+
+      - name: Run v1.2 requirements acceptance
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/remotion-compat/test_visual_intelligence_requirements.py
+
+      - name: Run fallback-aware asset acceptance
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/remotion-compat/test_visual_intelligence_asset_fallback.py
 
       - name: Run v1.2 state hard-gate acceptance
         env:
