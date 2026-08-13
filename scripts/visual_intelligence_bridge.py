@@ -131,17 +131,36 @@ def _asset_resolution_state(output_root: Path, date: str) -> dict[str, Any]:
     audit = output_root / "verification" / date / "asset_resolution_log.json"
     if audit.is_file():
         value = load_json(audit, "asset resolution log")
-        selection = value.get("selection")
-        if value.get("status") != "resolved" or not isinstance(selection, dict):
+        if value.get("status") != "resolved":
             raise VisualIntelligenceBridgeError("E_VISUAL_ASSET_RESOLUTION_UNRESOLVED")
-        if selection.get("status") != "resolved" or selection.get("unresolved_count") != 0:
+        logged_date = value.get("episode_date") or value.get("episodeDate")
+        if logged_date is not None and logged_date != date:
+            raise VisualIntelligenceBridgeError("E_VISUAL_ASSET_RESOLUTION_UNRESOLVED")
+
+        # Current resolver writes a flat record. Keep legacy nested `selection`
+        # compatibility during migration, but normalize both to one frozen state.
+        selection = value.get("selection")
+        if isinstance(selection, dict):
+            if selection.get("status") != "resolved" or selection.get("unresolved_count") != 0:
+                raise VisualIntelligenceBridgeError("E_VISUAL_ASSET_RESOLUTION_UNRESOLVED")
+            selected_path = selection.get("selected_path")
+            intent_routes = selection.get("intent_routes", {})
+        else:
+            if value.get("unresolved_count") != 0:
+                raise VisualIntelligenceBridgeError("E_VISUAL_ASSET_RESOLUTION_UNRESOLVED")
+            selected_path = value.get("selected_path")
+            intent_routes = value.get("intent_routes", {})
+
+        if not isinstance(selected_path, str) or not selected_path.strip():
+            raise VisualIntelligenceBridgeError("E_VISUAL_ASSET_RESOLUTION_UNRESOLVED")
+        if not isinstance(intent_routes, dict):
             raise VisualIntelligenceBridgeError("E_VISUAL_ASSET_RESOLUTION_UNRESOLVED")
         return {
             "contractVersion": "1.0.0",
             "episodeDate": date,
             "status": "resolved",
-            "selectedPath": selection.get("selected_path"),
-            "intentRoutes": selection.get("intent_routes", {}),
+            "selectedPath": selected_path,
+            "intentRoutes": intent_routes,
             "assetResolutionLogSha256": sha256_file(audit),
         }
 
