@@ -82,6 +82,7 @@ jobs:
             scripts/visual_intelligence_bridge.py \
             scripts/visual_intelligence_bridge_staged.py \
             scripts/visual_intelligence_intraday_evidence.py \
+            scripts/visual_intelligence_object_references.py \
             scripts/visual_intelligence_renderer_projection.py \
             scripts/visual_intelligence_requirements.py \
             scripts/visual_intelligence_story_context.py \
@@ -99,6 +100,7 @@ jobs:
             tests/remotion-compat/test_visual_intelligence_asset_plan.py \
             tests/remotion-compat/test_visual_intelligence_requirements.py \
             tests/remotion-compat/test_visual_intelligence_preflight_binding.py \
+            tests/remotion-compat/test_visual_intelligence_object_references.py \
             tests/remotion-compat/test_visual_intelligence_renderer_projection.py \
             tests/remotion-compat/test_visual_intelligence_gap_projection.py \
             tests/remotion-compat/test_final_render_authorization_v12.py
@@ -117,6 +119,11 @@ jobs:
         env:
           PYTHONPATH: scripts
         run: python3 tests/remotion-compat/test_visual_intelligence_asset_fallback.py
+
+      - name: Run object reference reconciliation acceptance
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/remotion-compat/test_visual_intelligence_object_references.py
 
       - name: Run Renderer candidate projection acceptance
         env:
