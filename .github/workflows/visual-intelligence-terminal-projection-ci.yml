@@ -1,0 +1,28 @@
+name: Visual Intelligence Terminal Projection
+
+on:
+  pull_request:
+    paths:
+      - "scripts/visual_intelligence_terminal_projection.py"
+      - "scripts/run_visual_intelligence_v12.py"
+      - "tests/remotion-compat/test_visual_intelligence_terminal_projection.py"
+      - ".github/workflows/visual-intelligence-terminal-projection-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Syntax
+        run: python -m py_compile scripts/visual_intelligence_terminal_projection.py scripts/run_visual_intelligence_v12.py tests/remotion-compat/test_visual_intelligence_terminal_projection.py
+      - name: Terminal transition regression
+        env:
+          PYTHONPATH: scripts
+        run: python tests/remotion-compat/test_visual_intelligence_terminal_projection.py
