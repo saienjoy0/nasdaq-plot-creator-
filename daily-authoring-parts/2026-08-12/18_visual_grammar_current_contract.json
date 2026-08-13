@@ -122,31 +122,20 @@
       "sceneNumber": 7,
       "beatNumber": 2,
       "set": {
-        "variant": "two-lane",
-        "metrics": [
-          {
-            "label": "Q2売上",
-            "value": "$2.58B",
-            "numericValue": 2.58,
-            "precision": 2,
-            "unit": "$B",
-            "tone": "neutral",
-            "comparison": "CoreWeave Q2"
-          },
-          {
-            "label": "backlog",
-            "value": "$104.2B",
-            "numericValue": 104.2,
-            "precision": 1,
-            "unit": "$B",
-            "tone": "neutral",
-            "comparison": "different measure; after close"
-          }
+        "visualTemplate": "evidence-boundary",
+        "visualMode": "verification-points",
+        "grammarId": "evidence",
+        "variant": "confirmed-vs-unconfirmed",
+        "screenState": "Data",
+        "screenQuestion": "AI需要材料は残る？",
+        "primaryElement": "CoreWeave Q2 after close",
+        "viewerTexts": [
+          "Q2売上 25.8億ドル",
+          "backlog 1042億ドル",
+          "引け後 → 通常取引原因ではない"
         ],
-        "visualEvents": [
-          {"action": "show", "targetId": "scene-07-number-02-01", "offsetMs": 0},
-          {"action": "show", "targetId": "scene-07-number-02-02", "offsetMs": 600}
-        ]
+        "metrics": [],
+        "visualEvents": null
       }
     },
     {
