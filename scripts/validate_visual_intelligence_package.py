@@ -227,10 +227,11 @@ def main() -> int:
     except (VisualIntelligenceValidationError, renderer_binding.RendererBindingError) as exc:
         result = {"status": "FAIL", "episodeDate": args.date, "error": str(exc)}
         code = 2
+    text = json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     if args.json_output:
         args.json_output.parent.mkdir(parents=True, exist_ok=True)
-        args.json_output.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+        args.json_output.write_text(text, encoding="utf-8")
+    print(text, end="")
     return code
 
 
