@@ -32,6 +32,9 @@ VISUAL_INTELLIGENCE_ROLES = {
     "visual_candidate_catalog": "working/{date}/visual-intelligence/visual_candidate_catalog.json",
     "visual_direction_plan": "working/{date}/visual-intelligence/visual_direction_plan.json",
     "visual_direction_compile_report": "working/{date}/visual-intelligence/visual_direction_compile_report.json",
+    "visual_intelligence_package": "working/{date}/visual-intelligence/visual_intelligence_package.json",
+    "visual_intelligence_validation": "verification/{date}/visual_intelligence_validation.json",
+    "visual_intelligence_post_pass_integrity": "verification/{date}/visual_intelligence_post_pass_integrity.json",
 }
 
 class RendererHandoff240Error(ValueError):
@@ -77,6 +80,62 @@ def load_json(path: Path, label: str) -> dict[str, Any]:
         raise RendererHandoff240Error(f"{label} must be an object")
     return value
 
+
+def _validate_vi_lineage(
+    *, extras: dict[str, Path], preflight: dict[str, Any], render_spec: Path,
+    date: str, renderer_commit: str,
+) -> None:
+    package = load_json(extras["visual_intelligence_package"], "Visual Intelligence package")
+    validation = load_json(extras["visual_intelligence_validation"], "Visual Intelligence validation")
+    integrity = load_json(
+        extras["visual_intelligence_post_pass_integrity"],
+        "Visual Intelligence post-PASS integrity",
+    )
+    direction = load_json(
+        extras["visual_direction_compile_report"],
+        "Visual Direction compile report",
+    )
+    if direction.get("semanticDiff") != "PASS":
+        raise RendererHandoff240Error("Visual Direction Protected Semantic Diff must PASS")
+
+    package_sha = sha256_file(extras["visual_intelligence_package"])
+    integrity_sha = sha256_file(extras["visual_intelligence_post_pass_integrity"])
+    render_sha = sha256_file(render_spec)
+    compiled_sha = package.get("final", {}).get("compiledVisualSha256")
+    if package.get("episodeDate") != date or package.get("final", {}).get("status") != "PASS":
+        raise RendererHandoff240Error("Visual Intelligence package must PASS for the same episode")
+    if package.get("inputs", {}).get("rendererCommit") != renderer_commit:
+        raise RendererHandoff240Error("Visual Intelligence package renderer mismatch")
+    if validation.get("status") != "PASS" or validation.get("episodeDate") != date:
+        raise RendererHandoff240Error("Visual Intelligence validation must PASS for the same episode")
+    if validation.get("packageSha256") != package_sha:
+        raise RendererHandoff240Error("Visual Intelligence validation/package SHA mismatch")
+    if validation.get("compiledVisualSha256") != compiled_sha:
+        raise RendererHandoff240Error("Visual Intelligence compiled visual lineage mismatch")
+    if integrity.get("status") != "PASS" or integrity.get("episodeDate") != date:
+        raise RendererHandoff240Error("Visual Intelligence post-PASS integrity must PASS")
+    if integrity.get("approvedCompiledVisualSha256") != compiled_sha:
+        raise RendererHandoff240Error("post-PASS compiled visual SHA mismatch")
+    if integrity.get("finalRenderSpecSha256") != render_sha:
+        raise RendererHandoff240Error("post-PASS final render spec SHA mismatch")
+    if integrity.get("secondDirectorInvoked") is not False:
+        raise RendererHandoff240Error("post-PASS integrity reports a second Director")
+    if integrity.get("visualAuthorityPreserved") is not True:
+        raise RendererHandoff240Error("post-PASS visual authority was not preserved")
+
+    preflight_vi = preflight.get("visual_intelligence")
+    if not isinstance(preflight_vi, dict) or preflight_vi.get("status") != "PASS":
+        raise RendererHandoff240Error("preflight Visual Intelligence binding missing")
+    if preflight_vi.get("packageSha256") != package_sha:
+        raise RendererHandoff240Error("preflight Visual Intelligence package SHA mismatch")
+    if preflight_vi.get("compiledVisualSha256") != compiled_sha:
+        raise RendererHandoff240Error("preflight compiled visual SHA mismatch")
+    if preflight_vi.get("postPassIntegritySha256") != integrity_sha:
+        raise RendererHandoff240Error("preflight post-PASS integrity SHA mismatch")
+    if preflight_vi.get("rendererCommit") != renderer_commit:
+        raise RendererHandoff240Error("preflight Visual Intelligence renderer mismatch")
+
+
 def _validate_renderer_evidence(
     *, source_root: Path, date: str, renderer_commit: str,
     renderer_contract_version: str,
@@ -91,7 +150,8 @@ def _validate_renderer_evidence(
         "production request",
     )
     visual_intelligence = request.get("visual_intelligence")
-    if isinstance(visual_intelligence, dict) and visual_intelligence.get("required") is True:
+    vi_required = isinstance(visual_intelligence, dict) and visual_intelligence.get("required") is True
+    if vi_required:
         role_paths.update(VISUAL_INTELLIGENCE_ROLES)
     elif request.get("visual_director") is not None:
         role_paths.update(VISUAL_DIRECTOR_ROLES)
@@ -133,7 +193,16 @@ def _validate_renderer_evidence(
         extras["renderer_validation_report"]
     ):
         raise RendererHandoff240Error("preflight renderer report SHA mismatch")
-    if "visual_direction_compile_report" in extras:
+
+    if vi_required:
+        _validate_vi_lineage(
+            extras=extras,
+            preflight=preflight,
+            render_spec=render_spec,
+            date=date,
+            renderer_commit=renderer_commit,
+        )
+    elif "visual_direction_compile_report" in extras:
         direction = load_json(
             extras["visual_direction_compile_report"],
             "Visual Direction compile report",

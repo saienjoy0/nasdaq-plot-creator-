@@ -8,6 +8,7 @@ import pytest
 
 DATE = "2026-08-06"
 COMMIT = "a" * 40
+COMPILED = "c" * 64
 
 
 def write_json(root: Path, relative: str, value: dict) -> Path:
@@ -52,6 +53,52 @@ def fixture(root: Path, *, visual_intelligence: bool = False) -> None:
         f"render-specs/{DATE}/render_spec.json",
         {"schemaVersion": "2.4.0", "episode": {"targetDate": DATE}},
     )
+
+    vi_preflight = None
+    if visual_intelligence:
+        package_path = write_json(
+            root,
+            roles["visual_intelligence_package"].format(date=DATE),
+            {
+                "contractVersion": "1.0.0",
+                "bridgeContractVersion": "visual-intelligence-bridge/1.2.0",
+                "episodeDate": DATE,
+                "inputs": {"rendererCommit": COMMIT},
+                "final": {"status": "PASS", "compiledVisualSha256": COMPILED},
+            },
+        )
+        integrity_path = write_json(
+            root,
+            roles["visual_intelligence_post_pass_integrity"].format(date=DATE),
+            {
+                "contractVersion": "1.0.0",
+                "bridgeContractVersion": "visual-intelligence-bridge/1.2.0",
+                "episodeDate": DATE,
+                "status": "PASS",
+                "approvedCompiledVisualSha256": COMPILED,
+                "finalRenderSpecSha256": handoff.sha256_file(render_path),
+                "secondDirectorInvoked": False,
+                "visualAuthorityPreserved": True,
+            },
+        )
+        write_json(
+            root,
+            roles["visual_intelligence_validation"].format(date=DATE),
+            {
+                "status": "PASS",
+                "episodeDate": DATE,
+                "packageSha256": handoff.sha256_file(package_path),
+                "compiledVisualSha256": COMPILED,
+            },
+        )
+        vi_preflight = {
+            "status": "PASS",
+            "packageSha256": handoff.sha256_file(package_path),
+            "compiledVisualSha256": COMPILED,
+            "postPassIntegritySha256": handoff.sha256_file(integrity_path),
+            "rendererCommit": COMMIT,
+        }
+
     renderer_report = write_json(
         root,
         f"verification/{DATE}/renderer_validation_report.json",
@@ -62,19 +109,20 @@ def fixture(root: Path, *, visual_intelligence: bool = False) -> None:
             "unresolvedStateCount": 0,
         },
     )
-    write_json(
-        root,
-        f"verification/{DATE}/official_execution_preflight.json",
-        {
-            "renderer_validation": {
-                "status": "pass",
-                "report_sha256": handoff.sha256_file(renderer_report),
-            },
-            "artifacts": {
-                "visual_direction_compile_report": handoff.sha256_file(direction_path)
-            },
+    preflight = {
+        "renderer_validation": {
+            "status": "pass",
+            "report_sha256": handoff.sha256_file(renderer_report),
         },
-    )
+        "artifacts": {},
+    }
+    if visual_intelligence:
+        preflight["visual_intelligence"] = vi_preflight
+    else:
+        preflight["artifacts"]["visual_direction_compile_report"] = handoff.sha256_file(
+            direction_path
+        )
+    write_json(root, f"verification/{DATE}/official_execution_preflight.json", preflight)
 
 
 def test_visual_direction_evidence_enters_handoff(tmp_path: Path) -> None:
@@ -88,7 +136,7 @@ def test_visual_direction_evidence_enters_handoff(tmp_path: Path) -> None:
     assert set(handoff.VISUAL_DIRECTOR_ROLES).issubset(extras)
 
 
-def test_visual_intelligence_uses_v12_canonical_paths(tmp_path: Path) -> None:
+def test_visual_intelligence_uses_v12_canonical_paths_and_lineage(tmp_path: Path) -> None:
     fixture(tmp_path, visual_intelligence=True)
     extras = handoff._validate_renderer_evidence(
         source_root=tmp_path,
@@ -103,6 +151,21 @@ def test_visual_intelligence_uses_v12_canonical_paths(tmp_path: Path) -> None:
     assert extras["visual_direction_compile_report"] == (
         tmp_path / f"working/{DATE}/visual-intelligence/visual_direction_compile_report.json"
     ).resolve()
+
+
+def test_visual_intelligence_stale_preflight_blocks_handoff(tmp_path: Path) -> None:
+    fixture(tmp_path, visual_intelligence=True)
+    preflight_path = tmp_path / f"verification/{DATE}/official_execution_preflight.json"
+    preflight = json.loads(preflight_path.read_text(encoding="utf-8"))
+    preflight["visual_intelligence"]["compiledVisualSha256"] = "d" * 64
+    write_json(root=tmp_path, relative=f"verification/{DATE}/official_execution_preflight.json", value=preflight)
+    with pytest.raises(handoff.RendererHandoff240Error, match="preflight compiled visual SHA mismatch"):
+        handoff._validate_renderer_evidence(
+            source_root=tmp_path,
+            date=DATE,
+            renderer_commit=COMMIT,
+            renderer_contract_version="2.4.0",
+        )
 
 
 def test_visual_direction_semantic_failure_blocks_handoff(tmp_path: Path) -> None:
