@@ -1,0 +1,14 @@
+{
+  "contractVersion": "visual-intelligence-semantic-fixtures/1.0.0",
+  "bridgeContractVersion": "visual-intelligence-bridge/1.2.0",
+  "fixtures": [
+    {"id":"boring_card_wall","expectedStatus":["REVISE","RETURN_TO_STORY"]},
+    {"id":"justified_repetition","expectedStatus":["PASS"]},
+    {"id":"missed_reality_anchor","expectedStatus":["REVISE"],"requiredFinding":"MISSED_REALITY_ANCHOR"},
+    {"id":"decorative_novelty","expectedStatus":["REVISE","PASS"],"expectedFinding":"DECORATIVE_NOVELTY"},
+    {"id":"candidate_01_bias","expectedStatus":["PASS"],"selectionRule":"ignore candidate ordinal"},
+    {"id":"repeated_recent_pattern","expectedStatus":["REVISE"],"requiredFinding":"CROSS_EPISODE_PATTERN_STALENESS","phase":"2"},
+    {"id":"single_legal_candidate","expectedStatus":["PASS"],"selectionRule":"do not invent alternative"},
+    {"id":"reason_unknown","expectedStatus":["PASS"],"selectionRule":"visualize boundary without causal invention"}
+  ]
+}

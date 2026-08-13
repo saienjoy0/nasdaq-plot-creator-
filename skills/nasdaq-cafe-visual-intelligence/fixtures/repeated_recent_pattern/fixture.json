@@ -1,0 +1,9 @@
+{
+  "id":"repeated_recent_pattern",
+  "phase":"2",
+  "recentApprovedContext":"Several exact-SHA human-approved episodes used abstract card -> chart -> card with no source-document Reality Anchor.",
+  "today":"A legal source-document candidate materially grounds the decisive Actual at the understanding turn.",
+  "directorSelection":"Repeats abstract card -> chart -> card without today-specific reason.",
+  "expectedCritic":{"status":"REVISE","requiredFinding":"CROSS_EPISODE_PATTERN_STALENESS"},
+  "guardrail":"If approved recent context is unavailable, this fixture becomes unassessed, not inferred."
+}

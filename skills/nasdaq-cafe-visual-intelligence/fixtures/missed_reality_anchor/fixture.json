@@ -1,0 +1,8 @@
+{
+  "id":"missed_reality_anchor",
+  "visualIntent":{"purpose":"Move from market interpretation to confirmed company guidance.","realityAnchorPreference":"preferred"},
+  "candidateState":"Both a legal generic summary card and a legal IR source-document candidate exist.",
+  "directorSelection":"Generic summary card.",
+  "expectedCritic":{"status":"REVISE","requiredFinding":"MISSED_REALITY_ANCHOR","replacement":"IR source-document candidate"},
+  "reason":"The source candidate moves the viewer from explanation to confirmation."
+}
