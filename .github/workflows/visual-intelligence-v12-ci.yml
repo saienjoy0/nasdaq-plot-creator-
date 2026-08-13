@@ -97,6 +97,7 @@ jobs:
             tests/remotion-compat/test_visual_intelligence_requirements.py \
             tests/remotion-compat/test_visual_intelligence_preflight_binding.py \
             tests/remotion-compat/test_visual_intelligence_renderer_projection.py \
+            tests/remotion-compat/test_visual_intelligence_gap_projection.py \
             tests/remotion-compat/test_final_render_authorization_v12.py
 
       - name: Run v1.2 requirements acceptance
@@ -118,6 +119,11 @@ jobs:
         env:
           PYTHONPATH: scripts
         run: python3 tests/remotion-compat/test_visual_intelligence_renderer_projection.py
+
+      - name: Run Expected Actual Gap projection acceptance
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/remotion-compat/test_visual_intelligence_gap_projection.py
 
       - name: Run v1.2 state hard-gate acceptance
         env:
