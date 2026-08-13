@@ -14,6 +14,8 @@ on:
       - "contracts/financial_*.json"
       - "contracts/visual_grammar_*.json"
       - "contracts/viewer_surface_*.json"
+      - "contracts/renderer_binding.json"
+      - "contracts/visual_intelligence_package.schema.json"
       - "scripts/assemble_chatgpt_daily_authoring_parts.py"
       - "scripts/materialize_chatgpt_daily_authoring.py"
       - "scripts/viewer_surface_projection.py"
@@ -25,7 +27,9 @@ on:
       - "scripts/materialize_financial_contract_1_0.py"
       - "scripts/finalize_renderer_package*.py"
       - "scripts/remotion_*.py"
+      - "scripts/renderer_binding.py"
       - "scripts/visual_director_bridge.py"
+      - "scripts/validate_visual_intelligence_package.py"
       - "scripts/run_daily_production_hardened.py"
       - "tests/remotion-compat/**"
       - "tests/viewer-surface/**"
@@ -45,22 +49,28 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      RENDERER_COMMIT: 6a44cdeb04d401dc45379783862e279a5c2f04a5
       NASDAQ_CAFE_RENDERER_ROOT: ${{ github.workspace }}/.renderer
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Resolve exact episode date
+      - name: Resolve canonical Renderer binding
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/renderer_binding.py --repo-root . --github-env "$GITHUB_ENV"
+
+      - name: Resolve exact episode date or synthetic-only mode
         shell: bash
         run: |
           set -euo pipefail
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             EPISODE_DATE="${{ inputs.episode_date }}"
+            RUN_REAL_DAY=true
           else
             git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" > /tmp/changed-files.txt
-            EPISODE_DATE="$(python - <<'PY'
+            RESULT="$(python - <<'PY'
           import re
           from pathlib import Path
 
@@ -81,24 +91,24 @@ jobs:
                   if match:
                       dates.add(match.group(1))
           if len(dates) > 1:
-              raise SystemExit('closure PR must target exactly one episode date: ' + ','.join(sorted(dates)))
-          if dates:
-              print(next(iter(dates)))
-          else:
-              root = Path('daily-authoring-parts')
-              candidates = sorted(
-                  p.name for p in root.iterdir()
-                  if p.is_dir() and re.fullmatch(r'\d{4}-\d{2}-\d{2}', p.name)
-              ) if root.is_dir() else []
-              if not candidates:
-                  raise SystemExit('no daily episode is available as closure canary')
-              print(candidates[-1])
+              raise SystemExit('closure PR must target at most one episode date: ' + ','.join(sorted(dates)))
+          print(next(iter(dates)) if dates else 'NONE')
           PY
           )"
+            if [[ "$RESULT" == "NONE" ]]; then
+              EPISODE_DATE=""
+              RUN_REAL_DAY=false
+            else
+              EPISODE_DATE="$RESULT"
+              RUN_REAL_DAY=true
+            fi
           fi
-          [[ "$EPISODE_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
-          echo "EPISODE_DATE=$EPISODE_DATE" >> "$GITHUB_ENV"
-          echo "Renderer closure target: $EPISODE_DATE"
+          if [[ "$RUN_REAL_DAY" == "true" ]]; then
+            [[ "$EPISODE_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
+            echo "EPISODE_DATE=$EPISODE_DATE" >> "$GITHUB_ENV"
+          fi
+          echo "RUN_REAL_DAY=$RUN_REAL_DAY" >> "$GITHUB_ENV"
+          echo "Renderer closure real-day=$RUN_REAL_DAY date=${EPISODE_DATE:-synthetic-current}"
 
       - name: Checkout exact Preview renderer
         uses: actions/checkout@v4
@@ -123,17 +133,20 @@ jobs:
           python -m pip install --disable-pip-version-check jsonschema pytest pillow
           npm --prefix .renderer ci
 
-      - name: Run closure regression tests
+      - name: Run current-contract synthetic convergence canary
         env:
           PYTHONPATH: scripts
         run: |
           python -m pytest -q \
+            tests/remotion-compat/test_visual_director_bridge.py \
+            tests/remotion-compat/test_visual_intelligence_convergence.py \
             tests/remotion-compat/test_chatgpt_daily_authoring_closure.py \
             tests/remotion-compat/test_fox_expression_projection.py \
-            tests/remotion-compat/test_visual_director_bridge.py \
             tests/remotion-compat/test_remotion_template_variant.py \
             tests/viewer-surface/test_viewer_surface_projection.py
           python -m py_compile \
+            scripts/renderer_binding.py \
+            scripts/validate_visual_intelligence_package.py \
             scripts/validate_chatgpt_daily_authoring_closure.py \
             scripts/run_daily_renderer_closure.py \
             scripts/assemble_chatgpt_daily_authoring_parts.py \
@@ -143,8 +156,10 @@ jobs:
             scripts/fixup_chatgpt_daily_materialization.py \
             scripts/remotion_template_variant.py \
             scripts/visual_director_bridge.py
+          npm --prefix .renderer run test:visual-director
 
       - name: Require exact-day Renderer 2.4 closure
+        if: env.RUN_REAL_DAY == 'true'
         run: |
           python scripts/run_daily_renderer_closure.py \
             --date "$EPISODE_DATE" \
@@ -152,15 +167,13 @@ jobs:
             --renderer-root .renderer
 
       - name: Upload closure evidence
-        if: always()
+        if: always() && env.RUN_REAL_DAY == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: daily-renderer-closure-${{ env.EPISODE_DATE }}
           path: |
             verification/${{ env.EPISODE_DATE }}/
-            working/${{ env.EPISODE_DATE }}/visual_capability_hints.json
-            working/${{ env.EPISODE_DATE }}/visual_candidate_catalog.json
-            working/${{ env.EPISODE_DATE }}/visual_direction_plan.json
+            working/${{ env.EPISODE_DATE }}/visual-intelligence/
             render-specs/${{ env.EPISODE_DATE }}/render_spec.json
           if-no-files-found: warn
           retention-days: 7
