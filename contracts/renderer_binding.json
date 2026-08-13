@@ -1,0 +1,9 @@
+{
+  "contractVersion": "1.0.0",
+  "rendererRepository": "saienjoy0/saienjoy0-nasdaq-cafe-remotion",
+  "rendererCommit": "5391967099fbd7a0a2569c6c82b94d90aa889d64",
+  "rendererContractVersion": "2.4.0",
+  "visualIntelligenceBridge": "visual-intelligence-bridge/1.2.0",
+  "candidateBuilder": "vnext",
+  "registrySnapshotPath": "contracts/visual_component_registry_snapshot.json"
+}
