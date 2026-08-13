@@ -22,6 +22,7 @@
       "beatNumber": 1,
       "set": {
         "visualTemplate": "expected-actual-bullet",
+        "visualMode": "expected-actual-gap",
         "grammarId": "gap",
         "variant": "default",
         "metrics": [
@@ -59,6 +60,7 @@
       "sceneNumber": 5,
       "beatNumber": 2,
       "set": {
+        "visualMode": "verification-points",
         "variant": "strengthen-vs-weaken"
       }
     },
@@ -107,6 +109,7 @@
       "beatNumber": 2,
       "set": {
         "visualTemplate": "evidence-boundary",
+        "visualMode": "verification-points",
         "grammarId": "evidence",
         "variant": "confirmed-vs-unconfirmed",
         "screenState": "Data",
@@ -154,6 +157,7 @@
       "sceneNumber": 8,
       "beatNumber": 1,
       "set": {
+        "visualMode": "verification-points",
         "variant": "strengthen-vs-weaken"
       }
     },
@@ -162,6 +166,7 @@
       "beatNumber": 2,
       "set": {
         "visualTemplate": "verification-checklist",
+        "visualMode": "verification-points",
         "grammarId": "verification",
         "variant": "default"
       }
