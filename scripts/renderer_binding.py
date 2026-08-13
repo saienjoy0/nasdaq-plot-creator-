@@ -60,8 +60,8 @@ def load_renderer_binding(repo_root: Path) -> dict[str, Any]:
     return value
 
 
-def export_github_env(binding: dict[str, Any], path: Path) -> None:
-    lines = {
+def _env_values(binding: dict[str, Any]) -> dict[str, str]:
+    return {
         "RENDERER_REPOSITORY": binding["rendererRepository"],
         "RENDERER_COMMIT": binding["rendererCommit"],
         "RENDERER_CONTRACT_VERSION": binding["rendererContractVersion"],
@@ -69,8 +69,25 @@ def export_github_env(binding: dict[str, Any], path: Path) -> None:
         "VISUAL_CANDIDATE_BUILDER": binding["candidateBuilder"],
         "VISUAL_REGISTRY_SNAPSHOT_PATH": binding["registrySnapshotPath"],
     }
+
+
+def export_github_env(binding: dict[str, Any], path: Path) -> None:
     with Path(path).open("a", encoding="utf-8") as handle:
-        for key, value in lines.items():
+        for key, value in _env_values(binding).items():
+            handle.write(f"{key}={value}\n")
+
+
+def export_github_output(binding: dict[str, Any], path: Path) -> None:
+    output_keys = {
+        "renderer_repository": binding["rendererRepository"],
+        "renderer_commit": binding["rendererCommit"],
+        "renderer_contract_version": binding["rendererContractVersion"],
+        "visual_intelligence_bridge": binding["visualIntelligenceBridge"],
+        "candidate_builder": binding["candidateBuilder"],
+        "registry_snapshot_path": binding["registrySnapshotPath"],
+    }
+    with Path(path).open("a", encoding="utf-8") as handle:
+        for key, value in output_keys.items():
             handle.write(f"{key}={value}\n")
 
 
@@ -78,6 +95,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-root", type=Path, default=Path.cwd())
     parser.add_argument("--github-env", type=Path)
+    parser.add_argument("--github-output", type=Path)
     args = parser.parse_args()
     try:
         binding = load_renderer_binding(args.repo_root)
@@ -86,6 +104,8 @@ def main() -> int:
         return 2
     if args.github_env:
         export_github_env(binding, args.github_env)
+    if args.github_output:
+        export_github_output(binding, args.github_output)
     print(json.dumps(binding, ensure_ascii=False, sort_keys=True))
     return 0
 
