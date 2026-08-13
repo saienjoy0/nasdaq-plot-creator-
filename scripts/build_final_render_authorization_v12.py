@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""Freeze an explicit Final authorization for the exact human-approved Preview.
+"""Freeze explicit Final authorization for the exact human-approved Preview.
 
-This is a control-plane artifact only. It does not render Final. It proves that:
+The authorization is control-plane evidence, not a render trigger. It proves:
 - the user explicitly requested Final;
-- the actual Preview SHA approved by the human review matches the Preview delivery manifest;
-- that Preview was rendered from the exact current render_spec SHA;
-- Visual Intelligence v1.2 remained PASS for that production package.
+- the approved MP4 bytes are exactly the Preview bytes supplied here;
+- the Preview technical report binds those bytes to the current render_spec SHA;
+- Visual Intelligence v1.2 remains PASS;
+- the forward-only production state is user_preview_approved.
 
-The resulting JSON intentionally keeps the legacy approval fields
-`episode_date`, `status`, and `final_requested` so the existing forward-only
-request-final state transition can use it as its approval evidence.
+The legacy fields `episode_date`, `status`, and `final_requested` are retained so
+this artifact can be used directly by the existing request-final state gate.
 """
 from __future__ import annotations
 
@@ -48,20 +48,13 @@ def require_file(path: Path, label: str) -> Path:
     return path
 
 
-def _delivery_episode(value: dict[str, Any]) -> str | None:
-    episode = value.get("episodeId")
-    if isinstance(episode, str):
-        return episode
-    episode = value.get("episodeDate")
-    return episode if isinstance(episode, str) else None
-
-
 def build_authorization(
     *,
     root: Path,
     date: str,
     preview_run_id: str,
-    preview_delivery_manifest: Path,
+    preview_mp4: Path,
+    preview_technical_report: Path,
     human_preview_review: Path,
     explicit_final: bool,
 ) -> dict[str, Any]:
@@ -84,7 +77,8 @@ def build_authorization(
         "Visual Intelligence validation",
     )
     review_path = require_file(human_preview_review, "human Preview review")
-    delivery_path = require_file(preview_delivery_manifest, "Preview delivery manifest")
+    preview_path = require_file(preview_mp4, "Preview MP4")
+    technical_path = require_file(preview_technical_report, "Preview technical report")
 
     state = load_json(state_path, "production state")
     if state.get("episode_date") != date or state.get("current_state") != "user_preview_approved":
@@ -97,22 +91,23 @@ def build_authorization(
         raise FinalAuthorizationError("human Preview review contractVersion mismatch")
     if review.get("episodeDate") != date or review.get("status") != "approved":
         raise FinalAuthorizationError("human Preview review must approve the same episode")
-    preview_sha = review.get("previewSha256")
-    if not isinstance(preview_sha, str) or not re.fullmatch(r"[0-9a-f]{64}", preview_sha):
+    approved_preview_sha = review.get("previewSha256")
+    if not isinstance(approved_preview_sha, str) or not re.fullmatch(r"[0-9a-f]{64}", approved_preview_sha):
         raise FinalAuthorizationError("human Preview review previewSha256 is invalid")
 
-    delivery = load_json(delivery_path, "Preview delivery manifest")
-    if delivery.get("status") not in {"preview-delivery-ready", "handoff-preview-delivery-ready"}:
-        raise FinalAuthorizationError("Preview delivery manifest is not delivery-ready")
-    if _delivery_episode(delivery) != date:
-        raise FinalAuthorizationError("Preview delivery manifest episode mismatch")
-    if str(delivery.get("runId")) != preview_run_id:
-        raise FinalAuthorizationError("Preview delivery manifest runId mismatch")
-    if delivery.get("previewSha256") != preview_sha:
-        raise FinalAuthorizationError("human approval does not match the actual Preview SHA")
+    actual_preview_sha = sha256_file(preview_path)
+    if actual_preview_sha != approved_preview_sha:
+        raise FinalAuthorizationError("human approval does not match the actual Preview MP4 SHA")
+
+    technical = load_json(technical_path, "Preview technical report")
+    if technical.get("status") != "preview-generated":
+        raise FinalAuthorizationError("Preview technical report must be preview-generated")
+    episode_value = technical.get("episodeId") or technical.get("episodeDate")
+    if episode_value != date:
+        raise FinalAuthorizationError("Preview technical report episode mismatch")
 
     spec_sha = sha256_file(spec)
-    if delivery.get("specSha256") != spec_sha:
+    if technical.get("inputSpecSha256") != spec_sha:
         raise FinalAuthorizationError(
             "approved Preview was not rendered from the current render_spec SHA"
         )
@@ -137,8 +132,8 @@ def build_authorization(
         "final_requested": True,
         "renderSpecSha256": spec_sha,
         "previewRunId": preview_run_id,
-        "previewSha256": preview_sha,
-        "previewDeliveryManifestSha256": sha256_file(delivery_path),
+        "previewSha256": actual_preview_sha,
+        "previewTechnicalReportSha256": sha256_file(technical_path),
         "humanPreviewReviewPath": review_rel,
         "humanPreviewReviewSha256": sha256_file(review_path),
         "visualIntelligencePackageSha256": sha256_file(package),
@@ -161,7 +156,8 @@ def main() -> int:
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--date", required=True)
     parser.add_argument("--preview-run-id", required=True)
-    parser.add_argument("--preview-delivery-manifest", required=True, type=Path)
+    parser.add_argument("--preview-mp4", required=True, type=Path)
+    parser.add_argument("--preview-technical-report", required=True, type=Path)
     parser.add_argument("--human-preview-review", type=Path)
     parser.add_argument("--explicit-final", action="store_true")
     parser.add_argument("--output", type=Path)
@@ -178,7 +174,8 @@ def main() -> int:
             root=root,
             date=args.date,
             preview_run_id=args.preview_run_id,
-            preview_delivery_manifest=args.preview_delivery_manifest,
+            preview_mp4=args.preview_mp4,
+            preview_technical_report=args.preview_technical_report,
             human_preview_review=review,
             explicit_final=args.explicit_final,
         )
