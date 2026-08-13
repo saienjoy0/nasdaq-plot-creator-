@@ -17,6 +17,7 @@ import renderer_binding
 import validate_visual_intelligence_package
 import visual_intelligence_bridge_staged
 import visual_intelligence_intraday_evidence
+import visual_intelligence_object_references
 import visual_intelligence_renderer_projection
 
 
@@ -46,6 +47,12 @@ def main() -> int:
                 producer_render,
                 repo_root=root,
                 date=args.date,
+            )
+        )
+        candidate_render = (
+            visual_intelligence_object_references.reconcile_projected_object_references(
+                producer_render,
+                candidate_render,
             )
         )
         candidate_render = visual_intelligence_intraday_evidence.bind_verified_intraday_evidence(
@@ -115,6 +122,7 @@ def main() -> int:
         renderer_binding.RendererBindingError,
         validate_visual_intelligence_package.VisualIntelligencePackageError,
         visual_intelligence_intraday_evidence.IntradayEvidenceBindingError,
+        visual_intelligence_object_references.ObjectReferenceReconciliationError,
         visual_intelligence_renderer_projection.VisualIntelligenceRendererProjectionError,
     ) as exc:
         report = {
