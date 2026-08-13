@@ -4,9 +4,9 @@
   "frozenInterfaceSha256": "a9c54f2115f1d5a73251be64edcd5ff3f84c0940613ff7a6d7718f755581977f",
   "renderer": {
     "repository": "saienjoy0/saienjoy0-nasdaq-cafe-remotion",
-    "commit": "5391967099fbd7a0a2569c6c82b94d90aa889d64",
+    "commit": "758c2c6ff7b9e4d61054437f1355886d57914553",
     "contractVersion": "2.4.0",
     "registrySnapshotPath": "contracts/visual_component_registry_snapshot.json",
-    "registrySnapshotSha256": "e49c51a944a25416677c03f346768d011735f1f141469f33839557a4c8b8ad35"
+    "registrySnapshotSha256": "c0a6cc73446a338e30f119a25b1ae7af8aee93d0232b0c802b1a3f2d73b2a2a3"
   }
 }
