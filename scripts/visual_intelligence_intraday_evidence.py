@@ -138,7 +138,6 @@ def bind_verified_intraday_evidence(
             if not isinstance(selected, list) or not selected:
                 continue
             series = None
-            reference = None
             for source_id in beat.get("evidenceSourceIds", []):
                 source = sources.get(source_id)
                 if not isinstance(source, dict) or source.get("sourceType") != "market-data":
@@ -155,7 +154,6 @@ def bind_verified_intraday_evidence(
                     _validate_intraday_series(value, reference=candidate_reference)
                     cache[candidate_reference] = value
                 series = cache[candidate_reference]
-                reference = candidate_reference
                 break
             if series is None:
                 continue
@@ -168,8 +166,4 @@ def bind_verified_intraday_evidence(
             }
             # Keep the authored template/variant untouched. Candidate Builder will use
             # this verified config only when it constructs a time-series candidate.
-            beat.setdefault("financialVisualTrace", {})
-            trace = beat.get("financialVisualTrace")
-            if isinstance(trace, dict):
-                trace.setdefault("intradayEvidenceReference", reference)
     return projected
