@@ -41,17 +41,17 @@ def main() -> int:
     try:
         binding = renderer_binding.verify_renderer_checkout(root, renderer_root)
         producer_render = load_json(args.render_spec)
-        evidence_bound_render = visual_intelligence_intraday_evidence.bind_verified_intraday_evidence(
-            producer_render,
-            repo_root=root,
-            date=args.date,
-        )
         candidate_render = (
             visual_intelligence_renderer_projection.project_visual_intelligence_renderer_input(
-                evidence_bound_render,
+                producer_render,
                 repo_root=root,
                 date=args.date,
             )
+        )
+        candidate_render = visual_intelligence_intraday_evidence.bind_verified_intraday_evidence(
+            candidate_render,
+            repo_root=root,
+            date=args.date,
         )
         result = visual_intelligence_bridge_staged.prepare_and_compile(
             render=candidate_render,
