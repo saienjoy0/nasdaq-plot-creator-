@@ -35,6 +35,17 @@
       }
     },
     {
+      "sceneNumber": 4,
+      "beatNumber": 2,
+      "set": {
+        "visualTemplate": "text-focus",
+        "visualMode": "expected-actual-gap",
+        "grammarId": "bridge-text",
+        "transitionRole": "continuation",
+        "variant": "default"
+      }
+    },
+    {
       "sceneNumber": 5,
       "beatNumber": 1,
       "set": {
