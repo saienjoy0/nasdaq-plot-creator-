@@ -28,6 +28,23 @@ def load_json(path: Path) -> dict:
     return value
 
 
+def _restore_precomputed_financial_context(path: Path, original: bytes | None) -> None:
+    """Keep the pre-Director financial provider immutable once registered as evidence.
+
+    `visual_intelligence_story_context.py` creates this provider from the approved
+    producer RenderSpec before Visual Requirements are authored. The staged bridge
+    also materializes provider metadata from its projected Renderer input for legacy
+    compatibility. That derived write must not replace the already-registered
+    Visual-independent context, otherwise the production-state evidence SHA becomes
+    stale even though Story and Visual semantics did not change.
+    """
+    if original is None:
+        return
+    if not path.is_file() or path.read_bytes() != original:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(original)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path.cwd())
@@ -60,14 +77,30 @@ def main() -> int:
             repo_root=root,
             date=args.date,
         )
-        result = visual_intelligence_bridge_staged.prepare_and_compile(
-            render=candidate_render,
-            output_root=root,
-            date=args.date,
-            renderer_root=renderer_root,
-            expected_renderer_commit=binding["renderer"]["commit"],
-            plot_root=root,
+        financial_context_path = (
+            root
+            / "working"
+            / args.date
+            / "visual-intelligence"
+            / "financial_candidate_provider.json"
         )
+        financial_context_before = (
+            financial_context_path.read_bytes() if financial_context_path.is_file() else None
+        )
+        try:
+            result = visual_intelligence_bridge_staged.prepare_and_compile(
+                render=candidate_render,
+                output_root=root,
+                date=args.date,
+                renderer_root=renderer_root,
+                expected_renderer_commit=binding["renderer"]["commit"],
+                plot_root=root,
+            )
+        finally:
+            _restore_precomputed_financial_context(
+                financial_context_path,
+                financial_context_before,
+            )
         validation = validate_visual_intelligence_package.validate(
             root=root,
             date=args.date,
