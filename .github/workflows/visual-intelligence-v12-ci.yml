@@ -17,6 +17,7 @@ on:
       - "scripts/run_daily_production_v12.py"
       - "scripts/run_daily_renderer_closure_v12.py"
       - "scripts/build_final_production_package_v12.py"
+      - "working/2026-08-12/visual-intelligence/visual_intelligence_decision.json"
       - "tests/remotion-compat/*visual_intelligence*.py"
       - "tests/remotion-compat/test_final_render_authorization_v12.py"
       - ".github/workflows/visual-intelligence-v12-ci.yml"
@@ -79,6 +80,8 @@ jobs:
             scripts/financial_candidate_provider.py \
             scripts/renderer_strict_projection.py \
             scripts/visual_intelligence_bridge.py \
+            scripts/visual_intelligence_bridge_staged.py \
+            scripts/visual_intelligence_intraday_evidence.py \
             scripts/visual_intelligence_renderer_projection.py \
             scripts/visual_intelligence_requirements.py \
             scripts/visual_intelligence_story_context.py \
@@ -154,33 +157,65 @@ jobs:
           PYTHONPATH: scripts
         run: python3 tests/remotion-compat/run_visual_intelligence_v12_cross_repo.py --renderer-root renderer
 
-      - name: Fresh real-day 2026-08-12 prepare canary
+      - name: Resolve fresh real-day canary stage
+        id: canary
+        shell: bash
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          from pathlib import Path
+          path=Path('working/2026-08-12/visual-intelligence/visual_intelligence_decision.json')
+          if not path.is_file():
+              print('phase=prepare')
+              print('expected_closure=PREPARED')
+              print('expected_vi=DECISION_REQUIRED')
+          else:
+              value=json.loads(path.read_text(encoding='utf-8'))
+              rounds=value.get('reviewRounds')
+              final_pass=(
+                  isinstance(rounds, list) and rounds and isinstance(rounds[-1], dict)
+                  and rounds[-1].get('status') == 'PASS'
+                  and isinstance(rounds[-1].get('compiledVisualSha256'), str)
+                  and isinstance(rounds[-1].get('warningReportSha256'), str)
+              )
+              print('phase=compile')
+              print('expected_closure=' + ('PASS' if final_pass else 'REVIEW_REQUIRED'))
+              print('expected_vi=' + ('PASS' if final_pass else 'REVIEW_REQUIRED'))
+          PY
+
+      - name: Fresh real-day 2026-08-12 staged canary
         env:
           PYTHONPATH: scripts
         run: |
           python3 scripts/run_daily_renderer_closure_v12.py \
-            --phase prepare \
+            --phase ${{ steps.canary.outputs.phase }} \
             --date 2026-08-12 \
             --repo-root . \
             --renderer-root renderer
+          EXPECTED_CLOSURE='${{ steps.canary.outputs.expected_closure }}' \
+          EXPECTED_VI='${{ steps.canary.outputs.expected_vi }}' \
           python3 - <<'PY'
-          import json
+          import json, os
           from pathlib import Path
-          report=json.loads(Path('verification/2026-08-12/renderer_closure_gate_v12.json').read_text())
-          assert report['status'] == 'PREPARED', report
+          closure=json.loads(Path('verification/2026-08-12/renderer_closure_gate_v12.json').read_text())
           vi=json.loads(Path('verification/2026-08-12/visual_intelligence_validation.json').read_text())
-          assert vi['status'] == 'DECISION_REQUIRED', vi
+          assert closure['status'] == os.environ['EXPECTED_CLOSURE'], closure
+          assert vi['status'] == os.environ['EXPECTED_VI'], vi
           catalog=json.loads(Path('working/2026-08-12/visual-intelligence/visual_candidate_catalog.json').read_text())
           assert catalog['episodeDate'] == '2026-08-12', catalog
           assert len(catalog.get('candidates', [])) > 0, catalog
-          print('REAL_DAY_V12_PREPARE_PASS candidates=', len(catalog['candidates']))
+          if vi['status'] == 'REVIEW_REQUIRED':
+              assert Path(vi['compiledVisual']).is_file(), vi
+              assert Path(vi['warningReport']).is_file(), vi
+              assert vi.get('compiledVisualSha256') and vi.get('warningReportSha256'), vi
+          print('REAL_DAY_V12_STAGE_PASS', vi['status'], 'candidates=', len(catalog['candidates']))
           PY
 
-      - name: Upload fresh real-day Candidate Catalog evidence
+      - name: Upload fresh real-day Visual Intelligence evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: visual-intelligence-v12-real-day-2026-08-12-prepare
+          name: visual-intelligence-v12-real-day-2026-08-12
           path: |
             working/2026-08-12/visual-intelligence/
             verification/2026-08-12/
