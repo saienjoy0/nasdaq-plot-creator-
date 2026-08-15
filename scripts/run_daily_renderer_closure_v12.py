@@ -5,8 +5,10 @@
 vNext CandidateInput/Capability/Catalog, then requires the machine bridge to stop
 at DECISION_REQUIRED. `compile` repeats the same deterministic preparation with an
 AI-B-authored Director decision present. Director-only decisions compile the actual
-visual output and warnings, then stop normally at REVIEW_REQUIRED. Only a Critic
-PASS bound to those exact outputs may advance the validated production states.
+visual output and warnings, then stop normally at REVIEW_REQUIRED. A decision that
+became stale against the current legal Catalog returns to DECISION_REQUIRED instead
+of being treated as a renderer failure. Only a Critic PASS bound to those exact
+outputs may advance the validated production states.
 
 Neither phase renders Preview or auto-requests Final.
 """
@@ -255,6 +257,32 @@ def prepare_common(
     advance(root, date=date, state="assets_resolved", evidence=asset_evidence, env=env)
 
 
+def _write_prepared_result(
+    *,
+    verification: Path,
+    binding: dict,
+    date: str,
+    reason: str | None = None,
+) -> None:
+    result = {
+        "contractVersion": "1.0.0",
+        "bridgeContractVersion": binding["bridgeContractVersion"],
+        "episodeDate": date,
+        "rendererCommit": binding["renderer"]["commit"],
+        "status": "PREPARED",
+        "candidateCatalog": f"working/{date}/visual-intelligence/visual_candidate_catalog.json",
+        "previewRendered": False,
+        "finalRendered": False,
+    }
+    if reason:
+        result["reason"] = reason
+    (verification / "renderer_closure_gate_v12.json").write_text(
+        json.dumps(result, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--phase", choices=["prepare", "compile"], required=True)
@@ -300,21 +328,11 @@ def main() -> int:
                 raise VisualIntelligenceClosureError(
                     "prepare phase must stop at DECISION_REQUIRED after Candidate Catalog generation"
                 )
-            result = {
-                "contractVersion": "1.0.0",
-                "bridgeContractVersion": binding["bridgeContractVersion"],
-                "episodeDate": date,
-                "rendererCommit": binding["renderer"]["commit"],
-                "status": "PREPARED",
-                "candidateCatalog": f"working/{date}/visual-intelligence/visual_candidate_catalog.json",
-                "previewRendered": False,
-                "finalRendered": False,
-            }
-            (verification / "renderer_closure_gate_v12.json").write_text(
-                json.dumps(result, ensure_ascii=False, indent=2) + "\n",
-                encoding="utf-8",
+            _write_prepared_result(
+                verification=verification,
+                binding=binding,
+                date=date,
             )
-            print(json.dumps(result, ensure_ascii=False, indent=2))
             return 0
 
         decision = root / "working" / date / "visual-intelligence" / "visual_intelligence_decision.json"
@@ -322,8 +340,22 @@ def main() -> int:
             raise VisualIntelligenceClosureError(
                 "compile phase requires AI-B visual_intelligence_decision.json"
             )
-        code = run(root, *vi_command, env=env, ok_codes=(0, 4))
+        code = run(root, *vi_command, env=env, ok_codes=(0, 3, 4))
         vi_report = load(verification / "visual_intelligence_validation.json")
+        if code == 3:
+            if vi_report.get("status") != "DECISION_REQUIRED":
+                raise VisualIntelligenceClosureError(
+                    "compile phase exit 3 must correspond to DECISION_REQUIRED"
+                )
+            reasons = vi_report.get("errors")
+            reason = reasons[0] if isinstance(reasons, list) and reasons else "Director decision requires reselection"
+            _write_prepared_result(
+                verification=verification,
+                binding=binding,
+                date=date,
+                reason=str(reason),
+            )
+            return 0
         if code == 4:
             if vi_report.get("status") != "REVIEW_REQUIRED":
                 raise VisualIntelligenceClosureError(
