@@ -11,7 +11,7 @@ Rules:
 - an unambiguous 1 -> 1 replacement may be rebound inside that Beat only;
 - approved specialized complex rewrites are validated, not guessed;
 - every other N -> M rewrite fails closed;
-- references outside the owning Beat make a 1 -> 1 replacement ambiguous and fail;
+- references outside the owning Beat make a replacement ambiguous and fail;
 - Visual Events, Shot targets, and object-bearing templateConfig fields are checked.
 """
 from __future__ import annotations
@@ -194,15 +194,27 @@ def _rebind_beat_references(beat: dict[str, Any], old_id: str, new_id: str) -> N
 def _is_approved_complex_rewrite(
     producer_beat: dict[str, Any], projected_beat: dict[str, Any], old_ids: list[str], new_ids: list[str]
 ) -> bool:
-    # Expected/Actual/Gap is the only current approved 1 -> 3 canonicalization.
-    # The dedicated Renderer canonicalizer creates all three role cards and their
-    # display events before this reconciliation layer runs.
-    return (
+    expected_actual_gap = (
         len(old_ids) == 1
         and len(new_ids) == 3
         and projected_beat.get("visualTemplate") == "expected-actual-gap-flow"
         and projected_beat.get("visualMode") == "expected-actual-gap"
     )
+    config = projected_beat.get("templateConfig")
+    node_order = config.get("nodeOrder") if isinstance(config, dict) else None
+    causal_card_to_graph = (
+        len(old_ids) == 1
+        and len(new_ids) in {3, 5, 7}
+        and projected_beat.get("visualTemplate") in {"causal-lane", "macro-pressure"}
+        and projected_beat.get("visualMode") == "causal-diagram"
+        and isinstance(node_order, list)
+        and all(isinstance(item, str) for item in node_order)
+        and 2 <= len(node_order) <= 4
+        and len(new_ids) == (2 * len(node_order)) - 1
+        and all(item in new_ids for item in node_order)
+        and config.get("outcomeNodeId") == node_order[-1]
+    )
+    return expected_actual_gap or causal_card_to_graph
 
 
 def _validate_complex_rewrite(
@@ -224,6 +236,26 @@ def _validate_complex_rewrite(
             "E_VISUAL_OBJECT_REWRITE_AMBIGUOUS:"
             f"scene={scene_index}:beat={beat_index}:old={len(old_ids)}:new={len(new_ids)}"
         )
+
+    projected_beats = projected_scene.get("visualBeats", [])
+    for old_id in old_ids:
+        if any(
+            isinstance(other, dict)
+            and other is not projected_beat
+            and old_id in other.get("objectIds", [])
+            for other in projected_beats
+        ):
+            raise ObjectReferenceReconciliationError(
+                f"E_VISUAL_OBJECT_REWRITE_SHARED:{old_id}:scene={scene_index}"
+            )
+        for source_event in producer_scene.get("visualEvents", []):
+            if not isinstance(source_event, dict) or source_event.get("targetId") != old_id:
+                continue
+            if not _event_is_local(source_event, positions=positions, start=start, end=end):
+                raise ObjectReferenceReconciliationError(
+                    "E_VISUAL_OBJECT_REFERENCE_OUTSIDE_BEAT:"
+                    f"{old_id}:scene={scene_index}:beat={beat_index}"
+                )
 
     local_targets: set[str] = set()
     events = projected_scene.get("visualEvents", [])
@@ -353,8 +385,6 @@ def reconcile_projected_object_references(
                         f"E_VISUAL_OBJECT_REWRITE_SHARED:{old_id}:scene={scene_index}"
                     )
 
-            # Any producer event that points to the replaced object must belong to this
-            # Beat. If it appears outside the Beat, the intended continuity is ambiguous.
             for source_event in producer_events:
                 if not isinstance(source_event, dict) or source_event.get("targetId") != old_id:
                     continue
@@ -377,8 +407,6 @@ def reconcile_projected_object_references(
                     )
                 target_event["targetId"] = new_id
 
-            # New projected events are allowed, but a stale old target may only be fixed
-            # when it is local to the Beat; an out-of-Beat stale target is ambiguous.
             for event in projected_events:
                 if not isinstance(event, dict) or event.get("targetId") != old_id:
                     continue

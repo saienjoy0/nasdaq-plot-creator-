@@ -16,10 +16,22 @@ from pathlib import Path
 import renderer_binding
 import validate_visual_intelligence_package
 import visual_intelligence_bridge_staged
+import visual_intelligence_causal_inventory
 import visual_intelligence_intraday_evidence
 import visual_intelligence_object_references
 import visual_intelligence_renderer_projection
 import visual_intelligence_terminal_projection
+
+
+STALE_DIRECTOR_MARKERS = (
+    "selectedCandidateId is not a legal Candidate",
+    "strongest alternative is invalid",
+    "single legal Candidate must not invent an alternative",
+    "E_VISUAL_REQUIRED_REALITY_ANCHOR_MISSING",
+    "E_VISUAL_REALITY_ANCHOR_DEPENDENCY_INVALID",
+    "E_VISUAL_REALITY_ANCHOR_DEPENDENCY_NOT_PRIOR",
+    "E_VISUAL_REALITY_ANCHOR_DEPENDENCY_CROSS_SCENE",
+)
 
 
 def load_json(path: Path) -> dict:
@@ -106,6 +118,9 @@ def main() -> int:
         candidate_render = visual_intelligence_terminal_projection.normalize_terminal_transition(
             candidate_render
         )
+        candidate_render = visual_intelligence_causal_inventory.materialize_causal_inventory(
+            candidate_render
+        )
         candidate_render = (
             visual_intelligence_object_references.reconcile_projected_object_references(
                 producer_render,
@@ -163,9 +178,12 @@ def main() -> int:
         code = 0
     except visual_intelligence_bridge_staged.VisualIntelligenceStageError as exc:
         text = str(exc)
-        if "E_VISUAL_INTELLIGENCE_DECISION_REQUIRED" in text:
+        stale_director = any(marker in text for marker in STALE_DIRECTOR_MARKERS)
+        if "E_VISUAL_INTELLIGENCE_DECISION_REQUIRED" in text or stale_director:
             status = "DECISION_REQUIRED"
             code = 3
+            if stale_director and not text.startswith("E_VISUAL_DECISION_STALE:"):
+                text = "E_VISUAL_DECISION_STALE:" + text
         elif "E_VISUAL_INTELLIGENCE_REVIEW_REQUIRED" in text:
             status = "REVIEW_REQUIRED"
             code = 4
@@ -194,6 +212,7 @@ def main() -> int:
         json.JSONDecodeError,
         renderer_binding.RendererBindingError,
         validate_visual_intelligence_package.VisualIntelligencePackageError,
+        visual_intelligence_causal_inventory.VisualIntelligenceCausalInventoryError,
         visual_intelligence_intraday_evidence.IntradayEvidenceBindingError,
         visual_intelligence_object_references.ObjectReferenceReconciliationError,
         visual_intelligence_renderer_projection.VisualIntelligenceRendererProjectionError,
