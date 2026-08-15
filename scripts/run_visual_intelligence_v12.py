@@ -46,6 +46,41 @@ def _restore_precomputed_financial_context(path: Path, original: bytes | None) -
         path.write_bytes(original)
 
 
+def _reject_legacy_source_evidence_authority(root: Path, date: str) -> None:
+    """Keep generic source evidence under the single Visual Intelligence authority.
+
+    The pre-v1.2 Financial Visual pipeline historically modeled Reuters/AP source
+    receipts as `kind: source-evidence` and froze a preferred `source-receipt` before
+    the Visual Director ran. Visual Intelligence v1.2 already owns source-document,
+    verification, and text-only Candidate selection, so carrying that legacy selected
+    path into v1.2 creates two competing visual authorities and stale financial traces.
+
+    Genuine financial intents remain legal and continue through the Financial Recipe
+    pipeline unchanged. Only legacy source-evidence intents are forbidden on v1.2.
+    """
+    path = root / "working" / date / "financial_final_episode_contract.json"
+    if not path.is_file():
+        return
+    value = load_json(path)
+    visuals = value.get("financialVisuals")
+    if not isinstance(visuals, dict):
+        return
+    intents = visuals.get("intents")
+    if not isinstance(intents, list):
+        return
+    legacy = [
+        item.get("intentId", "<unknown>")
+        for item in intents
+        if isinstance(item, dict) and item.get("kind") == "source-evidence"
+    ]
+    if legacy:
+        raise ValueError(
+            "E_VISUAL_SOURCE_EVIDENCE_DUAL_AUTHORITY:"
+            + ",".join(str(item) for item in legacy)
+            + ": source evidence must be authored through Visual Requirements/Candidates, not the legacy Financial selected path"
+        )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path.cwd())
@@ -60,6 +95,7 @@ def main() -> int:
     try:
         binding = renderer_binding.verify_renderer_checkout(root, renderer_root)
         producer_render = load_json(args.render_spec)
+        _reject_legacy_source_evidence_authority(root, args.date)
         candidate_render = (
             visual_intelligence_renderer_projection.project_visual_intelligence_renderer_input(
                 producer_render,
