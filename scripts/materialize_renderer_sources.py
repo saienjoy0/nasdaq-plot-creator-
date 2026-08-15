@@ -38,10 +38,10 @@ VISUAL_MODE_MAP = {
     "verification": "verification-points",
     "closing-recap": "conclusion-card",
 }
-FINANCIAL_TEMPLATES = {
-    "market-pulse-grid", "earnings-surprise", "dual-asset-split",
-    "macro-pressure", "source-receipt",
+FINANCIAL_ONLY_TEMPLATES = {
+    "market-pulse-grid", "earnings-surprise", "dual-asset-split", "macro-pressure",
 }
+DUAL_USE_FINANCIAL_TEMPLATES = {"source-receipt"}
 
 class RendererSourceError(ValueError):
     pass
@@ -170,6 +170,22 @@ def _binding_map(bindings: dict[str, Any]) -> dict[str, dict[str, Any]]:
         result[source_beat_id] = row
     return result
 
+def _financial_owned_source_beats(
+    render: dict[str, Any],
+    source_to_canonical: dict[str, str],
+    binding_by_source: dict[str, dict[str, Any]],
+) -> set[str]:
+    """Resolve Financial ownership without inferring dual-use receipts by name alone."""
+    owned: set[str] = set()
+    for source_id, canonical in source_to_canonical.items():
+        _, beat = _find_render_beat(render, canonical)
+        template = beat.get("visualTemplate")
+        if template in FINANCIAL_ONLY_TEMPLATES:
+            owned.add(source_id)
+        elif source_id in binding_by_source and template in DUAL_USE_FINANCIAL_TEMPLATES:
+            owned.add(source_id)
+    return owned
+
 def _visual_grammar_sidecar(*, date: str, render: dict[str, Any], expected_confirmed: bool) -> dict[str, Any]:
     scenes = []
     for scene in render["scenes"]:
@@ -269,12 +285,9 @@ def _plan(*, plan_id: str, intent_id: str, path: str, recipe_id: str, template_i
 def _financial_contract(*, render: dict[str, Any], bindings: dict[str, Any],
                         source_to_canonical: dict[str, str]) -> dict[str, Any]:
     binding_by_source = _binding_map(bindings)
-    financial_source_beats = {
-        source_id
-        for source_id, canonical in source_to_canonical.items()
-        for _, beat in [_find_render_beat(render, canonical)]
-        if beat.get("visualTemplate") in FINANCIAL_TEMPLATES
-    }
+    financial_source_beats = _financial_owned_source_beats(
+        render, source_to_canonical, binding_by_source
+    )
     if set(binding_by_source) != financial_source_beats:
         raise RendererSourceError(
             "financial binding set must exactly match selected financial templates: "
