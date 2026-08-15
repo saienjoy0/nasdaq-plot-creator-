@@ -9,6 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import visual_intelligence_causal_inventory as causal_inventory  # noqa: E402
 import visual_intelligence_object_references as refs  # noqa: E402
 
 
@@ -131,7 +132,6 @@ def test_outside_beat_fails() -> None:
     )
     projected = copy.deepcopy(producer)
     projected["scenes"][0]["visualBeats"][0]["objectIds"] = ["new-object"]
-    # Simulate the current scene-wide projection having already rewritten the event.
     for item in projected["scenes"][0]["visualEvents"]:
         if item["targetId"] == "old-object":
             item["targetId"] = "new-object"
@@ -184,6 +184,62 @@ def test_expected_actual_gap_specialized_rewrite() -> None:
         raise AssertionError(f"specialized E/A/G references drifted: {observed}")
 
 
+def test_causal_card_specialized_rewrite() -> None:
+    source_scene = scene()
+    source_scene["cards"] = [{
+        "cardId": "old-object",
+        "role": None,
+        "title": "承認済み因果",
+        "lines": [
+            {"label": "1", "value": "A", "tone": "neutral"},
+            {"label": "2", "value": "B", "tone": "neutral"},
+            {"label": "3", "value": "C", "tone": "neutral"},
+            {"label": "4", "value": "D", "tone": "neutral"},
+        ],
+    }]
+    source_scene["nodes"] = []
+    source_scene["arrows"] = []
+    source_scene["visualEvents"] = [
+        event("event-001", "scene-01-chunk-001", "show", "old-object")
+    ]
+    source_scene["visualBeats"][0]["shots"] = []
+    producer = {"scenes": [source_scene]}
+    projected = copy.deepcopy(producer)
+    first = projected["scenes"][0]["visualBeats"][0]
+    first["visualTemplate"] = "causal-lane"
+    first["visualMode"] = "causal-diagram"
+    first["templateConfig"] = {
+        "variant": "left-to-right",
+        "comparisonBasis": None,
+        "dataBasis": "synthetic",
+        "nodeOrder": [],
+        "laneLabels": [],
+        "outcomeNodeId": None,
+    }
+
+    materialized = causal_inventory.materialize_causal_inventory(projected)
+    causal_scene = materialized["scenes"][0]
+    causal_beat = causal_scene["visualBeats"][0]
+    node_ids = [item["nodeId"] for item in causal_scene["nodes"]]
+    if len(node_ids) != 4 or len(causal_scene["arrows"]) != 3:
+        raise AssertionError("4-line causal card did not become four nodes and three arrows")
+    if causal_beat["templateConfig"]["nodeOrder"] != node_ids:
+        raise AssertionError("causal nodeOrder drifted from generated approved nodes")
+    if causal_beat["templateConfig"]["outcomeNodeId"] != node_ids[-1]:
+        raise AssertionError("causal outcomeNodeId must be the authored final line")
+    if len(causal_beat["objectIds"]) != 7:
+        raise AssertionError("causal Beat must expose the complete node/arrow inventory")
+
+    result = refs.reconcile_projected_object_references(producer, materialized)
+    targets = [item["targetId"] for item in result["scenes"][0]["visualEvents"]]
+    if len(targets) != 7 or set(targets) != set(causal_beat["objectIds"]):
+        raise AssertionError(f"causal display events did not fan out to generated objects: {targets}")
+    if "old-object" in targets:
+        raise AssertionError("old causal source card remained in viewer events")
+    if producer["scenes"][0]["visualBeats"][0]["objectIds"] != ["old-object"]:
+        raise AssertionError("causal canonicalization mutated producer input")
+
+
 def test_noop_is_byte_equivalent() -> None:
     producer = {"scenes": [scene()]}
     projected = copy.deepcopy(producer)
@@ -198,6 +254,7 @@ def main() -> int:
     test_shared_object_fails()
     test_ambiguous_complex_rewrite_fails()
     test_expected_actual_gap_specialized_rewrite()
+    test_causal_card_specialized_rewrite()
     test_noop_is_byte_equivalent()
     print("visual intelligence object reference reconciliation tests passed")
     return 0
