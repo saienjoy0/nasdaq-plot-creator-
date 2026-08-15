@@ -9,6 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import materialize_renderer_sources as renderer_sources  # noqa: E402
 import run_visual_intelligence_v12 as run_v12  # noqa: E402
 import visual_intelligence_bridge_staged as staged_bridge  # noqa: E402
 import visual_intelligence_requirements as requirements  # noqa: E402
@@ -190,7 +191,46 @@ def main() -> int:
         }), encoding="utf-8")
         run_v12._reject_legacy_source_evidence_authority(root, date)
 
-    print("visual intelligence requirements, Candidate authority, and source-evidence ownership tests passed")
+    # Renderer-source materialization must use the same dual-use boundary. A generic
+    # source-receipt is not Financial merely because of its physical Template name;
+    # an explicit binding may still opt that Beat into Financial ownership.
+    materializer_render = {
+        "scenes": [{
+            "visualBeats": [
+                {"beatId": "vb-01-01", "visualTemplate": "source-receipt"},
+                {"beatId": "vb-01-02", "visualTemplate": "market-pulse-grid"},
+                {"beatId": "vb-01-03", "visualTemplate": "hero-number"},
+            ]
+        }]
+    }
+    source_map = {
+        "scene-01-beat-001": "vb-01-01",
+        "scene-01-beat-002": "vb-01-02",
+        "scene-01-beat-003": "vb-01-03",
+    }
+    owned_without_receipt_binding = renderer_sources._financial_owned_source_beats(
+        materializer_render,
+        source_map,
+        {},
+    )
+    if owned_without_receipt_binding != {"scene-01-beat-002"}:
+        raise AssertionError(owned_without_receipt_binding)
+    owned_with_receipt_binding = renderer_sources._financial_owned_source_beats(
+        materializer_render,
+        source_map,
+        {"scene-01-beat-001": {"bindingId": "binding-receipt"}},
+    )
+    if owned_with_receipt_binding != {"scene-01-beat-001", "scene-01-beat-002"}:
+        raise AssertionError(owned_with_receipt_binding)
+    arbitrary_binding_owned = renderer_sources._financial_owned_source_beats(
+        materializer_render,
+        source_map,
+        {"scene-01-beat-003": {"bindingId": "binding-invalid"}},
+    )
+    if "scene-01-beat-003" in arbitrary_binding_owned:
+        raise AssertionError("non-financial arbitrary Template must not become Financial by binding alone")
+
+    print("visual intelligence requirements, Candidate authority, source-evidence ownership, and materializer dual-use tests passed")
     return 0
 
 
