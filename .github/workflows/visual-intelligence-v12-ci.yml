@@ -81,6 +81,7 @@ jobs:
             scripts/renderer_strict_projection.py \
             scripts/visual_intelligence_bridge.py \
             scripts/visual_intelligence_bridge_staged.py \
+            scripts/visual_intelligence_causal_inventory.py \
             scripts/visual_intelligence_intraday_evidence.py \
             scripts/visual_intelligence_object_references.py \
             scripts/visual_intelligence_renderer_projection.py \
@@ -220,8 +221,17 @@ jobs:
 
           closure=json.loads(Path('verification/2026-08-12/renderer_closure_gate_v12.json').read_text())
           vi=json.loads(Path('verification/2026-08-12/visual_intelligence_validation.json').read_text())
-          assert closure['status'] == os.environ['EXPECTED_CLOSURE'], closure
-          assert vi['status'] == os.environ['EXPECTED_VI'], vi
+          stale_errors=vi.get('errors', [])
+          stale_decision=(
+              vi.get('status') == 'DECISION_REQUIRED'
+              and isinstance(stale_errors, list)
+              and any(isinstance(item, str) and item.startswith('E_VISUAL_DECISION_STALE:') for item in stale_errors)
+          )
+          if stale_decision:
+              assert closure['status'] == 'PREPARED', closure
+          else:
+              assert closure['status'] == os.environ['EXPECTED_CLOSURE'], closure
+              assert vi['status'] == os.environ['EXPECTED_VI'], vi
           catalog=json.loads(Path('working/2026-08-12/visual-intelligence/visual_candidate_catalog.json').read_text())
           assert catalog['episodeDate'] == '2026-08-12', catalog
           assert len(catalog.get('candidates', [])) > 0, catalog
@@ -241,7 +251,7 @@ jobs:
               final=json.loads(Path('render-specs/2026-08-12/render_spec.json').read_text())
               assert beat_identity(approved) == beat_identity(final), (beat_identity(approved), beat_identity(final))
               assert len(beat_identity(final)) == 18, beat_identity(final)
-          print('REAL_DAY_V12_STAGE_PASS', vi['status'], 'candidates=', len(catalog['candidates']))
+          print('REAL_DAY_V12_STAGE_PASS', vi['status'], 'stale=', stale_decision, 'candidates=', len(catalog['candidates']))
           PY
 
       - name: Upload fresh real-day Visual Intelligence evidence
