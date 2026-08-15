@@ -3,9 +3,10 @@
 
 This gate makes no editorial or visual selection. It checks the author-owned duration
 mode contract, the fixed nine-Scene/chunk-to-Beat closure, and that every authored
-Financial Visual Template has one explicit authored financial binding pointing to the
-exact Scene/Beat/template it claims to drive. Financial template ownership is derived
-from the existing financial recipe registry, not duplicated here.
+financial-only Visual Template has one explicit authored financial binding pointing to
+the exact Scene/Beat/template it claims to drive. Financial template ownership is
+derived from the existing financial recipe registry, with explicit dual-use Templates
+excluded from financial-only ownership.
 """
 from __future__ import annotations
 
@@ -17,6 +18,13 @@ from typing import Any
 
 class AuthoringClosureError(ValueError):
     pass
+
+
+# `source-receipt` is intentionally dual-use in Renderer 2.4: it can be the preferred
+# Template of a traced Financial source-receipt recipe, but Visual Intelligence v1.2
+# also exposes the same physical Template as a generic source-document Reality Anchor.
+# Therefore the template name alone cannot require a financialBindings owner.
+DUAL_USE_VISUAL_TEMPLATE_IDS = {"source-receipt"}
 
 
 def load_json(path: Path, label: str) -> dict[str, Any]:
@@ -47,10 +55,11 @@ def financial_template_ids(registry: dict[str, Any]) -> set[str]:
                 f"financial recipe {recipe_id}.allowedVisualTemplateIds must be a non-empty string array"
             )
         result.update(templates)
+    result.difference_update(DUAL_USE_VISUAL_TEMPLATE_IDS)
     if not result:
-        raise AuthoringClosureError(
-            "financial recipe registry exposes no preferred Financial Visual Templates"
-        )
+        # A registry containing only dual-use preferred Templates is valid; it simply
+        # exposes no financial-only Template that can be inferred by template name.
+        return set()
     return result
 
 
@@ -166,7 +175,7 @@ def validate_authoring(authoring: dict[str, Any], registry: dict[str, Any]) -> l
         template = beat.get("visualTemplate")
         if template in financial_templates and beat_id not in by_beat:
             errors.append(
-                f"{beat_id}: Financial Visual Template {template!r} requires an explicit "
+                f"{beat_id}: Financial-only Visual Template {template!r} requires an explicit "
                 "financialBindings entry; author a binding or explicitly choose its approved non-financial fallback"
             )
 
