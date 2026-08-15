@@ -16,6 +16,7 @@ from pathlib import Path
 import renderer_binding
 import validate_visual_intelligence_package
 import visual_intelligence_bridge_staged
+import visual_intelligence_causal_inventory
 import visual_intelligence_intraday_evidence
 import visual_intelligence_object_references
 import visual_intelligence_renderer_projection
@@ -106,6 +107,12 @@ def main() -> int:
         candidate_render = visual_intelligence_terminal_projection.normalize_terminal_transition(
             candidate_render
         )
+        # Visual Intelligence must receive the same Renderer-native causal inventory
+        # that final rendering would see. Reuse the existing deterministic card->graph
+        # materializer before Candidate construction; it does not choose visual meaning.
+        candidate_render = visual_intelligence_causal_inventory.materialize_causal_inventory(
+            candidate_render
+        )
         candidate_render = (
             visual_intelligence_object_references.reconcile_projected_object_references(
                 producer_render,
@@ -194,6 +201,7 @@ def main() -> int:
         json.JSONDecodeError,
         renderer_binding.RendererBindingError,
         validate_visual_intelligence_package.VisualIntelligencePackageError,
+        visual_intelligence_causal_inventory.VisualIntelligenceCausalInventoryError,
         visual_intelligence_intraday_evidence.IntradayEvidenceBindingError,
         visual_intelligence_object_references.ObjectReferenceReconciliationError,
         visual_intelligence_renderer_projection.VisualIntelligenceRendererProjectionError,
