@@ -23,6 +23,17 @@ import visual_intelligence_renderer_projection
 import visual_intelligence_terminal_projection
 
 
+STALE_DIRECTOR_MARKERS = (
+    "selectedCandidateId is not a legal Candidate",
+    "strongest alternative is invalid",
+    "single legal Candidate must not invent an alternative",
+    "E_VISUAL_REQUIRED_REALITY_ANCHOR_MISSING",
+    "E_VISUAL_REALITY_ANCHOR_DEPENDENCY_INVALID",
+    "E_VISUAL_REALITY_ANCHOR_DEPENDENCY_NOT_PRIOR",
+    "E_VISUAL_REALITY_ANCHOR_DEPENDENCY_CROSS_SCENE",
+)
+
+
 def load_json(path: Path) -> dict:
     value = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(value, dict):
@@ -107,9 +118,6 @@ def main() -> int:
         candidate_render = visual_intelligence_terminal_projection.normalize_terminal_transition(
             candidate_render
         )
-        # Visual Intelligence must receive the same Renderer-native causal inventory
-        # that final rendering would see. Reuse the existing deterministic card->graph
-        # materializer before Candidate construction; it does not choose visual meaning.
         candidate_render = visual_intelligence_causal_inventory.materialize_causal_inventory(
             candidate_render
         )
@@ -170,9 +178,12 @@ def main() -> int:
         code = 0
     except visual_intelligence_bridge_staged.VisualIntelligenceStageError as exc:
         text = str(exc)
-        if "E_VISUAL_INTELLIGENCE_DECISION_REQUIRED" in text:
+        stale_director = any(marker in text for marker in STALE_DIRECTOR_MARKERS)
+        if "E_VISUAL_INTELLIGENCE_DECISION_REQUIRED" in text or stale_director:
             status = "DECISION_REQUIRED"
             code = 3
+            if stale_director and not text.startswith("E_VISUAL_DECISION_STALE:"):
+                text = "E_VISUAL_DECISION_STALE:" + text
         elif "E_VISUAL_INTELLIGENCE_REVIEW_REQUIRED" in text:
             status = "REVIEW_REQUIRED"
             code = 4
