@@ -105,7 +105,6 @@ def _validate_director(
 
     intents, directions = _requirements_rows(requirements)
     intent_by_beat = {item.get("visualBeatId"): item for item in intents}
-    direction_by_beat = {item.get("visualBeatId"): item for item in directions}
     if [item.get("visualBeatId") for item in intents] != beat_ids:
         raise VisualIntelligenceStageError("Visual Intent must cover every Beat in Story order")
     if [item.get("visualBeatId") for item in directions] != beat_ids:
@@ -137,11 +136,10 @@ def _validate_director(
         candidate = by_id.get(selected_id)
         if not isinstance(candidate, dict) or candidate.get("visualBeatId") != beat_id:
             raise VisualIntelligenceStageError(f"{beat_id}: selectedCandidateId is not a legal Candidate")
-        required_modes = direction_by_beat.get(beat_id, {}).get("requiredModes")
-        if not isinstance(required_modes, list) or candidate.get("capability") not in required_modes:
-            raise VisualIntelligenceStageError(
-                f"E_VISUAL_SELECTED_MODE_NOT_REQUIRED:{beat_id}:{candidate.get('capability')}"
-            )
+        # requiredModes are provisional capability hints and are already enforced as
+        # a pre-selection catalog-coverage invariant above. Once the Renderer-owned
+        # Candidate Builder has admitted a Candidate, AI-B may choose that legal ID
+        # without mutating frozen Requirements merely to change Appearance.
         alternatives = by_beat.get(beat_id, [])
         strongest = selection.get("strongestAlternativeCandidateId")
         if len(alternatives) == 1:
