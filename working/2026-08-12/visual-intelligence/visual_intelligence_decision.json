@@ -1,1 +1,138 @@
-{"contractVersion":"1.0.0","bridgeContractVersion":"visual-intelligence-bridge/1.2.0","episodeDate":"2026-08-12","editorialSnapshotSha256":"1d2e7640a6e8e21ced5d41cfc43e10c84f374fe69229ee5dc297087fd4d29ec9","visualRequirementsSha256":"9f332f0e3c8337a7913f2e5d14f01e24650825915b959e31625b657323ac9234","intent":{"beats":[{"audienceBeliefAfter":"NASDAQは下落したが米国債利回りは低下しAI需要材料も残るため、単純説明では足りない","audienceBeliefBefore":"NASDAQが下がったなら金利上昇かAI需要悪化が主因だろう","editorialReason":"Scene 1の問いは原因断定ではなく矛盾の提示なので、複数の観測事実を同時に置くことが理解進展になる","preferredEvidenceModes":["comparison-set","verification"],"purpose":"冒頭の矛盾を一画面で成立させ、NASDAQ安を単純な金利高やAI需要崩壊だけで説明できないと理解させる","realityAnchorPreference":"preferred","visualBeatId":"scene-01-beat-001","visualInformationGain":"NASDAQ・金利・AI需要材料を同時比較し、見出しだけでは見えない矛盾を可視化する"},{"audienceBeliefAfter":"Brent上昇とホルムズ再開楽観後退をまず追うが、大型テック固有要因も残る","audienceBeliefBefore":"原因候補が多く、どこから追えばよいか定まっていない","editorialReason":"Scene 1後半は主役候補の設定であり、証拠の過剰演出よりBrentとホルムズの関係を簡潔に固定したい","preferredEvidenceModes":["comparison-set","text-only"],"purpose":"原油・ホルムズ経路を『最有力候補』として導入し、まだ因果確定ではないことを保つ","realityAnchorPreference":"neutral","visualBeatId":"scene-01-beat-002","visualInformationGain":"主役候補となる原油の変化を目立たせつつ、候補であるという位置づけを保つ"},{"audienceBeliefAfter":"米国が条件を満たさない限り閉鎖継続という報道が、再開楽観を後退させたことを確認する","audienceBeliefBefore":"原油が上がったという市場結果だけを知っている","editorialReason":"このBeatはReuters報道への直接接地が第一候補。ただし当日取得では実mediaを確保できていないため、出典・条件・不確実性を保つverification/text fallbackを事前承認する。","preferredEvidenceModes":["source-document","verification","text-only"],"purpose":"ホルムズ再開楽観を崩したReuters報道へ視聴者を直接接地させる","realityAnchorPreference":"preferred","visualBeatId":"scene-02-beat-001","visualInformationGain":"抽象的な『緊張』ではなく、実際の報道内容をReality Anchorとして示して変化点を確認できる"},{"audienceBeliefAfter":"期待は再開方向、現実は条件付き閉鎖継続であり、安心材料が未達だったと分けて理解する","audienceBeliefBefore":"緊張後退と閉鎖継続が同じニュース列の中で混ざっている","editorialReason":"Scene 4のExpected/Actualへつながる前段として、期待と現実の二項対比が必要","preferredEvidenceModes":["gap","comparison-set"],"purpose":"再開期待と条件付き閉鎖継続の差を明示し、期待が外れた構造を次Sceneへ渡す","realityAnchorPreference":"neutral","visualBeatId":"scene-02-beat-002","visualInformationGain":"期待と現実を対置して、単なるニュース要約からGapの構造へ変換する"},{"audienceBeliefAfter":"NASDAQ -0.60%とBrent +1.4%という同じ夜の観測値を確認する","audienceBeliefBefore":"NASDAQ安と原油高の方向だけを概念的に理解している","editorialReason":"AP原文への接地が高価値だが、Visual mediaとしての原文表示が利用できない場合でも、fresh取得済み終値と出典を失わない比較/text fallbackで市場事実を固定できる。","preferredEvidenceModes":["source-document","comparison-set","text-only"],"purpose":"fresh取得したAP市場終値でNASDAQとBrentの実数を固定し、物語を現実の市場データへ接地する","realityAnchorPreference":"preferred","visualBeatId":"scene-03-beat-001","visualInformationGain":"原文由来の市場値を同時に提示し、以後の因果検討の基準点を固定する"},{"audienceBeliefAfter":"昨夜は利回りが低下しており、実際の金利急騰説とは整合しない","audienceBeliefBefore":"テック安なら長期金利上昇が原因だと考えやすい","editorialReason":"ここで理解が進むのは新情報追加より、既存の金利説を観測事実で否定すること","preferredEvidenceModes":["verification","comparison-set"],"purpose":"実際の米国債利回り低下を使い、『金利急騰でテック安』という単純説明を棄却する","realityAnchorPreference":"preferred","visualBeatId":"scene-03-beat-002","visualInformationGain":"仮説と観測事実の不一致を検証形式で見せ、ひとつの説明を明確に外す"},{"audienceBeliefAfter":"期待された緊張緩和・再開に対し、Actualは閉鎖条件とBrent上昇で、安心材料が来なかったと理解する","audienceBeliefBefore":"原油上昇と閉鎖報道を別々の事実として見ている","editorialReason":"この回の中心的なGapなので、単なるテロップより構造比較を優先する","preferredEvidenceModes":["gap","comparison-set"],"purpose":"Expected / Actual / Gapを一体で見せ、評価軸が『Actualの良し悪し』ではなく期待との差だったと理解させる","realityAnchorPreference":"preferred","visualBeatId":"scene-04-beat-001","visualInformationGain":"Expected・Actual・Gapを同じ視野で比較し、市場の失望構造を即座に認識できる"},{"audienceBeliefAfter":"今回のExpectedはReuters等で共有された再開楽観であり、後付けの数値コンセンサスではないと理解する","audienceBeliefBefore":"Expectedという言葉から数値予想があったと誤解する可能性がある","editorialReason":"因果を強く見せるより、期待値の根拠区分をReality Anchorで限定することが重要","preferredEvidenceModes":["source-document","verification"],"purpose":"Expectedの根拠が数値コンセンサスではなく主要報道に基づく定性的な楽観だと境界を明示する","realityAnchorPreference":"preferred","visualBeatId":"scene-04-beat-002","visualInformationGain":"根拠ソースと『数値ではない』境界を同時に示し、Expectedの強さを正確に制限する"},{"audienceBeliefAfter":"ホルムズ不確実性→原油高→CPI/Fed不確実性→大型テックの重し候補という経路でつながる","audienceBeliefBefore":"ホルムズとNASDAQ安が離れたニュースに見える","editorialReason":"このBeatの価値は世界ニュースからNASDAQへの経路理解であり、文章列挙より空間化が効く","preferredEvidenceModes":["causal-graph"],"purpose":"ホルムズからNASDAQまでの候補経路を空間化し、観測事実と推論のつながりを理解させる","realityAnchorPreference":"neutral","visualBeatId":"scene-05-beat-001","visualInformationGain":"因果候補の中間ノードを見せ、世界ニュースがNASDAQへ届く経路を一続きで追える"},{"audienceBeliefAfter":"実際の利回りは低下しており、ここで言えるのは政策見通しの不確実性という候補経路までだと理解する","audienceBeliefBefore":"原油高から金利上昇まで既に観測されたように受け取る恐れがある","editorialReason":"Scene 5の因果図を安全に読むための重要な留保なので、確認/未確認境界を独立表示する","preferredEvidenceModes":["verification","comparison-set"],"purpose":"『実際の金利上昇』と『CPI/Fed政策見通しの不確実性』を分離し、断定できない部分を可視化する","realityAnchorPreference":"preferred","visualBeatId":"scene-05-beat-002","visualInformationGain":"確認済み観測と推論・寄与率不明の境界を明示し、因果の過剰断定を防ぐ"},{"audienceBeliefAfter":"NVDAとSOXXはいずれも通常取引で下落し、その時系列反応をfreshデータで確認できる","audienceBeliefBefore":"NASDAQ安という指数レベルの結果しか見ていない","editorialReason":"ここは新Collectorで得たfresh 1分足が最も高価値なReality Anchorで、タイミング確認に使う","preferredEvidenceModes":["time-series"],"purpose":"fresh 1分足でNVDAとSOXXの通常取引中の反応を時系列として確認する","realityAnchorPreference":"required","visualBeatId":"scene-06-beat-001","visualInformationGain":"単なる終値バーではなく、検証済み時系列なら反応の推移と時間軸を直接追える"},{"audienceBeliefAfter":"確認できた対象・取得できなかった対象・タイミング確認と因果証明の違いを分けて理解する","audienceBeliefBefore":"freshデータがあれば主因まで証明できたと誤解しやすい","editorialReason":"このBeatはfreshデータの限界を示すため、Reality Anchorと境界表示の組み合わせが必要","preferredEvidenceModes":["verification","time-series"],"purpose":"NVDA/SOXXはfresh確認済み、QQQは未取得、そして1分足は因果証明ではないという三つの境界を固定する","realityAnchorPreference":"required","visualBeatId":"scene-06-beat-002","visualInformationGain":"Evidenceの有無と証明範囲を同じ画面で境界化し、データの意味を過大評価しない"},{"audienceBeliefAfter":"第三者資本5000億ドル超の動員を目指す構想があり、しかも実行済み投資額ではないと正確に理解する","audienceBeliefBefore":"半導体安からAI投資そのものが崩れたと考える可能性がある","editorialReason":"大きな数字はReuters原文への接地が望ましい。ただし実media不在時は、5000億ドル超が目標であり実行済み投資額ではない境界を保つverification/text fallbackを事前承認する。","preferredEvidenceModes":["source-document","verification","text-only"],"purpose":"NvidiaのAIインフラ資金構想を反対材料としてソースに接地し、『AI需要崩壊』説を弱める","realityAnchorPreference":"preferred","visualBeatId":"scene-07-beat-001","visualInformationGain":"Reuters報道への接地でAI需要側の反対材料と金額の意味の境界を同時に確認する"},{"audienceBeliefAfter":"Q2売上は予想を上回りbacklogも大きいが、引け後発表なので通常取引下落の原因には使えないと理解する","audienceBeliefBefore":"AI関連株の弱さをAI需要崩壊と同一視している","editorialReason":"数字のサプライズだけを強調せず、引け後という時系列制約を残す必要がある","preferredEvidenceModes":["gap","comparison-set","verification"],"purpose":"CoreWeaveのActual対LSEG予想とbacklogを比較し、AI計算需要が消えたという説明への反対材料を示す","realityAnchorPreference":"preferred","visualBeatId":"scene-07-beat-002","visualInformationGain":"Actual/Expected比較と発表時刻の境界を一緒に見せ、反対材料の強さと適用範囲を正しく読む"},{"audienceBeliefAfter":"金利急騰は棄却、AI需要崩壊は弱い、ホルムズ・原油が最有力候補、大型テック固有は未解決と理解する","audienceBeliefBefore":"複数材料が増え、結局どの説明が残ったか分かりにくい","editorialReason":"Scene 8は結論の強さを調整する場面なので、派手な因果図より仮説状態の比較が適切","preferredEvidenceModes":["verification","comparison-set"],"purpose":"主要仮説を同じ検証面で並べ、何が棄却・弱化・最有力・未解決なのかを整理する","realityAnchorPreference":"neutral","visualBeatId":"scene-08-beat-001","visualInformationGain":"仮説ごとの検証状態を並列化し、結論と反対材料を同時に保持する"},{"audienceBeliefAfter":"CPI・ホルムズ条件・Brentとテック・原油沈静化後の弱さを見れば仮説を更新できると理解する","audienceBeliefBefore":"最有力候補が出たので原因が確定したように感じる","editorialReason":"将来株価予想ではなく仮説の検証条件を残すことがScene 8後半の情報価値","preferredEvidenceModes":["verification","text-only"],"purpose":"確信度を上げ下げする次の観測点を明確にし、未解決のまま終える理由を理解させる","realityAnchorPreference":"neutral","visualBeatId":"scene-08-beat-002","visualInformationGain":"次の検証条件をチェックポイント化し、中程度の確信度を具体的な観測可能条件へ変える"},{"audienceBeliefAfter":"NASDAQ -0.60%、焦点はホルムズ・原油、ただし確信度は中という結論へ戻る","audienceBeliefBefore":"情報が多く、最終的に何が分かったか散らばっている","editorialReason":"closing recapは新情報追加ではなく、冒頭からの検証結果を一度に回収する役割が最も重要","preferredEvidenceModes":["verification","comparison-set","text-only"],"purpose":"昨夜の結論を、NASDAQ安・金利低下・AI需要材料存続という矛盾を保ったまま一つに再統合する","realityAnchorPreference":"neutral","visualBeatId":"scene-09-beat-001","visualInformationGain":"冒頭の矛盾へ戻って検証結果を統合し、最有力候補と確信度を同時に回収する"},{"audienceBeliefAfter":"今回の結論は現時点のEvidenceに基づき、次の朝に新Evidenceで更新されると理解する","audienceBeliefBefore":"今回の最有力候補が恒久的な答えだと受け取りかねない","editorialReason":"締めのBeatは新しいReality Anchorを挿入すると結論を散らすため、簡潔なtext bridgeが適切","preferredEvidenceModes":["text-only"],"purpose":"次回もCurrent Evidenceで再検証するという番組の閉じ方を短く示し、因果を確定させず終了する","realityAnchorPreference":"avoid","visualBeatId":"scene-09-beat-002","visualInformationGain":"追加データや装飾を増やさず、検証継続という最終メッセージだけを明確に残す"}]},"provisionalDirection":{"requirements":[{"imageRequirement":"not-required","reason":"確認済みの指数・金利・AI材料の並置が主機能。構造比較Templateが合法化できない場合は、同じ3要素の矛盾を保持するopening text fallbackを許可する。","requiredModes":["comparison-set","verification","text-only"],"visualBeatId":"scene-01-beat-001"},{"imageRequirement":"not-required","reason":"数値と短い因果候補表示で十分で、画像は情報利得を増やさない","requiredModes":["comparison-set","text-only"],"visualBeatId":"scene-01-beat-002"},{"imageRequirement":"not-required","reason":"Reuters実mediaが利用可能ならsource-documentを優先し、無い場合は同じ確認済み事実と出典を保つverification/text fallbackを許可する。","requiredModes":["source-document","verification","text-only"],"visualBeatId":"scene-02-beat-001"},{"imageRequirement":"not-required","reason":"期待と現実の二項対比が主機能。3項Gap Templateに必要な構造が無い場合は、同じ対比を保持するtext fallbackを許可する。","requiredModes":["gap","comparison-set","text-only"],"visualBeatId":"scene-02-beat-002"},{"imageRequirement":"not-required","reason":"AP原文mediaが合法に使える場合はReality Anchorを優先し、無い場合はfresh取得値と出典を保持した比較/text fallbackを使う。","requiredModes":["source-document","comparison-set","text-only"],"visualBeatId":"scene-03-beat-001"},{"imageRequirement":"not-required","reason":"検証境界が主機能で画像は不要","requiredModes":["verification","comparison-set"],"visualBeatId":"scene-03-beat-002"},{"imageRequirement":"not-required","reason":"数値と文言の構造表示で十分","requiredModes":["gap","comparison-set"],"visualBeatId":"scene-04-beat-001"},{"imageRequirement":"not-required","reason":"ソース根拠と「数値コンセンサスではない」境界が主機能。実media/verification Templateが合法化できない場合は、出典を保持したtext fallbackを許可する。","requiredModes":["source-document","verification","text-only"],"visualBeatId":"scene-04-beat-002"},{"imageRequirement":"not-required","reason":"確認済みノードの因果候補図で足り、画像は不要","requiredModes":["causal-graph"],"visualBeatId":"scene-05-beat-001"},{"imageRequirement":"not-required","reason":"境界の可視化が主機能","requiredModes":["verification","comparison-set"],"visualBeatId":"scene-05-beat-002"},{"imageRequirement":"not-required","reason":"実データ系列自体がReality Anchorで生成画像は不要","requiredModes":["time-series"],"visualBeatId":"scene-06-beat-001"},{"imageRequirement":"not-required","reason":"データ境界表示が主機能","requiredModes":["verification","time-series"],"visualBeatId":"scene-06-beat-002"},{"imageRequirement":"not-required","reason":"Reuters実mediaが利用可能ならsource-documentを優先し、無い場合は目標額と実行済み額を混同しないverification/text fallbackを許可する。","requiredModes":["source-document","verification","text-only"],"visualBeatId":"scene-07-beat-001"},{"imageRequirement":"not-required","reason":"比較と時刻境界で理解できる","requiredModes":["gap","comparison-set","verification"],"visualBeatId":"scene-07-beat-002"},{"imageRequirement":"not-required","reason":"仮説比較が主機能","requiredModes":["verification","comparison-set"],"visualBeatId":"scene-08-beat-001"},{"imageRequirement":"not-required","reason":"確認項目の明示で十分","requiredModes":["verification","text-only"],"visualBeatId":"scene-08-beat-002"},{"imageRequirement":"not-required","reason":"結論統合が主機能で生成画像は不要","requiredModes":["verification","comparison-set","text-only"],"visualBeatId":"scene-09-beat-001"},{"imageRequirement":"not-required","reason":"番組の締めであり新しい画像・証拠を追加しない","requiredModes":["text-only"],"visualBeatId":"scene-09-beat-002"}]},"director":{"selections":[{"selectedCandidateId":"vc-scene-01-beat-001-02","strongestAlternativeCandidateId":"vc-scene-01-beat-001-01","visualBeatId":"scene-01-beat-001","whyNotAlternative":"hero-numberは数値の強調には強いが、3要素の矛盾そのものを主役にしにくい。","whySelected":"冒頭は数字単体より「NASDAQ安・金利低下・AI材料存続」の矛盾を同じ画面で成立させる方が、問いを読まずに把握できる。"},{"selectedCandidateId":"vc-scene-01-beat-002-02","strongestAlternativeCandidateId":"vc-scene-01-beat-002-01","visualBeatId":"scene-01-beat-002","whyNotAlternative":"hero-numberは導入の簡潔さに優れるが、実測TTSではScene 1 Beat 1とのopen-hero連続が28秒上限を超え、正式Previewの測定多様性契約を満たさない。","whySelected":"TTS後の実測でScene 1のopen-hero連続が28.474秒となり、28秒の同一Appearance上限を超えた。source-receiptは唯一の合法な別Appearance候補で、Brent上昇とホルムズ経路の根拠へ冒頭で接地しつつ、因果確定にはしない。次のScene 2 Beat 1とのdocument-media連続も約25.1秒で上限内に収まる。"},{"selectedCandidateId":"vc-scene-02-beat-001-03","strongestAlternativeCandidateId":"vc-scene-02-beat-001-01","visualBeatId":"scene-02-beat-001","whyNotAlternative":"evidence-boundaryも留保を示せるが、このBeatの主目的はまず楽観を崩した報道へのReality Anchorである。","whySelected":"Reuters報道そのものへ接地し、「聞いた話」から「何を根拠にしているか確認できる」状態へ変える。"},{"selectedCandidateId":"vc-scene-02-beat-002-01","strongestAlternativeCandidateId":"vc-scene-02-beat-002-02","visualBeatId":"scene-02-beat-002","whyNotAlternative":"text-focusでも意味は保てるが、期待と現実の対置を一つの結論単位として残す力が弱い。","whySelected":"再開期待と条件付き閉鎖継続の差を短い結論面として固定し、次の市場実数確認へ橋渡しする。"},{"selectedCandidateId":"vc-scene-03-beat-001-02","strongestAlternativeCandidateId":"vc-scene-03-beat-001-01","visualBeatId":"scene-03-beat-001","whyNotAlternative":"hero-numberは読みやすいが、ここで必要なReality Anchorを作れない。","whySelected":"fresh取得したAP市場終値へ直接接地し、NASDAQとBrentの数字が物語上の作図ではなく確認済み市場データだと示す。"},{"selectedCandidateId":"vc-scene-03-beat-002-02","strongestAlternativeCandidateId":"vc-scene-03-beat-002-01","visualBeatId":"scene-03-beat-002","whyNotAlternative":"checklistは確認済み項目を並べるには適するが、単純説明を弱める論理関係が見えにくい。","whySelected":"「利回り低下」という観測と「金利急騰説が弱い」という仮説評価をstrengthen/weakenの同じ検証面で比較できる。"},{"selectedCandidateId":"vc-scene-04-beat-001-01","strongestAlternativeCandidateId":null,"visualBeatId":"scene-04-beat-001","whyNotAlternative":"","whySelected":"唯一の合法gap候補で、Expected・Actual・Gapを同一座標で順に比較でき、このSceneの中心理解をそのまま可視化する。"},{"selectedCandidateId":"vc-scene-04-beat-002-02","strongestAlternativeCandidateId":"vc-scene-04-beat-002-01","visualBeatId":"scene-04-beat-002","whyNotAlternative":"conclusion-cardは結論感が強く、Expectedの根拠区分という注記・境界を必要以上に断定的に見せやすい。","whySelected":"数値コンセンサスではなく主要報道に基づく定性的期待だった、という留保を短いtext-focusで明確に固定する。"},{"selectedCandidateId":"vc-scene-05-beat-001-01","strongestAlternativeCandidateId":null,"visualBeatId":"scene-05-beat-001","whyNotAlternative":"","whySelected":"唯一の合法causal-graph候補で、ホルムズ→原油→CPI/Fed不確実性→NASDAQの「候補経路」を空間化できる。ナレーションの留保を維持し、確定因果にはしない。"},{"selectedCandidateId":"vc-scene-05-beat-002-02","strongestAlternativeCandidateId":"vc-scene-05-beat-002-01","visualBeatId":"scene-05-beat-002","whyNotAlternative":"checklistは事実確認には向くが、「観測済み」と「まだ推論」の関係を比較しにくい。","whySelected":"実際の金利低下と政策不確実性・原油寄与率不明をstrengthen/weakenの検証面で分離し、因果の端を見せられる。"},{"selectedCandidateId":"vc-scene-06-beat-001-01","strongestAlternativeCandidateId":"vc-scene-06-beat-001-02","visualBeatId":"scene-06-beat-001","whyNotAlternative":"return barsは終値比較には簡潔だが、要求されている「いつ反応したか」というtime-series情報を捨てる。","whySelected":"verified 1分足を時系列で見せることで、NVDA/SOXXの通常取引中の反応を実際の時間軸で確認できる。後半で初めて可能になる実データ検証である。"},{"realityAnchorDependencyBeatId":"scene-06-beat-001","selectedCandidateId":"vc-scene-06-beat-002-01","strongestAlternativeCandidateId":"vc-scene-06-beat-002-02","visualBeatId":"scene-06-beat-002","whyNotAlternative":"source-receiptは取得根拠の確認には強いが、確認済み／未取得／因果未証明という境界そのものを一画面で整理できない。","whySelected":"NVDA/SOXX確認済み・QQQ未取得・1分足は因果証明ではない、という三つの境界を同じ画面で明示できる。"},{"selectedCandidateId":"vc-scene-07-beat-001-03","strongestAlternativeCandidateId":"vc-scene-07-beat-001-01","visualBeatId":"scene-07-beat-001","whyNotAlternative":"evidence-boundaryは「5000億ドル超は実行済み投資額ではない」という留保に強いが、まず反対材料そのものへのReality Anchorを優先する。","whySelected":"NvidiaのAIインフラ資金構想をソースへ直接接地し、AI需要崩壊説への反対材料が実在する発表に基づくことを確かめられる。"},{"selectedCandidateId":"vc-scene-07-beat-002-05","strongestAlternativeCandidateId":"vc-scene-07-beat-002-03","visualBeatId":"scene-07-beat-002","whyNotAlternative":"focus-matrixは複数論点の整理には向くが、このBeatの中心であるActual対Expectedの二値比較を相対的にぼかす。","whySelected":"Actual $2.58B と LSEG予想 $2.56B を直接二分比較し、予想超過を最短距離で読める。backlogと引け後という留保はviewer textで保持する。"},{"selectedCandidateId":"vc-scene-08-beat-001-02","strongestAlternativeCandidateId":"vc-scene-08-beat-001-01","visualBeatId":"scene-08-beat-001","whyNotAlternative":"checklistでも項目は並べられるが、仮説ごとの支持・弱化の差が視覚的に一段弱い。","whySelected":"金利急騰＝棄却、AI需要崩壊＝弱い、ホルムズ・原油＝最有力候補、大型テック固有＝未解決を同じ検証軸で比較できる。"},{"selectedCandidateId":"vc-scene-08-beat-002-01","strongestAlternativeCandidateId":"vc-scene-08-beat-002-02","visualBeatId":"scene-08-beat-002","whyNotAlternative":"verification-matrixは確信度の上下条件を比較できる一方、直前Beatと同じmatrix機能が続き、次回確認という新しい情報機能が弱くなる。","whySelected":"次に見るCPI・ホルムズ条件・Brent×テック・原油沈静化後の弱さを「次の確認項目」として明快に残せる。"},{"selectedCandidateId":"vc-scene-09-beat-001-03","strongestAlternativeCandidateId":"vc-scene-09-beat-001-01","visualBeatId":"scene-09-beat-001","whyNotAlternative":"closing-recapも要約できるが、ここでは単なる復唱より複数の検証結果を再統合する機能を優先する。","whySelected":"NASDAQ安・金利低下・AI材料存続という矛盾を壊さず、ホルムズ・原油を中確信度の焦点として一つへ再統合する終盤のassemblyに適する。"},{"selectedCandidateId":"vc-scene-09-beat-002-02","strongestAlternativeCandidateId":"vc-scene-09-beat-002-01","visualBeatId":"scene-09-beat-002","whyNotAlternative":"closing-recapは直前の再統合をもう一度繰り返すため、情報利得が少なく終わりが重くなる。","whySelected":"最後は「次回もCurrent Evidenceで再検証」を短い結論面だけで示し、因果を確定させず静かに閉じる。"}]},"reviewRounds":[{"compiledVisualSha256":"4e259251c263578f966b64346a9c470423d1442d762470b7f2d7786d344c604a","findings":[],"note":"Independent AI-B Critic reviewed the actual compiled Visual Plan and warning report. The two REALITY_ANCHOR_DROUGHT warnings were not promoted to editorial findings: the Scene 3→5 stretch intentionally moves from source-grounded market facts into Expected/Actual/Gap, candidate causal-route explanation, and uncertainty boundary; the Scene 7→9 stretch intentionally moves from source/price grounding into counterevidence comparison, hypothesis verification, falsification conditions, and synthesis. Adding another Reality Anchor would be receipt-heavy and would not materially improve the viewer model. Scene 4→8 visual understanding materially advances, and Scenes 6–8 retain distinct late visual value through verified intraday timing, evidence boundaries, Actual-vs-Expected comparison, and hypothesis testing. No unresolved major finding.","round":1,"status":"PASS","warningReportSha256":"dcc9b458bcb141aacfd466703e6fea1d202225713a5fdfc375ed58f280e206a4"},{"compiledVisualSha256":"52a077db899225378b502f134b18ae592fd1c3f14c4b87c54a3d6354b169b13b","findings":[],"note":"Independent AI-B Critic re-bound round 2 to the final viewer-surface-normalized compiled payload. Compared with the previously approved round-2 compiled payload, exactly four display strings changed under the existing deterministic viewer-surface policy: Scene 4 card titles Expected / Actual / Gap became 予想 / 実際 / 差分, and the Scene 7 source-receipt phrase 第三者 became 第3者. Selected Candidate IDs, Beat visualMode/template values, viewerTexts, evidence, object bindings, Reality Anchor choices, Scene/Beat identity, 18-Beat order, transitions, and warning findings are unchanged. The warning report content is unchanged apart from its sourceCompileReportSha256 lineage. This is a machine-contract display normalization only; no candidate patch, Story return, or new Reality Anchor is required.","round":2,"status":"PASS","warningReportSha256":"1f5e3e43a5531e624a3ebe14c54031248ec488be882ce8a7eacaa1e7d1070437"}]}
+{
+  "contractVersion": "1.0.0",
+  "bridgeContractVersion": "visual-intelligence-bridge/1.2.0",
+  "episodeDate": "2026-08-12",
+  "editorialSnapshotSha256": "1d2e7640a6e8e21ced5d41cfc43e10c84f374fe69229ee5dc297087fd4d29ec9",
+  "visualRequirementsSha256": "9f332f0e3c8337a7913f2e5d14f01e24650825915b959e31625b657323ac9234",
+  "director": {
+    "selections": [
+      {
+        "selectedCandidateId": "vc-scene-01-beat-001-02",
+        "strongestAlternativeCandidateId": "vc-scene-01-beat-001-01",
+        "visualBeatId": "scene-01-beat-001",
+        "whyNotAlternative": "hero-numberは数値の強調には強いが、3要素の矛盾そのものを主役にしにくい。",
+        "whySelected": "冒頭は数字単体より「NASDAQ安・金利低下・AI材料存続」の矛盾を同じ画面で成立させる方が、問いを読まずに把握できる。"
+      },
+      {
+        "selectedCandidateId": "vc-scene-01-beat-002-02",
+        "strongestAlternativeCandidateId": "vc-scene-01-beat-002-01",
+        "visualBeatId": "scene-01-beat-002",
+        "whyNotAlternative": "hero-numberは導入の簡潔さに優れるが、実測TTSではScene 1 Beat 1とのopen-hero連続が28秒上限を超え、正式Previewの測定多様性契約を満たさない。",
+        "whySelected": "TTS後の実測でScene 1のopen-hero連続が28.474秒となり、28秒の同一Appearance上限を超えた。source-receiptは唯一の合法な別Appearance候補で、Brent上昇とホルムズ経路の根拠へ冒頭で接地しつつ、因果確定にはしない。Scene 2では別Appearanceへ進めるため、このBeatでReality Anchorを先に確保する。"
+      },
+      {
+        "selectedCandidateId": "vc-scene-02-beat-001-01",
+        "strongestAlternativeCandidateId": "vc-scene-02-beat-001-03",
+        "visualBeatId": "scene-02-beat-001",
+        "whyNotAlternative": "source-receiptはこのBeat単体では最も強いReality Anchorだが、直前のScene 1 Beat 2が同じdocument-mediaとなったため、連続使用するとScene 2のmajor-shiftが物理的に成立しない。Reality Anchor自体は直前Beatで確保済み。",
+        "whySelected": "Scene 1 Beat 2でReuters/APへのsource-document Reality Anchorを既に提示するため、Scene 2では同じdocument-mediaを重ねず、Reuters source-002を保ったevidence-boundaryで「確認済み／未確認」の境界へ理解を進める。これによりScene 2のmajor-shiftも物理的な切り替えとして成立する。"
+      },
+      {
+        "selectedCandidateId": "vc-scene-02-beat-002-01",
+        "strongestAlternativeCandidateId": "vc-scene-02-beat-002-02",
+        "visualBeatId": "scene-02-beat-002",
+        "whyNotAlternative": "text-focusでも意味は保てるが、期待と現実の対置を一つの結論単位として残す力が弱い。",
+        "whySelected": "再開期待と条件付き閉鎖継続の差を短い結論面として固定し、次の市場実数確認へ橋渡しする。"
+      },
+      {
+        "selectedCandidateId": "vc-scene-03-beat-001-02",
+        "strongestAlternativeCandidateId": "vc-scene-03-beat-001-01",
+        "visualBeatId": "scene-03-beat-001",
+        "whyNotAlternative": "hero-numberは読みやすいが、ここで必要なReality Anchorを作れない。",
+        "whySelected": "fresh取得したAP市場終値へ直接接地し、NASDAQとBrentの数字が物語上の作図ではなく確認済み市場データだと示す。"
+      },
+      {
+        "selectedCandidateId": "vc-scene-03-beat-002-02",
+        "strongestAlternativeCandidateId": "vc-scene-03-beat-002-01",
+        "visualBeatId": "scene-03-beat-002",
+        "whyNotAlternative": "checklistは確認済み項目を並べるには適するが、単純説明を弱める論理関係が見えにくい。",
+        "whySelected": "「利回り低下」という観測と「金利急騰説が弱い」という仮説評価をstrengthen/weakenの同じ検証面で比較できる。"
+      },
+      {
+        "selectedCandidateId": "vc-scene-04-beat-001-01",
+        "strongestAlternativeCandidateId": null,
+        "visualBeatId": "scene-04-beat-001",
+        "whyNotAlternative": "",
+        "whySelected": "唯一の合法gap候補で、Expected・Actual・Gapを同一座標で順に比較でき、このSceneの中心理解をそのまま可視化する。"
+      },
+      {
+        "selectedCandidateId": "vc-scene-04-beat-002-02",
+        "strongestAlternativeCandidateId": "vc-scene-04-beat-002-01",
+        "visualBeatId": "scene-04-beat-002",
+        "whyNotAlternative": "conclusion-cardは結論感が強く、Expectedの根拠区分という注記・境界を必要以上に断定的に見せやすい。",
+        "whySelected": "数値コンセンサスではなく主要報道に基づく定性的期待だった、という留保を短いtext-focusで明確に固定する。"
+      },
+      {
+        "selectedCandidateId": "vc-scene-05-beat-001-01",
+        "strongestAlternativeCandidateId": null,
+        "visualBeatId": "scene-05-beat-001",
+        "whyNotAlternative": "",
+        "whySelected": "唯一の合法causal-graph候補で、ホルムズ→原油→CPI/Fed不確実性→NASDAQの「候補経路」を空間化できる。ナレーションの留保を維持し、確定因果にはしない。"
+      },
+      {
+        "selectedCandidateId": "vc-scene-05-beat-002-02",
+        "strongestAlternativeCandidateId": "vc-scene-05-beat-002-01",
+        "visualBeatId": "scene-05-beat-002",
+        "whyNotAlternative": "checklistは事実確認には向くが、「観測済み」と「まだ推論」の関係を比較しにくい。",
+        "whySelected": "実際の金利低下と政策不確実性・原油寄与率不明をstrengthen/weakenの検証面で分離し、因果の端を見せられる。"
+      },
+      {
+        "selectedCandidateId": "vc-scene-06-beat-001-01",
+        "strongestAlternativeCandidateId": "vc-scene-06-beat-001-02",
+        "visualBeatId": "scene-06-beat-001",
+        "whyNotAlternative": "return barsは終値比較には簡潔だが、要求されている「いつ反応したか」というtime-series情報を捨てる。",
+        "whySelected": "verified 1分足を時系列で見せることで、NVDA/SOXXの通常取引中の反応を実際の時間軸で確認できる。後半で初めて可能になる実データ検証である。"
+      },
+      {
+        "realityAnchorDependencyBeatId": "scene-06-beat-001",
+        "selectedCandidateId": "vc-scene-06-beat-002-01",
+        "strongestAlternativeCandidateId": "vc-scene-06-beat-002-02",
+        "visualBeatId": "scene-06-beat-002",
+        "whyNotAlternative": "source-receiptは取得根拠の確認には強いが、確認済み／未取得／因果未証明という境界そのものを一画面で整理できない。",
+        "whySelected": "NVDA/SOXX確認済み・QQQ未取得・1分足は因果証明ではない、という三つの境界を同じ画面で明示できる。"
+      },
+      {
+        "selectedCandidateId": "vc-scene-07-beat-001-03",
+        "strongestAlternativeCandidateId": "vc-scene-07-beat-001-01",
+        "visualBeatId": "scene-07-beat-001",
+        "whyNotAlternative": "evidence-boundaryは「5000億ドル超は実行済み投資額ではない」という留保に強いが、まず反対材料そのものへのReality Anchorを優先する。",
+        "whySelected": "NvidiaのAIインフラ資金構想をソースへ直接接地し、AI需要崩壊説への反対材料が実在する発表に基づくことを確かめられる。"
+      },
+      {
+        "selectedCandidateId": "vc-scene-07-beat-002-05",
+        "strongestAlternativeCandidateId": "vc-scene-07-beat-002-03",
+        "visualBeatId": "scene-07-beat-002",
+        "whyNotAlternative": "focus-matrixは複数論点の整理には向くが、このBeatの中心であるActual対Expectedの二値比較を相対的にぼかす。",
+        "whySelected": "Actual $2.58B と LSEG予想 $2.56B を直接二分比較し、予想超過を最短距離で読める。backlogと引け後という留保はviewer textで保持する。"
+      },
+      {
+        "selectedCandidateId": "vc-scene-08-beat-001-02",
+        "strongestAlternativeCandidateId": "vc-scene-08-beat-001-01",
+        "visualBeatId": "scene-08-beat-001",
+        "whyNotAlternative": "checklistでも項目は並べられるが、仮説ごとの支持・弱化の差が視覚的に一段弱い。",
+        "whySelected": "金利急騰＝棄却、AI需要崩壊＝弱い、ホルムズ・原油＝最有力候補、大型テック固有＝未解決を同じ検証軸で比較できる。"
+      },
+      {
+        "selectedCandidateId": "vc-scene-08-beat-002-01",
+        "strongestAlternativeCandidateId": "vc-scene-08-beat-002-02",
+        "visualBeatId": "scene-08-beat-002",
+        "whyNotAlternative": "verification-matrixは確信度の上下条件を比較できる一方、直前Beatと同じmatrix機能が続き、次回確認という新しい情報機能が弱くなる。",
+        "whySelected": "次に見るCPI・ホルムズ条件・Brent×テック・原油沈静化後の弱さを「次の確認項目」として明快に残せる。"
+      },
+      {
+        "selectedCandidateId": "vc-scene-09-beat-001-03",
+        "strongestAlternativeCandidateId": "vc-scene-09-beat-001-01",
+        "visualBeatId": "scene-09-beat-001",
+        "whyNotAlternative": "closing-recapも要約できるが、ここでは単なる復唱より複数の検証結果を再統合する機能を優先する。",
+        "whySelected": "NASDAQ安・金利低下・AI材料存続という矛盾を壊さず、ホルムズ・原油を中確信度の焦点として一つへ再統合する終盤のassemblyに適する。"
+      },
+      {
+        "selectedCandidateId": "vc-scene-09-beat-002-02",
+        "strongestAlternativeCandidateId": "vc-scene-09-beat-002-01",
+        "visualBeatId": "scene-09-beat-002",
+        "whyNotAlternative": "closing-recapは直前の再統合をもう一度繰り返すため、情報利得が少なく終わりが重くなる。",
+        "whySelected": "最後は「次回もCurrent Evidenceで再検証」を短い結論面だけで示し、因果を確定させず静かに閉じる。"
+      }
+    ]
+  }
+}
