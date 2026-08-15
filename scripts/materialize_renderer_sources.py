@@ -38,9 +38,17 @@ VISUAL_MODE_MAP = {
     "verification": "verification-points",
     "closing-recap": "conclusion-card",
 }
+# Audited Renderer 2.4 Financial-capable Template scope. Keep this literal for
+# deterministic source inspection in assemble_chatgpt_daily_authoring_parts.py.
+FINANCIAL_TEMPLATES = {
+    "market-pulse-grid", "earnings-surprise", "dual-asset-split",
+    "macro-pressure", "source-receipt",
+}
+# Only these Templates imply Financial ownership by physical Template name alone.
 FINANCIAL_ONLY_TEMPLATES = {
     "market-pulse-grid", "earnings-surprise", "dual-asset-split", "macro-pressure",
 }
+# Dual-use Templates become Financial only when an explicit binding owns the Beat.
 DUAL_USE_FINANCIAL_TEMPLATES = {"source-receipt"}
 
 class RendererSourceError(ValueError):
