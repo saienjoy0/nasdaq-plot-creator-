@@ -62,15 +62,20 @@ def nine_scene_authoring(template: str = "opening-contradiction"):
     }
 
 
-def test_unbound_financial_templates_are_reported_together():
+def test_unbound_financial_only_template_is_reported_but_dual_use_receipt_is_not():
     authoring = nine_scene_authoring("source-receipt")
     authoring["scenes"][1]["beats"][0]["visualTemplate"] = "market-pulse-grid"
     errors = closure.validate_authoring(authoring, registry())
-    assert any("scene-01-beat-001" in error and "source-receipt" in error for error in errors)
+    assert not any("scene-01-beat-001" in error and "source-receipt" in error for error in errors)
     assert any("scene-02-beat-001" in error and "market-pulse-grid" in error for error in errors)
 
 
-def test_exact_binding_closes_financial_template():
+def test_generic_source_receipt_does_not_require_financial_binding():
+    authoring = nine_scene_authoring("source-receipt")
+    assert closure.validate_authoring(authoring, registry()) == []
+
+
+def test_explicit_financial_source_receipt_binding_remains_valid():
     authoring = nine_scene_authoring("source-receipt")
     authoring["financialBindings"] = [
         {
