@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import json
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import run_visual_intelligence_v12 as run_v12  # noqa: E402
 import visual_intelligence_bridge_staged as staged_bridge  # noqa: E402
 import visual_intelligence_requirements as requirements  # noqa: E402
 
@@ -154,7 +157,40 @@ def main() -> int:
     else:
         raise AssertionError("requiredModes must still be satisfiable by the Candidate Catalog")
 
-    print("visual intelligence requirements and Candidate authority tests passed")
+    # v1.2 owns generic source evidence. A legacy Financial source-evidence intent
+    # would pre-freeze source-receipt/news-media before AI-B and create dual authority.
+    with tempfile.TemporaryDirectory(prefix="nasdaq-v12-authority-") as temp:
+        root = Path(temp)
+        contract_path = root / "working" / date / "financial_final_episode_contract.json"
+        contract_path.parent.mkdir(parents=True, exist_ok=True)
+        contract_path.write_text(json.dumps({
+            "financialVisuals": {
+                "intents": [
+                    {"intentId": "fvi-source", "kind": "source-evidence"},
+                    {"intentId": "fvi-market", "kind": "market-snapshot"},
+                ]
+            }
+        }), encoding="utf-8")
+        try:
+            run_v12._reject_legacy_source_evidence_authority(root, date)
+        except ValueError as exc:
+            text = str(exc)
+            if "E_VISUAL_SOURCE_EVIDENCE_DUAL_AUTHORITY" not in text or "fvi-source" not in text:
+                raise
+        else:
+            raise AssertionError("v1.2 must reject legacy Financial source-evidence authority")
+
+        contract_path.write_text(json.dumps({
+            "financialVisuals": {
+                "intents": [
+                    {"intentId": "fvi-market", "kind": "market-snapshot"},
+                    {"intentId": "fvi-gap", "kind": "expectation-gap"},
+                ]
+            }
+        }), encoding="utf-8")
+        run_v12._reject_legacy_source_evidence_authority(root, date)
+
+    print("visual intelligence requirements, Candidate authority, and source-evidence ownership tests passed")
     return 0
 
 
