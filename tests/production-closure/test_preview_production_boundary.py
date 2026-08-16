@@ -37,13 +37,16 @@ class PreviewProductionBoundaryTests(unittest.TestCase):
         self.assertIn("print('continue=true')", self.text)
         self.assertIn("unexpected renderer closure status", self.text)
 
-    def test_existing_canary_has_real_source_probe_without_promoting_rights(self) -> None:
+    def test_existing_canary_has_real_source_probe_with_fallback_semantics(self) -> None:
         self.assertIn("- source-probe", self.canary)
         self.assertIn("resolve_visual_sources.resolve_all", self.canary)
         self.assertIn("real_source_e2e_report.json", self.canary)
         self.assertIn("rightsBoundaryPreserved", self.canary)
-        self.assertIn("selection.get('selectedPath') != 'fallback'", self.canary)
-        self.assertIn("one or more real Visual Source primaries could not be captured", self.canary)
+        self.assertIn("selected_path not in {'primary', 'fallback'}", self.canary)
+        self.assertIn("resolution_class = 'fallback-resolved'", self.canary)
+        self.assertIn("Approved Fallback resolution failed", self.canary)
+        self.assertIn("Primary is the selected production path but is unavailable", self.canary)
+        self.assertIn("primaryUnavailable", self.canary)
         self.assertIn("playwright==1.61.0", self.canary)
         self.assertIn("poppler-utils", self.canary)
 
