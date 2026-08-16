@@ -30,6 +30,10 @@ class VisualIntelligenceClosureError(RuntimeError):
     pass
 
 
+class VisualIntelligenceDecisionRequired(RuntimeError):
+    """Expected pause where ChatGPT/AI-B must author the next semantic artifact."""
+
+
 def run(root: Path, *args: str, env: dict[str, str] | None = None, ok_codes=(0,)) -> int:
     command = list(args)
     print("+", " ".join(command), flush=True)
@@ -144,8 +148,8 @@ def prepare_common(
     vi = root / "working" / date / "visual-intelligence"
     requirements = vi / "visual_requirements.json"
     if not requirements.is_file():
-        raise VisualIntelligenceClosureError(
-            "AI-B Visual Requirements missing: working/<date>/visual-intelligence/visual_requirements.json"
+        raise VisualIntelligenceDecisionRequired(
+            "E_VISUAL_REQUIREMENTS_MISSING: AI-B must author working/<date>/visual-intelligence/visual_requirements.json"
         )
     run(
         root,
@@ -263,6 +267,8 @@ def _write_prepared_result(
     binding: dict,
     date: str,
     reason: str | None = None,
+    required_action: str | None = None,
+    include_candidate_catalog: bool = True,
 ) -> None:
     result = {
         "contractVersion": "1.0.0",
@@ -270,12 +276,15 @@ def _write_prepared_result(
         "episodeDate": date,
         "rendererCommit": binding["renderer"]["commit"],
         "status": "PREPARED",
-        "candidateCatalog": f"working/{date}/visual-intelligence/visual_candidate_catalog.json",
         "previewRendered": False,
         "finalRendered": False,
     }
+    if include_candidate_catalog:
+        result["candidateCatalog"] = f"working/{date}/visual-intelligence/visual_candidate_catalog.json"
     if reason:
         result["reason"] = reason
+    if required_action:
+        result["requiredAction"] = required_action
     (verification / "renderer_closure_gate_v12.json").write_text(
         json.dumps(result, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
@@ -332,6 +341,7 @@ def main() -> int:
                 verification=verification,
                 binding=binding,
                 date=date,
+                required_action="AUTHOR_VISUAL_INTELLIGENCE_DECISION",
             )
             return 0
 
@@ -354,6 +364,7 @@ def main() -> int:
                 binding=binding,
                 date=date,
                 reason=str(reason),
+                required_action="RESELECT_VISUAL_CANDIDATES",
             )
             return 0
         if code == 4:
@@ -448,6 +459,16 @@ def main() -> int:
             date,
             env=env,
         )
+    except VisualIntelligenceDecisionRequired as exc:
+        _write_prepared_result(
+            verification=verification,
+            binding=binding,
+            date=date,
+            reason=str(exc),
+            required_action="AUTHOR_VISUAL_REQUIREMENTS",
+            include_candidate_catalog=False,
+        )
+        return 0
     except VisualIntelligenceClosureError as exc:
         result = {
             "contractVersion": "1.0.0",
