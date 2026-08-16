@@ -1,0 +1,132 @@
+name: Temporary Live Official Source Verification
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/temp-live-official-source-verification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  live-official-source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install live capture runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check pillow playwright==1.61.0
+          python -m playwright install --with-deps chromium
+
+      - name: Capture Microchip official IR through production resolver
+        env:
+          PYTHONPATH: scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          from PIL import Image
+          import resolve_visual_sources
+
+          root=Path.cwd()
+          out=root / 'working' / 'live-official-source-verification'
+          out.mkdir(parents=True, exist_ok=True)
+          contract=out / 'contract.json'
+          contract.write_text(json.dumps({
+            'contractVersion':'1.0.0',
+            'episodeDate':'2026-08-10',
+            'visualSources':{
+              'contractVersion':'1.0.0',
+              'episodeDate':'2026-08-10',
+              'intents':[{
+                'intentId':'live-microchip-official-ir',
+                'target':{'sceneId':'scene-06','visualBeatId':'vb-06-01'},
+                'presentationClass':'source-document',
+                'purpose':'Technical live-source verification using the already-approved 2026-08-10 Microchip official IR source.',
+                'sourceIds':['source-004'],
+                'placement':{
+                  'placementId':'live-microchip-official-ir-placement',
+                  'role':'main-media','region':'main-stage','fit':'contain','focalPoint':None,
+                },
+                'primary':{
+                  'candidateId':'live-microchip-primary',
+                  'assetId':'live-microchip-q1-fy27-ir',
+                  'sourceKind':'official-url',
+                  'sourceLocator':{'url':'https://ir.microchip.com/news-events/press-releases/detail/1409/microchip-technology-announces-financial-results-for-first-quarter-of-fiscal-year-2027'},
+                  'captureMethod':'webpage-screenshot',
+                  'captureSpec':{'viewport':{'width':1440,'height':900}},
+                  'rightsStatus':'cleared',
+                },
+                'fallback':{
+                  'candidateId':'live-microchip-fallback',
+                  'assetId':'company_amd',
+                  'sourceKind':'existing-asset',
+                  'sourceLocator':{'assetId':'company_amd'},
+                  'captureMethod':'registry-reference',
+                  'captureSpec':None,
+                  'rightsStatus':'cleared',
+                },
+              }],
+            },
+          }, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+          raw=out / 'asset_resolution_raw.json'
+          result=resolve_visual_sources.resolve_all(
+            contract_path=contract,
+            repo_root=root,
+            output_path=raw,
+            asset_root=root / 'daily-assets',
+            collector_root=None,
+          )
+          rows=result['results']
+          primary=next(row for row in rows if row.get('path')=='primary')
+          fallback=next(row for row in rows if row.get('path')=='fallback')
+          if primary.get('status') != 'ready':
+            raise SystemExit('official Microchip live capture failed: '+json.dumps(primary, ensure_ascii=False))
+          output=primary.get('outputPath')
+          if not isinstance(output, str):
+            raise SystemExit('official Microchip capture missing outputPath')
+          image_path=root / output
+          if not image_path.is_file() or image_path.stat().st_size == 0:
+            raise SystemExit('official Microchip capture output missing')
+          with Image.open(image_path) as image:
+            image.verify()
+          if primary.get('mimeType') != 'image/png' or not primary.get('outputSha256'):
+            raise SystemExit('official Microchip capture metadata invalid')
+          if fallback.get('status') != 'ready':
+            raise SystemExit('Approved Fallback did not resolve')
+          report={
+            'status':'PASS',
+            'source':'Microchip official Q1 FY27 investor-relations release',
+            'primaryStatus':primary['status'],
+            'primaryOutputPath':output,
+            'primaryOutputSha256':primary['outputSha256'],
+            'mimeType':primary['mimeType'],
+            'width':primary.get('width'),
+            'height':primary.get('height'),
+            'fallbackStatus':fallback['status'],
+            'productionResolver':'scripts/resolve_visual_sources.py',
+          }
+          (out/'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          print(json.dumps(report,ensure_ascii=False,indent=2))
+          PY
+
+      - name: Upload live-source evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: temp-live-official-source-verification
+          path: |
+            working/live-official-source-verification/
+            daily-assets/2026-08-10/
+          if-no-files-found: warn
+          retention-days: 3
