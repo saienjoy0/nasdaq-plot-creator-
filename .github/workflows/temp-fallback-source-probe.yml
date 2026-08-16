@@ -1,0 +1,64 @@
+name: Temporary Fallback Source Probe
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/temp-fallback-source-probe.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install production Visual Source runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
+          python -m pip install --disable-pip-version-check pillow playwright==1.61.0
+          python -m playwright install --with-deps chromium
+      - name: Re-run 2026-08-06 Reuters Primary plus Approved Fallback
+        env:
+          PYTHONPATH: scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          import resolve_visual_sources
+
+          root=Path.cwd(); date='2026-08-06'
+          intents=json.loads((root/'working'/date/'visual_source_intents.json').read_text(encoding='utf-8'))
+          selection=json.loads((root/'working'/date/'visual_source_selection.json').read_text(encoding='utf-8'))
+          if selection.get('selectedPath') != 'fallback':
+              raise SystemExit('fixture must select Approved Fallback')
+          out=root/'working'/date/'visual-source-probe-live'
+          out.mkdir(parents=True, exist_ok=True)
+          contract=out/'contract.json'
+          contract.write_text(json.dumps({'contractVersion':'1.0.0','episodeDate':date,'visualSources':intents},ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          result=resolve_visual_sources.resolve_all(contract_path=contract,repo_root=root,output_path=out/'asset_resolution_raw.json',asset_root=root/'daily-assets',collector_root=None)
+          primary=[r for r in result['results'] if r.get('path')=='primary']
+          fallback=[r for r in result['results'] if r.get('path')=='fallback']
+          unavailable_primary=[r for r in primary if r.get('status')!='ready']
+          unavailable_fallback=[r for r in fallback if r.get('status')!='ready']
+          if unavailable_fallback:
+              raise SystemExit('Approved Fallback unavailable: '+json.dumps(unavailable_fallback,ensure_ascii=False))
+          resolution='fallback-resolved' if unavailable_primary else 'fallback-selected'
+          report={'status':'PASS','episodeDate':date,'resolutionClass':resolution,'primaryUnavailableCount':len(unavailable_primary),'fallbackReadyCount':len(fallback),'primaryUnavailable':unavailable_primary}
+          (out/'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          print(json.dumps(report,ensure_ascii=False,indent=2))
+          PY
+      - name: Upload proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: temp-fallback-source-probe
+          path: working/2026-08-06/visual-source-probe-live/
+          retention-days: 3
