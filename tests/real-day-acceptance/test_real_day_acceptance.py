@@ -52,24 +52,37 @@ class Harness:
         self.manifest_path.write_text(json.dumps(self.manifest))
         self.preview = self.artifacts / "preview.mp4"
         self.preview.write_bytes(b"video")
+        self.preview_sha = hashlib.sha256(b"video").hexdigest()
         self.tech = {
             "status": "pass", "episode_date": DATE, "renderer_commit": RENDERER,
             "final_render_executed": False, "render_spec_sha256": self.files["render_spec"]["sha256"],
             "technical_checks": "pass", "preview_artifact": "preview.mp4",
-            "preview_sha256": hashlib.sha256(b"video").hexdigest(),
+            "preview_sha256": self.preview_sha,
         }
         self.tech_path = self.artifacts / "technical_report.json"
         self.tech_path.write_text(json.dumps(self.tech))
     def close(self): self.t.cleanup()
     def save_manifest(self): self.manifest_path.write_text(json.dumps(self.manifest))
     def save_tech(self): self.tech_path.write_text(json.dumps(self.tech))
-    def review(self, status="pending", **overrides):
+    def legacy_review(self, status="pending", **overrides):
         value = {
             "episode_date": DATE, "bundle_id": self.manifest["bundle_id"], "status": status,
             "reviewed_at": None if status == "pending" else "2026-08-06T12:00:00+09:00", "notes": "",
         }
         value.update(overrides)
         path = self.artifacts / "user_review.json"
+        path.write_text(json.dumps(value))
+        return path
+    def canonical_review(self, **overrides):
+        value = {
+            "contractVersion": "1.0.0",
+            "episodeDate": DATE,
+            "previewSha256": self.preview_sha,
+            "status": "approved",
+            "reviewedAt": "2026-08-06T12:00:00+09:00",
+        }
+        value.update(overrides)
+        path = self.artifacts / "human_preview_review.json"
         path.write_text(json.dumps(value))
         return path
     def run(self, **kwargs):
@@ -92,8 +105,12 @@ class Tests(unittest.TestCase):
         self.assertIn(needle, str(cm.exception))
 
     def test_01_pending_preview(self): self.assertEqual("preview_ready_user_review_pending", self.h.run()["mvp_status"])
-    def test_02_approved_preview(self): self.assertEqual("passed", self.h.run(user_review_path=self.h.review("approved"))["mvp_status"])
-    def test_03_rejected_preview(self): self.assertEqual("failed", self.h.run(user_review_path=self.h.review("rejected"))["mvp_status"])
+    def test_02_approved_preview_requires_canonical_sha_review(self):
+        report = self.h.run(user_review_path=self.h.canonical_review())
+        self.assertEqual("passed", report["mvp_status"])
+        self.assertEqual("human-preview-review/1.0.0", report["user_review"]["authority"])
+        self.assertEqual(self.h.preview_sha, report["user_review"]["preview_sha256"])
+    def test_03_rejected_preview(self): self.assertEqual("failed", self.h.run(user_review_path=self.h.legacy_review("rejected"))["mvp_status"])
     def test_04_final_always_false(self): self.assertFalse(self.h.run()["final_render_executed"])
     def test_05_seed_date_forbidden(self): self.fail("may not reuse", episode_date="2026-07-31")
     def test_06_daily_filename_date(self):
@@ -116,14 +133,22 @@ class Tests(unittest.TestCase):
     def test_22_technical_checks_fail(self): self.h.tech["technical_checks"] = "fail"; self.h.save_tech(); self.fail("technical checks")
     def test_23_preview_missing(self): self.h.preview.unlink(); self.fail("file does not exist")
     def test_24_preview_sha_mismatch(self): self.h.tech["preview_sha256"] = "e" * 64; self.h.save_tech(); self.fail("preview artifact SHA")
-    def test_25_review_date_mismatch(self): self.fail("user review episode_date", user_review_path=self.h.review("approved", episode_date="2026-08-07"))
-    def test_26_review_bundle_mismatch(self): self.fail("bundle_id mismatch", user_review_path=self.h.review("approved", bundle_id="f" * 64))
-    def test_27_review_status_invalid(self): self.fail("status must", user_review_path=self.h.review("other"))
-    def test_28_reviewed_at_required(self): self.fail("requires reviewed_at", user_review_path=self.h.review("approved", reviewed_at=None))
+    def test_25_legacy_review_date_mismatch(self): self.fail("user review episode_date", user_review_path=self.h.legacy_review("rejected", episode_date="2026-08-07"))
+    def test_26_legacy_review_bundle_mismatch(self): self.fail("bundle_id mismatch", user_review_path=self.h.legacy_review("rejected", bundle_id="f" * 64))
+    def test_27_legacy_review_status_invalid(self): self.fail("status must", user_review_path=self.h.legacy_review("other"))
+    def test_28_legacy_reviewed_at_required(self): self.fail("requires reviewed_at", user_review_path=self.h.legacy_review("rejected", reviewed_at=None))
     def test_29_report_files_written(self):
         report = self.h.run(); paths = accept.write_report(report, self.h.root / "report"); self.assertTrue(Path(paths["json"]).is_file()); self.assertTrue(Path(paths["markdown"]).is_file())
     def test_30_report_records_hashes(self):
-        report = self.h.run(); self.assertEqual(hashlib.sha256(b"video").hexdigest(), report["preview"]["sha256"]); self.assertEqual(accept.sha256_file(self.h.daily_file), report["daily_source"]["sha256"])
+        report = self.h.run(); self.assertEqual(self.h.preview_sha, report["preview"]["sha256"]); self.assertEqual(accept.sha256_file(self.h.daily_file), report["daily_source"]["sha256"])
+    def test_31_legacy_bundle_approval_cannot_advance(self):
+        self.fail("must use canonical", user_review_path=self.h.legacy_review("approved"))
+    def test_32_canonical_review_wrong_preview_sha_rejected(self):
+        self.fail("actual Preview SHA", user_review_path=self.h.canonical_review(previewSha256="f" * 64))
+    def test_33_canonical_review_wrong_episode_rejected(self):
+        self.fail("episodeDate mismatch", user_review_path=self.h.canonical_review(episodeDate="2026-08-07"))
+    def test_34_canonical_review_fields_are_exact(self):
+        self.fail("fields mismatch", user_review_path=self.h.canonical_review(extra="not-allowed"))
 
 
 if __name__ == "__main__":
