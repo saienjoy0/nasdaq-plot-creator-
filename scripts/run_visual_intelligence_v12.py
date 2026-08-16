@@ -178,7 +178,9 @@ def main() -> int:
         code = 0
     except visual_intelligence_bridge_staged.VisualIntelligenceStageError as exc:
         text = str(exc)
-        stale_director = any(marker in text for marker in STALE_DIRECTOR_MARKERS)
+        stale_director = text.startswith("E_VISUAL_DECISION_STALE:") or any(
+            marker in text for marker in STALE_DIRECTOR_MARKERS
+        )
         if "E_VISUAL_INTELLIGENCE_DECISION_REQUIRED" in text or stale_director:
             status = "DECISION_REQUIRED"
             code = 3
