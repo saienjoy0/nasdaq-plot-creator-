@@ -33,6 +33,23 @@ class VisualIntelligenceClosureError(RuntimeError):
 class VisualIntelligenceDecisionRequired(RuntimeError):
     """Expected pause where ChatGPT/AI-B must author the next semantic artifact."""
 
+    def __init__(
+        self,
+        message: str,
+        *,
+        required_action: str,
+        include_candidate_catalog: bool = False,
+    ) -> None:
+        super().__init__(message)
+        self.required_action = required_action
+        self.include_candidate_catalog = include_candidate_catalog
+
+
+VISUAL_SOURCE_AUTHORING_FILES = (
+    "visual_source_intents.json",
+    "visual_source_selection.json",
+)
+
 
 def run(root: Path, *args: str, env: dict[str, str] | None = None, ok_codes=(0,)) -> int:
     command = list(args)
@@ -61,6 +78,39 @@ def ensure_renderer(root: Path, renderer_root: Path) -> dict:
 
 def evidence_if_exists(root: Path, values: list[str]) -> list[str]:
     return [value for value in values if (root / value).is_file()]
+
+
+def _capture_visual_source_authoring(root: Path, date: str) -> dict[str, bytes]:
+    """Preserve post-Pass-B semantic authoring across mechanical rematerialization.
+
+    Before Visual Requirements exist, Daily Authoring remains the source that seeds
+    the working Visual Source files. Once Pass B exists, the working files are an
+    explicit ChatGPT semantic checkpoint and must not be silently replaced by the
+    baseline values embedded in Daily Authoring on a deterministic rerun.
+    """
+    work = root / "working" / date
+    requirements = work / "visual-intelligence" / "visual_requirements.json"
+    if not requirements.is_file():
+        return {}
+    captured: dict[str, bytes] = {}
+    for name in VISUAL_SOURCE_AUTHORING_FILES:
+        path = work / name
+        if path.is_file():
+            captured[name] = path.read_bytes()
+    return captured
+
+
+def _restore_visual_source_authoring(
+    root: Path,
+    date: str,
+    captured: dict[str, bytes],
+) -> None:
+    if not captured:
+        return
+    work = root / "working" / date
+    work.mkdir(parents=True, exist_ok=True)
+    for name, payload in captured.items():
+        (work / name).write_bytes(payload)
 
 
 def advance(
@@ -104,9 +154,11 @@ def prepare_common(
     if not daily_source.is_file():
         raise VisualIntelligenceClosureError(f"daily source package missing for {date}")
 
+    preserved_visual_source_authoring = _capture_visual_source_authoring(root, date)
     run(root, "python3", "scripts/assemble_chatgpt_daily_authoring_parts.py", "--date", date, "--repo-root", ".", env=env)
     run(root, "python3", "scripts/materialize_chatgpt_daily_authoring.py", "--date", date, "--repo-root", ".", env=env)
     run(root, "python3", "scripts/fixup_chatgpt_daily_materialization.py", "--date", date, "--repo-root", ".", env=env)
+    _restore_visual_source_authoring(root, date, preserved_visual_source_authoring)
     run(
         root,
         "python3",
@@ -149,7 +201,8 @@ def prepare_common(
     requirements = vi / "visual_requirements.json"
     if not requirements.is_file():
         raise VisualIntelligenceDecisionRequired(
-            "E_VISUAL_REQUIREMENTS_MISSING: AI-B must author working/<date>/visual-intelligence/visual_requirements.json"
+            "E_VISUAL_REQUIREMENTS_MISSING: AI-B must author working/<date>/visual-intelligence/visual_requirements.json",
+            required_action="AUTHOR_VISUAL_REQUIREMENTS",
         )
     run(
         root,
@@ -184,6 +237,16 @@ def prepare_common(
         f"working/{date}/visual-intelligence/visual_asset_plan_validation.json",
         env=env,
     )
+    source_intent_doc = load(source_intents)
+    intent_rows = source_intent_doc.get("intents")
+    if not isinstance(intent_rows, list):
+        raise VisualIntelligenceClosureError("Visual Source intents must be an array")
+    source_selection = root / "working" / date / "visual_source_selection.json"
+    if intent_rows and not source_selection.is_file():
+        raise VisualIntelligenceDecisionRequired(
+            "E_VISUAL_SOURCE_SELECTION_MISSING: ChatGPT must author working/<date>/visual_source_selection.json for non-empty Visual Source intents",
+            required_action="AUTHOR_VISUAL_SOURCE_SELECTION",
+        )
     run(root, "python3", "scripts/prepare_visual_sources.py", "--date", date, "--repo-root", ".", env=env)
     run(root, "python3", "scripts/materialize_daily_episode.py", "--date", date, "--repo-root", ".", env=env)
     run(root, "python3", "scripts/materialize_financial_contract_1_0.py", "--date", date, "--repo-root", ".", env=env)
@@ -465,8 +528,8 @@ def main() -> int:
             binding=binding,
             date=date,
             reason=str(exc),
-            required_action="AUTHOR_VISUAL_REQUIREMENTS",
-            include_candidate_catalog=False,
+            required_action=exc.required_action,
+            include_candidate_catalog=exc.include_candidate_catalog,
         )
         return 0
     except VisualIntelligenceClosureError as exc:
