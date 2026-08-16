@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import run_daily_production_v12 as v12  # noqa: E402
+import run_daily_renderer_closure_v12 as closure_v12  # noqa: E402
 
 
 class FakeDailyProductionError(ValueError):
@@ -63,6 +64,87 @@ def expect_error(code: str, fn) -> None:
         raise AssertionError(f"expected {code}")
 
 
+def test_post_pass_b_visual_source_authoring_is_preserved() -> None:
+    date = "2099-03-04"
+    with tempfile.TemporaryDirectory(prefix="nasdaq-v12-source-authoring-") as temp:
+        root = Path(temp)
+        work = root / "working" / date
+        vi = work / "visual-intelligence"
+        write(
+            vi / "visual_requirements.json",
+            {
+                "contractVersion": "1.0.0",
+                "episodeDate": date,
+                "intent": {"beats": []},
+                "provisionalDirection": {"requirements": []},
+            },
+        )
+        intent_path = write(
+            work / "visual_source_intents.json",
+            {
+                "contractVersion": "1.0.0",
+                "episodeDate": date,
+                "intents": [{"intentId": "chatgpt-authored-source-plan"}],
+            },
+        )
+        selection_path = write(
+            work / "visual_source_selection.json",
+            {
+                "contractVersion": "1.0.0",
+                "episodeDate": date,
+                "selectedPath": "primary",
+            },
+        )
+        expected_intents = intent_path.read_bytes()
+        expected_selection = selection_path.read_bytes()
+
+        captured = closure_v12._capture_visual_source_authoring(root, date)
+        write(
+            intent_path,
+            {
+                "contractVersion": "1.0.0",
+                "episodeDate": date,
+                "intents": [],
+            },
+        )
+        selection_path.unlink()
+        closure_v12._restore_visual_source_authoring(root, date, captured)
+
+        if intent_path.read_bytes() != expected_intents:
+            raise AssertionError("post-Pass-B Visual Source intents were not preserved byte-for-byte")
+        if selection_path.read_bytes() != expected_selection:
+            raise AssertionError("post-Pass-B Visual Source selection was not preserved byte-for-byte")
+
+
+def test_pre_pass_b_materialization_remains_authoritative() -> None:
+    date = "2099-03-05"
+    with tempfile.TemporaryDirectory(prefix="nasdaq-v12-source-seed-") as temp:
+        root = Path(temp)
+        work = root / "working" / date
+        write(
+            work / "visual_source_intents.json",
+            {
+                "contractVersion": "1.0.0",
+                "episodeDate": date,
+                "intents": [{"intentId": "pre-pass-b-seed"}],
+            },
+        )
+        captured = closure_v12._capture_visual_source_authoring(root, date)
+        if captured:
+            raise AssertionError("Visual Source authoring must not be preserved before Visual Requirements exist")
+
+
+def test_semantic_pause_carries_required_action() -> None:
+    pause = closure_v12.VisualIntelligenceDecisionRequired(
+        "selection needed",
+        required_action="AUTHOR_VISUAL_SOURCE_SELECTION",
+    )
+    if pause.required_action != "AUTHOR_VISUAL_SOURCE_SELECTION":
+        raise AssertionError("semantic pause lost required action")
+    if pause.include_candidate_catalog:
+        raise AssertionError("pre-asset semantic pause must not claim Candidate Catalog exists")
+
+
 def main() -> int:
     expected_prefix = [
         "research_inputs_bound",
@@ -76,6 +158,10 @@ def main() -> int:
     ]
     if v12.VI_STATES[1:9] != expected_prefix:
         raise AssertionError(f"v1.2 state order drifted: {v12.VI_STATES[1:9]}")
+
+    test_post_pass_b_visual_source_authoring_is_preserved()
+    test_pre_pass_b_materialization_remains_authoritative()
+    test_semantic_pause_carries_required_action()
 
     module = FakeModule()
     date = "2099-03-03"

@@ -1,6 +1,6 @@
 ---
 name: nasdaq-cafe-daily-production
-version: 1.3.0
+version: 1.3.1
 description: Manage the deterministic daily production lifecycle after the user supplies a Nasdaq Cafe daily source package, including Visual Intelligence v1.2 and explicit Visual Evidence Planning before preview.
 ---
 
@@ -142,7 +142,32 @@ A missing file means planning was skipped and is a production failure. If no Vis
 
 Therefore an empty intent list is a deliberate `not-required` decision; an absent file is not.
 
+Once `working/YYYY-MM-DD/visual-intelligence/visual_requirements.json` exists, the working Visual Source plan is a ChatGPT-authored semantic checkpoint. A deterministic v1.2 rerun must preserve the exact bytes of any existing:
+
+```text
+working/YYYY-MM-DD/visual_source_intents.json
+working/YYYY-MM-DD/visual_source_selection.json
+```
+
+Do not let Daily Authoring rematerialization silently replace those post-Pass-B decisions with an older baseline or an empty list. Before Pass B exists, Daily Authoring remains authoritative for seeding the initial working files. Story or editorial-snapshot drift still invalidates the old Visual Requirements through the existing SHA checks; preservation is not permission to reuse stale semantics.
+
+After Pass B, ChatGPT must explicitly review Reality Anchor opportunities. If `preferredEvidenceModes` includes `source-document` or a real source materially improves grounding, update `working/YYYY-MM-DD/visual_source_intents.json` before rerunning closure rather than accepting a mechanically inherited empty list by default.
+
+For sources already represented in the approved Source Registry by an exact public URL, reuse the existing Visual Source route first:
+
+```text
+official-url / direct-download
+or
+official-url / pdf-page-render
+or
+official-url / webpage-screenshot
+```
+
+Use `collector-document` only when the actual Collector archive is locally mounted and the exact document/local path exists. Do not add a second Collector→Plot transport, asset manifest, Visual Source resolver, or handoff format merely to move a source that the existing exact URL route can already resolve.
+
 Non-empty intents must reuse the existing Visual Source contract: exact locators, existing source/Beat IDs, Primary plus Approved Fallback, explicit rights status, and no new factual or causal meaning. Asset resolution remains mechanical and cannot rewrite the story. A failed Primary with a legal Approved Fallback remains `resolved`; only exhaustion of legal alternatives may become `BLOCKED`.
+
+A non-empty Visual Source plan also requires an explicit `working/YYYY-MM-DD/visual_source_selection.json`. If that selection has not been authored yet, v1.2 closure must stop as an expected semantic pause with `AUTHOR_VISUAL_SOURCE_SELECTION`; it must not classify the missing selection as a renderer or machine failure.
 
 ## State behavior
 
