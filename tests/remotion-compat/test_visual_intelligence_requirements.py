@@ -87,6 +87,7 @@ def main() -> int:
             },
         ]
     }
+    catalog_sha = staged_bridge.base.canonical_sha(catalog)
     staged_bridge._validate_catalog_coverage(requirements=value, catalog=catalog)
 
     # After the Renderer-owned Candidate Builder has admitted both Candidates,
@@ -98,13 +99,16 @@ def main() -> int:
         "episodeDate": date,
         "editorialSnapshotSha256": snapshot_sha,
         "visualRequirementsSha256": requirements_sha,
-        "director": {"selections": [{
-            "visualBeatId": beat_id,
-            "selectedCandidateId": "vc-appearance-alternative",
-            "strongestAlternativeCandidateId": "vc-required",
-            "whySelected": "legal appearance-only alternative",
-            "whyNotAlternative": "required-mode candidate keeps the measured appearance run",
-        }]},
+        "director": {
+            "candidateCatalogSha256": catalog_sha,
+            "selections": [{
+                "visualBeatId": beat_id,
+                "selectedCandidateId": "vc-appearance-alternative",
+                "strongestAlternativeCandidateId": "vc-required",
+                "whySelected": "legal appearance-only alternative",
+                "whyNotAlternative": "required-mode candidate keeps the measured appearance run",
+            }],
+        },
     }
     staged_bridge._validate_director(
         decision=decision,
@@ -114,17 +118,21 @@ def main() -> int:
         snapshot_sha=snapshot_sha,
         beat_ids=[beat_id],
         catalog=catalog,
+        catalog_sha=catalog_sha,
     )
 
     invalid_decision = {
         **decision,
-        "director": {"selections": [{
-            "visualBeatId": beat_id,
-            "selectedCandidateId": "vc-not-in-catalog",
-            "strongestAlternativeCandidateId": "vc-required",
-            "whySelected": "invalid",
-            "whyNotAlternative": "invalid",
-        }]},
+        "director": {
+            "candidateCatalogSha256": catalog_sha,
+            "selections": [{
+                "visualBeatId": beat_id,
+                "selectedCandidateId": "vc-not-in-catalog",
+                "strongestAlternativeCandidateId": "vc-required",
+                "whySelected": "invalid",
+                "whyNotAlternative": "invalid",
+            }],
+        },
     }
     try:
         staged_bridge._validate_director(
@@ -135,6 +143,7 @@ def main() -> int:
             snapshot_sha=snapshot_sha,
             beat_ids=[beat_id],
             catalog=catalog,
+            catalog_sha=catalog_sha,
         )
     except staged_bridge.VisualIntelligenceStageError as exc:
         if "selectedCandidateId is not a legal Candidate" not in str(exc):

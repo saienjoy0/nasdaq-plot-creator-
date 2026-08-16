@@ -82,6 +82,7 @@ def _validate_director(
     snapshot_sha: str,
     beat_ids: list[str],
     catalog: dict[str, Any],
+    catalog_sha: str,
 ) -> None:
     if decision.get("contractVersion") != "1.0.0":
         raise VisualIntelligenceStageError("Visual Intelligence decision contractVersion must be 1.0.0")
@@ -111,7 +112,11 @@ def _validate_director(
         raise VisualIntelligenceStageError("Provisional Direction must cover every Beat in Story order")
 
     director = decision.get("director")
-    selections = director.get("selections") if isinstance(director, dict) else None
+    if not isinstance(director, dict):
+        raise VisualIntelligenceStageError("Visual Intelligence director missing")
+    if director.get("candidateCatalogSha256") != catalog_sha:
+        raise VisualIntelligenceStageError("E_VISUAL_DECISION_STALE: Candidate Catalog SHA mismatch")
+    selections = director.get("selections")
     if not isinstance(selections, list):
         raise VisualIntelligenceStageError("Visual Intelligence director.selections missing")
     if [item.get("visualBeatId") for item in selections if isinstance(item, dict)] != beat_ids:
@@ -306,6 +311,7 @@ def prepare_and_compile(
     )
     catalog = base.load_json(catalog_path, "Visual Candidate Catalog")
     _validate_catalog_coverage(requirements=requirements, catalog=catalog)
+    catalog_sha = base.canonical_sha(catalog)
     if not decision_path.is_file():
         raise VisualIntelligenceStageError(
             "E_VISUAL_INTELLIGENCE_DECISION_REQUIRED: Candidate Catalog is ready; AI-B must author visual_intelligence_decision.json"
@@ -321,9 +327,9 @@ def prepare_and_compile(
         snapshot_sha=snapshot_sha,
         beat_ids=beat_ids,
         catalog=catalog,
+        catalog_sha=catalog_sha,
     )
 
-    catalog_sha = base.canonical_sha(catalog)
     base.write_json(
         plan_path,
         {

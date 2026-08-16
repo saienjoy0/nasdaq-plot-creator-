@@ -168,6 +168,7 @@ def run(renderer_root: Path) -> dict:
                 raise AssertionError(f"pre-decision bridge artifact missing: {name}")
 
         catalog = json.loads((vi / "visual_candidate_catalog.json").read_text(encoding="utf-8"))
+        catalog_sha = base_bridge.canonical_sha(catalog)
         by_beat: dict[str, list[dict]] = {}
         for candidate in catalog["candidates"]:
             by_beat.setdefault(candidate["visualBeatId"], []).append(candidate)
@@ -186,6 +187,30 @@ def run(renderer_root: Path) -> dict:
                 "whyNotAlternative": "fixture validates machinery, not editorial preference" if alternative else "",
             })
 
+        # A legal Candidate ID from the wrong Catalog must be treated as stale, not reused.
+        stale_decision = {
+            "contractVersion": "1.0.0",
+            "bridgeContractVersion": base_bridge.BRIDGE_CONTRACT_VERSION,
+            "episodeDate": date,
+            "editorialSnapshotSha256": snapshot_sha,
+            "visualRequirementsSha256": requirements_sha,
+            "director": {
+                "candidateCatalogSha256": "0" * 64,
+                "selections": selections,
+            },
+        }
+        write_json(vi / "visual_intelligence_decision.json", stale_decision)
+        try:
+            staged_bridge.prepare_and_compile(
+                render=spec, output_root=root, date=date, renderer_root=renderer_root,
+                expected_renderer_commit=expected_commit, plot_root=root,
+            )
+        except staged_bridge.VisualIntelligenceStageError as exc:
+            if "E_VISUAL_DECISION_STALE: Candidate Catalog SHA mismatch" not in str(exc):
+                raise
+        else:
+            raise AssertionError("stale Candidate Catalog decision must be rejected")
+
         # Stage 2: Director-only decision is legal, but Critic must not be pre-baked.
         director_decision = {
             "contractVersion": "1.0.0",
@@ -193,7 +218,10 @@ def run(renderer_root: Path) -> dict:
             "episodeDate": date,
             "editorialSnapshotSha256": snapshot_sha,
             "visualRequirementsSha256": requirements_sha,
-            "director": {"selections": selections},
+            "director": {
+                "candidateCatalogSha256": catalog_sha,
+                "selections": selections,
+            },
         }
         write_json(vi / "visual_intelligence_decision.json", director_decision)
         try:
@@ -248,6 +276,7 @@ def run(renderer_root: Path) -> dict:
             "beatCount": len(beat_ids(spec)),
             "semanticDiff": report["semanticDiff"],
             "machinePausedBeforeDecision": True,
+            "staleCatalogDecisionRejected": True,
             "machinePausedBeforeCritic": True,
             "criticBoundToCompiledVisual": True,
             "packageValidation": validation["status"],
