@@ -16,6 +16,9 @@ on:
           - source-probe
           - prepare
           - compile
+  pull_request:
+    paths:
+      - ".github/workflows/visual-intelligence-real-day-canary.yml"
 
 permissions:
   contents: read
@@ -24,6 +27,9 @@ jobs:
   canary:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    env:
+      CANARY_PHASE: ${{ github.event_name == 'pull_request' && 'source-probe' || inputs.phase }}
+      CANARY_DATE: ${{ github.event_name == 'pull_request' && '2026-08-06' || inputs.episode_date }}
     steps:
       - name: Checkout Plot
         uses: actions/checkout@v4
@@ -72,10 +78,10 @@ jobs:
           npm --prefix .renderer ci
 
       - name: Resolve real Visual Source primaries and fallbacks
-        if: inputs.phase == 'source-probe'
+        if: env.CANARY_PHASE == 'source-probe'
         env:
           PYTHONPATH: scripts
-          EPISODE_DATE: ${{ inputs.episode_date }}
+          EPISODE_DATE: ${{ env.CANARY_DATE }}
         shell: bash
         run: |
           set -euo pipefail
@@ -155,13 +161,13 @@ jobs:
           PY
 
       - name: Run real-day v1.2 closure
-        if: inputs.phase != 'source-probe'
+        if: env.CANARY_PHASE != 'source-probe'
         env:
           PYTHONPATH: scripts
         run: |
           python scripts/run_daily_renderer_closure_v12.py \
-            --phase "${{ inputs.phase }}" \
-            --date "${{ inputs.episode_date }}" \
+            --phase "$CANARY_PHASE" \
+            --date "$CANARY_DATE" \
             --repo-root . \
             --renderer-root .renderer
 
@@ -169,14 +175,14 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: visual-intelligence-v12-${{ inputs.episode_date }}-${{ inputs.phase }}
+          name: visual-intelligence-v12-${{ env.CANARY_DATE }}-${{ env.CANARY_PHASE }}
           path: |
-            working/${{ inputs.episode_date }}/visual-intelligence/
-            working/${{ inputs.episode_date }}/visual-source-probe/
-            verification/${{ inputs.episode_date }}/
-            render-specs/${{ inputs.episode_date }}/render_spec.json
-            working/${{ inputs.episode_date }}/production_request.json
-            working/${{ inputs.episode_date }}/production_state.json
-            daily-assets/${{ inputs.episode_date }}/
+            working/${{ env.CANARY_DATE }}/visual-intelligence/
+            working/${{ env.CANARY_DATE }}/visual-source-probe/
+            verification/${{ env.CANARY_DATE }}/
+            render-specs/${{ env.CANARY_DATE }}/render_spec.json
+            working/${{ env.CANARY_DATE }}/production_request.json
+            working/${{ env.CANARY_DATE }}/production_state.json
+            daily-assets/${{ env.CANARY_DATE }}/
           if-no-files-found: warn
           retention-days: 7
