@@ -8,11 +8,12 @@ on:
         required: true
         type: string
       phase:
-        description: "prepare = Candidate Catalog only; compile = AI-B decision + production closure"
+        description: "source-probe = resolve real Visual Sources only; prepare = Candidate Catalog; compile = AI-B decision + closure"
         required: true
         default: prepare
         type: choice
         options:
+          - source-probe
           - prepare
           - compile
 
@@ -61,11 +62,100 @@ jobs:
           cache-dependency-path: .renderer/package-lock.json
 
       - name: Install canary dependencies
+        shell: bash
         run: |
-          python -m pip install --disable-pip-version-check jsonschema pytest pillow
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
+          python -m pip install --disable-pip-version-check jsonschema pytest pillow playwright==1.61.0
+          python -m playwright install --with-deps chromium
           npm --prefix .renderer ci
 
+      - name: Resolve real Visual Source primaries and fallbacks
+        if: inputs.phase == 'source-probe'
+        env:
+          PYTHONPATH: scripts
+          EPISODE_DATE: ${{ inputs.episode_date }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          from PIL import Image
+          import resolve_visual_sources
+
+          date=os.environ['EPISODE_DATE']
+          root=Path.cwd()
+          intents_path=root / 'working' / date / 'visual_source_intents.json'
+          selection_path=root / 'working' / date / 'visual_source_selection.json'
+          if not intents_path.is_file():
+              raise SystemExit(f'Visual Source intents missing for source probe: {intents_path}')
+          intents=json.loads(intents_path.read_text(encoding='utf-8'))
+          if not isinstance(intents.get('intents'), list) or not intents['intents']:
+              raise SystemExit('source-probe requires a real-day fixture with non-empty Visual Source intents')
+          if not selection_path.is_file():
+              raise SystemExit('source-probe requires the pre-authored Primary/Fallback production selection')
+          selection=json.loads(selection_path.read_text(encoding='utf-8'))
+
+          probe_dir=root / 'working' / date / 'visual-source-probe'
+          probe_dir.mkdir(parents=True, exist_ok=True)
+          contract_path=probe_dir / 'probe_final_episode_contract.json'
+          contract_path.write_text(
+              json.dumps({
+                  'contractVersion': '1.0.0',
+                  'episodeDate': date,
+                  'visualSources': intents,
+              }, ensure_ascii=False, indent=2) + '\n',
+              encoding='utf-8',
+          )
+          raw_path=probe_dir / 'asset_resolution_raw.json'
+          result=resolve_visual_sources.resolve_all(
+              contract_path=contract_path,
+              repo_root=root,
+              output_path=raw_path,
+              asset_root=root / 'daily-assets',
+              collector_root=None,
+          )
+          primary=[row for row in result['results'] if row.get('path') == 'primary']
+          fallback=[row for row in result['results'] if row.get('path') == 'fallback']
+          if not primary or not fallback:
+              raise SystemExit('source-probe did not exercise both Primary and Approved Fallback')
+          failed=[row for row in primary if row.get('status') != 'ready']
+          if failed:
+              print(json.dumps({'status':'REAL_SOURCE_UNAVAILABLE','failures':failed}, ensure_ascii=False, indent=2))
+              raise SystemExit('one or more real Visual Source primaries could not be captured; E2E proof is incomplete')
+          for row in primary:
+              output=row.get('outputPath')
+              if not isinstance(output, str):
+                  raise SystemExit(f'captured primary lacks outputPath: {row}')
+              path=root / output
+              if not path.is_file() or path.stat().st_size == 0:
+                  raise SystemExit(f'captured primary asset missing: {path}')
+              with Image.open(path) as image:
+                  image.verify()
+              if row.get('mimeType') != 'image/png' or not row.get('outputSha256'):
+                  raise SystemExit(f'captured primary asset metadata invalid: {row}')
+          if any(row.get('status') != 'ready' for row in fallback):
+              raise SystemExit('Approved Fallback resolution is not ready')
+          if selection.get('selectedPath') != 'fallback':
+              raise SystemExit('source-probe fixture must keep user-review-required Primary out of production')
+          report={
+              'status':'PASS',
+              'episodeDate':date,
+              'realPrimaryCount':len(primary),
+              'approvedFallbackCount':len(fallback),
+              'productionSelection':'fallback',
+              'rightsBoundaryPreserved':True,
+              'assetResolutionRaw':str(raw_path.relative_to(root)),
+          }
+          report_path=probe_dir / 'real_source_e2e_report.json'
+          report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+          print(json.dumps(report, ensure_ascii=False, indent=2))
+          PY
+
       - name: Run real-day v1.2 closure
+        if: inputs.phase != 'source-probe'
         env:
           PYTHONPATH: scripts
         run: |
@@ -82,9 +172,11 @@ jobs:
           name: visual-intelligence-v12-${{ inputs.episode_date }}-${{ inputs.phase }}
           path: |
             working/${{ inputs.episode_date }}/visual-intelligence/
+            working/${{ inputs.episode_date }}/visual-source-probe/
             verification/${{ inputs.episode_date }}/
             render-specs/${{ inputs.episode_date }}/render_spec.json
             working/${{ inputs.episode_date }}/production_request.json
             working/${{ inputs.episode_date }}/production_state.json
+            daily-assets/${{ inputs.episode_date }}/
           if-no-files-found: warn
           retention-days: 7

@@ -85,9 +85,45 @@ def verify_handoff(bundle_root: Path, manifest_path: Path, date: str) -> tuple[d
     return manifest, file_index
 
 
-def validate_user_review(record: dict[str, Any] | None, date: str, bundle_id: str) -> dict[str, Any]:
+def validate_user_review(
+    record: dict[str, Any] | None,
+    date: str,
+    bundle_id: str,
+    preview_sha256: str,
+) -> dict[str, Any]:
+    """Normalize Preview review while giving approval one canonical authority.
+
+    Historical bundle-scoped pending/rejected review records remain readable for
+    diagnostics. An approval, however, must use the canonical Human Preview Review
+    contract produced from the exact MP4 bytes by write_human_preview_review.py.
+    This prevents a bundle-only review from advancing production state without
+    proving which Preview the user actually approved.
+    """
     if record is None:
         return {"status": "pending", "reviewed_at": None, "notes": ""}
+
+    if "contractVersion" in record or "previewSha256" in record:
+        required = {"contractVersion", "episodeDate", "previewSha256", "status", "reviewedAt"}
+        if set(record) != required:
+            raise AcceptanceError("canonical human Preview review fields mismatch")
+        if record.get("contractVersion") != "1.0.0":
+            raise AcceptanceError("canonical human Preview review contractVersion mismatch")
+        if record.get("episodeDate") != date:
+            raise AcceptanceError("canonical human Preview review episodeDate mismatch")
+        if record.get("status") != "approved":
+            raise AcceptanceError("canonical human Preview review status must be approved")
+        if record.get("previewSha256") != preview_sha256:
+            raise AcceptanceError("canonical human Preview review does not match actual Preview SHA")
+        if not isinstance(record.get("reviewedAt"), str) or not record["reviewedAt"].strip():
+            raise AcceptanceError("canonical human Preview review reviewedAt is required")
+        return {
+            "status": "approved",
+            "reviewed_at": record["reviewedAt"],
+            "notes": "",
+            "preview_sha256": preview_sha256,
+            "authority": "human-preview-review/1.0.0",
+        }
+
     if record.get("episode_date") != date:
         raise AcceptanceError("user review episode_date mismatch")
     if record.get("bundle_id") != bundle_id:
@@ -95,7 +131,11 @@ def validate_user_review(record: dict[str, Any] | None, date: str, bundle_id: st
     status = record.get("status")
     if status not in {"pending", "approved", "rejected"}:
         raise AcceptanceError("user review status must be pending, approved, or rejected")
-    if status in {"approved", "rejected"} and not record.get("reviewed_at"):
+    if status == "approved":
+        raise AcceptanceError(
+            "approved Preview review must use canonical human_preview_review.json bound to the actual MP4 SHA"
+        )
+    if status == "rejected" and not record.get("reviewed_at"):
         raise AcceptanceError("completed user review requires reviewed_at")
     return {"status": status, "reviewed_at": record.get("reviewed_at"), "notes": str(record.get("notes", ""))}
 
@@ -145,7 +185,12 @@ def validate_acceptance(*, episode_date: str, daily_source_root: Path, daily_sou
         raise AcceptanceError("preview artifact SHA mismatch")
 
     review_record = load_json(safe_file(renderer_artifact_root, user_review_path, "user review"), "user review") if user_review_path else None
-    user_review = validate_user_review(review_record, episode_date, manifest["bundle_id"])
+    user_review = validate_user_review(
+        review_record,
+        episode_date,
+        manifest["bundle_id"],
+        preview_sha,
+    )
     if user_review["status"] == "approved":
         mvp_status = "passed"
     elif user_review["status"] == "rejected":
