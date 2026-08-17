@@ -1,0 +1,6 @@
+{
+  "episodeDate": "2026-08-12",
+  "confirmation": "PREVIEW",
+  "requestedBy": "ChatGPT",
+  "reason": "WS-0 AS-IS current-SHA baseline replay using existing 2026-08-12 authoring/input; observe production path only; do not rewrite historical inputs; final not authorized"
+}
