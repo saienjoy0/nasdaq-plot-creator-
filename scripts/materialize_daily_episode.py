@@ -22,7 +22,8 @@ MEM_BEGIN = "<!--BEGIN_EPISODE_MEMORY_ANNEX-->"
 MEM_END = "<!--END_EPISODE_MEMORY_ANNEX-->"
 PROD_BEGIN = "<!--BEGIN_FINAL_PRODUCTION_SOURCE-->"
 PROD_END = "<!--END_FINAL_PRODUCTION_SOURCE-->"
-DOSSIER_TEMPLATE_SHA = "3bc1edaf7b3ca35f30e02f50d9a97605b38bc6a5d6242485eba825f7aabec384"
+DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
+SHA256_RE = re.compile(r"[0-9a-f]{64}")
 
 
 def sha(path: Path) -> str:
@@ -48,11 +49,14 @@ def normalize_scene_headings(text: str) -> str:
     return text
 
 
-def ensure_dossier_template(research: Path) -> Path:
+def ensure_dossier_template(research: Path, expected_sha: str) -> Path:
     target = research / "causal_research_dossier.template.json"
     if target.exists():
-        if sha(target) != DOSSIER_TEMPLATE_SHA:
-            raise SystemExit(f"dossier template SHA mismatch: {sha(target)}")
+        actual = sha(target)
+        if actual != expected_sha:
+            raise SystemExit(
+                f"dossier template SHA mismatch: expected={expected_sha} actual={actual}"
+            )
         return target
     parts = sorted(research.glob("causal_research_dossier.template.zlib.b64.part-*"))
     if not parts:
@@ -63,8 +67,10 @@ def ensure_dossier_template(research: Path) -> Path:
     except Exception as exc:
         raise SystemExit(f"failed to decode dossier template: {exc}") from exc
     actual = hashlib.sha256(raw).hexdigest()
-    if actual != DOSSIER_TEMPLATE_SHA:
-        raise SystemExit(f"decoded dossier template SHA mismatch: {actual}")
+    if actual != expected_sha:
+        raise SystemExit(
+            f"decoded dossier template SHA mismatch: expected={expected_sha} actual={actual}"
+        )
     target.write_bytes(raw)
     print(f"RECOVERED {target} sha256={actual}", flush=True)
     return target
@@ -86,8 +92,20 @@ def normalize_memory_locator(value):
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--date", required=True)
+    ap.add_argument("--market-date", required=True)
+    ap.add_argument("--information-cutoff", required=True)
+    ap.add_argument("--dossier-template-sha", required=True)
     ap.add_argument("--repo-root", type=Path, default=Path.cwd())
     args = ap.parse_args()
+    if not DATE_RE.fullmatch(args.date):
+        raise SystemExit("--date must be YYYY-MM-DD")
+    if not DATE_RE.fullmatch(args.market_date):
+        raise SystemExit("--market-date must be YYYY-MM-DD")
+    if not args.information_cutoff.strip():
+        raise SystemExit("--information-cutoff must be non-empty")
+    if not SHA256_RE.fullmatch(args.dossier_template_sha):
+        raise SystemExit("--dossier-template-sha must be a lowercase SHA-256")
+
     root = args.repo_root.resolve()
     date = args.date
     work = root / "working" / date
@@ -100,7 +118,7 @@ def main() -> int:
     context = work / f"memory_context_{date}.md"
     report = work / f"memory_retrieval_report_{date}.json"
     manifest = research / "research_input_manifest.json"
-    dossier_template = ensure_dossier_template(research)
+    dossier_template = ensure_dossier_template(research, args.dossier_template_sha)
     dossier = research / f"causal_research_dossier_{date}.json"
     dossier_report = research / "causal_dossier_validation.json"
     public_package = episodes / f"episode_package_public_{date}.md"
@@ -125,9 +143,9 @@ def main() -> int:
     run([
         sys.executable, "scripts/build_research_input_manifest.py",
         "--episode-date", date,
-        "--market-date", "2026-08-05",
+        "--market-date", args.market_date,
         "--timezone", "America/New_York",
-        "--information-cutoff", "2026-08-06T04:27:46+00:00",
+        "--information-cutoff", args.information_cutoff,
         "--daily-source-package", str(daily),
         "--memory-query-plan", str(query),
         "--memory-context", str(context),
