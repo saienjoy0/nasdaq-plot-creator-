@@ -1,0 +1,16 @@
+{
+  "contractVersion": "1.0.0",
+  "scope": "PREVIEW",
+  "plot": {
+    "repository": "saienjoy0/nasdaq-plot-creator-",
+    "entryWorkflow": ".github/workflows/chatgpt-daily-preview-production.yml",
+    "requestGlob": "daily-production-requests/*.json"
+  },
+  "renderer": {
+    "repository": "saienjoy0/saienjoy0-nasdaq-cafe-remotion",
+    "requestWorkflow": ".github/workflows/nasdaq-cafe-handoff-preview-request-v3.yml",
+    "workerWorkflow": ".github/workflows/nasdaq-cafe-preview-handoff.yml"
+  },
+  "semanticPauseIsSuccess": true,
+  "finalAllowed": false
+}
