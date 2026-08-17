@@ -74,7 +74,7 @@ def test_research_input_extraction_is_fail_closed(tmp_path: Path):
 
 def test_freeze_contract_binds_acceptance_not_story_sidecars():
     schema = json.loads((ROOT / "contracts/chatgpt_semantic_freeze.schema.json").read_text(encoding="utf-8"))
-    required = set(schema["required"])
+    required = set(schema["$defs"]["currentV12"]["required"])
     assert "editorialSemanticAcceptance" in required
     assert "canonicalAuthoring" in required
     assert "causalDossierValidation" in required
