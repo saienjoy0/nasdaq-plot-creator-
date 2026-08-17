@@ -119,17 +119,53 @@ jobs:
           if [[ -n "$EPISODE_DATE" ]]; then
             [[ "$EPISODE_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
             echo "EPISODE_DATE=$EPISODE_DATE" >> "$GITHUB_ENV"
-            V12_OWNED="$(EPISODE_DATE="$EPISODE_DATE" python - <<'PY'
+            CURRENT_V2_OWNED="$(EPISODE_DATE="$EPISODE_DATE" python - <<'PY'
+          import hashlib
           import json
           import os
           from pathlib import Path
 
           date = os.environ['EPISODE_DATE']
+          authoring_path = Path('daily-authoring') / f'{date}.json'
+          freeze_path = Path('semantic-freezes') / f'{date}.json'
+          acceptance_path = Path('verification') / date / 'editorial_semantic_acceptance.json'
+
+          def load(path):
+              return json.loads(path.read_text(encoding='utf-8'))
+
+          def sha256(path):
+              return hashlib.sha256(path.read_bytes()).hexdigest()
+
+          if authoring_path.is_file():
+              authoring = load(authoring_path)
+              if authoring.get('contractVersion') != '2.0.0' or authoring.get('episodeDate') != date:
+                  raise SystemExit(f'invalid current-v2 authoring marker: {authoring_path}')
+              missing = [str(path) for path in (freeze_path, acceptance_path) if not path.is_file()]
+              if missing:
+                  raise SystemExit('current-v2 authoring requires committed Acceptance + Freeze: ' + ','.join(missing))
+              freeze = load(freeze_path)
+              acceptance = load(acceptance_path)
+              if freeze.get('contractVersion') != '1.2.0' or freeze.get('episodeDate') != date:
+                  raise SystemExit(f'invalid current-v2 Semantic Freeze: {freeze_path}')
+              if acceptance.get('contractVersion') != '1.0.0' or acceptance.get('episodeDate') != date or acceptance.get('status') != 'PASS':
+                  raise SystemExit(f'invalid current-v2 Editorial Semantic Acceptance: {acceptance_path}')
+              authoring_ref = freeze.get('canonicalAuthoring', {})
+              acceptance_ref = freeze.get('editorialSemanticAcceptance', {})
+              if authoring_ref.get('path') != authoring_path.as_posix() or authoring_ref.get('sha256') != sha256(authoring_path):
+                  raise SystemExit('Semantic Freeze does not bind current Canonical Authoring bytes')
+              if acceptance_ref.get('path') != acceptance_path.as_posix() or acceptance_ref.get('sha256') != sha256(acceptance_path):
+                  raise SystemExit('Semantic Freeze does not bind current Editorial Semantic Acceptance bytes')
+              accepted_authoring = acceptance.get('authoring', {})
+              if accepted_authoring.get('path') != authoring_path.as_posix() or accepted_authoring.get('sha256') != sha256(authoring_path):
+                  raise SystemExit('Editorial Semantic Acceptance does not bind current Canonical Authoring bytes')
+              print('true')
+              raise SystemExit(0)
+
           decision_path = Path('working') / date / 'visual-intelligence' / 'visual_intelligence_decision.json'
           if not decision_path.is_file():
               print('false')
               raise SystemExit(0)
-          value = json.loads(decision_path.read_text(encoding='utf-8'))
+          value = load(decision_path)
           print('true' if (
               value.get('contractVersion') == '1.0.0'
               and value.get('bridgeContractVersion') == 'visual-intelligence-bridge/1.2.0'
@@ -137,9 +173,9 @@ jobs:
           ) else 'false')
           PY
           )"
-            if [[ "$V12_OWNED" == "true" ]]; then
+            if [[ "$CURRENT_V2_OWNED" == "true" ]]; then
               echo "RUN_EXACT_DAY=false" >> "$GITHUB_ENV"
-              echo "Legacy exact-day closure skipped: $EPISODE_DATE is owned by visual-intelligence-bridge/1.2.0. Regression tests still run."
+              echo "Legacy exact-day closure skipped: $EPISODE_DATE is owned by the current-v2 semantic/Visual Intelligence path. Regression tests still run."
             else
               echo "RUN_EXACT_DAY=true" >> "$GITHUB_ENV"
               echo "Legacy Renderer closure target: $EPISODE_DATE"
