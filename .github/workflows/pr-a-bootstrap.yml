@@ -1,0 +1,108 @@
+name: PR-A Semantic Boundary Bootstrap
+
+on:
+  push:
+    branches:
+      - hardening/editorial-semantic-boundary-v1-3
+    paths:
+      - '.pr-a-overlay.tar.xz.b64'
+      - '.github/workflows/pr-a-bootstrap.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install semantic test dependencies
+        run: python -m pip install --disable-pip-version-check jsonschema referencing pytest
+
+      - name: Unpack fail-closed PR-A overlay
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 -d .pr-a-overlay.tar.xz.b64 > /tmp/pr-a-overlay.tar.xz
+          rm -rf /tmp/pr-a-overlay
+          mkdir -p /tmp/pr-a-overlay
+          tar -xJf /tmp/pr-a-overlay.tar.xz -C /tmp/pr-a-overlay
+          test -f /tmp/pr-a-overlay/nasdaq-pr-a-implementation/apply_pr_a_overlay.py
+
+      - name: Verify exact main baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          python /tmp/pr-a-overlay/nasdaq-pr-a-implementation/apply_pr_a_overlay.py . --check-only
+
+      - name: Apply PR-A overlay
+        shell: bash
+        run: |
+          set -euo pipefail
+          python /tmp/pr-a-overlay/nasdaq-pr-a-implementation/apply_pr_a_overlay.py .
+
+      - name: Run semantic boundary tests
+        shell: bash
+        env:
+          PYTHONPATH: scripts
+        run: |
+          set -euo pipefail
+          python -m pytest -q \
+            tests/editorial-semantic-boundary/test_boundary_architecture.py \
+            tests/editorial-semantic-boundary/test_current_contract_e2e.py \
+            tests/remotion-compat/test_chatgpt_daily_authoring_closure.py
+
+      - name: Guard PR-A scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --name-only HEAD -- | grep -E '^(daily-authoring-parts/2026-08-17/|daily-authoring/2026-08-17\.json$|semantic-freezes/2026-08-17\.json$|daily-inputs/2026-08-17/)'; then
+            echo '::error::PR-A touched forbidden 2026-08-17 migration paths'
+            exit 1
+          fi
+          git diff --check
+
+      - name: Remove bootstrap payload and commit verified implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .pr-a-overlay.tar.xz.b64 .github/workflows/pr-a-bootstrap.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- \
+            contracts/chatgpt_daily_authoring_v2.schema.json \
+            contracts/editorial_semantic_acceptance.schema.json \
+            contracts/chatgpt_semantic_freeze.schema.json \
+            skills/nasdaq-cafe-causal-research/contracts/causal_dossier_validation_receipt.schema.json \
+            skills/nasdaq-cafe-causal-research/validators/validate_causal_research_dossier.py \
+            skills/nasdaq-cafe-daily-production/SKILL.md \
+            scripts/assemble_chatgpt_daily_authoring_parts.py \
+            scripts/chatgpt_semantic_freeze.py \
+            scripts/materialize_causal_research.py \
+            scripts/validate_editorial_semantic_boundary.py \
+            scripts/validate_chatgpt_daily_authoring_closure.py \
+            scripts/story-engine/materialize_story_engine.py \
+            scripts/story-engine/project_story_script_to_production.py \
+            scripts/materialize_chatgpt_daily_authoring.py \
+            scripts/materialize_daily_episode.py \
+            scripts/run_semantic_frozen_renderer_closure_v12.py \
+            scripts/run_daily_production_v12.py \
+            scripts/run_daily_renderer_closure_v12.py \
+            .github/workflows/daily-renderer-closure-gate.yml \
+            .github/workflows/chatgpt-daily-preview-production.yml \
+            tests/editorial-semantic-boundary/current_fixture.py \
+            tests/editorial-semantic-boundary/test_boundary_architecture.py \
+            tests/editorial-semantic-boundary/test_current_contract_e2e.py
+          git add -u -- .pr-a-overlay.tar.xz.b64 .github/workflows/pr-a-bootstrap.yml
+          git status --short
+          git diff --cached --check
+          git commit -m 'PR-A: harden editorial semantic boundary'
+          git push origin HEAD:hardening/editorial-semantic-boundary-v1-3
