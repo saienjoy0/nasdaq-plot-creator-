@@ -16,30 +16,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - name: Compute exact logical document SHA-256 values
+      - name: Compute exact direct-document SHA-256 values
         shell: python
         run: |
           from pathlib import Path
-          import base64
           import hashlib
 
           root = Path.cwd()
-          docs = {
-              "01": (root / "source-of-truth/01_fox_character_bible.md").read_bytes(),
-              "02": (root / "source-of-truth/02_editorial_bible.md").read_bytes(),
-              "03": b"".join(
-                  (root / path).read_bytes()
-                  for path in [
-                      "source-of-truth/packed/03_episode_production_spec.part01.txt",
-                      "source-of-truth/packed/03_episode_production_spec.part02.txt",
-                      "source-of-truth/packed/03_episode_production_spec.part03.txt",
-                  ]
-              ),
-              "04": base64.b64decode(
-                  (root / "source-of-truth/packed/04_entertainment_inquisitor.part01.b64").read_bytes(),
-                  validate=True,
-              ),
-          }
-          for key, data in docs.items():
+          for key, rel in {
+              "01": "source-of-truth/01_fox_character_bible.md",
+              "02": "source-of-truth/02_editorial_bible.md",
+          }.items():
+              data = (root / rel).read_bytes()
               print(f"CANON_SHA_{key}={hashlib.sha256(data).hexdigest()}")
               print(f"CANON_BYTES_{key}={len(data)}")
