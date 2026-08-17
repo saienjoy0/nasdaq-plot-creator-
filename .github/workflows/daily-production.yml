@@ -17,15 +17,20 @@ on:
       - "scripts/materialize_daily_episode.py"
       - "scripts/run_daily_renderer_closure.py"
       - "scripts/run_daily_renderer_closure_v12.py"
+      - "scripts/chatgpt_semantic_freeze.py"
+      - "scripts/run_semantic_frozen_renderer_closure_v12.py"
       - "skills/nasdaq-cafe-daily-production/**"
       - "skills/nasdaq-cafe-daily-production-hardening/**"
       - "tests/daily-production/**"
       - "tests/daily-production-hardening/**"
       - "tests/preview-production-path/**"
       - "tests/materializer-runtime-binding/**"
+      - "tests/chatgpt-semantic-freeze/**"
       - "contracts/preview_production_path.json"
       - "contracts/preview_production_outcome.schema.json"
+      - "contracts/chatgpt_semantic_freeze.schema.json"
       - "docs/DAILY_PRODUCTION_RUNBOOK.md"
+      - "docs/CHATGPT_SEMANTIC_FREEZE.md"
       - "designs/PR12_DAILY_OPERATIONAL_ENTRY_POINT.md"
       - ".github/workflows/daily-production.yml"
       - ".github/workflows/chatgpt-daily-preview-production.yml"
@@ -46,15 +51,20 @@ on:
       - "scripts/materialize_daily_episode.py"
       - "scripts/run_daily_renderer_closure.py"
       - "scripts/run_daily_renderer_closure_v12.py"
+      - "scripts/chatgpt_semantic_freeze.py"
+      - "scripts/run_semantic_frozen_renderer_closure_v12.py"
       - "skills/nasdaq-cafe-daily-production/**"
       - "skills/nasdaq-cafe-daily-production-hardening/**"
       - "tests/daily-production/**"
       - "tests/daily-production-hardening/**"
       - "tests/preview-production-path/**"
       - "tests/materializer-runtime-binding/**"
+      - "tests/chatgpt-semantic-freeze/**"
       - "contracts/preview_production_path.json"
       - "contracts/preview_production_outcome.schema.json"
+      - "contracts/chatgpt_semantic_freeze.schema.json"
       - "docs/DAILY_PRODUCTION_RUNBOOK.md"
+      - "docs/CHATGPT_SEMANTIC_FREEZE.md"
       - "designs/PR12_DAILY_OPERATIONAL_ENTRY_POINT.md"
       - ".github/workflows/daily-production.yml"
       - ".github/workflows/chatgpt-daily-preview-production.yml"
@@ -90,7 +100,9 @@ jobs:
             scripts/materializer_runtime_binding.py \
             scripts/materialize_daily_episode.py \
             scripts/run_daily_renderer_closure.py \
-            scripts/run_daily_renderer_closure_v12.py
+            scripts/run_daily_renderer_closure_v12.py \
+            scripts/chatgpt_semantic_freeze.py \
+            scripts/run_semantic_frozen_renderer_closure_v12.py
       - name: Parse daily schemas
         run: |
           python -m json.tool skills/nasdaq-cafe-daily-production/contracts/production_request.schema.json >/dev/null
@@ -98,10 +110,13 @@ jobs:
           python -m json.tool skills/nasdaq-cafe-daily-production/contracts/research_retry_request.schema.json >/dev/null
           python -m json.tool contracts/preview_production_path.json >/dev/null
           python -m json.tool contracts/preview_production_outcome.schema.json >/dev/null
+          python -m json.tool contracts/chatgpt_semantic_freeze.schema.json >/dev/null
       - name: Run canonical Preview production path tests
         run: python -m unittest discover -s tests/preview-production-path -p 'test_*.py' -v
       - name: Run materializer runtime binding tests
         run: python -m unittest discover -s tests/materializer-runtime-binding -p 'test_*.py' -v
+      - name: Run ChatGPT semantic freeze tests
+        run: python -m unittest discover -s tests/chatgpt-semantic-freeze -p 'test_*.py' -v
       - name: Run daily state-machine tests
         run: python -m unittest discover -s tests/daily-production -p 'test_*.py' -v
       - name: Run hardened daily entrypoint tests
