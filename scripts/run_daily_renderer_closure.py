@@ -17,6 +17,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
+import materializer_runtime_binding
+
 
 RENDERER_COMMIT = "6a44cdeb04d401dc45379783862e279a5c2f04a5"
 RENDERER_CONTRACT_VERSION = "2.4.0"
@@ -41,39 +43,14 @@ def load(path: Path) -> dict:
     return value
 
 
-def bind_legacy_materializer(root: Path, date: str) -> None:
-    authoring = load(root / "daily-authoring" / f"{date}.json")
-    dossier = root / "research" / date / "causal_research_dossier.template.json"
-    if not dossier.is_file():
-        raise ClosureError(f"causal dossier template missing: {dossier}")
-    dossier_sha = hashlib.sha256(dossier.read_bytes()).hexdigest()
-    path = root / "scripts" / "materialize_daily_episode.py"
-    text = path.read_text(encoding="utf-8")
-    text, n1 = re.subn(
-        r'DOSSIER_TEMPLATE_SHA = "[0-9a-f]{64}"',
-        f'DOSSIER_TEMPLATE_SHA = "{dossier_sha}"',
-        text,
-        count=1,
-    )
-    text, n2 = re.subn(
-        r'"--market-date", "[0-9]{4}-[0-9]{2}-[0-9]{2}"',
-        f'"--market-date", "{authoring["marketDate"]}"',
-        text,
-        count=1,
-    )
-    text, n3 = re.subn(
-        r'"--information-cutoff", "[^"]+"',
-        f'"--information-cutoff", "{authoring["informationCutoff"]}"',
-        text,
-        count=1,
-    )
-    if (n1, n2, n3) != (1, 1, 1):
-        raise ClosureError(f"legacy materializer bind failed: {(n1, n2, n3)}")
-    path.write_text(text, encoding="utf-8")
-    print(
-        f"BOUND_MATERIALIZER date={date} market={authoring['marketDate']} dossier={dossier_sha}",
-        flush=True,
-    )
+def materializer_runtime_args(root: Path, date: str) -> list[str]:
+    try:
+        binding = materializer_runtime_binding.MaterializerRuntimeBinding.from_workspace(
+            root, date
+        )
+    except materializer_runtime_binding.MaterializerRuntimeBindingError as exc:
+        raise ClosureError(str(exc)) from exc
+    return binding.cli_args()
 
 
 def ensure_renderer(renderer_root: Path) -> None:
@@ -150,7 +127,7 @@ def main() -> int:
             f"verification/{date}/authoring_renderer_closure.json",
             env=env,
         )
-        bind_legacy_materializer(root, date)
+        runtime_args = materializer_runtime_args(root, date)
         run(
             root,
             "python",
@@ -164,7 +141,17 @@ def main() -> int:
             env=env,
         )
         run(root, "python", "scripts/prepare_visual_sources.py", "--date", date, "--repo-root", ".", env=env)
-        run(root, "python", "scripts/materialize_daily_episode.py", "--date", date, "--repo-root", ".", env=env)
+        run(
+            root,
+            "python",
+            "scripts/materialize_daily_episode.py",
+            "--date",
+            date,
+            "--repo-root",
+            ".",
+            *runtime_args,
+            env=env,
+        )
         run(root, "python", "scripts/materialize_financial_contract_1_0.py", "--date", date, "--repo-root", ".", env=env)
         run(
             root,
