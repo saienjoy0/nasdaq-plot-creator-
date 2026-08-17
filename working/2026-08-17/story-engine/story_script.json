@@ -1,0 +1,238 @@
+{
+  "causal_dossier": {
+    "path": "research/2026-08-17/causal_research_dossier_2026-08-17.json",
+    "sha256": "1d490a22333e39a3972e11ea7378a885c1f34458da0b357bcc1f2f10e6281992"
+  },
+  "contract_version": "1.0.0",
+  "episode_date": "2026-08-17",
+  "producer": "chatgpt",
+  "retained_counterevidence_ids": [
+    "E-001",
+    "E-002",
+    "E-007",
+    "E-010",
+    "E-006"
+  ],
+  "scenes": [
+    {
+      "causal_claims": [
+        {
+          "claim_id": "claim-01",
+          "claim_type": "grounded_inference",
+          "confidence": "medium",
+          "evidence_ids": [
+            "E-003",
+            "E-004"
+          ],
+          "scope": "company",
+          "statement": "AMATの下落は、決算ミスだけでは説明できない。"
+        }
+      ],
+      "connection_to_previous": "opening",
+      "evidence_ids": [
+        "E-001",
+        "E-002",
+        "E-004"
+      ],
+      "formal_role": "direction_and_conclusion",
+      "narration": "おはようございます。昨夜のNasdaq Compositeは〇・二八パーセント下落しました。まず目に留まるのがApplied Materialsです。株価は約五パーセント下がったのに、決算は売上も次の四半期ガイダンスも市場予想を上回っていました。\n\nしかもAMDは六・五〇パーセント上昇し、SOXX ETFはほぼ横ばいです。つまり『半導体が全部弱かった』でもありません。今日は、数字は強いのに株が売られた、その期待値のズレからNASDAQまで追います。",
+      "scene_id": "scene-01"
+    },
+    {
+      "causal_claims": [
+        {
+          "claim_id": "claim-02",
+          "claim_type": "fact",
+          "confidence": "high",
+          "evidence_ids": [
+            "E-003",
+            "E-004"
+          ],
+          "scope": "company",
+          "statement": "AMATはformal consensusを上回る実績・ガイダンスを示した。"
+        }
+      ],
+      "connection_to_previous": "but",
+      "evidence_ids": [
+        "E-003",
+        "E-004",
+        "E-009"
+      ],
+      "formal_role": "contradiction",
+      "narration": "まず会社が出した数字です。Applied MaterialsのQ3売上は九十一・二億ドル。次のQ4売上ガイダンスは百二・五億ドルを中心に、調整後EPSも四・〇二ドルを中心に示しました。\n\nそれでも株は引け後から五パーセント超売られました。数字が悪かったわけではない。しかも同じ半導体でも、反応は割れています。",
+      "scene_id": "scene-02"
+    },
+    {
+      "causal_claims": [],
+      "connection_to_previous": "contrast",
+      "evidence_ids": [
+        "E-002"
+      ],
+      "formal_role": "confirmed_facts",
+      "narration": "半導体の地図を広げます。AMATはマイナス五・一二パーセント、Broadcomもマイナス五・九四パーセント。一方でAMDはプラス六・五〇パーセントでした。\n\nそしてCollectorの『SOX』欄は実際にはSOXX ETFで、こちらはマイナス〇・〇六パーセント、ほぼ横ばいです。下げた銘柄は目立ちますが、セクター全体が同じ理由で崩れた形ではありません。",
+      "scene_id": "scene-03"
+    },
+    {
+      "causal_claims": [
+        {
+          "claim_id": "claim-04",
+          "claim_type": "grounded_inference",
+          "confidence": "medium",
+          "evidence_ids": [
+            "E-003",
+            "E-004"
+          ],
+          "scope": "company",
+          "statement": "formal consensusを上回っても株価が下落したため、単純なbeat/missだけではAMAT反応を説明できない。"
+        },
+        {
+          "claim_id": "claim-05",
+          "claim_type": "reported_interpretation",
+          "confidence": "medium",
+          "evidence_ids": [
+            "E-005"
+          ],
+          "scope": "company",
+          "statement": "Reutersは高い期待が売りにつながったとの市場解釈を報じた。"
+        }
+      ],
+      "connection_to_previous": "therefore",
+      "evidence_ids": [
+        "E-003",
+        "E-004",
+        "E-005"
+      ],
+      "formal_role": "expected_actual_gap",
+      "narration": "ExpectedとActualを同じ表に置きます。Q3売上は八十九・九億ドル予想に対して九十一・二億ドル。Q4売上ガイドは九十五・四億ドル予想に対して百二・五億ドル。Q4調整EPSも三・六九ドル予想に対して四・〇二ドル中心です。\n\n数字だけならGapはプラスです。それでも株価は下落しました。試験で合格点を超えたのに、周りが満点を想定していたような構図です。ただし、その『満点』を僕が勝手に数値化はしません。確認できるのは、Reutersが高い期待が背景にあると報じたところまでです。",
+      "scene_id": "scene-04"
+    },
+    {
+      "causal_claims": [
+        {
+          "claim_id": "claim-06",
+          "claim_type": "reported_interpretation",
+          "confidence": "medium",
+          "evidence_ids": [
+            "E-005",
+            "E-007",
+            "E-008"
+          ],
+          "scope": "nasdaq_support",
+          "statement": "金曜のNASDAQ安には、AI関連の高期待値警戒とホルムズ・原油、弱い小売のマクロ材料が同時に存在した。"
+        }
+      ],
+      "connection_to_previous": "but",
+      "evidence_ids": [
+        "E-005",
+        "E-007",
+        "E-008"
+      ],
+      "formal_role": "global_context",
+      "narration": "ここからNASDAQ全体は別にします。AMAT一社の決算が指数全体を下げた、とまでは言えません。金曜はホルムズを巡る緊張と原油上昇が残り、七月の米小売売上高も〇・六パーセント減りました。成長不安というマクロの重しが重なっています。\n\nただ、小売の弱さは利上げ観測を後退させるので、テックには相殺方向もあります。だから昨夜を一つの矢印にすると壊れます。会社側では高期待値の選別、指数側ではマクロ不確実性。この二つを分けるのが今の中心仮説です。",
+      "scene_id": "scene-05"
+    },
+    {
+      "causal_claims": [],
+      "connection_to_previous": "therefore",
+      "evidence_ids": [
+        "E-001",
+        "E-004",
+        "E-006",
+        "E-009"
+      ],
+      "formal_role": "market_reaction",
+      "narration": "時系列を置くと、ここで話が二つに分かれます。AMATの売りは八月十三日の引け後、決算発表の直後から始まっています。一方、七月の小売売上高が出たのは翌十四日の朝八時三十分です。同じ時計ではありません。\n\nさらにNasdaq Compositeは九時三十分に二万六千八百五十一で寄り、前日の終値二万六千八百三を上回っていました。その後、引けでは二万六千七百二十九まで下げています。小売だけ、AMATだけで一日を説明するより、別の材料が重なったと見る方が時系列に合います。",
+      "scene_id": "scene-06"
+    },
+    {
+      "causal_claims": [
+        {
+          "claim_id": "claim-07",
+          "claim_type": "grounded_inference",
+          "confidence": "medium",
+          "evidence_ids": [
+            "E-002",
+            "E-010"
+          ],
+          "scope": "sector",
+          "statement": "当日の反対材料はAI・半導体全面需要崩壊説を弱める。"
+        }
+      ],
+      "connection_to_previous": "but",
+      "evidence_ids": [
+        "E-002",
+        "E-010"
+      ],
+      "formal_role": "entity_divergence",
+      "narration": "ここまで見たAMD高とSOXX ETFほぼ横ばいだけでも、半導体全部が同じ需要悪化を値付けした説明は弱いです。さらに、会社側の需要材料もあります。\n\nApplied Materials自身も、先端パッケージ関連の二〇二六年売上成長見通しを七〇パーセント超へ引き上げ、顧客との対話は二〇三〇年まで伸びていると説明しています。将来を保証する数字ではありませんが、『AI需要が消えた』という説明とは噛み合いません。",
+      "scene_id": "scene-07"
+    },
+    {
+      "causal_claims": [
+        {
+          "claim_id": "claim-08",
+          "claim_type": "grounded_inference",
+          "confidence": "medium",
+          "evidence_ids": [
+            "E-004",
+            "E-005",
+            "E-007",
+            "E-008"
+          ],
+          "scope": "nasdaq_support",
+          "statement": "AMATの直接反応は高期待値に対する選別的評価調整が有力で、NASDAQ全体には別のマクロ不確実性が重なったとみるのが最も整合的。"
+        }
+      ],
+      "connection_to_previous": "callback",
+      "evidence_ids": [
+        "E-001",
+        "E-002",
+        "E-003",
+        "E-004",
+        "E-005",
+        "E-007",
+        "E-008",
+        "E-010"
+      ],
+      "formal_role": "validation_points",
+      "narration": "ここまでで、残る説明はかなり絞れました。決算ミス説はformal beatと合わない。AI需要崩壊説はAMD、SOXX ETF、AMATの需要材料と合いにくい。弱い小売だけでも、利上げ観測後退と高い寄り付きが残ります。\n\nいちばん整合するのは二エンジンです。AMATの直接反応は、高いAI期待に対する選別的な再評価。NASDAQ全体には、ホルムズと原油、成長不安などのマクロ不確実性が重なった。確信度は中です。原油が落ち着いても高評価AI銘柄の選別が続くかが、この見方の次のテストになります。",
+      "scene_id": "scene-08"
+    },
+    {
+      "causal_claims": [],
+      "connection_to_previous": "closing",
+      "evidence_ids": [],
+      "formal_role": "fixed_closing",
+      "narration": "以上、朝のNASDAQカフェでした。今日も気をつけて、いってらっしゃい。こちらはそろそろ、おやすみなさい。",
+      "scene_id": "scene-09"
+    }
+  ],
+  "story_plan": {
+    "path": "working/2026-08-17/story-engine/story_plan.json",
+    "sha256": "5de4b246953c890d7075adfdc03771b0c0b85b6049f16f6061ee8c65cd48ef00"
+  },
+  "unresolved_points": [
+    {
+      "evidence_ids": [
+        "E-001",
+        "E-002",
+        "E-005",
+        "E-008"
+      ],
+      "statement": "AMAT・AVGOの個別弱さと原油/小売のマクロ要因がNasdaq -0.28%へ寄与した比率は確定できない。"
+    },
+    {
+      "evidence_ids": [
+        "E-002"
+      ],
+      "statement": "AMD +6.50%の個別上昇理由はCollector材料だけでは確定していない。"
+    },
+    {
+      "evidence_ids": [
+        "E-004",
+        "E-005"
+      ],
+      "statement": "formal consensusを超える価格織り込み期待を数値化する根拠は確認できない。"
+    }
+  ]
+}

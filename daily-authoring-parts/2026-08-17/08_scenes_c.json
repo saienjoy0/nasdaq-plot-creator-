@@ -1,0 +1,225 @@
+{
+  "production": {
+    "scenes": [
+      {
+        "beats": [
+          {
+            "changeCue": "next",
+            "contentType": "text",
+            "evidenceSourceIds": [
+              "source-001"
+            ],
+            "grammarId": "comparison",
+            "primaryElement": "AMD +6.50% / SOXX ETF -0.06%",
+            "primaryFunction": "Explain",
+            "screenQuestion": "AI・半導体は一方向？",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "AMD：+6.50%",
+              "SOXX ETF：-0.06%",
+              "全面需要崩壊ではない"
+            ],
+            "visualMode": "comparison",
+            "visualTemplate": "split-comparison"
+          },
+          {
+            "changeCue": "next",
+            "contentType": "text",
+            "evidenceSourceIds": [
+              "source-003",
+              "source-004"
+            ],
+            "grammarId": "evidence",
+            "primaryElement": "AMAT long-term demand signals",
+            "primaryFunction": "Explain",
+            "screenQuestion": "需要の会社側材料は？",
+            "screenState": "Source",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "Advanced packaging：>70%成長見通し",
+              "顧客対話：2030年まで",
+              "将来保証ではない"
+            ],
+            "visualMode": "text-focus",
+            "visualTemplate": "source-receipt"
+          }
+        ],
+        "causalScope": "sector_support",
+        "chunks": [
+          {
+            "expression": "分析",
+            "text": "ここまで見たAMD高とSOXX ETFほぼ横ばいだけでも、半導体全部が同じ需要悪化を値付けした説明は弱いです。さらに、会社側の需要材料もあります。"
+          },
+          {
+            "expression": "分析",
+            "text": "Applied Materials自身も、先端パッケージ関連の二〇二六年売上成長見通しを七〇パーセント超へ引き上げ、顧客との対話は二〇三〇年まで伸びていると説明しています。将来を保証する数字ではありませんが、『AI需要が消えた』という説明とは噛み合いません。"
+          }
+        ],
+        "evidenceSourceIds": [
+          "source-001",
+          "source-003",
+          "source-004"
+        ],
+        "expectedBasisType": "not-applicable",
+        "formalName": "反対材料：AI需要は崩れた？",
+        "headline": "AI需要崩壊では説明しにくい",
+        "initialExpression": "分析",
+        "performanceIntent": "強い材料を買い推奨にせず、誤った単純説明を落とすためだけに使う",
+        "purpose": "AI需要崩壊・半導体全面安説をAMD、SOXX ETF、AMAT需要見通しで反証する",
+        "sceneRole": "entity_divergence",
+        "sourceLabel": "fresh Collector / Reuters / Applied Materials",
+        "supportingTexts": [
+          "AMD +6.50%",
+          "SOXX ETF -0.06%",
+          "Advanced packaging >70%成長見通し"
+        ],
+        "timelineBasis": "2026-08-14 session / AMAT Q3 call",
+        "uncertainty": "AMATの長期需要見通しは会社発言を含み、将来実績を保証しない。",
+        "visualMode": "comparison"
+      },
+      {
+        "beats": [
+          {
+            "changeCue": "next",
+            "contentType": "text",
+            "evidenceSourceIds": [
+              "source-001",
+              "source-004",
+              "source-007"
+            ],
+            "grammarId": "verification",
+            "primaryElement": "仮説比較",
+            "primaryFunction": "Explain",
+            "screenQuestion": "どの説明が残った？",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "決算ミス：棄却",
+              "AI需要崩壊：弱い",
+              "小売だけ：弱い",
+              "二エンジン：最有力"
+            ],
+            "visualMode": "verification-matrix",
+            "visualTemplate": "verification-matrix"
+          },
+          {
+            "changeCue": "next",
+            "contentType": "text",
+            "evidenceSourceIds": [
+              "source-004",
+              "source-005",
+              "source-008"
+            ],
+            "grammarId": "comparison",
+            "primaryElement": "Company-direct vs NASDAQ-wide",
+            "primaryFunction": "Explain",
+            "screenQuestion": "会社とNASDAQをどう分ける？",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "AMAT直接：高期待値の再評価",
+              "NASDAQ-wide：マクロoverlay",
+              "確信度：中"
+            ],
+            "visualMode": "verification-matrix",
+            "visualTemplate": "split-comparison"
+          }
+        ],
+        "causalScope": "multiple",
+        "chunks": [
+          {
+            "expression": "分析",
+            "text": "ここまでで、残る説明はかなり絞れました。決算ミス説はformal beatと合わない。AI需要崩壊説はAMD、SOXX ETF、AMATの需要材料と合いにくい。弱い小売だけでも、利上げ観測後退と高い寄り付きが残ります。"
+          },
+          {
+            "expression": "分析",
+            "text": "いちばん整合するのは二エンジンです。AMATの直接反応は、高いAI期待に対する選別的な再評価。NASDAQ全体には、ホルムズと原油、成長不安などのマクロ不確実性が重なった。確信度は中です。原油が落ち着いても高評価AI銘柄の選別が続くかが、この見方の次のテストになります。"
+          }
+        ],
+        "evidenceSourceIds": [
+          "source-001",
+          "source-004",
+          "source-005",
+          "source-007",
+          "source-008"
+        ],
+        "expectedBasisType": "major-reporting",
+        "formalName": "最終判定と次の検証",
+        "headline": "最有力：期待値選別 ＋ マクロoverlay",
+        "initialExpression": "分析",
+        "performanceIntent": "結論は明確に、一度だけ確信度と反証条件を残す",
+        "purpose": "代替仮説を比較し、AMAT直接要因とNASDAQ-wide要因の境界を保ったまま中心仮説を確定する",
+        "sceneRole": "validation_points",
+        "sourceLabel": "Current Evidence synthesis",
+        "supportingTexts": [
+          "AMAT直接：高期待値の再評価",
+          "NASDAQ-wide：原油・成長不安など",
+          "確信度：中"
+        ],
+        "timelineBasis": "cutoff 2026-08-17T04:59:02Z; market session 2026-08-14",
+        "uncertainty": "各要因の寄与率は不明。AMATの高期待値解釈は市場報道に依存し、NASDAQ全体の単独原因ではない。",
+        "visualMode": "verification-matrix"
+      },
+      {
+        "beats": [
+          {
+            "changeCue": "next",
+            "contentType": "text",
+            "evidenceSourceIds": [],
+            "grammarId": "assembly",
+            "primaryElement": "以上、朝のNASDAQカフェでした。",
+            "primaryFunction": "Explain",
+            "screenQuestion": "朝のNASDAQカフェ",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "今日も気をつけて、いってらっしゃい。"
+            ],
+            "visualMode": "conclusion-card",
+            "visualTemplate": "conclusion-card"
+          },
+          {
+            "changeCue": "next",
+            "contentType": "text",
+            "evidenceSourceIds": [],
+            "grammarId": "assembly",
+            "primaryElement": "こちらはそろそろ、おやすみなさい。",
+            "primaryFunction": "Explain",
+            "screenQuestion": "また次の朝に",
+            "screenState": "Data",
+            "transitionRole": "closing",
+            "viewerTexts": [
+              "また次の朝に"
+            ],
+            "visualMode": "conclusion-card",
+            "visualTemplate": "conclusion-card"
+          }
+        ],
+        "causalScope": "multiple",
+        "chunks": [
+          {
+            "expression": "通常",
+            "text": "以上、朝のNASDAQカフェでした。今日も気をつけて、いってらっしゃい。こちらはそろそろ、おやすみなさい。"
+          }
+        ],
+        "evidenceSourceIds": [],
+        "expectedBasisType": "not-applicable",
+        "formalName": "まとめ",
+        "headline": "朝のNASDAQカフェ",
+        "initialExpression": "通常",
+        "performanceIntent": "新しい証拠を足さず、冒頭の問いへ短く戻る",
+        "purpose": "主役の矛盾とNASDAQへの意味を一文で回収して締める",
+        "sceneRole": "fixed_closing",
+        "sourceLabel": "closing",
+        "supportingTexts": [
+          "今日も気をつけて、いってらっしゃい。",
+          "こちらはそろそろ、おやすみなさい。"
+        ],
+        "timelineBasis": "2026-08-13 after close → 2026-08-14 session",
+        "uncertainty": "二エンジンは中確信度の解釈であり寄与率は確定していない。",
+        "visualMode": "conclusion-card"
+      }
+    ]
+  }
+}

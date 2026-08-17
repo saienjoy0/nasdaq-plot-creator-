@@ -1,0 +1,231 @@
+{
+  "production": {
+    "scenes": [
+      {
+        "beats": [
+          {
+            "changeCue": "next",
+            "contentType": "text",
+            "evidenceSourceIds": [
+              "source-001",
+              "source-004",
+              "source-005"
+            ],
+            "grammarId": "contradiction",
+            "primaryElement": "好決算でもAMAT -5.12%",
+            "primaryFunction": "Explain",
+            "screenQuestion": "何が矛盾している？",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "NASDAQ -0.28%",
+              "AMAT -5.12%",
+              "決算はbeat-and-raise"
+            ],
+            "visualMode": "conclusion-card",
+            "visualTemplate": "opening-contradiction"
+          },
+          {
+            "changeCue": "next",
+            "contentType": "text",
+            "evidenceSourceIds": [
+              "source-001"
+            ],
+            "grammarId": "evidence",
+            "primaryElement": "AMD +6.50%",
+            "primaryFunction": "Explain",
+            "screenQuestion": "全面安だった？",
+            "screenState": "Data",
+            "transitionRole": "continuation",
+            "viewerTexts": [
+              "AMD +6.50%",
+              "SOXX ETF -0.06%",
+              "半導体全面安ではない"
+            ],
+            "visualMode": "conclusion-card",
+            "visualTemplate": "hero-number"
+          }
+        ],
+        "causalScope": "multiple",
+        "chunks": [
+          {
+            "expression": "軽い驚き",
+            "text": "おはようございます。昨夜のNasdaq Compositeは〇・二八パーセント下落しました。まず目に留まるのがApplied Materialsです。株価は約五パーセント下がったのに、決算は売上も次の四半期ガイダンスも市場予想を上回っていました。"
+          },
+          {
+            "expression": "分析",
+            "text": "しかもAMDは六・五〇パーセント上昇し、SOXX ETFはほぼ横ばいです。つまり『半導体が全部弱かった』でもありません。今日は、数字は強いのに株が売られた、その期待値のズレからNASDAQまで追います。"
+          }
+        ],
+        "evidenceSourceIds": [
+          "source-001",
+          "source-004",
+          "source-005"
+        ],
+        "expectedBasisType": "major-reporting",
+        "formalName": "寝ている間に何が起きた？",
+        "headline": "NASDAQ -0.28% / AMAT -5.12%",
+        "initialExpression": "軽い驚き",
+        "performanceIntent": "好決算なのに売られた違和感を主役にし、NASDAQ全体へ拡大しすぎない",
+        "purpose": "NASDAQの方向、AMATの矛盾、半導体全面安ではない反対材料を30秒以内に置く",
+        "sceneRole": "direction_and_conclusion",
+        "sourceLabel": "fresh Collector / Reuters",
+        "supportingTexts": [
+          "決算はbeat-and-raise",
+          "AMD +6.50% / SOXX ETF -0.06%"
+        ],
+        "timelineBasis": "2026-08-14 US regular session / AMAT results after 2026-08-13 close",
+        "uncertainty": "AMATの直接反応とNASDAQ全体の下落要因は同一ではない。",
+        "visualMode": "conclusion-card"
+      },
+      {
+        "beats": [
+          {
+            "changeCue": "next",
+            "contentType": "text",
+            "evidenceSourceIds": [
+              "source-003",
+              "source-004"
+            ],
+            "grammarId": "evidence",
+            "primaryElement": "AMAT Q3 / Q4 guide",
+            "primaryFunction": "Explain",
+            "screenQuestion": "実際の数字は？",
+            "screenState": "Source",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "Q3売上 $9.12B",
+              "Q4売上ガイド $10.25B ±0.50B",
+              "Q4 adj. EPS $4.02 ±0.20"
+            ],
+            "visualMode": "text-focus",
+            "visualTemplate": "source-receipt"
+          },
+          {
+            "changeCue": "next",
+            "contentType": "text",
+            "evidenceSourceIds": [
+              "source-004"
+            ],
+            "grammarId": "comparison",
+            "primaryElement": "beat-and-raise vs selloff",
+            "primaryFunction": "Explain",
+            "screenQuestion": "数字と株価は一致した？",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "数字：予想超え",
+              "株価：引け後から5%超下落"
+            ],
+            "visualMode": "text-focus",
+            "visualTemplate": "split-comparison"
+          }
+        ],
+        "causalScope": "company_direct",
+        "chunks": [
+          {
+            "expression": "分析",
+            "text": "まず会社が出した数字です。Applied MaterialsのQ3売上は九十一・二億ドル。次のQ4売上ガイダンスは百二・五億ドルを中心に、調整後EPSも四・〇二ドルを中心に示しました。"
+          },
+          {
+            "expression": "分析",
+            "text": "それでも株は引け後から五パーセント超売られました。数字が悪かったわけではない。しかも同じ半導体でも、反応は割れています。"
+          }
+        ],
+        "evidenceSourceIds": [
+          "source-002",
+          "source-003",
+          "source-004"
+        ],
+        "expectedBasisType": "major-reporting",
+        "formalName": "主役ニュース",
+        "headline": "AMAT：beat-and-raise、それでも売られた",
+        "initialExpression": "分析",
+        "performanceIntent": "良い数字を強気材料として煽らず、価格反応との矛盾だけを示す",
+        "purpose": "AMATの発表内容と引け後反応を会社直接材料として固定する",
+        "sceneRole": "contradiction",
+        "sourceLabel": "Applied Materials / Reuters",
+        "supportingTexts": [
+          "Q3売上 9.12B",
+          "Q4売上ガイド 10.25B"
+        ],
+        "timelineBasis": "2026-08-13 after close / call 16:30 ET",
+        "uncertainty": "高い期待値はReutersが報じた市場解釈であり、価格から独自の数値期待を逆算しない。",
+        "visualMode": "text-focus"
+      },
+      {
+        "beats": [
+          {
+            "changeCue": "next",
+            "contentType": "text",
+            "evidenceSourceIds": [
+              "source-001"
+            ],
+            "grammarId": "comparison",
+            "primaryElement": "AMAT / AVGO vs AMD",
+            "primaryFunction": "Explain",
+            "screenQuestion": "同じ半導体でも？",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "AMAT -5.12%",
+              "AVGO -5.94%",
+              "AMD +6.50%"
+            ],
+            "visualMode": "number-comparison",
+            "visualTemplate": "split-comparison"
+          },
+          {
+            "changeCue": "next",
+            "contentType": "text",
+            "evidenceSourceIds": [
+              "source-001"
+            ],
+            "grammarId": "verification",
+            "primaryElement": "SOXX ETF -0.06%",
+            "primaryFunction": "Explain",
+            "screenQuestion": "全面安説は通る？",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "SOXX ETF：ほぼ横ばい",
+              "全面安説：弱い",
+              "※PHLX SOX指数ではない"
+            ],
+            "visualMode": "number-comparison",
+            "visualTemplate": "verification-matrix"
+          }
+        ],
+        "causalScope": "sector_support",
+        "chunks": [
+          {
+            "expression": "分析",
+            "text": "半導体の地図を広げます。AMATはマイナス五・一二パーセント、Broadcomもマイナス五・九四パーセント。一方でAMDはプラス六・五〇パーセントでした。"
+          },
+          {
+            "expression": "分析",
+            "text": "そしてCollectorの『SOX』欄は実際にはSOXX ETFで、こちらはマイナス〇・〇六パーセント、ほぼ横ばいです。下げた銘柄は目立ちますが、セクター全体が同じ理由で崩れた形ではありません。"
+          }
+        ],
+        "evidenceSourceIds": [
+          "source-001"
+        ],
+        "expectedBasisType": "not-applicable",
+        "formalName": "確認済みの数字",
+        "headline": "半導体は『全面安』ではない",
+        "initialExpression": "分析",
+        "performanceIntent": "大幅下落銘柄だけを並べず、AMDとSOXX ETFを同時に見せる",
+        "purpose": "AMATをNASDAQ全体の原因へ拡大しないため、半導体内の分裂を固定する",
+        "sceneRole": "confirmed_facts",
+        "sourceLabel": "fresh Collector",
+        "supportingTexts": [
+          "AVGO -5.94%",
+          "AMD +6.50% / SOXX ETF -0.06%"
+        ],
+        "timelineBasis": "2026-08-14 US regular session close",
+        "uncertainty": "SOXXはPHLX SOX指数ではなくSOXX ETF。個別銘柄の寄与率はここでは分解しない。",
+        "visualMode": "number-comparison"
+      }
+    ]
+  }
+}

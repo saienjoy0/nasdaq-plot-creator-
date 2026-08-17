@@ -1,0 +1,100 @@
+{
+  "contract_version": "1.1.0",
+  "episode_date": "2026-08-17",
+  "findings": [],
+  "immediate_failures": [],
+  "reviewer": "editorial_critic",
+  "round": 2,
+  "scene_checks": [
+    {
+      "belief_changed": true,
+      "closure_effective": null,
+      "continuation_reason_natural": true,
+      "mode": "continue",
+      "opening_promise_recovered": null,
+      "payoff_delivered": true,
+      "procedural_language_dominant": false,
+      "scene_id": "scene-01"
+    },
+    {
+      "belief_changed": true,
+      "closure_effective": null,
+      "continuation_reason_natural": true,
+      "mode": "continue",
+      "opening_promise_recovered": null,
+      "payoff_delivered": true,
+      "procedural_language_dominant": false,
+      "scene_id": "scene-02"
+    },
+    {
+      "belief_changed": true,
+      "closure_effective": null,
+      "continuation_reason_natural": true,
+      "mode": "continue",
+      "opening_promise_recovered": null,
+      "payoff_delivered": true,
+      "procedural_language_dominant": false,
+      "scene_id": "scene-03"
+    },
+    {
+      "belief_changed": true,
+      "closure_effective": null,
+      "continuation_reason_natural": true,
+      "mode": "continue",
+      "opening_promise_recovered": null,
+      "payoff_delivered": true,
+      "procedural_language_dominant": false,
+      "scene_id": "scene-04"
+    },
+    {
+      "belief_changed": true,
+      "closure_effective": null,
+      "continuation_reason_natural": true,
+      "mode": "continue",
+      "opening_promise_recovered": null,
+      "payoff_delivered": true,
+      "procedural_language_dominant": false,
+      "scene_id": "scene-05"
+    },
+    {
+      "belief_changed": true,
+      "closure_effective": null,
+      "continuation_reason_natural": true,
+      "mode": "continue",
+      "opening_promise_recovered": null,
+      "payoff_delivered": true,
+      "procedural_language_dominant": false,
+      "scene_id": "scene-06"
+    },
+    {
+      "belief_changed": true,
+      "closure_effective": null,
+      "continuation_reason_natural": true,
+      "mode": "continue",
+      "opening_promise_recovered": null,
+      "payoff_delivered": true,
+      "procedural_language_dominant": false,
+      "scene_id": "scene-07"
+    },
+    {
+      "belief_changed": true,
+      "closure_effective": true,
+      "continuation_reason_natural": null,
+      "mode": "close",
+      "opening_promise_recovered": true,
+      "payoff_delivered": true,
+      "procedural_language_dominant": false,
+      "scene_id": "scene-08"
+    }
+  ],
+  "scores": {
+    "clarity": 5,
+    "discovery": 5,
+    "fox_voice": 4,
+    "late_payoff": 5,
+    "opening": 5,
+    "progression": 4
+  },
+  "total_score": 28,
+  "verdict": "pass"
+}

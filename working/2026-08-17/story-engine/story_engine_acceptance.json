@@ -1,0 +1,41 @@
+{
+  "artifacts": {
+    "causal_dossier": {
+      "path": "research/2026-08-17/causal_research_dossier_2026-08-17.json",
+      "sha256": "1d490a22333e39a3972e11ea7378a885c1f34458da0b357bcc1f2f10e6281992"
+    },
+    "creative_review": {
+      "path": "working/2026-08-17/story-engine/creative_review.json",
+      "sha256": "4566caa354eccb29c2c0af0e2ec4acecd53c8a1dbf4ee56494b2fb35e8e441fb"
+    },
+    "story_plan": {
+      "path": "working/2026-08-17/story-engine/story_plan.json",
+      "sha256": "5de4b246953c890d7075adfdc03771b0c0b85b6049f16f6061ee8c65cd48ef00"
+    },
+    "story_script": {
+      "path": "working/2026-08-17/story-engine/story_script.json",
+      "sha256": "149a3a6c1883c0fca3a0108103abb45d071f11189c9ec726057d3023a02a57d5"
+    }
+  },
+  "contract_version": "1.1.0",
+  "critic": {
+    "critic_certified": false,
+    "external_critic_status": "not_run",
+    "reviewer": "editorial_critic",
+    "round": 2,
+    "score": 28,
+    "verdict": "pass"
+  },
+  "episode_date": "2026-08-17",
+  "production_eligible": false,
+  "status": "pass",
+  "validation": {
+    "causality_guard": "pass",
+    "editorial_review": "pass",
+    "scene_09_guard": "pass",
+    "scene_order_guard": "pass",
+    "story_plan": "pass",
+    "story_script": "pass",
+    "understanding_progression": "pass"
+  }
+}

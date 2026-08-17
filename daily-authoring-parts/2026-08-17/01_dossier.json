@@ -1,0 +1,608 @@
+{
+  "researchAuthoring": {
+    "causalDossierDraft": {
+      "alternative_hypotheses": [
+        {
+          "hypothesis": "AI需要が崩れたため半導体全体が売られた。",
+          "id": "ALT-01",
+          "status": "weakened",
+          "supporting_evidence_ids": [
+            "E-005"
+          ],
+          "weakening_evidence_ids": [
+            "E-002",
+            "E-004",
+            "E-010"
+          ]
+        },
+        {
+          "hypothesis": "AMATが決算やガイダンスをミスしたため売られた。",
+          "id": "ALT-02",
+          "status": "rejected",
+          "supporting_evidence_ids": [],
+          "weakening_evidence_ids": [
+            "E-003",
+            "E-004"
+          ]
+        },
+        {
+          "hypothesis": "弱い小売売上高だけでNASDAQ下落を説明できる。",
+          "id": "ALT-03",
+          "status": "weakened",
+          "supporting_evidence_ids": [
+            "E-007"
+          ],
+          "weakening_evidence_ids": [
+            "E-001",
+            "E-007"
+          ]
+        },
+        {
+          "hypothesis": "ホルムズと原油だけでNASDAQ下落を説明できる。",
+          "id": "ALT-04",
+          "status": "unresolved",
+          "supporting_evidence_ids": [
+            "E-005",
+            "E-008"
+          ],
+          "weakening_evidence_ids": [
+            "E-002",
+            "E-004"
+          ]
+        }
+      ],
+      "carryover_results": [],
+      "causal_edges": [
+        {
+          "confidence": "medium",
+          "editorially_required": true,
+          "evidence_ids": [
+            "E-004",
+            "E-005"
+          ],
+          "from_node": "AMATのbeat-and-raise",
+          "id": "EDGE-01",
+          "mechanism": "正式予想を上回っても、AI関連株に織り込まれた高い期待値を満たせなかったとの評価。",
+          "scope": "company_direct",
+          "strongest_alternative": "利益確定や他の会社固有フロー",
+          "timing_alignment": "strong",
+          "to_node": "AMAT株の下落"
+        },
+        {
+          "confidence": "medium",
+          "editorially_required": true,
+          "evidence_ids": [
+            "E-002",
+            "E-004",
+            "E-005"
+          ],
+          "from_node": "高いAI評価への警戒",
+          "id": "EDGE-02",
+          "mechanism": "強い業績そのものではなく期待値との相対差で評価が分かれる。",
+          "scope": "sector_support",
+          "strongest_alternative": "各銘柄固有材料",
+          "timing_alignment": "partial",
+          "to_node": "一部半導体株の選別的な売り"
+        },
+        {
+          "confidence": "medium",
+          "editorially_required": true,
+          "evidence_ids": [
+            "E-005",
+            "E-008"
+          ],
+          "from_node": "ホルムズ緊張・原油上昇",
+          "id": "EDGE-03",
+          "mechanism": "インフレ不確実性とリスク選好を通じて高評価グロース株の追い風を弱める可能性。",
+          "scope": "nasdaq_wide",
+          "strongest_alternative": "会社固有のAI評価調整",
+          "timing_alignment": "partial",
+          "to_node": "NASDAQへのマクロ重し候補"
+        },
+        {
+          "confidence": "medium",
+          "editorially_required": true,
+          "evidence_ids": [
+            "E-007"
+          ],
+          "from_node": "弱い小売売上高",
+          "id": "EDGE-04",
+          "mechanism": "成長懸念は重しになる一方、利上げ観測後退は評価面の支えになり得る。",
+          "scope": "nasdaq_wide",
+          "strongest_alternative": "小売データは指数下落の主因ではなく金利面ではむしろ相殺",
+          "timing_alignment": "partial",
+          "to_node": "NASDAQへの複方向マクロ影響"
+        },
+        {
+          "confidence": "medium",
+          "editorially_required": true,
+          "evidence_ids": [
+            "E-001",
+            "E-002",
+            "E-005",
+            "E-007",
+            "E-008"
+          ],
+          "from_node": "選別的AI評価調整＋マクロ不確実性",
+          "id": "EDGE-05",
+          "mechanism": "一部大型半導体の弱さとマクロの重しが重なったが、AMD上昇・SOXX横ばい・利上げ観測後退が相殺した。",
+          "scope": "nasdaq_wide",
+          "strongest_alternative": "指数の小幅変動に特定の単一ニュースを割り当てることはできない",
+          "timing_alignment": "partial",
+          "to_node": "Nasdaq -0.28%"
+        }
+      ],
+      "contract_version": "0.3.0",
+      "contradictions": [
+        {
+          "id": "CON-01",
+          "rank": 1,
+          "selection_reason": "好決算なら上がるという単純説明を壊し、AI株の評価軸が需要そのものから期待値の高さへ移っていることを最もよく示す。",
+          "statement": "AMATは売上と次四半期ガイダンスが引用された市場予想を上回ったのに、翌取引日に約5%下落した。"
+        },
+        {
+          "id": "CON-02",
+          "rank": 2,
+          "selection_reason": "AMATの個別材料をAI需要崩壊や半導体全体の原因へ拡大することを防ぐ。",
+          "statement": "AMATとAVGOは大きく下げた一方、AMDは6.5%上昇しSOXX ETFはほぼ横ばいで、半導体全面安ではなかった。"
+        },
+        {
+          "id": "CON-03",
+          "rank": 3,
+          "selection_reason": "弱い小売を一方向のテック悪材料と扱わず、成長懸念と金利期待の相殺を残すため。",
+          "statement": "7月小売売上高は予想外に弱かったが利上げ観測も後退し、NASDAQは小幅安にとどまった。"
+        }
+      ],
+      "contrary_evidence": [
+        {
+          "effect_on_confidence": "material",
+          "evidence_ids": [
+            "E-002"
+          ],
+          "statement": "AMDは6.50%上昇しSOXX ETFは0.06%安にとどまり、半導体全面安ではない。"
+        },
+        {
+          "effect_on_confidence": "material",
+          "evidence_ids": [
+            "E-010"
+          ],
+          "statement": "AMATはAI向けadvanced packagingの成長見通しを引き上げ、需要可視性も長期化した。"
+        },
+        {
+          "effect_on_confidence": "material",
+          "evidence_ids": [
+            "E-007"
+          ],
+          "statement": "弱い小売は利上げ観測を後退させ、テックの評価面では相殺要因になり得た。"
+        },
+        {
+          "effect_on_confidence": "material",
+          "evidence_ids": [
+            "E-001",
+            "E-006",
+            "E-007"
+          ],
+          "statement": "Nasdaqは小売発表後の寄り付きで前日終値を上回ったため、8:30の小売だけを即時の下落原因とはできない。"
+        }
+      ],
+      "cross_market_assessment": {
+        "alternatives": [],
+        "evidence_ids": [],
+        "materiality": "not_material",
+        "rationale": "今回の中心矛盾は米国引け後AMAT決算と翌米国セッション内の反応で閉じるため、アジア先行反応を主因判定に使わない。"
+      },
+      "editorial_handoff": {
+        "causal_spine": "AMATの好決算なのに売られる矛盾→正式期待と実績のGap→高期待値の壁→金曜マクロの上乗せ→AMD/SOXXの反対材料で全面安説を棄却→二エンジン型でNASDAQを回収。",
+        "central_hypothesis": "昨夜のNASDAQはAI需要崩壊ではなく、高期待値下で一部半導体が選別的に再評価される動きに、ホルムズ・原油と弱い消費のマクロ不確実性が重なった二エンジン型。確信度は中。",
+        "company_direct_material": [
+          "AMAT Q3売上9.12B vs LSEG 8.99B",
+          "Q4売上ガイド10.25B vs 9.54B",
+          "Q4 EPS4.02 vs 3.69",
+          "AMAT -5.12%"
+        ],
+        "confidence": "medium",
+        "exclude_from_narration": [
+          "Collectorの`SOX`ラベルをPHLX SOX指数として読むこと",
+          "AMD上昇の未確認原因",
+          "AMATをNasdaq全体の単一原因とする表現",
+          "小売悪化を一方向のテック悪材料とする表現"
+        ],
+        "headline_beyond_discovery": "AI需要が弱いか強いかではなく、期待値に対してどれだけ上回れるかで半導体の反応が分裂した。",
+        "memory_differences": [],
+        "nasdaq_wide_material": [
+          "Nasdaq -0.28%",
+          "AVGO -5.94%",
+          "AMD +6.50%",
+          "SOXX ETF -0.06%",
+          "小売売上高 -0.6%",
+          "ホルムズ緊張・原油上昇"
+        ],
+        "next_validation_points": [
+          "次のAMAT/半導体決算でもformal beat後の価格反応が期待値差で分裂するか",
+          "原油・ホルムズ不安が落ち着いた場合に大型半導体の選別が続くか"
+        ],
+        "provisional_lead": "Applied Materials：beat-and-raiseでも約5%売られた高期待値の壁",
+        "unresolved_questions": [
+          "AMAT/AVGOの個別寄与とマクロ寄与の正確な分解",
+          "AMD +6.5%の個別材料"
+        ]
+      },
+      "episode_date": "2026-08-17",
+      "evidence": [
+        {
+          "claim": "Fresh Collector/Longbridge data show the Nasdaq Composite closed 26,729.164, down 0.28%, after opening 26,851.148 above the prior close 26,803.025.",
+          "confidence": "high",
+          "directness": "direct",
+          "event_timestamp": "2026-08-14 US regular session",
+          "evidence_class": "fact",
+          "evidence_id": "E-001",
+          "independence_group": "fresh-longbridge-nasdaq-2026-08-14",
+          "limitations": "Regular-session OHLC is available, but no Nasdaq minute series is included in the safe artifact.",
+          "publication_timestamp": "2026-08-17T04:59:02Z",
+          "source_issuer_or_publisher": "NASDAQ Cafe Collector / Longbridge",
+          "source_reference": "daily-inputs/2026-08-17/daily_source_package_2026-08-17.md",
+          "source_tier": "tier_1",
+          "source_title": "Fresh Daily Source Package 2026-08-17",
+          "timezone": "America/New_York"
+        },
+        {
+          "claim": "Fresh market data show AMAT -5.12%, AVGO -5.94%, AMD +6.50%, while the SOXX ETF closed only -0.06%, showing large semiconductor dispersion.",
+          "confidence": "high",
+          "directness": "direct",
+          "event_timestamp": "2026-08-14 US regular session",
+          "evidence_class": "fact",
+          "evidence_id": "E-002",
+          "independence_group": "fresh-semiconductor-prices-2026-08-14",
+          "limitations": "The collector field label `SOX` actually references ticker SOXX.US; production uses the correct SOXX ETF label.",
+          "publication_timestamp": "2026-08-17T04:59:02Z",
+          "source_issuer_or_publisher": "NASDAQ Cafe Collector / Nasdaq Market Activity / Longbridge",
+          "source_reference": "daily-inputs/2026-08-17/daily_source_package_2026-08-17.md",
+          "source_tier": "tier_1",
+          "source_title": "Fresh Daily Source Package 2026-08-17",
+          "timezone": "America/New_York"
+        },
+        {
+          "claim": "Applied Materials' official Q2 release guided Q3 FY2026 revenue to $8.95B ± $0.50B and non-GAAP EPS to $3.36 ± $0.20.",
+          "confidence": "high",
+          "directness": "direct",
+          "event_timestamp": "2026-05-14T16:01:00-04:00",
+          "evidence_class": "fact",
+          "evidence_id": "E-003",
+          "independence_group": "amat-ir-q2-2026",
+          "limitations": "This is prior company guidance, not Wall Street consensus.",
+          "publication_timestamp": "2026-05-14T16:01:00-04:00",
+          "source_issuer_or_publisher": "Applied Materials",
+          "source_reference": "https://investor.appliedmaterials.com/news-releases/news-release-details/applied-materials-announces-second-quarter-2026-results",
+          "source_tier": "tier_1",
+          "source_title": "Applied Materials Announces Second Quarter 2026 Results",
+          "timezone": "America/New_York"
+        },
+        {
+          "claim": "Reuters reported AMAT Q3 revenue of $9.12B versus a $8.99B LSEG estimate, Q4 revenue guidance of about $10.25B versus $9.54B, and Q4 adjusted EPS guidance of $4.02 versus $3.69; shares still fell more than 5% in extended trading.",
+          "confidence": "high",
+          "directness": "direct",
+          "event_timestamp": "2026-08-13 after US close",
+          "evidence_class": "fact",
+          "evidence_id": "E-004",
+          "independence_group": "reuters-amat-q3-2026",
+          "limitations": "LSEG estimates are reported by Reuters. The article does not provide a numeric price-implied expectation above consensus.",
+          "publication_timestamp": "2026-08-13T20:05:23Z",
+          "source_issuer_or_publisher": "Reuters",
+          "source_reference": "https://www.reuters.com/business/applied-materials-forecasts-quarterly-revenue-above-estimates-2026-08-13/",
+          "source_tier": "tier_2",
+          "source_title": "Applied Materials forecasts revenue above estimates, shares fall on high expectations",
+          "timezone": "America/New_York"
+        },
+        {
+          "claim": "Reuters described AMAT's reaction as a beat-and-raise that still disappointed because AI-stock expectations and valuations were elevated; it also reported AMAT -5.1%, AVGO -5.9%, and Nasdaq -0.28% on Aug. 14.",
+          "confidence": "medium",
+          "directness": "supporting",
+          "event_timestamp": "2026-08-14 US regular session",
+          "evidence_class": "reported_interpretation",
+          "evidence_id": "E-005",
+          "independence_group": "reuters-us-close-2026-08-14",
+          "limitations": "Market interpretation, not proof that AMAT alone caused the Nasdaq decline.",
+          "publication_timestamp": "2026-08-14",
+          "source_issuer_or_publisher": "Reuters",
+          "source_reference": "https://www.reuters.com/business/wall-st-futures-muted-higher-oil-prices-temper-risk-appetite-after-sp-record-2026-08-14/",
+          "source_tier": "tier_2",
+          "source_title": "S&P 500 ends lower as investors weigh data, Middle East tensions",
+          "timezone": "America/New_York"
+        },
+        {
+          "claim": "The U.S. Census Bureau scheduled the July 2026 advance retail-sales release for Aug. 14, 2026 at 8:30 AM ET.",
+          "confidence": "high",
+          "directness": "direct",
+          "event_timestamp": "2026-08-14T08:30:00-04:00",
+          "evidence_class": "fact",
+          "evidence_id": "E-006",
+          "independence_group": "census-retail-schedule",
+          "limitations": "Release timing only; actual and consensus are sourced separately.",
+          "publication_timestamp": null,
+          "source_issuer_or_publisher": "U.S. Census Bureau",
+          "source_reference": "https://www.census.gov/retail/release_schedule.html",
+          "source_tier": "tier_1",
+          "source_title": "Monthly Retail Trade - Release Schedule",
+          "timezone": "America/New_York"
+        },
+        {
+          "claim": "Reuters reported July U.S. retail sales fell 0.6% after a 0.2% June gain, while economists had expected a slight rise; the data reduced expectations for a September Fed rate hike.",
+          "confidence": "high",
+          "directness": "direct",
+          "event_timestamp": "2026-08-14T08:30:00-04:00",
+          "evidence_class": "fact",
+          "evidence_id": "E-007",
+          "independence_group": "reuters-retail-sales-2026-08-14",
+          "limitations": "Weak retail can be negative for growth expectations but also supportive for tech valuations through lower rate-hike expectations.",
+          "publication_timestamp": "2026-08-14",
+          "source_issuer_or_publisher": "Reuters",
+          "source_reference": "https://www.reuters.com/world/asia-pacific/yens-slide-weekly-loss-prompts-bets-another-intervention-2026-08-14/",
+          "source_tier": "tier_2",
+          "source_title": "Dollar falls on surprise drop in US retail sales",
+          "timezone": "America/New_York"
+        },
+        {
+          "claim": "Reuters reported oil rose more than $1 a barrel as U.S.-Iran talks faltered and blockade risk remained, while U.S. equities including the Nasdaq fell on Aug. 14.",
+          "confidence": "medium",
+          "directness": "supporting",
+          "event_timestamp": "2026-08-14",
+          "evidence_class": "reported_interpretation",
+          "evidence_id": "E-008",
+          "independence_group": "reuters-global-markets-2026-08-14",
+          "limitations": "Supports the macro overlay but does not isolate the oil contribution to Nasdaq returns.",
+          "publication_timestamp": "2026-08-14",
+          "source_issuer_or_publisher": "Reuters",
+          "source_reference": "https://www.reuters.com/world/china/global-markets-wrapup-1-2026-08-14/",
+          "source_tier": "tier_2",
+          "source_title": "Oil prices rally, US data dents chances of Fed rate hike",
+          "timezone": "America/New_York"
+        },
+        {
+          "claim": "Applied Materials' official investor page scheduled its Q3 FY2026 earnings conference call for Aug. 13 at 4:30 PM EDT, confirming the company-results event occurred after the regular-session close before Friday's retail-sales release.",
+          "confidence": "high",
+          "directness": "direct",
+          "event_timestamp": "2026-08-13T16:30:00-04:00",
+          "evidence_class": "fact",
+          "evidence_id": "E-009",
+          "independence_group": "amat-ir-q3-call-2026",
+          "limitations": "Call time establishes chronology; it is not itself evidence of stock causality.",
+          "publication_timestamp": null,
+          "source_issuer_or_publisher": "Applied Materials",
+          "source_reference": "https://investor.appliedmaterials.com/events/event-details/q3-2026-applied-materials-earnings-conference-call",
+          "source_tier": "tier_1",
+          "source_title": "Q3 2026 Applied Materials Earnings Conference Call",
+          "timezone": "America/New_York"
+        },
+        {
+          "claim": "Reuters reported Applied expected calendar-2026 advanced-packaging revenue growth above 70%, up from a prior above-50% view, and management said some customer visibility extended to 2030.",
+          "confidence": "high",
+          "directness": "context",
+          "event_timestamp": "2026-08-13",
+          "evidence_class": "fact",
+          "evidence_id": "E-010",
+          "independence_group": "reuters-amat-q3-2026",
+          "limitations": "Company demand visibility is counterevidence to a broad AI-demand-collapse story, not a guarantee of future equity performance.",
+          "publication_timestamp": "2026-08-13T20:05:23Z",
+          "source_issuer_or_publisher": "Reuters",
+          "source_reference": "https://www.reuters.com/business/applied-materials-forecasts-quarterly-revenue-above-estimates-2026-08-13/",
+          "source_tier": "tier_2",
+          "source_title": "Applied Materials forecasts revenue above estimates, shares fall on high expectations",
+          "timezone": "America/New_York"
+        }
+      ],
+      "expected_actual_gap": {
+        "actual": {
+          "evidence_ids": [
+            "E-004"
+          ],
+          "statement": "Q3売上9.12B、Q4売上ガイド10.25B±0.50B、調整EPS4.02±0.20を提示した。"
+        },
+        "expected": {
+          "basis_class": "major_reporting",
+          "evidence_ids": [
+            "E-003",
+            "E-004"
+          ],
+          "statement": "Reuters/LSEGによる正式な市場期待はQ3売上8.99B、Q4売上9.54B、Q4調整EPS3.69。AMAT自身の事前Q3ガイド中央値は売上8.95B、EPS3.36。",
+          "status": "confirmed"
+        },
+        "gap": {
+          "confidence": "medium",
+          "market_meaning": "数字の絶対値より高いAI期待・バリュエーションが評価の壁になったという市場解釈が有力。ただし価格に織り込まれた上乗せ期待を数値化はしない。",
+          "statement": "正式な期待値を上回ったのにAMAT株は5%以上下落した。"
+        }
+      },
+      "factor_roles": {
+        "amplifiers": [
+          "AVGOなど一部大型半導体の弱さ",
+          "ホルムズ情勢と原油上昇によるマクロ不確実性"
+        ],
+        "offsetting": [
+          "AMD +6.50%",
+          "SOXX ETF -0.06%",
+          "弱い小売による利上げ観測後退",
+          "Nasdaqは小売発表後の寄り付きで前日終値を上回った"
+        ],
+        "primary_candidate": "AMATのbeat-and-raiseでも売られた高期待値の反応",
+        "unresolved": [
+          "AMAT・AVGO・マクロ要因のNasdaq寄与率",
+          "AMD上昇の個別原因はCollectorで確定していない"
+        ]
+      },
+      "input_provenance": [
+        {
+          "path_or_reference": "daily-inputs/2026-08-17/daily_source_package_2026-08-17.md",
+          "role": "daily_input",
+          "version_or_hash": "94b79aa7945e7008e86eaa9678a57d92e74e94049015c8215f6d3381484861f9"
+        },
+        {
+          "path_or_reference": "source-of-truth/01_fox_character_bible.md",
+          "role": "source_of_truth",
+          "version_or_hash": "canon-manifest"
+        },
+        {
+          "path_or_reference": "source-of-truth/02_editorial_bible.md",
+          "role": "source_of_truth",
+          "version_or_hash": "canon-manifest"
+        },
+        {
+          "path_or_reference": "source-of-truth/03_episode_production_spec.md",
+          "role": "source_of_truth",
+          "version_or_hash": "canon-manifest"
+        },
+        {
+          "path_or_reference": "source-of-truth/04_entertainment_inquisitor.md",
+          "role": "source_of_truth",
+          "version_or_hash": "canon-manifest"
+        },
+        {
+          "path_or_reference": "https://www.reuters.com/business/applied-materials-forecasts-quarterly-revenue-above-estimates-2026-08-13/",
+          "role": "other",
+          "version_or_hash": "accessed-2026-08-17"
+        },
+        {
+          "path_or_reference": "https://www.reuters.com/business/wall-st-futures-muted-higher-oil-prices-temper-risk-appetite-after-sp-record-2026-08-14/",
+          "role": "other",
+          "version_or_hash": "accessed-2026-08-17"
+        }
+      ],
+      "memory_revalidation": [],
+      "research_input_manifest": {
+        "path": "research/2026-08-17/research_input_manifest.json",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "research_questions": [
+        {
+          "answer_summary": "Q3売上は9.12BでLSEG予想8.99Bを上回り、Q4売上ガイド10.25BとEPS4.02も引用予想を上回った。",
+          "evidence_ids": [
+            "E-003",
+            "E-004"
+          ],
+          "id": "Q-01",
+          "perspective": "official_evidence",
+          "question": "AMATの正式な事前ガイドと実績・次四半期ガイドはどう違ったか。",
+          "status": "answered"
+        },
+        {
+          "answer_summary": "Reutersは高いAI期待・評価と強い同業決算の後でbeat-and-raiseでも不足と受け止められたと報じた。数値化された上乗せ期待は確認できない。",
+          "evidence_ids": [
+            "E-004",
+            "E-005"
+          ],
+          "id": "Q-02",
+          "perspective": "expectation",
+          "question": "数字が強いのにAMATが売られた理由として市場で共有された解釈は何か。",
+          "status": "partially_answered"
+        },
+        {
+          "answer_summary": "AMATは8月13日引け後決算でextended tradingから5%以上下落。小売売上高は翌14日8:30 ET。Nasdaqはその後寄り付きで前日終値を上回った。",
+          "evidence_ids": [
+            "E-001",
+            "E-004",
+            "E-006",
+            "E-009"
+          ],
+          "id": "Q-03",
+          "perspective": "timeline",
+          "question": "AMAT反応と金曜マクロ材料の時系列は分離できるか。",
+          "status": "answered"
+        },
+        {
+          "answer_summary": "ホルムズ緊張と原油上昇はインフレ・リスク選好の重し候補。弱い小売は成長懸念と同時に利上げ観測後退という相殺経路を持つ。寄与率は不明。",
+          "evidence_ids": [
+            "E-005",
+            "E-007",
+            "E-008"
+          ],
+          "id": "Q-04",
+          "perspective": "macro_transmission",
+          "question": "金曜の世界・米国材料はNASDAQへどう重なったか。",
+          "status": "partially_answered"
+        },
+        {
+          "answer_summary": "AMATの需要見通し、AMD +6.5%、SOXX -0.06%が反対材料で、全面的なAI需要崩壊という説明は弱い。",
+          "evidence_ids": [
+            "E-002",
+            "E-004",
+            "E-010"
+          ],
+          "id": "Q-05",
+          "perspective": "counter_hypothesis",
+          "question": "AI需要崩壊や半導体全面安が主因だったのか。",
+          "status": "answered"
+        }
+      ],
+      "session": {
+        "information_cutoff": "2026-08-17T04:59:02Z",
+        "market_date": "2026-08-14",
+        "timezone": "America/New_York"
+      },
+      "timeline": [
+        {
+          "event": "Applied MaterialsがQ3結果とQ4見通しを公表し、extended tradingで5%以上下落。",
+          "evidence_ids": [
+            "E-004",
+            "E-009"
+          ],
+          "id": "T-01",
+          "precision": "reported_only",
+          "timestamp_or_window": "2026-08-13 after US regular close",
+          "timezone": "America/New_York"
+        },
+        {
+          "event": "7月小売売上高が-0.6%と公表され、予想していた小幅増を下回る。",
+          "evidence_ids": [
+            "E-006",
+            "E-007"
+          ],
+          "id": "T-02",
+          "precision": "exact",
+          "timestamp_or_window": "2026-08-14 08:30 ET",
+          "timezone": "America/New_York"
+        },
+        {
+          "event": "Nasdaq Compositeは26,851.148で寄り付き、前日終値26,803.025を上回った。",
+          "evidence_ids": [
+            "E-001"
+          ],
+          "id": "T-03",
+          "precision": "session",
+          "timestamp_or_window": "2026-08-14 09:30 ET regular open",
+          "timezone": "America/New_York"
+        },
+        {
+          "event": "ホルムズ情勢の緊張と原油上昇が続き、AI関連の高い評価への警戒も報じられる。",
+          "evidence_ids": [
+            "E-005",
+            "E-008"
+          ],
+          "id": "T-04",
+          "precision": "reported_only",
+          "timestamp_or_window": "2026-08-14 US regular session",
+          "timezone": "America/New_York"
+        },
+        {
+          "event": "Nasdaq -0.28%。AMAT -5.12%、AVGO -5.94%、AMD +6.50%、SOXX ETF -0.06%。",
+          "evidence_ids": [
+            "E-001",
+            "E-002",
+            "E-005"
+          ],
+          "id": "T-05",
+          "precision": "session",
+          "timestamp_or_window": "2026-08-14 16:00 ET close",
+          "timezone": "America/New_York"
+        }
+      ],
+      "validation": {
+        "errors": [],
+        "status": "pass",
+        "warnings": [
+          "Collector field `SOX` is actually SOXX.US; narrative and visuals must label it SOXX ETF."
+        ]
+      },
+      "validation_candidates": [],
+      "visual_evidence_needs": []
+    }
+  }
+}

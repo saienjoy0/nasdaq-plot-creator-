@@ -1,0 +1,316 @@
+{
+  "angle_candidates": [
+    {
+      "angle_type": "contradiction",
+      "causality_scope": "nasdaq_support",
+      "central_question": "好決算なのにAMATが約5%売られたのはなぜか。",
+      "closing_reframe": "AI需要の崩壊ではなく、期待値に対する選別とマクロ不確実性の重なり。",
+      "confidence": "medium",
+      "counterevidence_ids": [
+        "E-001",
+        "E-002",
+        "E-007",
+        "E-010",
+        "E-006"
+      ],
+      "evidence_ids": [
+        "E-001",
+        "E-002",
+        "E-004",
+        "E-005",
+        "E-007",
+        "E-008",
+        "E-010",
+        "E-006"
+      ],
+      "id": "angle-01",
+      "midpoint_turn_claim": "AMATの売りは小売発表より前の引け後から始まり、Nasdaq自体は小売後の寄りで前日終値を上回った。",
+      "opening_promise": "『決算ミス』でも『AI全面安』でもない夜を、期待値と時系列で解く。",
+      "risk": "AMATをNasdaq全体の単一原因に拡大しない。",
+      "story_spine": "formal beat→株価下落→期待値の壁→金曜マクロ上乗せ→半導体分裂→二エンジン型でNASDAQを回収。",
+      "why_distinct": "会社直接材料とNASDAQ-wide材料を二本の時計で分けられる。"
+    },
+    {
+      "angle_type": "comparison",
+      "causality_scope": "sector",
+      "central_question": "半導体は本当に全面安だったのか。",
+      "closing_reframe": "AI需要ではなく選別。",
+      "confidence": "medium",
+      "counterevidence_ids": [
+        "E-005",
+        "E-008"
+      ],
+      "evidence_ids": [
+        "E-002",
+        "E-004",
+        "E-010"
+      ],
+      "id": "angle-02",
+      "midpoint_turn_claim": "SOXX ETFはほぼ横ばいで、個別の期待値差が大きい。",
+      "opening_promise": "同じAI半導体でも真逆の反応になった理由を比較する。",
+      "risk": "NASDAQ全体のマクロ経路が薄くなる。",
+      "story_spine": "AMAT/AVGO安とAMD高・SOXX横ばいを比較し期待値差を見る。",
+      "why_distinct": "セクター内部の分裂中心。"
+    },
+    {
+      "angle_type": "causal_chain",
+      "causality_scope": "nasdaq_support",
+      "central_question": "ホルムズ・原油と弱い小売はNASDAQへどう届いたか。",
+      "closing_reframe": "マクロは一方向ではない。",
+      "confidence": "medium",
+      "counterevidence_ids": [
+        "E-002",
+        "E-004"
+      ],
+      "evidence_ids": [
+        "E-001",
+        "E-005",
+        "E-007",
+        "E-008"
+      ],
+      "id": "angle-03",
+      "midpoint_turn_claim": "弱い小売は金利期待ではむしろ相殺材料。",
+      "opening_promise": "世界ニュースからNASDAQまでのマクロ経路を分解する。",
+      "risk": "AMATの強い矛盾を活かし切れない。",
+      "story_spine": "地政学・原油と消費データの相殺を追う。",
+      "why_distinct": "マクロ伝播中心。"
+    }
+  ],
+  "causal_dossier": {
+    "path": "research/2026-08-17/causal_research_dossier_2026-08-17.json",
+    "sha256": "1d490a22333e39a3972e11ea7378a885c1f34458da0b357bcc1f2f10e6281992"
+  },
+  "central_contradiction": "AMATは売上と次四半期ガイダンスが引用された市場予想を上回ったのに、翌取引日に約5%下落した。",
+  "central_contradiction_id": "CON-01",
+  "central_question": "好決算なのにAMATが約5%売られたのはなぜか。",
+  "closing_reframe": {
+    "scene_id": "scene-08",
+    "text": "AI需要の崩壊ではなく、期待値に対する選別とマクロ不確実性の重なり。"
+  },
+  "contract_version": "1.2.0",
+  "created_at": "2026-08-17T04:59:02Z",
+  "episode_date": "2026-08-17",
+  "headline_beyond_discovery": "AI需要が弱いか強いかではなく、期待値に対してどれだけ上回れるかで半導体の反応が分裂した。",
+  "midpoint_turn": {
+    "claim": "AMATの売りは小売発表より前の引け後から始まり、Nasdaq自体は小売後の寄りで前日終値を上回った。",
+    "evidence_ids": [
+      "E-001",
+      "E-004",
+      "E-006",
+      "E-009"
+    ],
+    "scene_id": "scene-06",
+    "what_changes": "『金曜の弱い小売が全部を下げた』という一本線から、AMATの期待値再評価と金曜マクロの二本の時計へモデルが分岐する。"
+  },
+  "naive_explanations": [
+    {
+      "evidence_ids": [
+        "E-003",
+        "E-004"
+      ],
+      "explanation": "AMATは決算をミスしたから下がった。",
+      "id": "naive-01",
+      "status": "rejected",
+      "why": "Q3売上とQ4売上/EPSガイドは引用された市場予想を上回った。"
+    },
+    {
+      "evidence_ids": [
+        "E-002",
+        "E-004",
+        "E-010"
+      ],
+      "explanation": "AI需要が崩れ、半導体全体が売られた。",
+      "id": "naive-02",
+      "status": "rejected",
+      "why": "AMD +6.5%、SOXX ETF -0.06%、AMATのAI需要見通しが反対材料。"
+    },
+    {
+      "evidence_ids": [
+        "E-001",
+        "E-006",
+        "E-007"
+      ],
+      "explanation": "弱い小売だけでNASDAQが下がった。",
+      "id": "naive-03",
+      "status": "rejected",
+      "why": "小売は利上げ観測も後退させ、Nasdaqは発表後の寄りで前日終値を上回った。"
+    }
+  ],
+  "open_loops": [
+    {
+      "close_scene": "scene-04",
+      "id": "loop-01",
+      "open_scene": "scene-01",
+      "promised_evidence_ids": [
+        "E-003",
+        "E-004",
+        "E-005"
+      ],
+      "question": "beat-and-raiseなのにAMATが売られたGapは何か。",
+      "resolution": "formal consensusは上回ったが、高いAI期待が価格反応の壁だったという市場解釈へ進む。"
+    },
+    {
+      "close_scene": "scene-08",
+      "id": "loop-02",
+      "open_scene": "scene-05",
+      "promised_evidence_ids": [
+        "E-001",
+        "E-002",
+        "E-006",
+        "E-007",
+        "E-008"
+      ],
+      "question": "AMATの個別反応とNASDAQ-wide材料をどう分けるか。",
+      "resolution": "時系列とAMD/SOXX反対材料から、選別的AI評価調整＋マクロoverlayの二エンジン型に限定する。"
+    }
+  ],
+  "opening_promise": "『決算ミス』でも『AI全面安』でもない夜を、期待値と時系列で解く。",
+  "producer": "chatgpt",
+  "scenes": [
+    {
+      "connector": "opening",
+      "continuation_reason": "AMATで何が発表され、いつ売られ始めたかを確認する。",
+      "formal_role": "direction_and_conclusion",
+      "new_evidence_ids": [
+        "E-001",
+        "E-002",
+        "E-004"
+      ],
+      "new_meaning": "AMATはformal expectationを上回ったのに約5%下落し、同じ半導体でもAMDは上昇した。",
+      "scene_id": "scene-01",
+      "story_role": "hook",
+      "viewer_belief_after": "昨夜は決算の良し悪しやAI需要崩壊だけでは説明できない。",
+      "viewer_belief_before": "半導体株が下がったならAI需要か決算が悪かったのかもしれない。"
+    },
+    {
+      "connector": "but",
+      "continuation_reason": "同じ夜の半導体全体がどう動いたかを比較する。",
+      "formal_role": "contradiction",
+      "new_evidence_ids": [
+        "E-003",
+        "E-004",
+        "E-009"
+      ],
+      "new_meaning": "Q3売上とQ4売上・EPSガイダンスはformal consensusを上回った。",
+      "scene_id": "scene-02",
+      "story_role": "question",
+      "viewer_belief_after": "価格下落の説明にはformal beatを超える評価軸が必要だ。",
+      "viewer_belief_before": "AMATは予想未達で売られたのかもしれない。"
+    },
+    {
+      "connector": "contrast",
+      "continuation_reason": "AMATのformal expectationとActualの差を定量的に確認する。",
+      "formal_role": "confirmed_facts",
+      "new_evidence_ids": [
+        "E-002"
+      ],
+      "new_meaning": "AVGOも大幅安だった一方、AMDは大幅高、SOXX ETFはほぼ横ばいだった。",
+      "scene_id": "scene-03",
+      "story_role": "setup",
+      "viewer_belief_after": "AI・半導体全体の需要崩壊という単純説明は弱い。",
+      "viewer_belief_before": "AMATの下落は半導体セクター全体の需要悪化かもしれない。"
+    },
+    {
+      "connector": "therefore",
+      "continuation_reason": "その会社固有の評価軸とNASDAQ全体のマクロ材料を分ける。",
+      "formal_role": "expected_actual_gap",
+      "new_evidence_ids": [
+        "E-003",
+        "E-004",
+        "E-005"
+      ],
+      "new_meaning": "formal consensusのGapはプラスなのに価格反応はマイナスで、高期待値という第二の評価軸が示唆された。",
+      "scene_id": "scene-04",
+      "story_role": "explanation",
+      "viewer_belief_after": "決算はActualの絶対値ではなく、どこまで織り込まれていたかでも評価される。",
+      "viewer_belief_before": "予想を上回ったなら株価も上がるはずに見える。"
+    },
+    {
+      "connector": "but",
+      "continuation_reason": "二つのエンジンが同時に始まったのか、時系列で検証する。",
+      "formal_role": "global_context",
+      "new_evidence_ids": [
+        "E-005",
+        "E-007",
+        "E-008"
+      ],
+      "new_meaning": "金曜のNASDAQには、AI評価調整とは別にホルムズ・原油と弱い小売のマクロ材料が重なった。",
+      "scene_id": "scene-05",
+      "story_role": "context",
+      "viewer_belief_after": "NASDAQ全体は一社ではなく、選別的AI評価調整とマクロoverlayを分けて読む必要がある。",
+      "viewer_belief_before": "AMATの期待値調整だけでNASDAQ -0.28%まで説明できるかもしれない。"
+    },
+    {
+      "connector": "therefore",
+      "continuation_reason": "AI需要崩壊説を当日の反対材料で最後にテストする。",
+      "formal_role": "market_reaction",
+      "new_evidence_ids": [
+        "E-001",
+        "E-004",
+        "E-006",
+        "E-009"
+      ],
+      "new_meaning": "AMAT反応は前夜から始まり、小売発表後もNasdaqは前日終値より上で寄ったため、二つの時計は一致しない。",
+      "scene_id": "scene-06",
+      "story_role": "test",
+      "viewer_belief_after": "AMAT会社直接要因と金曜NASDAQ-wide材料を別エンジンとして扱う根拠が強まる。",
+      "viewer_belief_before": "AMAT下落もNASDAQ安も金曜朝の同じニュースで始まったのかもしれない。"
+    },
+    {
+      "connector": "but",
+      "continuation_reason": "残った仮説を比較し、どこまで言えるか確定する。",
+      "formal_role": "entity_divergence",
+      "new_evidence_ids": [
+        "E-002",
+        "E-010"
+      ],
+      "new_meaning": "AMD上昇、SOXX ETF横ばい、AMATの需要見通しは全面的AI需要崩壊と整合しにくい。",
+      "scene_id": "scene-07",
+      "story_role": "comparison",
+      "viewer_belief_after": "弱さはセクター一律ではなく、銘柄ごとの期待値選別として読む方が安全だ。",
+      "viewer_belief_before": "高期待値の売りはAI需要そのものが弱くなった合図かもしれない。"
+    },
+    {
+      "connector": "callback",
+      "continuation_reason": "",
+      "formal_role": "validation_points",
+      "new_evidence_ids": [
+        "E-001",
+        "E-002",
+        "E-003",
+        "E-004",
+        "E-005",
+        "E-007",
+        "E-008",
+        "E-010"
+      ],
+      "new_meaning": "決算ミスと全面AI需要崩壊は弱く、AMAT直接は高期待値の選別、NASDAQ-wideはマクロ不確実性のoverlayという二エンジンが最も整合する。",
+      "scene_id": "scene-08",
+      "story_role": "verification",
+      "viewer_belief_after": "昨夜のNASDAQは一つのニュースではなく、銘柄選別とマクロoverlayを分離すると説明しやすい。",
+      "viewer_belief_before": "決算ミス、AI需要崩壊、弱い小売だけ、二エンジン型の複数仮説が残る。"
+    },
+    {
+      "connector": "closing",
+      "continuation_reason": "",
+      "formal_role": "fixed_closing",
+      "new_evidence_ids": [],
+      "new_meaning": "",
+      "scene_id": "scene-09",
+      "story_role": "closing",
+      "viewer_belief_after": "昨夜のNASDAQは一つのニュースではなく、銘柄選別とマクロoverlayを分離すると説明しやすい。",
+      "viewer_belief_before": "昨夜のNASDAQは一つのニュースではなく、銘柄選別とマクロoverlayを分離すると説明しやすい。"
+    }
+  ],
+  "selected_angle_id": "angle-01",
+  "story_spine": "formal beat→株価下落→期待値の壁→金曜マクロ上乗せ→半導体分裂→二エンジン型でNASDAQを回収。",
+  "temporal_usage": {
+    "carryover_results": [],
+    "cross_market": {
+      "mode": "internal_only",
+      "scene_id": null,
+      "visual_need_ids": []
+    },
+    "validation_obligations": []
+  }
+}
