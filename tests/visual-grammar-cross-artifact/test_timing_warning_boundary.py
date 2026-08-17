@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import sys
 import unittest
 from pathlib import Path
@@ -71,9 +72,30 @@ class TimingWarningBoundaryTests(unittest.TestCase):
             ],
             "failures": [],
             "warnings": [
-                {"code": "VG_DOMINANT_SURFACE_OVERWEIGHT"},
-                {"code": "VG_CARD_BOARD_OVERWEIGHT"},
-                {"code": "VG_NON_ANALYSIS_DURATION_TOO_LOW"},
+                {
+                    "code": "VG_DOMINANT_SURFACE_OVERWEIGHT",
+                    "path": "$.metrics.dominantSurfaceDurationMs.card-board",
+                    "beatId": None,
+                    "actual": 1.0,
+                    "limit": 0.45,
+                    "unit": "ratio",
+                },
+                {
+                    "code": "VG_CARD_BOARD_OVERWEIGHT",
+                    "path": "$.metrics.dominantSurfaceDurationMs.card-board",
+                    "beatId": None,
+                    "actual": 1.0,
+                    "limit": 0.55,
+                    "unit": "ratio",
+                },
+                {
+                    "code": "VG_NON_ANALYSIS_DURATION_TOO_LOW",
+                    "path": "$.metrics.nonAnalysisDurationMs",
+                    "beatId": None,
+                    "actual": 0.0,
+                    "limit": 10000,
+                    "unit": "ms",
+                },
             ],
         }
 
@@ -85,7 +107,79 @@ class TimingWarningBoundaryTests(unittest.TestCase):
         report["warnings"] = report["warnings"][:-1]
         with self.assertRaisesRegex(
             recompute.VisualGrammarReportRecomputeError,
-            "timing quality warning codes mismatch",
+            "timing quality warning payloads mismatch",
+        ):
+            recompute.validate_timing_report_metrics(report)
+
+    def test_corrupted_warning_actual_is_detected(self):
+        report = self.report()
+        report["warnings"][0]["actual"] = 7000
+        with self.assertRaisesRegex(
+            recompute.VisualGrammarReportRecomputeError,
+            "timing quality warning payloads mismatch",
+        ):
+            recompute.validate_timing_report_metrics(report)
+
+    def test_corrupted_warning_unit_is_detected(self):
+        report = self.report()
+        report["warnings"][0]["unit"] = "ms"
+        with self.assertRaisesRegex(
+            recompute.VisualGrammarReportRecomputeError,
+            "timing quality warning payloads mismatch",
+        ):
+            recompute.validate_timing_report_metrics(report)
+
+    def test_bridge_ratio_warning_uses_ratio_actual_and_limit(self):
+        report = copy.deepcopy(self.report())
+        report["beats"][0].update(
+            {
+                "visualGrammarId": "bridge-text",
+                "appearanceClass": "text-bridge",
+                "dominantSurface": "text",
+                "stageShell": "text-stage",
+            }
+        )
+        report["metrics"].update(
+            {
+                "dominantSurfaceMaxId": "text",
+                "cardBoardRatio": 0.0,
+                "bridgeTextDurationMs": 7000.0,
+                "bridgeTextRatio": 1.0,
+                "appearanceDurationMs": {"text-bridge": 7000.0},
+                "dominantSurfaceDurationMs": {"text": 7000.0},
+            }
+        )
+        report["warnings"] = [
+            {
+                "code": "VG_DOMINANT_SURFACE_OVERWEIGHT",
+                "path": "$.metrics.dominantSurfaceDurationMs.text",
+                "beatId": None,
+                "actual": 1.0,
+                "limit": 0.45,
+                "unit": "ratio",
+            },
+            {
+                "code": "VG_NON_ANALYSIS_DURATION_TOO_LOW",
+                "path": "$.metrics.nonAnalysisDurationMs",
+                "beatId": None,
+                "actual": 0.0,
+                "limit": 10000,
+                "unit": "ms",
+            },
+            {
+                "code": "VG_BRIDGE_TEXT_OVERUSED",
+                "path": "$.metrics.bridgeTextDurationMs",
+                "beatId": None,
+                "actual": 1.0,
+                "limit": 0.12,
+                "unit": "ratio",
+            },
+        ]
+        recompute.validate_timing_report_metrics(report)
+        report["warnings"][-1]["actual"] = 7000
+        with self.assertRaisesRegex(
+            recompute.VisualGrammarReportRecomputeError,
+            "timing quality warning payloads mismatch",
         ):
             recompute.validate_timing_report_metrics(report)
 
