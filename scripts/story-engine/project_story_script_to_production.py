@@ -11,6 +11,12 @@ meaning is the assembled ``daily-authoring/<date>.json`` already materialized in
 producer RenderSpec and public episode package. This gate verifies identity and writes
 only a report. It never changes narration, telops, Scene order, Visual Candidates,
 assets, sources, causal wording, Primary/Fallback selection, or reaction bindings.
+
+Two legacy helper APIs remain for read-only diagnostics: ``segment`` and
+``apply_visual_overrides``. They operate only on caller-owned in-memory values and are
+not called by this module's production ``main``. Existing Pre-TTS validation uses them
+on a deep copy so historical compatibility checks can still reason about old bindings
+without restoring any production writeback authority.
 """
 from __future__ import annotations
 
@@ -20,6 +26,8 @@ import json
 import re
 from pathlib import Path
 from typing import Any
+
+SENTENCE_RE = re.compile(r".*?(?:[。！？!?](?:[」』】）)]*)|$)")
 
 
 class StoryProjectionIdentityError(ValueError):
@@ -46,6 +54,115 @@ def canonical(value: Any) -> str:
 
 def normalize(text: str) -> str:
     return re.sub(r"\s+", "", text)
+
+
+def sentences(text: str) -> list[str]:
+    """Compatibility helper for read-only historical diagnostics."""
+    out = [match.group(0) for match in SENTENCE_RE.finditer(text) if match.group(0)]
+    return out or [text]
+
+
+def segment(text: str, count: int) -> list[str]:
+    """Split text deterministically without changing bytes when rejoined.
+
+    This helper is retained only for diagnostic/test compatibility. Production Story
+    validation never re-segments frozen ChatGPT narration.
+    """
+    if count <= 0:
+        raise ValueError("chunk count must be positive")
+    if count == 1:
+        return [text]
+    parts = sentences(text)
+    if len(parts) < count:
+        joined = "".join(parts)
+        cuts = [round(len(joined) * i / count) for i in range(count + 1)]
+        return [joined[cuts[i]:cuts[i + 1]] for i in range(count)]
+    target = len(text) / count
+    result: list[str] = []
+    current = ""
+    remaining_groups = count
+    for index, part in enumerate(parts):
+        remaining_parts = len(parts) - index
+        if current and len(result) < count - 1 and (
+            len(current) >= target or remaining_parts == remaining_groups - 1
+        ):
+            result.append(current)
+            current = ""
+            remaining_groups -= 1
+        current += part
+    result.append(current)
+    while len(result) < count:
+        result.append("")
+    if len(result) > count:
+        result[count - 1] = "".join(result[count - 1:])
+        result = result[:count]
+    if "".join(result) != text:
+        raise ValueError("narration segmentation changed authored text")
+    return result
+
+
+def apply_visual_overrides(render: dict[str, Any], bindings: dict[str, Any]) -> None:
+    """Apply historical Story overrides to an in-memory diagnostic copy only.
+
+    The production ``main`` never calls this helper. It exists because Pre-TTS legacy
+    compatibility checks intentionally deep-copy a historical RenderSpec and ask what
+    those historical bindings *would* have produced. New production is forbidden from
+    carrying non-empty Story overrides after semantic freeze.
+    """
+    scene_map = {
+        scene["sceneId"]: scene
+        for scene in render.get("scenes", [])
+        if isinstance(scene, dict) and isinstance(scene.get("sceneId"), str)
+    }
+    for scene_id, override in bindings.get("scene_overrides", {}).items():
+        scene = scene_map.get(scene_id)
+        if scene is None:
+            raise ValueError(f"unknown scene override: {scene_id}")
+        if not isinstance(override, dict):
+            raise ValueError(f"invalid scene override: {scene_id}")
+        for key in ("headline", "supportingTexts", "purpose", "performanceIntent"):
+            if key in override:
+                scene[key] = override[key]
+
+    beat_map = {
+        beat["beatId"]: beat
+        for scene in render.get("scenes", [])
+        if isinstance(scene, dict)
+        for beat in scene.get("visualBeats", [])
+        if isinstance(beat, dict) and isinstance(beat.get("beatId"), str)
+    }
+    for beat_id, override in bindings.get("beat_overrides", {}).items():
+        beat = beat_map.get(beat_id)
+        if beat is None:
+            raise ValueError(f"unknown beat override: {beat_id}")
+        if not isinstance(override, dict):
+            raise ValueError(f"invalid beat override: {beat_id}")
+        for key in (
+            "screenQuestion",
+            "primaryElement",
+            "viewerTexts",
+            "changeCue",
+            "contentType",
+            "visualTemplate",
+            "visualMode",
+            "screenState",
+        ):
+            if key in override:
+                beat[key] = override[key]
+        if "templateVariant" in override:
+            config = beat.get("templateConfig")
+            if not isinstance(config, dict):
+                raise ValueError(f"{beat_id}: templateConfig required for templateVariant")
+            config["variant"] = override["templateVariant"]
+            beat["templateVariant"] = override["templateVariant"]
+        if "visualGrammarId" in override or "transitionRole" in override:
+            grammar = beat.get("visualGrammar")
+            if not isinstance(grammar, dict):
+                raise ValueError(f"{beat_id}: visualGrammar required for grammar override")
+            if "visualGrammarId" in override:
+                grammar["grammarId"] = override["visualGrammarId"]
+            if "transitionRole" in override:
+                grammar["transitionRole"] = override["transitionRole"]
 
 
 def _repo_root_from_render(render_path: Path) -> Path:
