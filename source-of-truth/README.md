@@ -1,17 +1,23 @@
-# Source-of-truth packaging
+# Source-of-truth canon
 
-`01_fox_character_bible.md` and `02_editorial_bible.md` are stored directly.
+`source-of-truth/canon_manifest.json` is the single machine-readable authority for the four semantic rulebooks used by 朝のNASDAQカフェ.
 
-Large 03/04 rulebooks may be stored as deterministic packed transport under `source-of-truth/packed/` and described by `source-of-truth/packed_sources.json`. Their authoritative identity is the logical path plus the manifest SHA-256 and raw byte length, not the gzip byte stream itself.
+- `01_fox_character_bible.md` and `02_editorial_bible.md` are stored directly.
+- Large 03/04 rulebooks are stored as deterministic gzip+base64 transport under `source-of-truth/packed/` and materialized when needed.
+- For every document, the manifest fixes the logical path, exact logical SHA-256, raw byte length, storage mode, and physical parts.
+- Workflow checks, validators, materialization, and ChatGPT semantic freeze must consume this same manifest. They must not maintain separate document SHA constants.
 
-Use:
+Verify without writing:
 
 ```bash
+python scripts/canon_manifest.py verify
 python scripts/materialize_sources.py --check-only
 ```
 
-before any Story Engine Critic bundling or production use. This reconstructs the logical Markdown and verifies both SHA-256 and raw byte length.
+Materialize 03/04:
 
-If a packed transport part is corrupted but the authoritative source document is available and its raw byte length and SHA-256 exactly match the existing manifest, it is permitted to regenerate only the gzip+base64 transport parts. Do **not** change `packed_sources.json`, the logical document identity, source filename, or neighboring rulebooks during such a transport-only repair.
+```bash
+python scripts/materialize_sources.py
+```
 
-A transport repair must be accepted only after `scripts/materialize_sources.py --check-only` passes for every packed source.
+A packed transport repair is allowed only when reconstructed logical bytes still match the existing manifest SHA-256 and raw byte length exactly. A logical content change requires an intentional update to the Canon Manifest and therefore invalidates any daily semantic freeze that was bound to the previous manifest bytes.
