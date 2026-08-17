@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Create and verify the committed ChatGPT semantic-source freeze.
 
-The freeze binds the exact ChatGPT-authored source fragments, the deterministic
-assembled daily authoring, its closure report, and the daily evidence package. It
-contains no timestamp so identical semantic inputs produce identical manifest bytes.
-Downstream production may verify this contract but must never rewrite it.
+WS-3 freezes only the committed semantic authority inputs: ChatGPT-authored JSON
+fragments plus the exact daily evidence package they cite. It deliberately does not
+freeze generated render_spec / episode-package outputs yet; WS-4 removes the remaining
+secondary Story Engine semantic projection before those outputs can become immutable.
+
+The manifest contains no timestamp, so identical inputs produce identical bytes.
 """
 from __future__ import annotations
 
@@ -62,6 +64,8 @@ def _repo_file(root: Path, relative: str, label: str) -> Path:
 def _json_binding(root: Path, relative: str, label: str) -> dict[str, str]:
     path = _repo_file(root, relative, label)
     value = load_json(path, label)
+    if not isinstance(value, dict):
+        raise SemanticFreezeError(f"{label} root must be an object: {relative}")
     return {
         "path": relative,
         "sha256": sha256_file(path),
@@ -88,28 +92,14 @@ def build_manifest(root: Path, date: str) -> dict[str, Any]:
         relative = path.relative_to(root).as_posix()
         part_bindings.append(_json_binding(root, relative, "ChatGPT authoring part"))
 
-    authoring_rel = f"daily-authoring/{date}.json"
-    authoring = _json_binding(root, authoring_rel, "assembled daily authoring")
-    authoring_value = load_json(root / authoring_rel, "assembled daily authoring")
-    if not isinstance(authoring_value, dict) or authoring_value.get("episodeDate") != date:
-        raise SemanticFreezeError("assembled daily authoring episodeDate mismatch")
-
-    closure_rel = f"verification/{date}/authoring_renderer_closure.json"
-    closure = _json_binding(root, closure_rel, "authoring closure report")
-    closure_value = load_json(root / closure_rel, "authoring closure report")
-    if not isinstance(closure_value, dict) or closure_value.get("status") != "PASS":
-        raise SemanticFreezeError("authoring closure must be PASS before semantic freeze")
-
     daily_rel = f"daily-inputs/{date}/daily_source_package_{date}.md"
     daily = _file_binding(root, daily_rel, "daily source package")
-
     digest_payload = {
         "episodeDate": date,
         "parts": [
             {"path": item["path"], "semanticSha256": item["semanticSha256"]}
             for item in part_bindings
         ],
-        "assembledAuthoringSemanticSha256": authoring["semanticSha256"],
         "dailySourceSha256": daily["sha256"],
     }
     return {
@@ -117,9 +107,7 @@ def build_manifest(root: Path, date: str) -> dict[str, Any]:
         "authority": AUTHORITY,
         "episodeDate": date,
         "parts": part_bindings,
-        "assembledAuthoring": authoring,
         "dailySourcePackage": daily,
-        "authoringClosure": {**closure, "status": "PASS"},
         "sourceSetDigestSha256": canonical_sha(digest_payload),
     }
 
@@ -133,6 +121,9 @@ def validate_manifest_shape(manifest: dict[str, Any], date: str) -> None:
         raise SemanticFreezeError("semantic freeze episodeDate mismatch")
     if not SHA_RE.fullmatch(str(manifest.get("sourceSetDigestSha256", ""))):
         raise SemanticFreezeError("semantic freeze sourceSetDigestSha256 invalid")
+    parts = manifest.get("parts")
+    if not isinstance(parts, list) or not parts:
+        raise SemanticFreezeError("semantic freeze parts must be a non-empty array")
 
 
 def write_manifest(root: Path, date: str, output: Path) -> dict[str, Any]:
