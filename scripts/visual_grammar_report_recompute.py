@@ -91,6 +91,12 @@ def validate_structural_report_against_render(
         raise VisualGrammarReportRecomputeError(
             "structural PASS report must contain zero violations"
         )
+    # New/current reports must carry the editorial-warning channel. The JSON schema
+    # keeps this optional only so historical 1.0.0 artifacts do not need rewriting.
+    if "warnings" in structural_report and not isinstance(structural_report["warnings"], list):
+        raise VisualGrammarReportRecomputeError(
+            "structural report warnings must be an array when present"
+        )
 
 
 def _validate_static_state_report(timing_report: dict[str, Any]) -> None:
@@ -154,6 +160,27 @@ def _validate_static_state_report(timing_report: dict[str, Any]) -> None:
         )
 
 
+def _quality_signature(row: dict[str, Any]) -> tuple[Any, ...]:
+    return (
+        str(row.get("code")),
+        str(row.get("path")),
+        row.get("beatId"),
+        row.get("actual"),
+        row.get("limit"),
+        str(row.get("unit")),
+    )
+
+
+def _sorted_quality_signatures(rows: list[dict[str, Any]]) -> list[tuple[Any, ...]]:
+    return sorted(
+        (_quality_signature(row) for row in rows),
+        key=lambda item: (
+            item[0], item[1], "" if item[2] is None else str(item[2]),
+            repr(item[3]), repr(item[4]), item[5],
+        ),
+    )
+
+
 def validate_timing_report_metrics(timing_report: dict[str, Any]) -> None:
     if timing_report.get("failures") != []:
         raise VisualGrammarReportRecomputeError(
@@ -181,7 +208,7 @@ def validate_timing_report_metrics(timing_report: dict[str, Any]) -> None:
     non_analysis_appearances = {
         "entity-canvas", "document-media", "picturebook-canvas"
     }
-    expected_quality_warnings: set[str] = set()
+    expected_quality_warnings: list[dict[str, Any]] = []
 
     longest_run_ms = 0.0
     longest_run_ids: list[str] = []
@@ -195,7 +222,17 @@ def validate_timing_report_metrics(timing_report: dict[str, Any]) -> None:
             longest_run_ms = current_run_ms
             longest_run_ids = list(current_run_ids)
         if current_run_ms > thresholds["sameAppearanceRunMaxMs"]:
-            expected_quality_warnings.add("VG_SAME_APPEARANCE_RUN_TOO_LONG")
+            first_id = current_run_ids[0] if current_run_ids else "unknown"
+            expected_quality_warnings.append(
+                {
+                    "code": "VG_SAME_APPEARANCE_RUN_TOO_LONG",
+                    "path": f"episode://{first_id}/appearance-run",
+                    "beatId": first_id if current_run_ids else None,
+                    "actual": current_run_ms,
+                    "limit": thresholds["sameAppearanceRunMaxMs"],
+                    "unit": "ms",
+                }
+            )
 
     for index, row in enumerate(rows):
         duration = row["endMs"] - row["startMs"]
@@ -216,7 +253,16 @@ def validate_timing_report_metrics(timing_report: dict[str, Any]) -> None:
         if row["transitionRole"] == "major-shift":
             major_shift_count += 1
             if duration < thresholds["majorShiftStageMinMs"]:
-                expected_quality_warnings.add("VG_MAJOR_SHIFT_HOLD_TOO_SHORT")
+                expected_quality_warnings.append(
+                    {
+                        "code": "VG_MAJOR_SHIFT_HOLD_TOO_SHORT",
+                        "path": f"episode://{row['sceneId']}/{row['beatId']}/durationMs",
+                        "beatId": row["beatId"],
+                        "actual": duration,
+                        "limit": thresholds["majorShiftStageMinMs"],
+                        "unit": "ms",
+                    }
+                )
 
         if appearance != current_appearance:
             close_run()
@@ -238,26 +284,63 @@ def validate_timing_report_metrics(timing_report: dict[str, Any]) -> None:
     bridge_ratio = _round_ratio(_ratio(bridge_ms, total_ms))
 
     if surface_max_ratio > thresholds["dominantSurfaceMaxRatio"]:
-        expected_quality_warnings.add("VG_DOMINANT_SURFACE_OVERWEIGHT")
+        expected_quality_warnings.append(
+            {
+                "code": "VG_DOMINANT_SURFACE_OVERWEIGHT",
+                "path": f"$.metrics.dominantSurfaceDurationMs.{surface_max_id or 'unknown'}",
+                "beatId": None,
+                "actual": surface_max_ratio,
+                "limit": thresholds["dominantSurfaceMaxRatio"],
+                "unit": "ratio",
+            }
+        )
     if card_ratio > thresholds["cardBoardMaxRatio"]:
-        expected_quality_warnings.add("VG_CARD_BOARD_OVERWEIGHT")
+        expected_quality_warnings.append(
+            {
+                "code": "VG_CARD_BOARD_OVERWEIGHT",
+                "path": "$.metrics.dominantSurfaceDurationMs.card-board",
+                "beatId": None,
+                "actual": card_ratio,
+                "limit": thresholds["cardBoardMaxRatio"],
+                "unit": "ratio",
+            }
+        )
     if non_analysis_ms < thresholds["nonAnalysisMinMs"]:
-        expected_quality_warnings.add("VG_NON_ANALYSIS_DURATION_TOO_LOW")
+        expected_quality_warnings.append(
+            {
+                "code": "VG_NON_ANALYSIS_DURATION_TOO_LOW",
+                "path": "$.metrics.nonAnalysisDurationMs",
+                "beatId": None,
+                "actual": non_analysis_ms,
+                "limit": thresholds["nonAnalysisMinMs"],
+                "unit": "ms",
+            }
+        )
     if (
         bridge_ms > thresholds["bridgeTextMaxMs"]
         or bridge_ratio > thresholds["bridgeTextMaxRatio"]
     ):
-        expected_quality_warnings.add("VG_BRIDGE_TEXT_OVERUSED")
+        absolute_exceeded = bridge_ms > thresholds["bridgeTextMaxMs"]
+        expected_quality_warnings.append(
+            {
+                "code": "VG_BRIDGE_TEXT_OVERUSED",
+                "path": "$.metrics.bridgeTextDurationMs",
+                "beatId": None,
+                "actual": bridge_ms if absolute_exceeded else bridge_ratio,
+                "limit": thresholds["bridgeTextMaxMs"] if absolute_exceeded else thresholds["bridgeTextMaxRatio"],
+                "unit": "ms" if absolute_exceeded else "ratio",
+            }
+        )
 
-    actual_quality_warnings = {
-        str(row.get("code"))
+    actual_quality_warnings = [
+        row
         for row in timing_report.get("warnings", [])
         if str(row.get("code")) in QUALITY_WARNING_CODES
-    }
+    ]
     _require_equal(
-        "timing quality warning codes",
-        actual_quality_warnings,
-        expected_quality_warnings,
+        "timing quality warning payloads",
+        _sorted_quality_signatures(actual_quality_warnings),
+        _sorted_quality_signatures(expected_quality_warnings),
     )
 
     metrics = timing_report["metrics"]
