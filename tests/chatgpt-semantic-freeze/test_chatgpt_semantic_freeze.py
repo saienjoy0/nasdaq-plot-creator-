@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import sys
 import tempfile
@@ -54,6 +53,16 @@ class ChatGPTSemanticFreezeTests(unittest.TestCase):
                 )
             )
             Draft202012Validator(schema).validate(first)
+
+    def test_real_day_2026_08_12_source_set_is_freezable(self) -> None:
+        manifest = freeze.build_manifest(REPO_ROOT, "2026-08-12")
+        self.assertEqual(manifest["episodeDate"], "2026-08-12")
+        self.assertGreater(len(manifest["parts"]), 5)
+        self.assertEqual(
+            manifest["dailySourcePackage"]["path"],
+            "daily-inputs/2026-08-12/daily_source_package_2026-08-12.md",
+        )
+        self.assertEqual(len(manifest["sourceSetDigestSha256"]), 64)
 
     def test_semantic_change_invalidates_committed_freeze(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -147,10 +156,7 @@ class ChatGPTSemanticFreezeTests(unittest.TestCase):
         self.assertIn('["semanticFreeze"]["sha256"]', workflow)
         self.assertIn("scripts/chatgpt_semantic_freeze.py", workflow)
         self.assertIn("scripts/run_semantic_frozen_renderer_closure_v12.py", workflow)
-        self.assertNotIn(
-            "python3 scripts/run_daily_renderer_closure_v12.py \\\n            --phase compile",
-            workflow,
-        )
+        self.assertNotIn("python3 scripts/run_daily_renderer_closure_v12.py", workflow)
 
 
 if __name__ == "__main__":
