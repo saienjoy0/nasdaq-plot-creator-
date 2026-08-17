@@ -51,10 +51,111 @@ def ref(root: Path, path: Path) -> dict[str, str]:
     return {"path": path.resolve().relative_to(root.resolve()).as_posix(), "sha256": sha(path)}
 
 
+
+def _materialize_current_v2(
+    *,
+    root: Path,
+    date: str,
+    authoring_path: Path,
+    dossier: Path,
+    plan_path: Path,
+    script_path: Path,
+    review_path: Path,
+    acceptance_path: Path,
+    semantic_freeze: Path | None,
+) -> int:
+    if semantic_freeze is None:
+        raise SystemExit("Daily Authoring v2 Story projection requires --semantic-freeze")
+    freeze_module = load_module("chatgpt_semantic_freeze_story_v2", root / "scripts/chatgpt_semantic_freeze.py")
+    freeze_module.verify_manifest(root, date, semantic_freeze)
+    authoring = load(authoring_path)
+    if authoring.get("contractVersion") != "2.0.0":
+        raise SystemExit("current-v2 Story projection requires Daily Authoring 2.0.0")
+
+    plan = copy.deepcopy(authoring["storyPlan"])
+    script = copy.deepcopy(authoring["storyScript"])
+    review = copy.deepcopy(authoring["creativeReview"])
+    dump(plan_path, plan)
+    expected_plan_ref = ref(root, plan_path)
+    if script.get("story_plan") != expected_plan_ref:
+        raise SystemExit("frozen Story Script story_plan binding differs from projected Story Plan bytes")
+    expected_dossier_ref = ref(root, dossier)
+    if plan.get("causal_dossier") != expected_dossier_ref or script.get("causal_dossier") != expected_dossier_ref:
+        raise SystemExit("frozen Story/Dossier linkage differs from current validated Dossier")
+    dump(script_path, script)
+    dump(review_path, review)
+
+    plan_validator = load_module(
+        "story_plan_validator_v2_projector",
+        root / "skills/nasdaq-cafe-story-plan/validators/validate_story_plan.py",
+    )
+    plan_result = plan_validator.validate_story_plan(
+        plan_path, dossier, repo_root=root,
+        schema_path=root / "skills/nasdaq-cafe-story-plan/contracts/story_plan.schema.json",
+    )
+    if not plan_result.ok:
+        raise SystemExit("Story Plan validation failed: " + "; ".join(plan_result.errors))
+    bundle_validator = load_module(
+        "story_engine_bundle_validator_v2_projector",
+        root / "scripts/story-engine/validate_story_engine_bundle.py",
+    )
+    bundle_result = bundle_validator.validate_bundle(
+        script_path, plan_path, dossier,
+        story_contracts_dir=root / "skills/nasdaq-cafe-story-authoring/contracts",
+        critic_contracts_dir=root / "skills/nasdaq-cafe-entertainment-critic/contracts",
+        repo_root=root,
+        review_path=review_path,
+    )
+    if not bundle_result.ok:
+        raise SystemExit("Story Engine bundle validation failed: " + "; ".join(bundle_result.errors))
+    if review.get("verdict") != "pass" or int(review.get("total_score", 0)) < 25:
+        raise SystemExit("frozen Creative Review must PASS with score >=25")
+
+    acceptance = {
+        "contract_version": "1.1.0",
+        "episode_date": date,
+        "status": "pass",
+        "production_eligible": False,
+        "artifacts": {
+            "causal_dossier": expected_dossier_ref,
+            "story_plan": ref(root, plan_path),
+            "story_script": ref(root, script_path),
+            "creative_review": ref(root, review_path),
+        },
+        "validation": {
+            "story_plan": "pass", "story_script": "pass", "editorial_review": "pass",
+            "understanding_progression": "pass", "causality_guard": "pass",
+            "scene_order_guard": "pass", "scene_09_guard": "pass",
+        },
+        "critic": {
+            "round": review["round"], "score": review["total_score"],
+            "verdict": review["verdict"], "reviewer": review["reviewer"],
+            "critic_certified": False, "external_critic_status": "not_run",
+        },
+    }
+    dump(acceptance_path, acceptance)
+    acceptance_validator = load_module(
+        "story_engine_acceptance_v2_projector",
+        root / "scripts/story-engine/validate_story_engine_acceptance_v1_1.py",
+    )
+    result = acceptance_validator.validate_acceptance(acceptance_path, repo_root=root, require_production=False)
+    if result["status"] != "pass":
+        messages = [item.get("message", "acceptance failed") for item in result.get("errors", [])]
+        raise SystemExit("derived Story Engine acceptance failed: " + "; ".join(messages))
+    print(json.dumps({
+        "status": "pass", "mode": "post-freeze-pure-projection", "episode_date": date,
+        "semantic_writer": False,
+        "paths": {"story_plan": str(plan_path), "story_script": str(script_path),
+                  "creative_review": str(review_path), "acceptance": str(acceptance_path)},
+    }, ensure_ascii=False, indent=2))
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--date", required=True)
     ap.add_argument("--repo-root", type=Path, default=ROOT)
+    ap.add_argument("--semantic-freeze", type=Path)
     ap.add_argument(
         "--external-critic",
         choices=("off", "auto", "required"),
@@ -77,6 +178,18 @@ def main() -> int:
     script_path = work / "story_script.json"
     review_path = work / "creative_review.json"
     acceptance_path = work / "story_engine_acceptance.json"
+
+    if authoring_path.is_file():
+        authoring_probe = load(authoring_path)
+        if authoring_probe.get("contractVersion") == "2.0.0":
+            freeze = args.semantic_freeze
+            if freeze is not None and not freeze.is_absolute():
+                freeze = root / freeze
+            return _materialize_current_v2(
+                root=root, date=date, authoring_path=authoring_path, dossier=dossier,
+                plan_path=plan_path, script_path=script_path, review_path=review_path,
+                acceptance_path=acceptance_path, semantic_freeze=freeze,
+            )
 
     for path in (dossier, plan_template, script_template, review_template):
         if not path.is_file() or path.stat().st_size == 0:

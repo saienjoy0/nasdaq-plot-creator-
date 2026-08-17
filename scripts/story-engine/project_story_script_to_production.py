@@ -230,6 +230,12 @@ def _require_no_post_freeze_overrides(bindings: dict[str, Any], date: str) -> No
 def _validate_plan_identity(
     plan: dict[str, Any], authoring: dict[str, Any], date: str
 ) -> None:
+    if authoring.get("contractVersion") == "2.0.0":
+        if plan != authoring.get("storyPlan"):
+            raise StoryProjectionIdentityError(
+                "E_STORY_SEMANTIC_DRIFT: projected Story Plan differs from frozen Daily Authoring v2"
+            )
+        return
     if plan.get("episode_date") != date:
         raise StoryProjectionIdentityError("story plan episode_date mismatch")
     editorial = authoring.get("editorial")
@@ -283,6 +289,41 @@ def _validate_script_identity(
     md: str,
     date: str,
 ) -> None:
+    if authoring.get("contractVersion") == "2.0.0":
+        if script != authoring.get("storyScript"):
+            raise StoryProjectionIdentityError(
+                "E_STORY_SEMANTIC_DRIFT: projected Story Script differs from frozen Daily Authoring v2"
+            )
+        production = authoring.get("production")
+        if not isinstance(production, dict):
+            raise StoryProjectionIdentityError("Daily Authoring v2 production missing")
+        prod_scenes = production.get("scenes")
+        script_scenes = script.get("scenes")
+        render_scenes = render.get("scenes")
+        if not isinstance(prod_scenes, list) or len(prod_scenes) != 9:
+            raise StoryProjectionIdentityError("Daily Authoring v2 production must contain nine Scenes")
+        if not isinstance(script_scenes, list) or len(script_scenes) != 9:
+            raise StoryProjectionIdentityError("Story Script must contain nine Scenes")
+        if not isinstance(render_scenes, list) or len(render_scenes) != 9:
+            raise StoryProjectionIdentityError("render spec must contain nine Scenes")
+        for index, (prod, scripted, rendered) in enumerate(zip(prod_scenes, script_scenes, render_scenes, strict=True), 1):
+            scene_id = f"scene-{index:02d}"
+            chunks = prod.get("chunks") if isinstance(prod, dict) else None
+            if not isinstance(chunks, list) or not chunks:
+                raise StoryProjectionIdentityError(f"{scene_id}: frozen production chunks missing")
+            authoritative = "\n\n".join(str(chunk.get("text", "")) for chunk in chunks if isinstance(chunk, dict))
+            if normalize(str(scripted.get("narration", ""))) != normalize(authoritative):
+                raise StoryProjectionIdentityError(f"E_STORY_SEMANTIC_DRIFT: {scene_id} production narration differs from Story Script")
+            render_chunks = rendered.get("narrationChunks") if isinstance(rendered, dict) else None
+            if not isinstance(render_chunks, list) or not render_chunks:
+                raise StoryProjectionIdentityError(f"{scene_id}: render narrationChunks missing")
+            render_narration = "".join(str(chunk.get("speechText", "")) for chunk in render_chunks if isinstance(chunk, dict))
+            if normalize(render_narration) != normalize(authoritative):
+                raise StoryProjectionIdentityError(f"E_STORY_SEMANTIC_DRIFT: {scene_id} render narration differs from frozen v2 production")
+            public_narration = _public_scene_narration(md, index)
+            if normalize(public_narration) != normalize(authoritative):
+                raise StoryProjectionIdentityError(f"E_STORY_SEMANTIC_DRIFT: {scene_id} public narration differs from frozen v2 production")
+        return
     authored_scenes = authoring.get("scenes")
     script_scenes = script.get("scenes")
     render_scenes = render.get("scenes")
@@ -402,6 +443,10 @@ def validate_read_only(
 
     if authoring.get("episodeDate") != date:
         raise StoryProjectionIdentityError("daily authoring episodeDate mismatch")
+    if authoring.get("contractVersion") == "2.0.0" and review != authoring.get("creativeReview"):
+        raise StoryProjectionIdentityError(
+            "E_STORY_SEMANTIC_DRIFT: projected Creative Review differs from frozen Daily Authoring v2"
+        )
     if review.get("verdict") != "pass":
         raise StoryProjectionIdentityError("Story Engine review must be PASS")
     _require_no_post_freeze_overrides(bindings, date)

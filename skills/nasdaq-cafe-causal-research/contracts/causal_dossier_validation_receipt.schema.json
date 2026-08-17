@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nasdaq-cafe.local/contracts/causal_dossier_validation_receipt_v1.0.schema.json",
+  "title": "NASDAQ Cafe Causal Dossier Validation Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contractVersion",
+    "status",
+    "episodeDate",
+    "dossier",
+    "researchInputManifest",
+    "memoryRetrievalReport",
+    "validator",
+    "schemaBindings",
+    "errors",
+    "warnings"
+  ],
+  "properties": {
+    "contractVersion": {
+      "const": "1.0.0"
+    },
+    "status": {
+      "enum": [
+        "pass",
+        "fail"
+      ]
+    },
+    "episodeDate": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
+    "dossier": {
+      "$ref": "#/$defs/fileBinding"
+    },
+    "researchInputManifest": {
+      "$ref": "#/$defs/fileBinding"
+    },
+    "memoryRetrievalReport": {
+      "$ref": "#/$defs/fileBinding"
+    },
+    "validator": {
+      "$ref": "#/$defs/fileBinding"
+    },
+    "schemaBindings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/fileBinding"
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "fileBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    }
+  }
+}

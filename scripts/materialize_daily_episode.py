@@ -89,6 +89,131 @@ def normalize_memory_locator(value):
     return value
 
 
+
+def _run_current_v2(root: Path, args: argparse.Namespace, authoring: dict) -> int:
+    date = args.date
+    work = root / "working" / date
+    story_work = work / "story-engine"
+    research = root / "research" / date
+    episodes = root / "episodes" / date
+    render_path = root / "render-specs" / date / "render_spec.json"
+    report = work / f"memory_retrieval_report_{date}.json"
+    dossier = research / f"causal_research_dossier_{date}.json"
+    public_package = episodes / f"episode_package_public_{date}.md"
+    final_package = episodes / f"episode_package_{date}.md"
+    bindings = work / "financial_visual_bindings.json"
+    story_bindings = story_work / "story_production_bindings.json"
+    story_plan = story_work / "story_plan.json"
+    story_script = story_work / "story_script.json"
+    creative_review = story_work / "creative_review.json"
+    story_acceptance = story_work / "story_engine_acceptance.json"
+    story_projection = story_work / "story_projection_report.json"
+    required = (report, dossier, render_path, public_package, bindings, story_bindings,
+                story_plan, story_script, creative_review, story_acceptance)
+    for item in required:
+        if not item.is_file():
+            raise SystemExit(f"current-v2 production input missing: {item.relative_to(root)}")
+
+    run([
+        sys.executable, "scripts/story-engine/project_story_script_to_production.py",
+        "--story-script", str(story_script), "--creative-review", str(creative_review),
+        "--render-spec", str(render_path), "--episode-package-public", str(public_package),
+        "--bindings", str(story_bindings), "--report", str(story_projection),
+    ])
+    renderer_materialization = renderer_sources.materialize(
+        root=root, date=date, render_path=render_path,
+        public_package_path=public_package, bindings_path=bindings,
+    )
+    render = renderer_materialization["render"]
+    contract_package = renderer_materialization["contract_package_path"]
+    final_contract_path = renderer_materialization["final_contract_path"]
+    try:
+        visual_source = visual_source_projection.prepare_visual_sources(
+            root=root, date=date, final_contract_path=final_contract_path, render=render,
+        )
+    except visual_source_projection.VisualSourceProjectionError as exc:
+        raise SystemExit(str(exc)) from exc
+
+    acceptance_doc = json.loads(story_acceptance.read_text(encoding="utf-8"))
+    story_annex = {
+        "contract_version":"1.0.0", "episode_date":date, "status":"pass",
+        "story_plan":{"path":story_plan.relative_to(root).as_posix(),"sha256":sha(story_plan)},
+        "story_script":{"path":story_script.relative_to(root).as_posix(),"sha256":sha(story_script)},
+        "creative_review":{"path":creative_review.relative_to(root).as_posix(),"sha256":sha(creative_review)},
+        "acceptance":{"path":story_acceptance.relative_to(root).as_posix(),"sha256":sha(story_acceptance)},
+        "projection":{"path":story_projection.relative_to(root).as_posix(),"sha256":sha(story_projection)},
+        "critic":acceptance_doc["critic"],
+    }
+    dossier_doc = json.loads(dossier.read_text(encoding="utf-8"))
+    retrieval = json.loads(report.read_text(encoding="utf-8"))
+    by_key = {(item["memory_reference_type"], item["memory_reference_id"]): item
+              for item in dossier_doc.get("memory_revalidation", [])}
+    refs = []
+    serial = 1
+    for item in retrieval.get("selected", []):
+        if item.get("item_type") == "core":
+            continue
+        key = (item.get("item_type"), item.get("item_id"))
+        rv = by_key.get(key)
+        if rv is None:
+            raise SystemExit(f"missing memory revalidation for selected item: {key}")
+        refs.append({
+            "reference_id":f"MR-{serial:03d}", "memory_reference_type":rv["memory_reference_type"],
+            "memory_reference_id":rv["memory_reference_id"], "historical_confidence":rv["historical_confidence"],
+            "current_revalidation_status":rv["revalidation_status"], "dossier_editorial_use":rv["editorial_use"],
+            "dossier_current_evidence_ids":rv["current_evidence_ids"], "difference_from_previous":rv["difference_from_previous"],
+            "public_usage_mode":"internal_only",
+            "scope_limit":"過去記録は現在証拠として使わず、当日の一次情報・主要報道で再検証した内部比較に限定する。",
+            "usages":[],
+        })
+        serial += 1
+    memory_annex = {
+        "contract_version":"1.0.0", "episode_date":date,
+        "causal_dossier":{"path":dossier.relative_to(root).as_posix(),"sha256":sha(dossier)},
+        "references":refs,
+        "validation_intent":{"past_mentions_complete":True,"title_thumbnail_checked":True,"post_inquisition_final":True},
+    }
+    asset_catalog = visual_source_projection.build_asset_catalog(render, visual_source)
+    image_resolution = {"status":"resolved","selected_path":visual_source["selected_path"],"unresolved_count":0,"routes":visual_source["routes"]}
+    production_annex = {
+        "contract_version":"1.0.0", "episode_date":date,
+        "post_inquisition":{"status":"pass","required_changes_applied":True,"unresolved_required_changes":0},
+        "image_resolution":image_resolution,
+        "renderer_contract":{"repository":"saienjoy0/saienjoy0-nasdaq-cafe-remotion","schema_version":render["schemaVersion"]},
+        "asset_catalog":asset_catalog, "render_spec":render,
+    }
+    public = normalize_scene_headings(contract_package.read_text(encoding="utf-8").rstrip())
+    final = (public + "\\n\\n" + STORY_BEGIN + "\\n```json\\n" + dump(story_annex) + "\\n```\\n" + STORY_END
+             + "\\n\\n" + MEM_BEGIN + "\\n```json\\n" + dump(memory_annex) + "\\n```\\n" + MEM_END
+             + "\\n\\n" + PROD_BEGIN + "\\n```json\\n" + dump(production_annex) + "\\n```\\n" + PROD_END + "\\n")
+    final_package.write_text(final, encoding="utf-8")
+
+    verification = root / "verification" / date
+    verification.mkdir(parents=True, exist_ok=True)
+    asset_log = verification / "asset_resolution_log.json"
+    if visual_source["has_visual_sources"]:
+        if not asset_log.is_file():
+            raise SystemExit("Visual Source selection requires precomputed verification asset_resolution_log.json")
+        audit = json.loads(asset_log.read_text(encoding="utf-8"))
+        selection = audit.get("selection") if isinstance(audit, dict) else None
+        if not isinstance(selection, dict) or selection.get("status") != "resolved":
+            raise SystemExit("Visual Source asset_resolution_log selection is unresolved")
+        if selection.get("selected_path") != visual_source["selected_path"]:
+            raise SystemExit("Visual Source asset_resolution_log selected_path mismatch")
+    else:
+        asset_log.write_text(dump({"episode_date":date,"status":"resolved","selected_path":"not-required","unresolved_count":0,
+                                   "registered_assets":[item["asset_id"] for item in asset_catalog]}) + "\\n", encoding="utf-8")
+    selected_generated = [item for item in visual_source["selected_assets"] if item.get("sourceKind") == "generated-image"]
+    image_generation_log = verification / "image_generation_log.json"
+    if not selected_generated:
+        image_generation_log.write_text(dump({"episode_date":date,"status":"not-required","attempts":0,
+                                              "selected_path":visual_source["selected_path"]}) + "\\n", encoding="utf-8")
+    elif not image_generation_log.is_file():
+        raise SystemExit("selected generated-image requires precomputed image_generation_log.json from ChatGPT image generation")
+    print(f"WROTE {final_package}")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--date", required=True)
@@ -108,6 +233,11 @@ def main() -> int:
 
     root = args.repo_root.resolve()
     date = args.date
+    authoring_path = root / "daily-authoring" / f"{date}.json"
+    if authoring_path.is_file():
+        authoring_probe = json.loads(authoring_path.read_text(encoding="utf-8"))
+        if isinstance(authoring_probe, dict) and authoring_probe.get("contractVersion") == "2.0.0":
+            return _run_current_v2(root, args, authoring_probe)
     work = root / "working" / date
     story_work = work / "story-engine"
     research = root / "research" / date
