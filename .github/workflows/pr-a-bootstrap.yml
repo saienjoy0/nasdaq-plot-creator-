@@ -58,19 +58,18 @@ jobs:
           set -euo pipefail
           python - <<'PY'
           from pathlib import Path
+          import textwrap
 
           p = Path('tests/editorial-semantic-boundary/test_boundary_architecture.py')
           s = p.read_text(encoding='utf-8')
           marker = 'def test_overlay_does_not_touch_aug17_daily_artifacts():'
           if marker not in s:
               raise SystemExit('architecture test marker missing')
-          replacement = r'''def _text(rel: str) -> str:
+          replacement = textwrap.dedent(r'''def _text(rel: str) -> str:
               return (ROOT / rel).read_text(encoding="utf-8")
 
 
           def test_pr_a_current_v2_core_has_no_aug17_migration_literal():
-              # Exact-day migration is PR-B. The workflow scope guard separately proves
-              # that no 2026-08-17 daily artifact path is present in the git diff.
               for rel in (
                   "scripts/materialize_causal_research.py",
                   "scripts/validate_editorial_semantic_boundary.py",
@@ -123,15 +122,12 @@ jobs:
               assert dependency < freeze < acceptance < renderer
               assert "jsonschema referencing" in text
               assert "actions/setup-python@v5" in text
-          '''
-          # Remove bootstrap indentation from the embedded Python source.
-          import textwrap
-          replacement = textwrap.dedent(replacement)
+          ''')
           p.write_text(s[:s.index(marker)] + replacement, encoding='utf-8')
 
           p = Path('tests/editorial-semantic-boundary/test_current_contract_e2e.py')
           s = p.read_text(encoding='utf-8')
-          old = '''def test_missing_temporal_usage_fails_official_story_validator(tmp_path: Path):
+          old = textwrap.dedent('''def test_missing_temporal_usage_fails_official_story_validator(tmp_path: Path):
               root, authoring = build_workspace(tmp_path)
               del authoring["storyPlan"]["temporal_usage"]
               path = root / "daily-authoring" / f"{fx.DATE}.json"
@@ -139,14 +135,10 @@ jobs:
               semantic = load_module("fixture_semantic_missing_temporal", root / "scripts/validate_editorial_semantic_boundary.py")
               with pytest.raises(Exception, match="temporal_usage|Temporal"):
                   semantic.validate_boundary(root, fx.DATE, path)
-          '''
-          old = textwrap.dedent(old)
-          new = '''def test_missing_temporal_usage_fails_official_story_validator(tmp_path: Path):
+          ''')
+          new = textwrap.dedent('''def test_missing_temporal_usage_fails_official_story_validator(tmp_path: Path):
               root, authoring = build_workspace(tmp_path)
               del authoring["storyPlan"]["temporal_usage"]
-              # Linkage is machine-owned and deliberately checked before semantic rules.
-              # Rebind to the mutated deterministic projection so this test reaches the
-              # official Story Plan Temporal 0.3 rule rather than stale-linkage failure.
               authoring["storyScript"]["story_plan"]["sha256"] = fx.sha_bytes(
                   fx.canonical_projection_bytes(authoring["storyPlan"])
               )
@@ -155,8 +147,7 @@ jobs:
               semantic = load_module("fixture_semantic_missing_temporal", root / "scripts/validate_editorial_semantic_boundary.py")
               with pytest.raises(Exception, match="temporal_usage|Temporal"):
                   semantic.validate_boundary(root, fx.DATE, path)
-          '''
-          new = textwrap.dedent(new)
+          ''')
           if old not in s:
               raise SystemExit('Temporal test block missing')
           p.write_text(s.replace(old, new), encoding='utf-8')
@@ -183,11 +174,14 @@ jobs:
           fi
           git diff --check
 
-      - name: Remove bootstrap payload and commit verified implementation
+      - name: Commit and push verified non-workflow implementation
         shell: bash
         run: |
           set -euo pipefail
-          rm -f .pr-a-overlay.tar.xz.b64 .pr-a-overlay.part* .github/workflows/pr-a-bootstrap.yml
+          git checkout HEAD -- \
+            .github/workflows/chatgpt-daily-preview-production.yml \
+            .github/workflows/daily-renderer-closure-gate.yml
+          rm -f .pr-a-overlay.tar.xz.b64 .pr-a-overlay.part*
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -- \
@@ -209,13 +203,11 @@ jobs:
             scripts/run_semantic_frozen_renderer_closure_v12.py \
             scripts/run_daily_production_v12.py \
             scripts/run_daily_renderer_closure_v12.py \
-            .github/workflows/daily-renderer-closure-gate.yml \
-            .github/workflows/chatgpt-daily-preview-production.yml \
             tests/editorial-semantic-boundary/current_fixture.py \
             tests/editorial-semantic-boundary/test_boundary_architecture.py \
             tests/editorial-semantic-boundary/test_current_contract_e2e.py
-          git add -u -- .pr-a-overlay.tar.xz.b64 .pr-a-overlay.part00 .pr-a-overlay.part01 .pr-a-overlay.part02 .pr-a-overlay.part03 .pr-a-overlay.part04 .pr-a-overlay.part05 .pr-a-overlay.part06 .pr-a-overlay.part07 .pr-a-overlay.part08 .pr-a-overlay.part09 .github/workflows/pr-a-bootstrap.yml
+          git add -u -- .pr-a-overlay.tar.xz.b64 .pr-a-overlay.part00 .pr-a-overlay.part01 .pr-a-overlay.part02 .pr-a-overlay.part03 .pr-a-overlay.part04 .pr-a-overlay.part05 .pr-a-overlay.part06 .pr-a-overlay.part07 .pr-a-overlay.part08 .pr-a-overlay.part09
           git status --short
           git diff --cached --check
-          git commit -m 'PR-A: harden editorial semantic boundary'
+          git commit -m 'PR-A: harden editorial semantic boundary core'
           git push origin HEAD:hardening/editorial-semantic-boundary-v1-3
