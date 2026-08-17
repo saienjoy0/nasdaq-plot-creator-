@@ -1,9 +1,16 @@
 #!/usr/bin/env python3
-"""Mechanically project an approved Story Script into existing episode/render structures.
+"""Validate Story Engine sidecars against frozen ChatGPT production semantics.
 
-This script does not invent or rewrite narration. It preserves the authored Story Script
-verbatim, re-segments it only at sentence boundaries to fit existing narration chunk IDs,
-and applies only explicitly authored visual-copy/structure overrides.
+Historical versions of this entry point projected Story Script narration, visual-copy
+bindings, review metadata, and reaction bindings back into ``render_spec.json`` and the
+public episode package. That made the Story Engine a second semantic writer after
+ChatGPT authoring.
+
+Production now treats Story Engine output as a validation-only sidecar. The authoritative
+meaning is the assembled ``daily-authoring/<date>.json`` already materialized into the
+producer RenderSpec and public episode package. This gate verifies identity and writes
+only a report. It never changes narration, telops, Scene order, Visual Candidates,
+assets, sources, causal wording, Primary/Fallback selection, or reaction bindings.
 """
 from __future__ import annotations
 
@@ -11,24 +18,21 @@ import argparse
 import hashlib
 import json
 import re
-import sys
 from pathlib import Path
 from typing import Any
 
-SCRIPT_DIR = Path(__file__).resolve().parent
-if str(SCRIPT_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPT_DIR))
 
-from apply_story_auxiliary_bindings import apply_story_reaction_bindings
-from display_text import to_display_text
-
-SENTENCE_RE = re.compile(r".*?(?:[。！？!?](?:[」』】）)]*)|$)")
+class StoryProjectionIdentityError(ValueError):
+    pass
 
 
-def load_json(path: Path) -> dict[str, Any]:
-    value = json.loads(path.read_text(encoding="utf-8"))
+def load_json(path: Path, label: str) -> dict[str, Any]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise StoryProjectionIdentityError(f"{label} invalid: {exc}") from exc
     if not isinstance(value, dict):
-        raise ValueError(f"JSON root must be object: {path}")
+        raise StoryProjectionIdentityError(f"{label} root must be an object")
     return value
 
 
@@ -40,170 +44,282 @@ def canonical(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
 
 
-def sentences(text: str) -> list[str]:
-    out = [m.group(0) for m in SENTENCE_RE.finditer(text) if m.group(0)]
-    return out or [text]
-
-
-def segment(text: str, count: int) -> list[str]:
-    if count <= 0:
-        raise ValueError("chunk count must be positive")
-    if count == 1:
-        return [text]
-    parts = sentences(text)
-    if len(parts) < count:
-        joined = "".join(parts)
-        cuts = [round(len(joined) * i / count) for i in range(count + 1)]
-        return [joined[cuts[i]:cuts[i + 1]] for i in range(count)]
-    target = len(text) / count
-    result: list[str] = []
-    current = ""
-    remaining_groups = count
-    for idx, part in enumerate(parts):
-        remaining_parts = len(parts) - idx
-        if current and len(result) < count - 1 and (
-            len(current) >= target or remaining_parts == remaining_groups - 1
-        ):
-            result.append(current)
-            current = ""
-            remaining_groups -= 1
-        current += part
-    result.append(current)
-    while len(result) < count:
-        result.append("")
-    if len(result) > count:
-        result[count - 1] = "".join(result[count - 1:])
-        result = result[:count]
-    if "".join(result) != text:
-        raise ValueError("narration segmentation changed authored text")
-    return result
-
-
-def cue_start(text: str, size: int = 64) -> str:
-    return text[:size]
-
-
-def cue_end(text: str, size: int = 64) -> str:
-    return text[-size:]
-
-
 def normalize(text: str) -> str:
     return re.sub(r"\s+", "", text)
 
 
-def scene_block_pattern(scene_number: int) -> re.Pattern[str]:
-    return re.compile(
-        rf"(?ms)(^##\s+(?:B{scene_number}\.\s+)?Scene\s+{scene_number}(?:｜|\|).*?)(?=^##\s+(?:B{scene_number + 1}\.\s+)?Scene\s+{scene_number + 1}(?:｜|\|)|\Z)"
+def _repo_root_from_render(render_path: Path) -> Path:
+    resolved = render_path.resolve()
+    # <root>/render-specs/<date>/render_spec.json
+    if len(resolved.parents) < 3 or resolved.parents[1].name != "render-specs":
+        raise StoryProjectionIdentityError(
+            "render spec must be <repo>/render-specs/<date>/render_spec.json"
+        )
+    return resolved.parents[2]
+
+
+def _episode_date(script: dict[str, Any], render: dict[str, Any]) -> str:
+    date = script.get("episode_date")
+    if not isinstance(date, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date):
+        raise StoryProjectionIdentityError("story script episode_date is invalid")
+    if render.get("episode", {}).get("targetDate") != date:
+        raise StoryProjectionIdentityError("render/story episode date mismatch")
+    return date
+
+
+def _authored_scene_narration(scene: dict[str, Any], scene_id: str) -> str:
+    chunks = scene.get("chunks")
+    if not isinstance(chunks, list) or not chunks:
+        raise StoryProjectionIdentityError(f"{scene_id}: authored chunks missing")
+    texts: list[str] = []
+    for index, chunk in enumerate(chunks, 1):
+        if not isinstance(chunk, dict) or not isinstance(chunk.get("text"), str):
+            raise StoryProjectionIdentityError(
+                f"{scene_id}: invalid authored chunk {index}"
+            )
+        texts.append(chunk["text"])
+    return "".join(texts)
+
+
+def _public_scene_narration(md: str, scene_number: int) -> str:
+    pattern = re.compile(
+        rf"(?ms)^##\s+(?:B{scene_number}\.\s+)?Scene\s+{scene_number}(?:｜|\|).*?"
+        rf"^### 完成ナレーション\s*\n(.*?)"
+        rf"(?=\n- ナレーションで示す出典主体・媒体：|\n- 根拠と不確実性：)"
     )
-
-
-def replace_scene_narration(md: str, scene_number: int, narration: str) -> str:
-    scene_pat = re.compile(
-        rf"(?ms)(^##\s+(?:B{scene_number}\.\s+)?Scene\s+{scene_number}(?:｜|\|).*?^### 完成ナレーション\s*\n)(.*?)(?=\n- ナレーションで示す出典主体・媒体：)"
-    )
-    match = scene_pat.search(md)
-    if not match:
-        raise ValueError(f"episode package Scene {scene_number} 完成ナレーション block not found")
-    return md[:match.start(2)] + narration + "\n" + md[match.end(2):]
-
-
-def beat_block(md: str, beat_id: str) -> tuple[re.Match[str], str]:
-    block_re = re.compile(
-        rf"(?ms)(- \*\*{re.escape(beat_id)}\*\*.*?)(?=\n- \*\*scene-0[1-9]-beat-[0-9]{{3}}\*\*|\n### 完成ナレーション)"
-    )
-    match = block_re.search(md)
-    if not match:
-        raise ValueError(f"episode package beat block not found: {beat_id}")
-    return match, match.group(1)
-
-
-def replace_beat_cues(md: str, beat_id: str, start: str, end: str) -> str:
-    match, block = beat_block(md, beat_id)
-    block = re.sub(r"(?m)^  - 開始合図：.*$", f"  - 開始合図：{start}", block, count=1)
-    block = re.sub(r"(?m)^  - 終了合図：.*$", f"  - 終了合図：{end}", block, count=1)
-    return md[:match.start(1)] + block + md[match.end(1):]
-
-
-def replace_beat_visual_copy(md: str, beat_id: str, override: dict[str, Any], beat: dict[str, Any]) -> str:
-    match, block = beat_block(md, beat_id)
-    mapping = {
-        "screenQuestion": "画面の問い", "primaryElement": "主要要素",
-        "viewerTexts": "視聴者向けテキスト", "changeCue": "変化合図",
-        "screenState": "画面状態", "visualTemplate": "Visual Template ID",
-        "templateVariant": "Template Variant",
-    }
-    for key, label in mapping.items():
-        if key not in override:
-            continue
-        value = beat.get(key, override[key])
-        if isinstance(value, list):
-            value = " / ".join(str(item) for item in value)
-        pattern = rf"(?m)^  - {re.escape(label)}：.*$"
-        replacement = f"  - {label}：{value}"
-        if re.search(pattern, block):
-            block = re.sub(pattern, replacement, block, count=1)
-        elif key not in {"changeCue"}:
-            raise ValueError(f"{beat_id}: markdown field missing for {label}")
-    if "visualGrammarId" in override or "transitionRole" in override:
-        grammar = beat.get("visualGrammar")
-        if not isinstance(grammar, dict):
-            raise ValueError(f"{beat_id}: visualGrammar is required for grammar override")
-        pattern = r"(?m)^  - Visual Grammar：.*$"
-        replacement = f"  - Visual Grammar：{grammar['grammarId']} / {grammar['transitionRole']}"
-        if not re.search(pattern, block):
-            raise ValueError(f"{beat_id}: markdown field missing for Visual Grammar")
-        block = re.sub(pattern, replacement, block, count=1)
-    return md[:match.start(1)] + block + md[match.end(1):]
-
-
-def replace_scene_visual_copy(md: str, scene_number: int, override: dict[str, Any]) -> str:
-    pattern = scene_block_pattern(scene_number)
     match = pattern.search(md)
     if not match:
-        raise ValueError(f"episode package Scene {scene_number} block not found")
-    block = match.group(1)
-    mapping = {"purpose": "目的", "performanceIntent": "狐の演技意図"}
-    for key, label in mapping.items():
-        if key in override:
-            block = re.sub(rf"(?m)^- {re.escape(label)}：.*$", f"- {label}：{override[key]}", block, count=1)
-    return md[:match.start(1)] + block + md[match.end(1):]
+        raise StoryProjectionIdentityError(
+            f"episode package Scene {scene_number} 完成ナレーション block not found"
+        )
+    return match.group(1).strip()
 
 
-def apply_visual_overrides(render: dict[str, Any], bindings: dict[str, Any]) -> None:
-    scene_map = {scene["sceneId"]: scene for scene in render.get("scenes", [])}
-    for scene_id, override in bindings.get("scene_overrides", {}).items():
-        scene = scene_map.get(scene_id)
-        if scene is None:
-            raise ValueError(f"unknown scene override: {scene_id}")
-        for key in ("headline", "supportingTexts", "purpose", "performanceIntent"):
-            if key in override:
-                scene[key] = override[key]
-    beat_map = {beat["beatId"]: beat for scene in render.get("scenes", []) for beat in scene.get("visualBeats", [])}
-    for beat_id, override in bindings.get("beat_overrides", {}).items():
-        beat = beat_map.get(beat_id)
-        if beat is None:
-            raise ValueError(f"unknown beat override: {beat_id}")
-        for key in ("screenQuestion", "primaryElement", "viewerTexts", "changeCue", "contentType", "visualTemplate", "visualMode", "screenState"):
-            if key in override:
-                beat[key] = override[key]
-        if "templateVariant" in override:
-            config = beat.get("templateConfig")
-            if not isinstance(config, dict):
-                raise ValueError(f"{beat_id}: templateConfig required for templateVariant")
-            config["variant"] = override["templateVariant"]
-            beat["templateVariant"] = override["templateVariant"]
-        if "visualGrammarId" in override or "transitionRole" in override:
-            grammar = beat.get("visualGrammar")
-            if not isinstance(grammar, dict):
-                raise ValueError(f"{beat_id}: visualGrammar required for grammar override")
-            if "visualGrammarId" in override:
-                grammar["grammarId"] = override["visualGrammarId"]
-            if "transitionRole" in override:
-                grammar["transitionRole"] = override["transitionRole"]
+def _require_no_post_freeze_overrides(bindings: dict[str, Any], date: str) -> None:
+    if bindings.get("contract_version") != "1.0.0" or bindings.get("episode_date") != date:
+        raise StoryProjectionIdentityError("story production bindings contract/date mismatch")
+    scene_overrides = bindings.get("scene_overrides", {})
+    beat_overrides = bindings.get("beat_overrides", {})
+    if scene_overrides not in ({}, None):
+        raise StoryProjectionIdentityError(
+            "E_STORY_SEMANTIC_WRITER_FORBIDDEN: scene_overrides must be authored upstream before semantic freeze"
+        )
+    if beat_overrides not in ({}, None):
+        raise StoryProjectionIdentityError(
+            "E_STORY_SEMANTIC_WRITER_FORBIDDEN: beat_overrides must be authored upstream before semantic freeze"
+        )
+
+
+def _validate_plan_identity(
+    plan: dict[str, Any], authoring: dict[str, Any], date: str
+) -> None:
+    if plan.get("episode_date") != date:
+        raise StoryProjectionIdentityError("story plan episode_date mismatch")
+    editorial = authoring.get("editorial")
+    if not isinstance(editorial, dict):
+        raise StoryProjectionIdentityError("daily authoring editorial missing")
+    comparisons = {
+        "central_contradiction": authoring.get("centralContradiction"),
+        "headline_beyond_discovery": authoring.get("headlineBeyondDiscovery"),
+        "selected_angle_id": authoring.get("selectedAngleId"),
+        "central_question": authoring.get("centralQuestion"),
+        "story_spine": editorial.get("storySpine"),
+        "opening_promise": authoring.get("openingPromise"),
+        "midpoint_turn": authoring.get("midpointTurn"),
+        "closing_reframe": authoring.get("closingReframe"),
+    }
+    for key, expected in comparisons.items():
+        if plan.get(key) != expected:
+            raise StoryProjectionIdentityError(
+                f"E_STORY_SEMANTIC_DRIFT: story plan {key} differs from frozen ChatGPT authoring"
+            )
+
+    authored_scenes = authoring.get("scenes")
+    plan_scenes = plan.get("scenes")
+    if not isinstance(authored_scenes, list) or len(authored_scenes) != 9:
+        raise StoryProjectionIdentityError("daily authoring must contain nine Scenes")
+    if not isinstance(plan_scenes, list) or len(plan_scenes) != 9:
+        raise StoryProjectionIdentityError("story plan must contain nine Scenes")
+    for index, (authored, planned) in enumerate(
+        zip(authored_scenes, plan_scenes, strict=True), 1
+    ):
+        if not isinstance(authored, dict) or not isinstance(planned, dict):
+            raise StoryProjectionIdentityError(f"scene-{index:02d}: invalid plan/authoring Scene")
+        expected = {
+            "scene_id": f"scene-{index:02d}",
+            "new_evidence_ids": authored.get("newEvidenceIds", []),
+            "new_meaning": authored.get("newMeaning", ""),
+            "continuation_reason": authored.get("continuationReason", ""),
+            "connector": authored.get("connector", "therefore"),
+        }
+        for key, value in expected.items():
+            if planned.get(key) != value:
+                raise StoryProjectionIdentityError(
+                    f"E_STORY_SEMANTIC_DRIFT: scene-{index:02d} plan {key} differs from frozen ChatGPT authoring"
+                )
+
+
+def _validate_script_identity(
+    script: dict[str, Any],
+    authoring: dict[str, Any],
+    render: dict[str, Any],
+    md: str,
+    date: str,
+) -> None:
+    authored_scenes = authoring.get("scenes")
+    script_scenes = script.get("scenes")
+    render_scenes = render.get("scenes")
+    if not isinstance(authored_scenes, list) or len(authored_scenes) != 9:
+        raise StoryProjectionIdentityError("daily authoring must contain nine Scenes")
+    if not isinstance(script_scenes, list) or len(script_scenes) != 9:
+        raise StoryProjectionIdentityError("story script must contain nine Scenes")
+    if not isinstance(render_scenes, list) or len(render_scenes) != 9:
+        raise StoryProjectionIdentityError("render spec must contain nine Scenes")
+
+    for index, (authored, scripted, rendered) in enumerate(
+        zip(authored_scenes, script_scenes, render_scenes, strict=True), 1
+    ):
+        scene_id = f"scene-{index:02d}"
+        if not all(isinstance(item, dict) for item in (authored, scripted, rendered)):
+            raise StoryProjectionIdentityError(f"{scene_id}: invalid Scene object")
+        if scripted.get("scene_id") != scene_id or rendered.get("sceneId") != scene_id:
+            raise StoryProjectionIdentityError(f"{scene_id}: Scene identity mismatch")
+
+        authoritative = _authored_scene_narration(authored, scene_id)
+        story_narration = scripted.get("narration")
+        if not isinstance(story_narration, str) or normalize(story_narration) != normalize(authoritative):
+            raise StoryProjectionIdentityError(
+                f"E_STORY_SEMANTIC_DRIFT: {scene_id} Story Script narration differs from frozen ChatGPT authoring"
+            )
+
+        if scripted.get("connection_to_previous") != authored.get("connector", "therefore"):
+            raise StoryProjectionIdentityError(
+                f"E_STORY_SEMANTIC_DRIFT: {scene_id} connector differs from frozen ChatGPT authoring"
+            )
+        if scripted.get("evidence_ids", []) != authored.get("newEvidenceIds", []):
+            raise StoryProjectionIdentityError(
+                f"E_STORY_SEMANTIC_DRIFT: {scene_id} evidence IDs differ from frozen ChatGPT authoring"
+            )
+        if scripted.get("causal_claims", []) != authored.get("causalClaims", []):
+            raise StoryProjectionIdentityError(
+                f"E_STORY_SEMANTIC_DRIFT: {scene_id} causal claims differ from frozen ChatGPT authoring"
+            )
+
+        chunks = rendered.get("narrationChunks")
+        if not isinstance(chunks, list) or not chunks:
+            raise StoryProjectionIdentityError(f"{scene_id}: render narrationChunks missing")
+        render_narration = "".join(
+            str(chunk.get("speechText", "")) for chunk in chunks if isinstance(chunk, dict)
+        )
+        if normalize(render_narration) != normalize(authoritative):
+            raise StoryProjectionIdentityError(
+                f"E_STORY_SEMANTIC_DRIFT: {scene_id} render narration differs from frozen ChatGPT authoring"
+            )
+
+        public_narration = _public_scene_narration(md, index)
+        if normalize(public_narration) != normalize(authoritative):
+            raise StoryProjectionIdentityError(
+                f"E_STORY_SEMANTIC_DRIFT: {scene_id} public narration differs from frozen ChatGPT authoring"
+            )
+
+        chunk_by_id = {
+            chunk.get("chunkId"): chunk.get("speechText", "")
+            for chunk in chunks
+            if isinstance(chunk, dict) and isinstance(chunk.get("chunkId"), str)
+        }
+        for beat in rendered.get("visualBeats", []):
+            if not isinstance(beat, dict):
+                raise StoryProjectionIdentityError(f"{scene_id}: invalid Visual Beat")
+            start_text = chunk_by_id.get(beat.get("startChunkId"))
+            end_text = chunk_by_id.get(beat.get("endChunkId"))
+            if not isinstance(start_text, str) or not isinstance(end_text, str):
+                raise StoryProjectionIdentityError(
+                    f"{beat.get('beatId', scene_id)}: narration chunk reference missing"
+                )
+            start_cue = beat.get("narrationStartCue")
+            end_cue = beat.get("narrationEndCue")
+            if not isinstance(start_cue, str) or not normalize(start_text).startswith(normalize(start_cue)):
+                raise StoryProjectionIdentityError(
+                    f"{beat.get('beatId', scene_id)}: narrationStartCue is stale"
+                )
+            if not isinstance(end_cue, str) or not normalize(end_text).endswith(normalize(end_cue)):
+                raise StoryProjectionIdentityError(
+                    f"{beat.get('beatId', scene_id)}: narrationEndCue is stale"
+                )
+
+    if script.get("retained_counterevidence_ids", []) != authoring.get(
+        "retainedCounterevidenceIds", []
+    ):
+        raise StoryProjectionIdentityError(
+            "E_STORY_SEMANTIC_DRIFT: retained counterevidence differs from frozen ChatGPT authoring"
+        )
+    if script.get("unresolved_points", []) != authoring.get("unresolvedPoints", []):
+        raise StoryProjectionIdentityError(
+            "E_STORY_SEMANTIC_DRIFT: unresolved points differ from frozen ChatGPT authoring"
+        )
+
+
+def validate_read_only(
+    *,
+    story_script_path: Path,
+    creative_review_path: Path,
+    render_spec_path: Path,
+    episode_package_public_path: Path,
+    bindings_path: Path,
+) -> dict[str, Any]:
+    before = {
+        "render_spec": sha(render_spec_path),
+        "episode_package_public": sha(episode_package_public_path),
+    }
+    script = load_json(story_script_path, "story script")
+    review = load_json(creative_review_path, "creative review")
+    render = load_json(render_spec_path, "render spec")
+    bindings = load_json(bindings_path, "story production bindings")
+    md = episode_package_public_path.read_text(encoding="utf-8")
+    date = _episode_date(script, render)
+    root = _repo_root_from_render(render_spec_path)
+    authoring_path = root / "daily-authoring" / f"{date}.json"
+    story_plan_path = story_script_path.parent / "story_plan.json"
+    authoring = load_json(authoring_path, "daily authoring")
+    plan = load_json(story_plan_path, "story plan")
+
+    if authoring.get("episodeDate") != date:
+        raise StoryProjectionIdentityError("daily authoring episodeDate mismatch")
+    if review.get("verdict") != "pass":
+        raise StoryProjectionIdentityError("Story Engine review must be PASS")
+    _require_no_post_freeze_overrides(bindings, date)
+    _validate_plan_identity(plan, authoring, date)
+    _validate_script_identity(script, authoring, render, md, date)
+
+    after = {
+        "render_spec": sha(render_spec_path),
+        "episode_package_public": sha(episode_package_public_path),
+    }
+    if after != before:
+        raise StoryProjectionIdentityError(
+            "E_STORY_SEMANTIC_WRITER_FORBIDDEN: read-only Story gate changed production inputs"
+        )
+    return {
+        "contract_version": "2.0.0",
+        "episode_date": date,
+        "status": "pass",
+        "mode": "read-only-semantic-identity",
+        "authority": "chatgpt-daily-authoring",
+        "story_engine_role": "validation-only",
+        "semantic_writer": False,
+        "source_story_plan_sha256": sha(story_plan_path),
+        "source_story_script_sha256": sha(story_script_path),
+        "source_creative_review_sha256": sha(creative_review_path),
+        "source_daily_authoring_sha256": sha(authoring_path),
+        "before": before,
+        "after": after,
+        "scene_count": 9,
+        "visual_override_count": 0,
+    }
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--story-script", type=Path, required=True)
     ap.add_argument("--creative-review", type=Path, required=True)
     ap.add_argument("--render-spec", type=Path, required=True)
@@ -211,96 +327,28 @@ def main() -> int:
     ap.add_argument("--bindings", type=Path, required=True)
     ap.add_argument("--report", type=Path, required=True)
     args = ap.parse_args()
-
-    script = load_json(args.story_script)
-    review = load_json(args.creative_review)
-    render = load_json(args.render_spec)
-    bindings = load_json(args.bindings)
-    md = args.episode_package_public.read_text(encoding="utf-8")
-    before = {"render_spec": sha(args.render_spec), "episode_package_public": sha(args.episode_package_public)}
-
-    if bindings.get("contract_version") != "1.0.0" or bindings.get("episode_date") != script.get("episode_date"):
-        raise SystemExit("story production bindings contract/date mismatch")
-    if review.get("verdict") != "pass":
-        raise SystemExit("cannot project a non-PASS creative review")
-
-    script_scenes = {scene["scene_id"]: scene for scene in script["scenes"]}
-    for scene_index, render_scene in enumerate(render.get("scenes", []), start=1):
-        scene_id = f"scene-{scene_index:02d}"
-        if render_scene.get("sceneId") != scene_id or scene_id not in script_scenes:
-            raise SystemExit(f"scene identity mismatch at {scene_id}")
-        narration = script_scenes[scene_id]["narration"]
-        chunks = render_scene.get("narrationChunks", [])
-        pieces = segment(narration, len(chunks))
-        chunk_by_id: dict[str, str] = {}
-        for chunk, piece in zip(chunks, pieces, strict=True):
-            chunk["speechText"] = piece
-            chunk["captionText"] = to_display_text(piece)
-            chunk_by_id[chunk["chunkId"]] = piece
-        if "".join(chunk["speechText"] for chunk in chunks) != narration:
-            raise SystemExit(f"{scene_id}: render narration changed authored script")
-        for beat in render_scene.get("visualBeats", []):
-            start_text = chunk_by_id[beat["startChunkId"]]
-            end_text = chunk_by_id[beat["endChunkId"]]
-            beat["narrationStartCue"] = cue_start(start_text)
-            beat["narrationEndCue"] = cue_end(end_text)
-            md = replace_beat_cues(md, beat["beatId"], beat["narrationStartCue"], beat["narrationEndCue"])
-        md = replace_scene_narration(md, scene_index, narration)
-
-    apply_visual_overrides(render, bindings)
-    for scene_id, override in bindings.get("scene_overrides", {}).items():
-        md = replace_scene_visual_copy(md, int(scene_id.split("-")[1]), override)
-    beat_map = {beat["beatId"]: beat for scene in render.get("scenes", []) for beat in scene.get("visualBeats", [])}
-    for beat_id, override in bindings.get("beat_overrides", {}).items():
-        md = replace_beat_visual_copy(md, beat_id, override, beat_map[beat_id])
-
-    score_map = {
-        "openingHook": review["scores"]["opening"],
-        "storyProgression": review["scores"]["progression"],
-        "discovery": review["scores"]["discovery"],
-        "clarity": review["scores"]["clarity"],
-        "foxCharacter": review["scores"]["fox_voice"],
-        "reasonToFinish": review["scores"]["late_payoff"],
-    }
-    reviewer = review.get("reviewer", "editorial_critic")
-    review_note = (
-        "External Independent Critic PASS after targeted patch"
-        if reviewer == "independent_critic"
-        else "04 editorial review PASS after targeted rewrite"
-    )
-    render.setdefault("review", {})["verdict"] = "approved"
-    render["review"]["scores"] = score_map
-    render["review"]["totalScore"] = review["total_score"]
-    render["review"]["requiredChanges"] = []
-    render["review"]["changesApplied"] = [review_note]
-
-    for idx, scene in enumerate(script["scenes"], start=1):
-        rscene = render["scenes"][idx - 1]
-        if normalize("".join(c["speechText"] for c in rscene["narrationChunks"])) != normalize(scene["narration"]):
-            raise SystemExit(f"scene-{idx:02d}: render/script narration mismatch")
-
-    reaction_bindings_path = args.bindings.parent.parent / "reaction_timeline_bindings.json"
-    if reaction_bindings_path.is_file():
-        apply_story_reaction_bindings(args.bindings, reaction_bindings_path)
-
-    args.render_spec.write_text(canonical(render), encoding="utf-8")
-    args.episode_package_public.write_text(md, encoding="utf-8")
-    report = {
-        "contract_version": "1.0.0",
-        "episode_date": script["episode_date"],
-        "status": "pass",
-        "source_story_script_sha256": sha(args.story_script),
-        "source_creative_review_sha256": sha(args.creative_review),
-        "reviewer": reviewer,
-        "before": before,
-        "after": {"render_spec": sha(args.render_spec), "episode_package_public": sha(args.episode_package_public)},
-        "scene_count": 9,
-        "visual_override_count": len(bindings.get("beat_overrides", {})) + len(bindings.get("scene_overrides", {})),
-    }
+    try:
+        report = validate_read_only(
+            story_script_path=args.story_script,
+            creative_review_path=args.creative_review,
+            render_spec_path=args.render_spec,
+            episode_package_public_path=args.episode_package_public,
+            bindings_path=args.bindings,
+        )
+        code = 0
+    except (OSError, json.JSONDecodeError, StoryProjectionIdentityError) as exc:
+        report = {
+            "contract_version": "2.0.0",
+            "status": "fail",
+            "mode": "read-only-semantic-identity",
+            "semantic_writer": False,
+            "errors": [str(exc)],
+        }
+        code = 2
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(canonical(report), encoding="utf-8")
     print(canonical(report), end="")
-    return 0
+    return code
 
 
 if __name__ == "__main__":
