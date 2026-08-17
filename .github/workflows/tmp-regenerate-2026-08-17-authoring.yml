@@ -31,39 +31,31 @@ jobs:
 
           path = Path('daily-authoring-parts/2026-08-17/08_scenes_c.json')
           value = json.loads(path.read_text(encoding='utf-8'))
-          scenes = value['production']['scenes']
-          scene = scenes[-1]
+          scene = value['production']['scenes'][-1]
           assert scene['sceneRole'] == 'fixed_closing'
           assert len(scene['beats']) == 2
           assert len(scene['chunks']) == 1
           assert scene['chunks'][0]['text'] == '以上、朝のNASDAQカフェでした。今日も気をつけて、いってらっしゃい。こちらはそろそろ、おやすみなさい。'
           scene['chunks'] = [
-              {
-                  'expression': '通常',
-                  'text': '以上、朝のNASDAQカフェでした。今日も気をつけて、いってらっしゃい。',
-              },
-              {
-                  'expression': '通常',
-                  'text': 'こちらはそろそろ、おやすみなさい。',
-              },
+              {'expression': '通常', 'text': '以上、朝のNASDAQカフェでした。今日も気をつけて、いってらっしゃい。'},
+              {'expression': '通常', 'text': 'こちらはそろそろ、おやすみなさい。'},
           ]
           path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
           PY
 
       - name: Reassemble canonical Daily Authoring v2
-        run: python3 scripts/assemble_chatgpt_daily_authoring_parts.py --date 2026-08-17 --repo-root .
+        run: python3 scripts/assemble_chatgpt_daily_authoring_parts.py --date 2026-08-17 --repo-root . | tee assemble.log
 
       - name: Reissue official Editorial Semantic Acceptance
-        run: python3 scripts/validate_editorial_semantic_boundary.py --date 2026-08-17 --repo-root .
-
-      - name: Recreate and verify Semantic Freeze v1.2
+        id: acceptance
+        continue-on-error: true
         shell: bash
         run: |
-          set -euo pipefail
-          python3 scripts/chatgpt_semantic_freeze.py --repo-root . create --date 2026-08-17
-          python3 scripts/chatgpt_semantic_freeze.py --repo-root . verify --date 2026-08-17 --manifest semantic-freezes/2026-08-17.json
+          set -o pipefail
+          python3 scripts/validate_editorial_semantic_boundary.py --date 2026-08-17 --repo-root . 2>&1 | tee acceptance.log
 
       - name: Verify 9 scenes / 18 beats / chunk-beat alignment
+        if: always()
         shell: bash
         run: |
           set -euo pipefail
@@ -80,7 +72,8 @@ jobs:
           print('Scene structure PASS: 9 scenes / 18 beats / 1:1 chunk-beat alignment')
           PY
 
-      - name: Write hash report
+      - name: Write diagnostic hash report
+        if: always()
         shell: bash
         run: |
           set -euo pipefail
@@ -91,22 +84,27 @@ jobs:
               'daily-authoring-parts/2026-08-17/08_scenes_c.json',
               'daily-authoring/2026-08-17.json',
               'verification/2026-08-17/editorial_semantic_acceptance.json',
-              'semantic-freezes/2026-08-17.json',
           ]
-          report={p: hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in paths}
+          report={p: hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in paths if Path(p).is_file()}
           Path('scene9-regeneration-hashes.json').write_text(json.dumps(report, indent=2, sort_keys=True)+'\n', encoding='utf-8')
           print(json.dumps(report, indent=2, sort_keys=True))
           PY
 
-      - name: Upload regenerated authoritative files
+      - name: Upload diagnostic files
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: scene9-authoring-regeneration-${{ github.run_id }}
+          name: scene9-authoring-diagnostic-${{ github.run_id }}
           path: |
             daily-authoring-parts/2026-08-17/08_scenes_c.json
             daily-authoring/2026-08-17.json
             verification/2026-08-17/editorial_semantic_acceptance.json
-            semantic-freezes/2026-08-17.json
+            assemble.log
+            acceptance.log
             scene9-regeneration-hashes.json
           if-no-files-found: error
           retention-days: 1
+
+      - name: Fail if acceptance failed
+        if: steps.acceptance.outcome != 'success'
+        run: exit 1
