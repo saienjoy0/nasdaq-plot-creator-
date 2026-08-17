@@ -13,11 +13,16 @@ on:
       - "scripts/run_real_day_acceptance.py"
       - "scripts/run_real_day_acceptance_hardened.py"
       - "scripts/write_preview_production_outcome.py"
+      - "scripts/materializer_runtime_binding.py"
+      - "scripts/materialize_daily_episode.py"
+      - "scripts/run_daily_renderer_closure.py"
+      - "scripts/run_daily_renderer_closure_v12.py"
       - "skills/nasdaq-cafe-daily-production/**"
       - "skills/nasdaq-cafe-daily-production-hardening/**"
       - "tests/daily-production/**"
       - "tests/daily-production-hardening/**"
       - "tests/preview-production-path/**"
+      - "tests/materializer-runtime-binding/**"
       - "contracts/preview_production_path.json"
       - "contracts/preview_production_outcome.schema.json"
       - "docs/DAILY_PRODUCTION_RUNBOOK.md"
@@ -37,11 +42,16 @@ on:
       - "scripts/run_real_day_acceptance.py"
       - "scripts/run_real_day_acceptance_hardened.py"
       - "scripts/write_preview_production_outcome.py"
+      - "scripts/materializer_runtime_binding.py"
+      - "scripts/materialize_daily_episode.py"
+      - "scripts/run_daily_renderer_closure.py"
+      - "scripts/run_daily_renderer_closure_v12.py"
       - "skills/nasdaq-cafe-daily-production/**"
       - "skills/nasdaq-cafe-daily-production-hardening/**"
       - "tests/daily-production/**"
       - "tests/daily-production-hardening/**"
       - "tests/preview-production-path/**"
+      - "tests/materializer-runtime-binding/**"
       - "contracts/preview_production_path.json"
       - "contracts/preview_production_outcome.schema.json"
       - "docs/DAILY_PRODUCTION_RUNBOOK.md"
@@ -76,7 +86,11 @@ jobs:
             scripts/build_renderer_handoff_hardened.py \
             scripts/run_real_day_acceptance.py \
             scripts/run_real_day_acceptance_hardened.py \
-            scripts/write_preview_production_outcome.py
+            scripts/write_preview_production_outcome.py \
+            scripts/materializer_runtime_binding.py \
+            scripts/materialize_daily_episode.py \
+            scripts/run_daily_renderer_closure.py \
+            scripts/run_daily_renderer_closure_v12.py
       - name: Parse daily schemas
         run: |
           python -m json.tool skills/nasdaq-cafe-daily-production/contracts/production_request.schema.json >/dev/null
@@ -86,6 +100,8 @@ jobs:
           python -m json.tool contracts/preview_production_outcome.schema.json >/dev/null
       - name: Run canonical Preview production path tests
         run: python -m unittest discover -s tests/preview-production-path -p 'test_*.py' -v
+      - name: Run materializer runtime binding tests
+        run: python -m unittest discover -s tests/materializer-runtime-binding -p 'test_*.py' -v
       - name: Run daily state-machine tests
         run: python -m unittest discover -s tests/daily-production -p 'test_*.py' -v
       - name: Run hardened daily entrypoint tests

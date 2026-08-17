@@ -22,6 +22,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
+import materializer_runtime_binding
 import renderer_binding
 import run_daily_renderer_closure as legacy
 
@@ -171,7 +172,12 @@ def prepare_common(
         f"verification/{date}/authoring_renderer_closure.json",
         env=env,
     )
-    legacy.bind_legacy_materializer(root, date)
+    try:
+        runtime_binding = materializer_runtime_binding.MaterializerRuntimeBinding.from_workspace(
+            root, date
+        )
+    except materializer_runtime_binding.MaterializerRuntimeBindingError as exc:
+        raise VisualIntelligenceClosureError(str(exc)) from exc
     run(
         root,
         "python3",
@@ -248,7 +254,17 @@ def prepare_common(
             required_action="AUTHOR_VISUAL_SOURCE_SELECTION",
         )
     run(root, "python3", "scripts/prepare_visual_sources.py", "--date", date, "--repo-root", ".", env=env)
-    run(root, "python3", "scripts/materialize_daily_episode.py", "--date", date, "--repo-root", ".", env=env)
+    run(
+        root,
+        "python3",
+        "scripts/materialize_daily_episode.py",
+        "--date",
+        date,
+        "--repo-root",
+        ".",
+        *runtime_binding.cli_args(),
+        env=env,
+    )
     run(root, "python3", "scripts/materialize_financial_contract_1_0.py", "--date", date, "--repo-root", ".", env=env)
 
     renderer = binding["renderer"]
