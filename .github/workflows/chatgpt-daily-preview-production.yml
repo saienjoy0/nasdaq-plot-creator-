@@ -33,11 +33,31 @@ jobs:
           REQUEST="${CHANGED[0]}"
           EPISODE_DATE="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["episodeDate"])' "$REQUEST")"
           CONFIRMATION="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["confirmation"])' "$REQUEST")"
+          SEMANTIC_FREEZE_PATH="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["semanticFreeze"]["path"])' "$REQUEST")"
+          SEMANTIC_FREEZE_SHA256="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["semanticFreeze"]["sha256"])' "$REQUEST")"
           test "$CONFIRMATION" = "PREVIEW"
           test -d "daily-authoring-parts/$EPISODE_DATE"
           test -f "daily-inputs/$EPISODE_DATE/daily_source_package_$EPISODE_DATE.md"
+          test "$SEMANTIC_FREEZE_PATH" = "semantic-freezes/$EPISODE_DATE.json"
+          [[ "$SEMANTIC_FREEZE_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          test -f "$SEMANTIC_FREEZE_PATH"
+          ACTUAL_FREEZE_SHA256="$(sha256sum "$SEMANTIC_FREEZE_PATH" | awk '{print $1}')"
+          if [[ "$ACTUAL_FREEZE_SHA256" != "$SEMANTIC_FREEZE_SHA256" ]]; then
+            echo "::error::Production request semantic freeze SHA mismatch"
+            exit 1
+          fi
           echo "EPISODE_DATE=$EPISODE_DATE" >> "$GITHUB_ENV"
           echo "REQUEST_PATH=$REQUEST" >> "$GITHUB_ENV"
+          echo "SEMANTIC_FREEZE_PATH=$SEMANTIC_FREEZE_PATH" >> "$GITHUB_ENV"
+          echo "SEMANTIC_FREEZE_SHA256=$SEMANTIC_FREEZE_SHA256" >> "$GITHUB_ENV"
+
+      - name: Verify committed ChatGPT semantic freeze
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/chatgpt_semantic_freeze.py --repo-root . verify \
+            --date "$EPISODE_DATE" \
+            --manifest "$SEMANTIC_FREEZE_PATH"
 
       - name: Resolve canonical Renderer binding
         shell: bash
@@ -98,16 +118,17 @@ jobs:
                   print(f'materialized {target}')
           PY
 
-      - name: Run Visual Intelligence v1.2 production closure
+      - name: Run semantic-frozen Visual Intelligence v1.2 production closure
         shell: bash
         run: |
           mkdir -p "verification/$EPISODE_DATE"
           set -o pipefail
-          python3 scripts/run_daily_renderer_closure_v12.py \
+          python3 scripts/run_semantic_frozen_renderer_closure_v12.py \
             --phase compile \
             --date "$EPISODE_DATE" \
             --repo-root . \
             --renderer-root "$NASDAQ_CAFE_RENDERER_ROOT" \
+            --semantic-freeze "$SEMANTIC_FREEZE_PATH" \
             2>&1 | tee "verification/$EPISODE_DATE/preview-production-v12.log"
 
       - name: Resolve semantic closure outcome
@@ -220,6 +241,8 @@ jobs:
               print()
           print(f"Preview handoff ready: `{str(value['previewHandoffReady']).lower()}`")
           print()
+          print(f"Semantic freeze: `{os.environ['SEMANTIC_FREEZE_SHA256']}`")
+          print()
           print('Canonical Plot entry: `.github/workflows/chatgpt-daily-preview-production.yml`')
           print('Canonical Renderer request: `.github/workflows/nasdaq-cafe-handoff-preview-request-v3.yml`')
           PY
@@ -236,6 +259,7 @@ jobs:
             episodes/${{ env.EPISODE_DATE }}/
             render-specs/${{ env.EPISODE_DATE }}/render_spec.json
             verification/${{ env.EPISODE_DATE }}/
+            semantic-freezes/${{ env.EPISODE_DATE }}.json
             production-bundles/${{ env.EPISODE_DATE }}/
           if-no-files-found: warn
           retention-days: 14
