@@ -9,7 +9,7 @@
     "beatCount", "scene1To8BeatCount", "semanticGrammarCount",
     "frontHalfGrammarCount", "backHalfGrammarCount", "majorShiftCount",
     "frontHalfMajorShiftCount", "backHalfMajorShiftCount",
-    "bridgeTextBeatCount", "violations", "warnings"
+    "bridgeTextBeatCount", "violations"
   ],
   "properties": {
     "reportVersion": {"const": "1.0.0"},
