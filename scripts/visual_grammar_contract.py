@@ -2,9 +2,9 @@
 """Validate the editorial Visual Grammar 1.0.0 contract.
 
 The validator checks explicit Beat-level editorial decisions. It never chooses a
-Visual Grammar from a scene number, text, metric sign, or item count. Renderer
-Appearance Class and measured-duration checks are intentionally deferred to the
-renderer compatibility phase.
+Visual Grammar from a scene number, text, metric sign, or item count. Structural
+integrity is a hard failure. Editorial variety and preferred visual composition are
+machine-readable warnings for ChatGPT/editorial review and never block production.
 """
 
 from __future__ import annotations
@@ -105,10 +105,22 @@ def validate_registry(registry: dict[str, Any], schema: dict[str, Any]) -> None:
         )
 
 
+def _finding(
+    findings: list[dict[str, str]], code: str, path: str, message: str
+) -> None:
+    findings.append({"code": code, "path": path, "message": message})
+
+
 def _violation(
     violations: list[dict[str, str]], code: str, path: str, message: str
 ) -> None:
-    violations.append({"code": code, "path": path, "message": message})
+    _finding(violations, code, path, message)
+
+
+def _warning(
+    warnings: list[dict[str, str]], code: str, path: str, message: str
+) -> None:
+    _finding(warnings, code, path, message)
 
 
 def _collect_beats(
@@ -250,6 +262,7 @@ def validate_episode(
     episode: dict[str, Any], registry: dict[str, Any]
 ) -> dict[str, Any]:
     violations: list[dict[str, str]] = []
+    warnings: list[dict[str, str]] = []
     if episode.get("visualGrammarContractVersion") != "1.0.0":
         _violation(
             violations,
@@ -270,10 +283,7 @@ def validate_episode(
     beats = _collect_beats(episode, violations)
     by_id = {beat.beat_id: beat for beat in beats}
     for beat in beats:
-        if (
-            beat.transition_role == "return"
-            and beat.return_target_beat_id not in by_id
-        ):
+        if beat.transition_role == "return" and beat.return_target_beat_id not in by_id:
             _violation(
                 violations,
                 "VG_RETURN_TARGET_UNKNOWN",
@@ -287,123 +297,114 @@ def validate_episode(
     counted_map = {
         grammar["grammarId"]: grammar["counted"] for grammar in registry["grammars"]
     }
-    counted = {
-        beat.grammar_id for beat in scene_1_8 if counted_map[beat.grammar_id]
-    }
-    front_counted = {
-        beat.grammar_id for beat in front if counted_map[beat.grammar_id]
-    }
-    back_counted = {
-        beat.grammar_id for beat in back if counted_map[beat.grammar_id]
-    }
+    counted = {beat.grammar_id for beat in scene_1_8 if counted_map[beat.grammar_id]}
+    front_counted = {beat.grammar_id for beat in front if counted_map[beat.grammar_id]}
+    back_counted = {beat.grammar_id for beat in back if counted_map[beat.grammar_id]}
+
     if len(counted) < 6:
-        _violation(
-            violations,
+        _warning(
+            warnings,
             "VG_GRAMMAR_COUNT_TOO_LOW",
             "$.scenes[0:8]",
-            f"requires at least 6 counted grammars; found={len(counted)}",
+            f"editorial target is at least 6 counted grammars; found={len(counted)}",
         )
     if len(front_counted) < 3:
-        _violation(
-            violations,
+        _warning(
+            warnings,
             "VG_FRONT_HALF_GRAMMAR_COUNT_TOO_LOW",
             "$.scenes[0:4]",
-            f"requires at least 3 counted grammars; found={len(front_counted)}",
+            f"editorial target is at least 3 counted grammars; found={len(front_counted)}",
         )
     if len(back_counted) < 3:
-        _violation(
-            violations,
+        _warning(
+            warnings,
             "VG_BACK_HALF_GRAMMAR_COUNT_TOO_LOW",
             "$.scenes[4:8]",
-            f"requires at least 3 counted grammars; found={len(back_counted)}",
+            f"editorial target is at least 3 counted grammars; found={len(back_counted)}",
         )
 
-    major = [
-        beat for beat in scene_1_8 if beat.transition_role == "major-shift"
-    ]
-    front_major = [
-        beat for beat in front if beat.transition_role == "major-shift"
-    ]
+    major = [beat for beat in scene_1_8 if beat.transition_role == "major-shift"]
+    front_major = [beat for beat in front if beat.transition_role == "major-shift"]
     back_major = [beat for beat in back if beat.transition_role == "major-shift"]
     if len(major) < 4:
-        _violation(
-            violations,
+        _warning(
+            warnings,
             "VG_MAJOR_SHIFT_COUNT_TOO_LOW",
             "$.scenes[0:8]",
-            f"requires at least 4 major shifts; found={len(major)}",
+            f"editorial target is at least 4 major shifts; found={len(major)}",
         )
     if not front_major:
-        _violation(
-            violations,
+        _warning(
+            warnings,
             "VG_FRONT_HALF_MAJOR_SHIFT_MISSING",
             "$.scenes[0:4]",
-            "requires at least one major shift",
+            "editorial target is at least one major shift",
         )
     if not back_major:
-        _violation(
-            violations,
+        _warning(
+            warnings,
             "VG_BACK_HALF_MAJOR_SHIFT_MISSING",
             "$.scenes[4:8]",
-            "requires at least one major shift",
+            "editorial target is at least one major shift",
         )
 
     bridge_beats = [beat for beat in beats if beat.grammar_id == "bridge-text"]
     if len(bridge_beats) > 2:
-        _violation(
-            violations,
+        _warning(
+            warnings,
             "VG_BRIDGE_TEXT_OVERUSED",
             "$.scenes",
-            f"bridge-text max is 2; found={len(bridge_beats)}",
+            f"editorial target is at most 2 bridge-text beats; found={len(bridge_beats)}",
         )
     ordered = sorted(beats, key=lambda beat: (beat.scene_index, beat.beat_index))
     for previous, current in zip(ordered, ordered[1:]):
         if previous.grammar_id == current.grammar_id == "bridge-text":
-            _violation(
-                violations,
+            _warning(
+                warnings,
                 "VG_BRIDGE_TEXT_CONSECUTIVE",
                 current.path,
-                "bridge-text must not be consecutive",
+                "consecutive bridge-text beats reduce visual progression",
             )
 
     grammar_by_scene: dict[int, set[str]] = {}
     for beat in beats:
-        grammar_by_scene.setdefault(beat.scene_index + 1, set()).add(
-            beat.grammar_id
-        )
-    required_scene_grammar = {
+        grammar_by_scene.setdefault(beat.scene_index + 1, set()).add(beat.grammar_id)
+    preferred_scene_grammar = {
         1: "contradiction",
         6: "reaction",
         7: "comparison",
         8: "verification",
         9: "assembly",
     }
-    for scene_number, grammar_id in required_scene_grammar.items():
+    for scene_number, grammar_id in preferred_scene_grammar.items():
         if grammar_id not in grammar_by_scene.get(scene_number, set()):
-            _violation(
-                violations,
+            _warning(
+                warnings,
                 "VG_REQUIRED_SCENE_GRAMMAR_MISSING",
                 f"$.scenes[{scene_number - 1}]",
-                f"Scene {scene_number} requires {grammar_id}",
+                f"editorial preference: Scene {scene_number} uses {grammar_id}",
             )
     if (
         "causal" not in grammar_by_scene.get(5, set())
         and not episode.get("scene5CausalExceptionReason")
     ):
-        _violation(
-            violations,
+        _warning(
+            warnings,
             "VG_SCENE5_CAUSAL_MISSING",
             "$.scenes[4]",
-            "Scene 5 requires causal or an explicit exception reason",
+            "editorial preference: Scene 5 uses causal or records an exception reason",
         )
     expected_confirmed = episode.get("expectedConfirmed")
     if expected_confirmed is True and "gap" not in grammar_by_scene.get(4, set()):
-        _violation(
-            violations,
+        _warning(
+            warnings,
             "VG_SCENE4_GAP_MISSING",
             "$.scenes[3]",
-            "Expected confirmed episodes require gap in Scene 4",
+            "editorial preference: Expected-confirmed episodes visualize the gap in Scene 4",
         )
 
+    violations.sort(key=lambda item: (item["path"], item["code"], item["message"]))
+    warnings.sort(key=lambda item: (item["path"], item["code"], item["message"]))
     return {
         "reportVersion": "1.0.0",
         "visualGrammarContractVersion": "1.0.0",
@@ -419,6 +420,7 @@ def validate_episode(
         "backHalfMajorShiftCount": len(back_major),
         "bridgeTextBeatCount": len(bridge_beats),
         "violations": violations,
+        "warnings": warnings,
     }
 
 
@@ -453,8 +455,7 @@ def main(argv: list[str] | None = None) -> int:
         if report_errors:
             raise VisualGrammarError(
                 "\n".join(
-                    f"{_json_path(error)}: {error.message}"
-                    for error in report_errors
+                    f"{_json_path(error)}: {error.message}" for error in report_errors
                 )
             )
     except VisualGrammarError as exc:
