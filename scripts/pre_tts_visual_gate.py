@@ -7,10 +7,9 @@ shell in memory, validates Semantic Grammar plus the mirrored Renderer compatibi
 registry, and writes only a validation report. It never selects or repairs a Template,
 changes narration, or mutates the input render spec.
 
-The Plot repository intentionally does not create a second schema authority for the
-Renderer compatibility mirror. The mirror is validated fail-closed here by its fixed
-contract version and required entry fields; the pinned Renderer remains the strict
-owner of Template Variant allow-lists and final render-schema validation.
+Hard failures are limited to objective contract/render incompatibilities. Editorial
+variety and visual progression heuristics are emitted as non-blocking warnings for
+ChatGPT/editorial review.
 """
 
 from __future__ import annotations
@@ -181,6 +180,10 @@ def _append_violation(report: dict[str, Any], code: str, path: str, message: str
     report["status"] = "FAIL"
 
 
+def _append_warning(report: dict[str, Any], code: str, path: str, message: str) -> None:
+    report.setdefault("warnings", []).append({"code": code, "path": path, "message": message})
+
+
 def _validate_renderer_compatibility(
     render: dict[str, Any],
     report: dict[str, Any],
@@ -236,32 +239,32 @@ def _validate_renderer_compatibility(
     appearances = {row[3] for row in scene_1_8}
     surfaces = {row[4] for row in scene_1_8}
     if len(appearances) < 6:
-        _append_violation(
+        _append_warning(
             report,
             "VG_APPEARANCE_COUNT_TOO_LOW",
             "$.scenes[0:8]",
-            f"requires at least 6 Appearance Classes; found={len(appearances)}",
+            f"editorial target is at least 6 Appearance Classes; found={len(appearances)}",
         )
     if len(surfaces) < 5:
-        _append_violation(
+        _append_warning(
             report,
             "VG_DOMINANT_SURFACE_COUNT_TOO_LOW",
             "$.scenes[0:8]",
-            f"requires at least 5 Dominant Surfaces; found={len(surfaces)}",
+            f"editorial target is at least 5 Dominant Surfaces; found={len(surfaces)}",
         )
     if len({row[3] for row in front}) < 3:
-        _append_violation(
+        _append_warning(
             report,
             "VG_FRONT_HALF_APPEARANCE_COUNT_TOO_LOW",
             "$.scenes[0:4]",
-            f"requires at least 3 Appearance Classes; found={len({row[3] for row in front})}",
+            f"editorial target is at least 3 Appearance Classes; found={len({row[3] for row in front})}",
         )
     if len({row[3] for row in back}) < 3:
-        _append_violation(
+        _append_warning(
             report,
             "VG_BACK_HALF_APPEARANCE_COUNT_TOO_LOW",
             "$.scenes[4:8]",
-            f"requires at least 3 Appearance Classes; found={len({row[3] for row in back})}",
+            f"editorial target is at least 3 Appearance Classes; found={len({row[3] for row in back})}",
         )
 
     ordered = sorted(measured, key=lambda row: (row[0], row[1]))
@@ -275,31 +278,35 @@ def _validate_renderer_compatibility(
             appearance_run = appearance_run + 1 if previous[3] == appearance else 1
             surface_run = surface_run + 1 if previous[4] == surface else 1
             if appearance_run >= 3:
-                _append_violation(
+                _append_warning(
                     report,
                     "VG_SAME_APPEARANCE_RUN_TOO_LONG",
                     path,
-                    f"same Appearance Class {appearance!r} may not run for 3 consecutive Beats",
+                    f"same Appearance Class {appearance!r} runs for 3 or more consecutive Beats",
                 )
             if surface_run >= 4:
-                _append_violation(
+                _append_warning(
                     report,
                     "VG_SAME_DOMINANT_SURFACE_RUN_TOO_LONG",
                     path,
-                    f"same Dominant Surface {surface!r} may not run for 4 consecutive Beats",
+                    f"same Dominant Surface {surface!r} runs for 4 or more consecutive Beats",
                 )
-            if (
-                transition == "major-shift"
-                and previous[3] == appearance
-                and previous[4] == surface
-            ):
-                _append_violation(
+            if transition == "major-shift" and previous[3] == appearance and previous[4] == surface:
+                _append_warning(
                     report,
                     "VG_MAJOR_SHIFT_NOT_PHYSICAL",
                     path,
-                    "major-shift requires a physical Appearance Class or Dominant Surface change",
+                    "major-shift has no physical Appearance Class or Dominant Surface change",
                 )
         previous = row
+
+    report["violations"] = sorted(
+        report.get("violations", []), key=lambda item: (item["path"], item["code"], item["message"])
+    )
+    report["warnings"] = sorted(
+        report.get("warnings", []), key=lambda item: (item["path"], item["code"], item["message"])
+    )
+    report["status"] = "PASS" if not report["violations"] else "FAIL"
 
 
 def validate_pre_tts(
