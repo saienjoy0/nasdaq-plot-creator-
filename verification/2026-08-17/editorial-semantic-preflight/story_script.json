@@ -203,7 +203,7 @@
       "connection_to_previous": "closing",
       "evidence_ids": [],
       "formal_role": "fixed_closing",
-      "narration": "以上、朝のNASDAQカフェでした。今日も気をつけて、いってらっしゃい。こちらはそろそろ、おやすみなさい。",
+      "narration": "以上、朝のNASDAQカフェでした。今日も気をつけて、いってらっしゃい。\n\nこちらはそろそろ、おやすみなさい。",
       "scene_id": "scene-09"
     }
   ],
