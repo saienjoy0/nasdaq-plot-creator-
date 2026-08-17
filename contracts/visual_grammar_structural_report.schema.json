@@ -9,7 +9,7 @@
     "beatCount", "scene1To8BeatCount", "semanticGrammarCount",
     "frontHalfGrammarCount", "backHalfGrammarCount", "majorShiftCount",
     "frontHalfMajorShiftCount", "backHalfMajorShiftCount",
-    "bridgeTextBeatCount", "violations"
+    "bridgeTextBeatCount", "violations", "warnings"
   ],
   "properties": {
     "reportVersion": {"const": "1.0.0"},
@@ -25,7 +25,11 @@
     "frontHalfMajorShiftCount": {"type": "integer", "minimum": 0},
     "backHalfMajorShiftCount": {"type": "integer", "minimum": 0},
     "bridgeTextBeatCount": {"type": "integer", "minimum": 0},
-    "violations": {
+    "violations": {"$ref": "#/$defs/findings"},
+    "warnings": {"$ref": "#/$defs/findings"}
+  },
+  "$defs": {
+    "findings": {
       "type": "array",
       "items": {
         "type": "object",
