@@ -149,60 +149,64 @@ def prepare_common(
     env: dict[str, str],
     binding: dict,
 ) -> None:
-    if not (root / "daily-authoring-parts" / date).is_dir():
-        raise VisualIntelligenceClosureError(f"daily authoring parts missing for {date}")
     daily_source = root / "daily-inputs" / date / f"daily_source_package_{date}.md"
-    if not daily_source.is_file():
-        raise VisualIntelligenceClosureError(f"daily source package missing for {date}")
+    authoring = root / "daily-authoring" / f"{date}.json"
+    dossier = root / "research" / date / f"causal_research_dossier_{date}.json"
+    dossier_receipt = root / "research" / date / "causal_dossier_validation.json"
+    acceptance = root / "verification" / date / "editorial_semantic_acceptance.json"
+    freeze_raw = env.get("NASDAQ_CAFE_SEMANTIC_FREEZE_PATH", "")
+    if not freeze_raw:
+        raise VisualIntelligenceClosureError("current-v1.2 production requires committed Semantic Freeze from wrapper")
+    freeze = Path(freeze_raw).resolve()
+    for item in (daily_source, authoring, dossier, dossier_receipt, acceptance, freeze):
+        if not item.is_file():
+            raise VisualIntelligenceClosureError(f"current-v2 production input missing: {item}")
+    authoring_doc = load(authoring)
+    if authoring_doc.get("contractVersion") != "2.0.0":
+        raise VisualIntelligenceClosureError("current-v1.2 production requires Daily Authoring 2.0.0")
+
+    renderer = binding["renderer"]
+    run(
+        root, "python3", "scripts/run_daily_production_v12.py", "--workspace", ".", "init",
+        "--episode-date", date, "--daily-source-package", f"daily-inputs/{date}/daily_source_package_{date}.md",
+        "--requested-scope", "preview", "--renderer-commit", renderer["commit"],
+        "--renderer-contract-version", renderer["contractVersion"],
+        "--visual-intelligence-bridge-version", binding["bridgeContractVersion"], env=env,
+    )
+    advance(root, date=date, state="research_inputs_bound",
+            evidence=[f"research/{date}/research_input_manifest.json"], env=env)
+    advance(root, date=date, state="causal_dossier_valid",
+            evidence=[f"research/{date}/causal_research_dossier_{date}.json", f"research/{date}/causal_dossier_validation.json"], env=env)
 
     preserved_visual_source_authoring = _capture_visual_source_authoring(root, date)
-    run(root, "python3", "scripts/assemble_chatgpt_daily_authoring_parts.py", "--date", date, "--repo-root", ".", env=env)
     run(root, "python3", "scripts/materialize_chatgpt_daily_authoring.py", "--date", date, "--repo-root", ".", env=env)
-    run(root, "python3", "scripts/fixup_chatgpt_daily_materialization.py", "--date", date, "--repo-root", ".", env=env)
     _restore_visual_source_authoring(root, date, preserved_visual_source_authoring)
-    run(
-        root,
-        "python3",
-        "scripts/validate_chatgpt_daily_authoring_closure.py",
-        "--authoring",
-        f"daily-authoring/{date}.json",
-        "--registry",
-        "contracts/financial_recipe_registry.json",
-        "--json-output",
-        f"verification/{date}/authoring_renderer_closure.json",
-        env=env,
-    )
+    run(root, "python3", "scripts/story-engine/materialize_story_engine.py", "--date", date, "--repo-root", ".",
+        "--semantic-freeze", str(freeze), env=env)
     try:
-        runtime_binding = materializer_runtime_binding.MaterializerRuntimeBinding.from_workspace(
-            root, date
-        )
+        runtime_binding = materializer_runtime_binding.MaterializerRuntimeBinding.from_workspace(root, date)
     except materializer_runtime_binding.MaterializerRuntimeBindingError as exc:
         raise VisualIntelligenceClosureError(str(exc)) from exc
-    run(
-        root,
-        "python3",
-        "scripts/pre_tts_visual_gate.py",
-        "--render-spec",
-        f"render-specs/{date}/render_spec.json",
-        "--story-bindings",
-        f"working/{date}/story-engine/story_production_bindings.json",
-        "--output",
-        f"verification/{date}/pre_tts_visual_gate.json",
-        env=env,
-    )
+    run(root, "python3", "scripts/materialize_daily_episode.py", "--date", date, "--repo-root", ".",
+        *runtime_binding.cli_args(), env=env)
+    run(root, "python3", "scripts/materialize_financial_contract_1_0.py", "--date", date, "--repo-root", ".", env=env)
+    run(root, "python3", "scripts/validate_chatgpt_daily_authoring_closure.py",
+        "--authoring", f"daily-authoring/{date}.json", "--registry", "contracts/financial_recipe_registry.json",
+        "--json-output", f"verification/{date}/authoring_renderer_closure.json", env=env)
+    run(root, "python3", "scripts/pre_tts_visual_gate.py", "--render-spec", f"render-specs/{date}/render_spec.json",
+        "--story-bindings", f"working/{date}/story-engine/story_production_bindings.json",
+        "--output", f"verification/{date}/pre_tts_visual_gate.json", env=env)
+    run(root, "python3", "scripts/visual_intelligence_story_context.py", "--render-spec", f"render-specs/{date}/render_spec.json",
+        "--date", date, "--output-root", ".", env=env)
 
-    run(
-        root,
-        "python3",
-        "scripts/visual_intelligence_story_context.py",
-        "--render-spec",
-        f"render-specs/{date}/render_spec.json",
-        "--date",
-        date,
-        "--output-root",
-        ".",
-        env=env,
-    )
+    advance(root, date=date, state="editorial_snapshot_valid", evidence=[
+        f"working/{date}/visual-intelligence/editorial_snapshot.json",
+        f"working/{date}/visual-intelligence/financial_candidate_provider.json",
+        f"verification/{date}/editorial_semantic_acceptance.json",
+        str(freeze.relative_to(root)),
+        f"working/{date}/story-engine/story_projection_report.json",
+    ], env=env)
+
     vi = root / "working" / date / "visual-intelligence"
     requirements = vi / "visual_requirements.json"
     if not requirements.is_file():
@@ -210,39 +214,15 @@ def prepare_common(
             "E_VISUAL_REQUIREMENTS_MISSING: AI-B must author working/<date>/visual-intelligence/visual_requirements.json",
             required_action="AUTHOR_VISUAL_REQUIREMENTS",
         )
-    run(
-        root,
-        "python3",
-        "scripts/visual_intelligence_requirements.py",
-        "--requirements",
-        str(requirements.relative_to(root)),
-        "--render-spec",
-        f"render-specs/{date}/render_spec.json",
-        "--editorial-snapshot",
-        f"working/{date}/visual-intelligence/editorial_snapshot.json",
-        "--date",
-        date,
-        "--output",
-        f"working/{date}/visual-intelligence/visual_requirements_validation.json",
-        env=env,
-    )
+    run(root, "python3", "scripts/visual_intelligence_requirements.py", "--requirements", str(requirements.relative_to(root)),
+        "--render-spec", f"render-specs/{date}/render_spec.json", "--editorial-snapshot", f"working/{date}/visual-intelligence/editorial_snapshot.json",
+        "--date", date, "--output", f"working/{date}/visual-intelligence/visual_requirements_validation.json", env=env)
     source_intents = root / "working" / date / "visual_source_intents.json"
     if not source_intents.is_file():
         raise VisualIntelligenceClosureError(f"Visual Source intents missing: {source_intents}")
-    run(
-        root,
-        "python3",
-        "scripts/visual_intelligence_asset_plan.py",
-        "--requirements",
-        str(requirements.relative_to(root)),
-        "--visual-source-intents",
-        str(source_intents.relative_to(root)),
-        "--date",
-        date,
-        "--output",
-        f"working/{date}/visual-intelligence/visual_asset_plan_validation.json",
-        env=env,
-    )
+    run(root, "python3", "scripts/visual_intelligence_asset_plan.py", "--requirements", str(requirements.relative_to(root)),
+        "--visual-source-intents", str(source_intents.relative_to(root)), "--date", date,
+        "--output", f"working/{date}/visual-intelligence/visual_asset_plan_validation.json", env=env)
     source_intent_doc = load(source_intents)
     intent_rows = source_intent_doc.get("intents")
     if not isinstance(intent_rows, list):
@@ -254,89 +234,17 @@ def prepare_common(
             required_action="AUTHOR_VISUAL_SOURCE_SELECTION",
         )
     run(root, "python3", "scripts/prepare_visual_sources.py", "--date", date, "--repo-root", ".", env=env)
-    run(
-        root,
-        "python3",
-        "scripts/materialize_daily_episode.py",
-        "--date",
-        date,
-        "--repo-root",
-        ".",
-        *runtime_binding.cli_args(),
-        env=env,
-    )
-    run(root, "python3", "scripts/materialize_financial_contract_1_0.py", "--date", date, "--repo-root", ".", env=env)
-
-    renderer = binding["renderer"]
-    run(
-        root,
-        "python3",
-        "scripts/run_daily_production_v12.py",
-        "--workspace",
-        ".",
-        "init",
-        "--episode-date",
-        date,
-        "--daily-source-package",
-        f"daily-inputs/{date}/daily_source_package_{date}.md",
-        "--requested-scope",
-        "preview",
-        "--renderer-commit",
-        renderer["commit"],
-        "--renderer-contract-version",
-        renderer["contractVersion"],
-        "--visual-intelligence-bridge-version",
-        binding["bridgeContractVersion"],
-        env=env,
-    )
-
-    advance(
-        root,
-        date=date,
-        state="research_inputs_bound",
-        evidence=[f"research/{date}/research_input_manifest.json"],
-        env=env,
-    )
-    advance(
-        root,
-        date=date,
-        state="causal_dossier_valid",
-        evidence=[
-            f"research/{date}/causal_research_dossier_{date}.json",
-            f"research/{date}/causal_dossier_validation.json",
-        ],
-        env=env,
-    )
-    advance(
-        root,
-        date=date,
-        state="editorial_snapshot_valid",
-        evidence=[
-            f"working/{date}/visual-intelligence/editorial_snapshot.json",
-            f"working/{date}/visual-intelligence/financial_candidate_provider.json",
-        ],
-        env=env,
-    )
-    advance(
-        root,
-        date=date,
-        state="visual_requirements_planned",
-        evidence=[
-            f"working/{date}/visual-intelligence/visual_requirements.json",
-            f"working/{date}/visual-intelligence/visual_requirements_validation.json",
-            f"working/{date}/visual-intelligence/visual_asset_plan_validation.json",
-        ],
-        env=env,
-    )
-    asset_evidence = evidence_if_exists(
-        root,
-        [
-            f"working/{date}/visual_source_intents.json",
-            f"working/{date}/visual-intelligence/visual_asset_plan_validation.json",
-            f"verification/{date}/asset_resolution_log.json",
-            f"verification/{date}/image_generation_log.json",
-        ],
-    )
+    advance(root, date=date, state="visual_requirements_planned", evidence=[
+        f"working/{date}/visual-intelligence/visual_requirements.json",
+        f"working/{date}/visual-intelligence/visual_requirements_validation.json",
+        f"working/{date}/visual-intelligence/visual_asset_plan_validation.json",
+    ], env=env)
+    asset_evidence = evidence_if_exists(root, [
+        f"working/{date}/visual_source_intents.json",
+        f"working/{date}/visual-intelligence/visual_asset_plan_validation.json",
+        f"verification/{date}/asset_resolution_log.json",
+        f"verification/{date}/image_generation_log.json",
+    ])
     advance(root, date=date, state="assets_resolved", evidence=asset_evidence, env=env)
 
 

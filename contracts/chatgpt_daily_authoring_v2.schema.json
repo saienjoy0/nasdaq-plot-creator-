@@ -1,0 +1,433 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nasdaq-cafe.local/contracts/chatgpt_daily_authoring_v2.schema.json",
+  "title": "NASDAQ Cafe ChatGPT Daily Authoring v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contractVersion",
+    "episodeDate",
+    "marketDate",
+    "informationCutoff",
+    "durationMode",
+    "shortenedReason",
+    "causalDossier",
+    "storyPlan",
+    "storyScript",
+    "creativeReview",
+    "publishing",
+    "production"
+  ],
+  "properties": {
+    "contractVersion": {
+      "const": "2.0.0"
+    },
+    "episodeDate": {
+      "type": "string",
+      "format": "date"
+    },
+    "marketDate": {
+      "type": "string",
+      "format": "date"
+    },
+    "informationCutoff": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "durationMode": {
+      "enum": [
+        "standard",
+        "shortened"
+      ]
+    },
+    "shortenedReason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "causalDossier": {
+      "$ref": "#/$defs/dossierBinding"
+    },
+    "storyPlan": {
+      "$ref": "https://nasdaq-cafe.local/contracts/story_plan_v1.2.schema.json"
+    },
+    "storyScript": {
+      "$ref": "https://nasdaq-cafe.local/contracts/story_script_v1.0.schema.json"
+    },
+    "creativeReview": {
+      "$ref": "https://nasdaq-cafe.local/contracts/creative_review_v1.1.schema.json"
+    },
+    "publishing": {
+      "$ref": "#/$defs/publishing"
+    },
+    "production": {
+      "$ref": "#/$defs/production"
+    }
+  },
+  "$defs": {
+    "fileRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "dossierBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "validation"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "validation": {
+          "$ref": "#/$defs/fileRef"
+        }
+      }
+    },
+    "publishing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "titleCandidates",
+        "thumbnailTextCandidates",
+        "description"
+      ],
+      "properties": {
+        "titleCandidates": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "thumbnailTextCandidates": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "chunk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "text",
+        "expression"
+      ],
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expression": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "metric": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "label",
+        "value"
+      ],
+      "properties": {
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "beat": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "primaryFunction",
+        "screenState",
+        "visualMode",
+        "visualTemplate",
+        "contentType",
+        "screenQuestion",
+        "primaryElement",
+        "viewerTexts",
+        "changeCue",
+        "grammarId",
+        "transitionRole",
+        "evidenceSourceIds"
+      ],
+      "properties": {
+        "primaryFunction": {
+          "type": "string",
+          "minLength": 1
+        },
+        "screenState": {
+          "type": "string",
+          "minLength": 1
+        },
+        "visualMode": {
+          "type": "string",
+          "minLength": 1
+        },
+        "visualTemplate": {
+          "type": "string",
+          "minLength": 1
+        },
+        "contentType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "screenQuestion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "primaryElement": {
+          "type": "string",
+          "minLength": 1
+        },
+        "viewerTexts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "changeCue": {
+          "type": "string",
+          "minLength": 1
+        },
+        "grammarId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "transitionRole": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidenceSourceIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "metrics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/metric"
+          }
+        },
+        "nodes": {
+          "type": "array"
+        },
+        "edges": {
+          "type": "array"
+        },
+        "shots": {
+          "type": "array"
+        },
+        "visualEvents": {
+          "type": "array"
+        }
+      }
+    },
+    "scene": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "sceneRole",
+        "formalName",
+        "purpose",
+        "causalScope",
+        "performanceIntent",
+        "evidenceSourceIds",
+        "uncertainty",
+        "timelineBasis",
+        "expectedBasisType",
+        "visualMode",
+        "initialExpression",
+        "headline",
+        "supportingTexts",
+        "sourceLabel",
+        "chunks",
+        "beats"
+      ],
+      "properties": {
+        "sceneRole": {
+          "type": "string",
+          "minLength": 1
+        },
+        "formalName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1
+        },
+        "causalScope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "performanceIntent": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidenceSourceIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "uncertainty": {
+          "type": "string"
+        },
+        "timelineBasis": {
+          "type": "string"
+        },
+        "expectedBasisType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "visualMode": {
+          "type": "string",
+          "minLength": 1
+        },
+        "initialExpression": {
+          "type": "string",
+          "minLength": 1
+        },
+        "headline": {
+          "type": "string",
+          "minLength": 1
+        },
+        "supportingTexts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sourceLabel": {
+          "type": "string"
+        },
+        "chunks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/chunk"
+          }
+        },
+        "beats": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/beat"
+          }
+        },
+        "beliefBefore": false,
+        "beliefAfter": false,
+        "newEvidenceIds": false,
+        "newMeaning": false,
+        "continuationReason": false,
+        "connector": false,
+        "causalClaims": false,
+        "retainedCounterevidenceIds": false,
+        "unresolvedPoints": false
+      }
+    },
+    "production": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "episodeType",
+        "sources",
+        "pronunciations",
+        "corrections",
+        "visualSourceIntents",
+        "scenes"
+      ],
+      "properties": {
+        "episodeType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sources": {
+          "type": "array"
+        },
+        "pronunciations": {
+          "type": "array"
+        },
+        "corrections": {
+          "type": "array"
+        },
+        "visualSourceIntents": {
+          "type": "array"
+        },
+        "visualSourceSelection": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "scenes": {
+          "type": "array",
+          "minItems": 9,
+          "maxItems": 9,
+          "items": {
+            "$ref": "#/$defs/scene"
+          }
+        },
+        "retainedCounterevidenceIds": false,
+        "unresolvedPoints": false,
+        "centralContradiction": false,
+        "centralQuestion": false,
+        "selectedAngleId": false,
+        "openingPromise": false,
+        "midpointTurn": false,
+        "closingReframe": false,
+        "openLoops": false,
+        "expectedConfirmed": false,
+        "editorial": false,
+        "review": false
+      }
+    }
+  }
+}

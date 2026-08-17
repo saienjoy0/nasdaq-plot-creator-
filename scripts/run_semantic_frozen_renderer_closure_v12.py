@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -155,6 +156,10 @@ def main() -> int:
             write_safe_pause(root, args.date, required_action=pause[0], reason=pause[1])
             return 0
 
+        production_env = os.environ.copy()
+        resolved_manifest = manifest if manifest.is_absolute() else (root / manifest)
+        production_env["NASDAQ_CAFE_SEMANTIC_FREEZE_PATH"] = str(resolved_manifest.resolve())
+        production_env["NASDAQ_CAFE_SEMANTIC_FREEZE_SHA256"] = freeze_sha
         command = [
             sys.executable,
             "scripts/run_daily_renderer_closure_v12.py",
@@ -168,7 +173,7 @@ def main() -> int:
             str(args.renderer_root.resolve()),
         ]
         print("+", " ".join(command), flush=True)
-        completed = subprocess.run(command, cwd=root, check=False)
+        completed = subprocess.run(command, cwd=root, env=production_env, check=False)
 
         # The underlying closure may generate many derived files, but it is never
         # allowed to mutate the committed ChatGPT semantic authority inputs.

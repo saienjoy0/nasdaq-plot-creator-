@@ -246,7 +246,26 @@ def _validate_vi_transition(
 ) -> None:
     grouped = _evidence_by_name(evidence_paths)
     vi_dir = workspace / "working" / date / "visual-intelligence"
-    if new_state == "editorial_snapshot_valid":
+    if new_state == "causal_dossier_valid":
+        dossier_name = f"causal_research_dossier_{date}.json"
+        dossier = _require_one(
+            module=module, grouped=grouped, name=dossier_name, code=module.ERROR_CODES["stale"],
+            message="causal_dossier_valid requires exactly one current Causal Dossier",
+        )
+        receipt = _require_one(
+            module=module, grouped=grouped, name="causal_dossier_validation.json", code=module.ERROR_CODES["stale"],
+            message="causal_dossier_valid requires exactly one SHA-bound Causal Dossier validation receipt",
+        )
+        verifier = hardened._load_module(
+            "causal_dossier_receipt_v12_gate", ROOT / "scripts/materialize_causal_research.py"
+        )
+        try:
+            value = verifier.verify_validation_receipt(workspace, date, receipt)
+        except Exception as exc:
+            raise module.DailyProductionError(module.ERROR_CODES["stale"], f"Causal Dossier validation receipt failed: {exc}") from exc
+        if value.get("dossier", {}).get("path") != dossier.relative_to(workspace).as_posix() or value.get("dossier", {}).get("sha256") != module.sha256_file(dossier):
+            raise module.DailyProductionError(module.ERROR_CODES["stale"], "Causal Dossier receipt does not bind supplied Dossier")
+    elif new_state == "editorial_snapshot_valid":
         snapshot = _require_one(
             module=module,
             grouped=grouped,
@@ -259,6 +278,38 @@ def _validate_vi_transition(
             raise module.DailyProductionError(
                 module.ERROR_CODES["date"], "editorial snapshot episodeDate mismatch"
             )
+        acceptance = _require_one(
+            module=module, grouped=grouped, name="editorial_semantic_acceptance.json", code=module.ERROR_CODES["stale"],
+            message="editorial_snapshot_valid requires Editorial Semantic Acceptance",
+        )
+        projection = _require_one(
+            module=module, grouped=grouped, name="story_projection_report.json", code=module.ERROR_CODES["stale"],
+            message="editorial_snapshot_valid requires WS-4 Story identity report",
+        )
+        freeze_candidates = [p for p in evidence_paths if p.parent.name == "semantic-freezes" and p.suffix == ".json"]
+        if len(freeze_candidates) != 1:
+            raise module.DailyProductionError(module.ERROR_CODES["stale"], "editorial_snapshot_valid requires exactly one Semantic Freeze")
+        freeze_path = freeze_candidates[0]
+        acceptance_module = hardened._load_module(
+            "editorial_semantic_acceptance_v12_gate", ROOT / "scripts/validate_editorial_semantic_boundary.py"
+        )
+        freeze_module = hardened._load_module(
+            "chatgpt_semantic_freeze_v12_state_gate", ROOT / "scripts/chatgpt_semantic_freeze.py"
+        )
+        try:
+            accepted = acceptance_module.verify_acceptance(workspace, date, acceptance)
+            freeze = freeze_module.verify_manifest(workspace, date, freeze_path)
+        except Exception as exc:
+            raise module.DailyProductionError(module.ERROR_CODES["stale"], f"editorial semantic lineage failed: {exc}") from exc
+        if freeze.get("contractVersion") != "1.2.0":
+            raise module.DailyProductionError(module.ERROR_CODES["stale"], "current-v1.2 production requires Semantic Freeze 1.2.0")
+        if freeze.get("editorialSemanticAcceptance", {}).get("sha256") != module.sha256_file(acceptance):
+            raise module.DailyProductionError(module.ERROR_CODES["stale"], "Semantic Freeze binds a different Editorial Semantic Acceptance")
+        report = module.load_json(projection, "Story projection report")
+        if report.get("status") != "pass" or report.get("episode_date") != date:
+            raise module.DailyProductionError(module.ERROR_CODES["stale"], "WS-4 Story identity report must PASS for the same date")
+        if report.get("source_daily_authoring_sha256") != freeze.get("canonicalAuthoring", {}).get("sha256"):
+            raise module.DailyProductionError(module.ERROR_CODES["stale"], "WS-4 report is stale against frozen Daily Authoring")
     elif new_state == "visual_requirements_planned":
         requirements = _require_one(
             module=module,

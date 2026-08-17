@@ -14,6 +14,34 @@ on:
       - "contracts/financial_*.json"
       - "contracts/visual_grammar_*.json"
       - "contracts/viewer_surface_*.json"
+      - "contracts/chatgpt_daily_authoring_v2.schema.json"
+      - "contracts/editorial_semantic_acceptance.schema.json"
+      - "contracts/chatgpt_semantic_freeze.schema.json"
+      - "contracts/canon_manifest.schema.json"
+      - "scripts/materialize_causal_research.py"
+      - "scripts/validate_editorial_semantic_boundary.py"
+      - "scripts/chatgpt_semantic_freeze.py"
+      - "scripts/canon_manifest.py"
+      - "scripts/build_research_input_manifest.py"
+      - "scripts/editorial_memory_retrieval.py"
+      - "scripts/temporal_evidence.py"
+      - "scripts/story-engine/materialize_story_engine.py"
+      - "scripts/story-engine/project_story_script_to_production.py"
+      - "scripts/story-engine/validate_story_engine_bundle.py"
+      - "scripts/story-engine/validate_story_engine_acceptance_v1_1.py"
+      - "scripts/run_daily_renderer_closure_v12.py"
+      - "scripts/run_semantic_frozen_renderer_closure_v12.py"
+      - "scripts/run_daily_production_v12.py"
+      - "skills/nasdaq-cafe-causal-research/contracts/**"
+      - "skills/nasdaq-cafe-causal-research/validators/**"
+      - "skills/nasdaq-cafe-editorial-memory/contracts/**"
+      - "skills/nasdaq-cafe-story-plan/contracts/**"
+      - "skills/nasdaq-cafe-story-plan/validators/**"
+      - "skills/nasdaq-cafe-story-authoring/contracts/**"
+      - "skills/nasdaq-cafe-story-authoring/validators/**"
+      - "skills/nasdaq-cafe-entertainment-critic/contracts/**"
+      - "skills/nasdaq-cafe-entertainment-critic/validators/**"
+      - "tests/editorial-semantic-boundary/**"
       - "scripts/assemble_chatgpt_daily_authoring_parts.py"
       - "scripts/materialize_chatgpt_daily_authoring.py"
       - "scripts/viewer_surface_projection.py"
@@ -141,7 +169,7 @@ jobs:
 
       - name: Install closure dependencies
         run: |
-          python -m pip install --disable-pip-version-check jsonschema pytest pillow
+          python -m pip install --disable-pip-version-check jsonschema referencing pytest pillow
           npm --prefix .renderer ci
 
       - name: Run closure regression tests
@@ -153,7 +181,9 @@ jobs:
             tests/remotion-compat/test_fox_expression_projection.py \
             tests/remotion-compat/test_visual_director_bridge.py \
             tests/remotion-compat/test_remotion_template_variant.py \
-            tests/viewer-surface/test_viewer_surface_projection.py
+            tests/viewer-surface/test_viewer_surface_projection.py \
+            tests/editorial-semantic-boundary/test_current_contract_e2e.py \
+            tests/editorial-semantic-boundary/test_boundary_architecture.py
           python -m py_compile \
             scripts/validate_chatgpt_daily_authoring_closure.py \
             scripts/run_daily_renderer_closure.py \
@@ -163,7 +193,15 @@ jobs:
             scripts/materialize_renderer_sources.py \
             scripts/fixup_chatgpt_daily_materialization.py \
             scripts/remotion_template_variant.py \
-            scripts/visual_director_bridge.py
+            scripts/visual_director_bridge.py \
+            scripts/materialize_causal_research.py \
+            scripts/validate_editorial_semantic_boundary.py \
+            scripts/chatgpt_semantic_freeze.py \
+            scripts/story-engine/materialize_story_engine.py \
+            scripts/story-engine/project_story_script_to_production.py \
+            scripts/run_daily_renderer_closure_v12.py \
+            scripts/run_semantic_frozen_renderer_closure_v12.py \
+            scripts/run_daily_production_v12.py
 
       - name: Require exact-day Renderer 2.4 closure
         if: env.RUN_EXACT_DAY == 'true'

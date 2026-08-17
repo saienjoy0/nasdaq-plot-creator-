@@ -538,6 +538,171 @@ def build_episode_markdown(a: dict[str, Any], render: dict[str, Any]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+
+def _require_explicit_v2(a: dict[str, Any]) -> None:
+    scenes = a.get("scenes")
+    if not isinstance(scenes, list) or len(scenes) != 9:
+        raise SystemExit("Daily Authoring v2 production requires exactly 9 scenes")
+    total_beats = 0
+    for sidx, scene in enumerate(scenes, 1):
+        for key in (
+            "sceneRole", "formalName", "purpose", "causalScope", "performanceIntent",
+            "evidenceSourceIds", "uncertainty", "timelineBasis", "expectedBasisType",
+            "visualMode", "initialExpression", "headline", "supportingTexts", "sourceLabel",
+            "chunks", "beats",
+        ):
+            if key not in scene:
+                raise SystemExit(f"scene-{sidx:02d}: explicit {key} is required in Daily Authoring v2")
+        for cidx, chunk in enumerate(scene["chunks"], 1):
+            if "text" not in chunk or "expression" not in chunk:
+                raise SystemExit(f"scene-{sidx:02d} chunk {cidx}: explicit text/expression required")
+        for bidx, beat in enumerate(scene["beats"], 1):
+            total_beats += 1
+            for key in (
+                "primaryFunction", "screenState", "visualMode", "visualTemplate", "contentType",
+                "screenQuestion", "primaryElement", "viewerTexts", "changeCue", "grammarId",
+                "transitionRole", "evidenceSourceIds",
+            ):
+                if key not in beat:
+                    raise SystemExit(f"scene-{sidx:02d} beat {bidx}: explicit {key} required")
+    if total_beats != 18:
+        raise SystemExit(f"Daily Authoring v2 requires exactly 18 Visual Beats; found={total_beats}")
+
+
+def build_episode_markdown_v2(root_authoring: dict[str, Any], projected: dict[str, Any]) -> str:
+    lines = [
+        f"# 朝のNASDAQカフェ｜{root_authoring['episodeDate']} 制作パッケージ", "",
+        "## エピソード概要",
+        f"- 対象日：{root_authoring['episodeDate']}",
+        f"- 市場セッション：{root_authoring['marketDate']} US market",
+        f"- 情報締切：{root_authoring['informationCutoff']}",
+        f"- Story spine：{root_authoring['storyPlan']['story_spine']}",
+        f"- Creative Review：{root_authoring['creativeReview']['verdict']} / {root_authoring['creativeReview']['total_score']}",
+        "",
+    ]
+    script_scenes = root_authoring["storyScript"]["scenes"]
+    for index, (scene, scripted) in enumerate(zip(projected["scenes"], script_scenes, strict=True), 1):
+        lines += [
+            f"## Scene {index}｜{scene['formalName']}", "",
+            f"- 目的：{scene['purpose']}",
+            f"- 狐の演技意図：{scene['performanceIntent']}",
+            f"- 狐の表情：{scene['initialExpression']}",
+            f"- 画面モード：{scene['visualMode']}",
+            f"- 大テロップ：{scene['headline']}",
+            f"- 補助テロップ：{' / '.join(scene['supportingTexts'])}", "",
+            "### 完成ナレーション", "", scripted["narration"], "",
+            f"- 根拠と不確実性：{scene['uncertainty']}", "",
+        ]
+    publishing = projected["publishing"]
+    lines += [
+        "## タイトル候補", *[f"- {x}" for x in publishing["titleCandidates"]], "",
+        "## サムネイル文言候補", *[f"- {x}" for x in publishing["thumbnailTextCandidates"]], "",
+        "## 概要欄", publishing["description"], "",
+        "## 04による興味深さ・わかりやすさ審問結果",
+        f"- verdict：{root_authoring['creativeReview']['verdict']}",
+        f"- scores：{json.dumps(root_authoring['creativeReview']['scores'], ensure_ascii=False)}", "",
+        "## 実装上の注意",
+        "- GitHub Actions / Remotionは市場因果、Story、04、ナレーションを変更しない。",
+        "- このパッケージはCanonical Daily Authoring v2からのdeterministic projectionである。", "",
+    ]
+    return "\\n".join(lines).rstrip() + "\\n"
+
+
+def _materialize_current_v2(root: Path, date: str, raw_authoring: dict[str, Any]) -> int:
+    production = copy.deepcopy(raw_authoring["production"])
+    dossier_ref = raw_authoring["causalDossier"]
+    dossier_path = (root / dossier_ref["path"]).resolve()
+    if not dossier_path.is_file():
+        raise SystemExit("Daily Authoring v2 causal Dossier is missing")
+    dossier = load(dossier_path)
+    expected = dossier["expected_actual_gap"]["expected"]
+    actual = dossier["expected_actual_gap"]["actual"]
+    gap = dossier["expected_actual_gap"]["gap"]
+    handoff = dossier["editorial_handoff"]
+    review = raw_authoring["creativeReview"]
+    derived_editorial = {
+        "leadNews": handoff["provisional_lead"],
+        "storySpine": raw_authoring["storyPlan"]["story_spine"],
+        "centralHypothesis": handoff["central_hypothesis"],
+        "confidence": handoff["confidence"],
+        "expected": expected["statement"],
+        "actual": actual["statement"],
+        "gap": gap["statement"],
+        "expectedBasisType": expected["basis_class"],
+        "expectedBasisDetails": expected["statement"],
+        "counterEvidence": [item["statement"] for item in dossier.get("contrary_evidence", [])],
+    }
+    derived_review = {
+        "verdict": "approved" if review["verdict"] == "pass" else review["verdict"],
+        "scores": copy.deepcopy(review["scores"]),
+        "totalScore": review["total_score"],
+        "largestDropoffRisk": review["findings"][0]["viewer_impact"] if review.get("findings") else "",
+        "requiredChanges": [item["minimal_fix"] for item in review.get("findings", []) if item.get("severity") in {"critical", "major"}],
+        "changesApplied": [],
+    }
+    a = dict(production)
+    a.update({
+        "episodeDate": raw_authoring["episodeDate"],
+        "marketDate": raw_authoring["marketDate"],
+        "informationCutoff": raw_authoring["informationCutoff"],
+        "durationMode": raw_authoring["durationMode"],
+        "shortenedReason": raw_authoring["shortenedReason"],
+        "publishing": copy.deepcopy(raw_authoring["publishing"]),
+        "expectedConfirmed": expected["status"] in {"confirmed", "partially_confirmed"},
+        "editorial": derived_editorial,
+        "review": derived_review,
+    })
+    _require_explicit_v2(a)
+    projected, viewer_report = project_authoring_viewer_surfaces(a)
+    work = root / "working" / date
+    story = work / "story-engine"
+    episodes = root / "episodes" / date
+    render_dir = root / "render-specs" / date
+    dump(work / "financial_visual_bindings.json", {"contractVersion":"1.0.0","episodeDate":date,"bindings":projected.get("financialBindings",[])})
+    dump(work / "visual_source_intents.json", {"contractVersion":"1.0.0","episodeDate":date,"intents":projected.get("visualSourceIntents",[])})
+    if projected.get("visualSourceSelection") is not None:
+        dump(work / "visual_source_selection.json", projected["visualSourceSelection"])
+    dump(story / "story_production_bindings.json", {
+        "contract_version":"1.0.0","episode_date":date,"scene_overrides":{},"beat_overrides":{}
+    })
+
+    event_serial = [0]
+    caption_conversions: list[dict[str, Any]] = []
+    scenes = [build_scene(scene, i, event_serial, caption_conversions) for i, scene in enumerate(projected["scenes"], 1)]
+    viewer_report["conversions"].extend(caption_conversions)
+    viewer_report["conversionCount"] = len(viewer_report["conversions"])
+    write_projection_report(work / "viewer_surface_projection_report.json", viewer_report)
+    render = {
+        "schemaVersion":"2.4.0", "visualGrammarContractVersion":"1.0.0",
+        "expectedConfirmed": projected["expectedConfirmed"],
+        "episode": {
+            "id":date,"targetDate":date,"marketSession":f"{raw_authoring['marketDate']} US market",
+            "informationCutoff":raw_authoring["informationCutoff"],"episodeType":projected["episodeType"],
+            "durationMode":raw_authoring["durationMode"],"shortenedReason":raw_authoring["shortenedReason"],
+            "fps":30,"width":1920,"height":1080,
+        },
+        "editorial":projected["editorial"], "publishing":projected["publishing"],
+        "sources":projected["sources"], "review":projected["review"],
+        "pronunciations":projected["pronunciations"], "corrections":projected["corrections"],
+        "voiceProfileId":"gemini-charon", "scenes":scenes,
+    }
+    dump(render_dir / "render_spec.json", render)
+    bindings = []
+    for sidx, scene in enumerate(projected["scenes"], 1):
+        for bidx, beat in enumerate(scene["beats"], 1):
+            if "reactionBinding" in beat:
+                row = copy.deepcopy(beat["reactionBinding"])
+                row.setdefault("visualBeatId", f"vb-{sidx:02d}-{bidx:02d}")
+                bindings.append(row)
+    dump(work / "reaction_timeline_bindings.json", {"contractVersion":"1.0.0","episodeDate":date,"bindings":bindings})
+    episodes.mkdir(parents=True, exist_ok=True)
+    (episodes / f"episode_package_public_{date}.md").write_text(
+        build_episode_markdown_v2(raw_authoring, projected), encoding="utf-8"
+    )
+    print(f"MATERIALIZED Daily Authoring v2 {date}: scenes=9 beats=18 semantic_writer=false")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--date", required=True)
@@ -545,6 +710,10 @@ def main() -> int:
     args = ap.parse_args()
     root = args.repo_root.resolve()
     raw_authoring = load(root / "daily-authoring" / f"{args.date}.json")
+    if raw_authoring.get("contractVersion") == "2.0.0":
+        if raw_authoring.get("episodeDate") != args.date:
+            raise SystemExit("authoring episodeDate mismatch")
+        return _materialize_current_v2(root, args.date, raw_authoring)
     a, viewer_report = project_authoring_viewer_surfaces(raw_authoring)
     if a.get("episodeDate") != args.date:
         raise SystemExit("authoring episodeDate mismatch")

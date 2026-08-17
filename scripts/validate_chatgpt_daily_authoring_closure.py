@@ -81,7 +81,18 @@ def validate_authoring(authoring: dict[str, Any], registry: dict[str, Any]) -> l
     errors: list[str] = []
     errors.extend(validate_duration_ownership(authoring))
 
-    scenes = authoring.get("scenes")
+    # Current-v2 keeps presentation authoring under production while duration ownership
+    # remains at the canonical root. This is a structural projection only.
+    surface = authoring
+    if authoring.get("contractVersion") == "2.0.0":
+        production = authoring.get("production")
+        if not isinstance(production, dict):
+            return [*errors, "$.production: must be an object"]
+        surface = dict(production)
+        surface["durationMode"] = authoring.get("durationMode")
+        surface["shortenedReason"] = authoring.get("shortenedReason")
+
+    scenes = surface.get("scenes")
     if not isinstance(scenes, list):
         return [*errors, "$.scenes: must be an array"]
     if len(scenes) != 9:
@@ -117,7 +128,7 @@ def validate_authoring(authoring: dict[str, Any], registry: dict[str, Any]) -> l
     if total_beats != 18:
         errors.append(f"$.scenes[*].beats: expected 18 total Visual Beats; found={total_beats}")
 
-    bindings = authoring.get("financialBindings", [])
+    bindings = surface.get("financialBindings", [])
     if not isinstance(bindings, list):
         errors.append("$.financialBindings: must be an array")
         bindings = []

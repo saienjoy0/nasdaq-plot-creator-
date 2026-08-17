@@ -228,3 +228,33 @@ python scripts/run_daily_production_v12.py --workspace . request-final --explici
 ```
 
 The CLIs emit machine-readable JSON and stable error codes. Stop reasons identify the failed lifecycle boundary rather than silently repairing inputs.
+
+## Editorial Semantic Boundary v2
+
+Current Visual Intelligence v1.2 production uses this authority chain:
+
+```text
+Raw Daily Authoring Parts (authoring / lineage only)
+→ Authoritative Causal Dossier + SHA-bound validation receipt
+→ Canonical Daily Authoring v2
+→ Official Story Plan / Story Script / 04 validation
+→ Editorial Semantic Acceptance
+→ Semantic Freeze 1.2 CREATE (authoring / PR preparation only)
+→ committed Freeze
+→ Production VERIFY only
+→ derived Story sidecars + Story Engine acceptance (validation receipt only)
+→ WS-4 read-only identity gate
+→ editorial_snapshot_valid
+→ Visual Intelligence
+```
+
+Hard rules:
+
+- Daily Authoring v2 is the current ChatGPT semantic authority.
+- The Dossier body is referenced, not duplicated into production.
+- `creativeReview` is authored/reviewed by ChatGPT; machine code never synthesizes PASS.
+- Story Engine is validation-only after Semantic Freeze.
+- Current-v2 never calls generic semantic fixup.
+- Production GitHub Actions never CREATE Semantic Freeze or Editorial Semantic Acceptance.
+- Unknown contract versions fail closed.
+- Historical daily artifacts remain on explicit legacy paths and are never current-contract fixtures.

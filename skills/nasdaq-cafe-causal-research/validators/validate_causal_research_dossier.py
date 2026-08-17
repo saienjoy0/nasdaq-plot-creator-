@@ -269,16 +269,17 @@ def validate_dossier(
     except (OSError, json.JSONDecodeError) as exc:
         return ValidationResult([f"cannot read validation input: {exc}"], [])
 
-    errors.extend(
-        schema_errors(
-            dossier,
-            contracts_dir / (
-                "causal_research_dossier_v0.3.schema.json"
-                if dossier.get("contract_version") == "0.3.0"
-                else "causal_research_dossier_v0.2.schema.json"
-            ),
-            "dossier",
+    dossier_version = dossier.get("contract_version")
+    if dossier_version == "0.3.0":
+        dossier_schema_name = "causal_research_dossier_v0.3.schema.json"
+    elif dossier_version == "0.2.0":
+        dossier_schema_name = "causal_research_dossier_v0.2.schema.json"
+    else:
+        return ValidationResult(
+            [f"unsupported Causal Dossier contract_version: {dossier_version!r}"], warnings
         )
+    errors.extend(
+        schema_errors(dossier, contracts_dir / dossier_schema_name, "dossier")
     )
     errors.extend(
         schema_errors(
@@ -636,6 +637,89 @@ def validate_dossier(
     return ValidationResult(sorted(set(errors)), sorted(set(warnings)))
 
 
+
+def _repo_ref(repo_root: Path, path: Path) -> dict[str, str]:
+    root = repo_root.resolve()
+    resolved = path.resolve()
+    if resolved != root and root not in resolved.parents:
+        raise ValueError(f"path escapes repository root: {path}")
+    if not resolved.is_file():
+        raise ValueError(f"missing receipt-bound file: {path}")
+    return {"path": resolved.relative_to(root).as_posix(), "sha256": sha256_file(resolved)}
+
+
+def _receipt_episode_date(dossier_path: Path, manifest_path: Path) -> str | None:
+    for path in (dossier_path, manifest_path):
+        try:
+            value = load_json(path)
+        except Exception:
+            continue
+        candidate = value.get("episode_date")
+        if isinstance(candidate, str):
+            return candidate
+    return None
+
+
+def build_validation_receipt(
+    *,
+    result: ValidationResult,
+    dossier_path: Path,
+    manifest_path: Path,
+    retrieval_report_path: Path,
+    contracts_dir: Path,
+    repo_root: Path,
+) -> dict[str, Any]:
+    root = repo_root.resolve()
+    try:
+        dossier = load_json(dossier_path)
+        version = dossier.get("contract_version")
+    except Exception:
+        version = None
+    if version == "0.3.0":
+        dossier_schema = contracts_dir / "causal_research_dossier_v0.3.schema.json"
+    elif version == "0.2.0":
+        dossier_schema = contracts_dir / "causal_research_dossier_v0.2.schema.json"
+    else:
+        # Bind both known schemas on unsupported/malformed input so the FAIL receipt
+        # still records the exact validator contract surface that rejected it.
+        dossier_schema = contracts_dir / "causal_research_dossier_v0.3.schema.json"
+    editorial_contracts = (contracts_dir / "../../nasdaq-cafe-editorial-memory/contracts").resolve()
+    receipt_schema = contracts_dir / "causal_dossier_validation_receipt.schema.json"
+    validator_path = Path(__file__).resolve()
+    return {
+        "contractVersion": "1.0.0",
+        "status": "pass" if result.ok else "fail",
+        "episodeDate": _receipt_episode_date(dossier_path, manifest_path),
+        "dossier": _repo_ref(root, dossier_path),
+        "researchInputManifest": _repo_ref(root, manifest_path),
+        "memoryRetrievalReport": _repo_ref(root, retrieval_report_path),
+        "validator": _repo_ref(root, validator_path),
+        "schemaBindings": [
+            _repo_ref(root, dossier_schema),
+            _repo_ref(root, contracts_dir / "research_input_manifest.schema.json"),
+            _repo_ref(root, editorial_contracts / "memory_query_plan.schema.json"),
+            _repo_ref(root, editorial_contracts / "memory_retrieval_report.schema.json"),
+            _repo_ref(root, receipt_schema),
+            _repo_ref(root, root / "scripts/build_research_input_manifest.py"),
+            _repo_ref(root, root / "scripts/editorial_memory_retrieval.py"),
+            _repo_ref(root, root / "scripts/temporal_evidence.py"),
+        ],
+        "errors": result.errors,
+        "warnings": result.warnings,
+    }
+
+
+def _atomic_json(path: Path, value: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\\n", encoding="utf-8")
+    tmp.replace(path)
+
+
+def _validate_receipt_schema(payload: dict[str, Any], schema_path: Path) -> list[str]:
+    return schema_errors(payload, schema_path, "causal_dossier_validation_receipt")
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("dossier", type=Path)
@@ -660,13 +744,22 @@ def main() -> int:
         contracts_dir=args.contracts_dir,
         repo_root=args.repo_root,
     )
-    payload = result.as_dict()
+    payload = build_validation_receipt(
+        result=result,
+        dossier_path=args.dossier,
+        manifest_path=args.research_input_manifest,
+        retrieval_report_path=args.memory_retrieval_report,
+        contracts_dir=args.contracts_dir.resolve(),
+        repo_root=args.repo_root.resolve(),
+    )
+    receipt_schema = args.contracts_dir.resolve() / "causal_dossier_validation_receipt.schema.json"
+    receipt_errors = _validate_receipt_schema(payload, receipt_schema)
+    if receipt_errors:
+        payload["status"] = "fail"
+        payload["errors"] = sorted(set([*payload.get("errors", []), *receipt_errors]))
+        result.errors.extend(receipt_errors)
     if args.json_output:
-        args.json_output.parent.mkdir(parents=True, exist_ok=True)
-        args.json_output.write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
+        _atomic_json(args.json_output, payload)
     for error in result.errors:
         print(f"ERROR: {error}")
     for warning in result.warnings:

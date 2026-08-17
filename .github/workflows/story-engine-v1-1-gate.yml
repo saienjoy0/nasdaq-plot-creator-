@@ -12,6 +12,7 @@ on:
       - 'critic-adapters/**'
       - 'tests/story-engine-integration/**'
       - 'working/**/story-engine/templates/**'
+      - 'source-of-truth/canon_manifest.json'
       - '.github/workflows/story-engine-v1-1-gate.yml'
   workflow_dispatch:
 
@@ -46,8 +47,39 @@ jobs:
             scripts/story-engine/validate_story_engine_bundle.py \
             scripts/story-engine/validate_story_engine_acceptance_v1_1.py \
             scripts/run_daily_production_story_engine_v1_1.py
-      - name: Verify packed source-of-truth before Critic bundling
+      - name: Verify canonical source-of-truth before Critic bundling
         run: python scripts/materialize_sources.py --check-only
+      - name: Materialize legacy packed manifest only for historical integration fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          canon = json.loads(Path('source-of-truth/canon_manifest.json').read_text(encoding='utf-8'))
+          sources = []
+          for doc in canon['documents']:
+              storage = doc['storage']
+              if storage['mode'] != 'gzip+base64-concatenated':
+                  continue
+              sources.append({
+                  'logical_path': doc['logicalPath'],
+                  'sha256': doc['sha256'],
+                  'raw_bytes': doc['rawBytes'],
+                  'encoding': storage['mode'],
+                  'parts': storage['parts'],
+              })
+          if {row['logical_path'] for row in sources} != {
+              'source-of-truth/03_episode_production_spec.md',
+              'source-of-truth/04_entertainment_inquisitor.md',
+          }:
+              raise SystemExit('Canon Manifest packed-document set drifted')
+          Path('source-of-truth/packed_sources.json').write_text(
+              json.dumps({'sources': sources}, ensure_ascii=False, indent=2, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          PY
       - name: Smoke-test 2026-08-06 editorial Story Engine without external Critic or paid model
         run: |
           cp research/2026-08-06/causal_research_dossier.template.json research/2026-08-06/causal_research_dossier_2026-08-06.json

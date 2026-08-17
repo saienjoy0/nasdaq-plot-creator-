@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit acceptance for v1.2 state ordering and hard-gate preservation."""
+"""Unit acceptance for v1.2 state ordering and semantic hard-gate preservation."""
 from __future__ import annotations
 
 import hashlib
@@ -167,33 +167,102 @@ def main() -> int:
     date = "2099-03-03"
     with tempfile.TemporaryDirectory(prefix="nasdaq-v12-state-") as temp:
         root = Path(temp)
-        vi = root / "working" / date / "visual-intelligence"
-        snapshot = write(vi / "editorial_snapshot.json", {
-            "contractVersion": "1.0.0",
-            "episodeDate": date,
-        })
+        work = root / "working" / date
+        vi = work / "visual-intelligence"
+        snapshot = write(
+            vi / "editorial_snapshot.json",
+            {"contractVersion": "1.0.0", "episodeDate": date},
+        )
         snapshot_sha = module.sha256_file(snapshot)
-        requirements = write(vi / "visual_requirements.json", {
-            "contractVersion": "1.0.0",
-            "bridgeContractVersion": "visual-intelligence-bridge/1.2.0",
-            "episodeDate": date,
-            "editorialSnapshotSha256": snapshot_sha,
-            "intent": {"beats": []},
-            "provisionalDirection": {"requirements": []},
-        })
-        requirements_report = write(vi / "visual_requirements_validation.json", {
-            "status": "PASS",
-            "episodeDate": date,
-            "beatCount": 0,
-            "editorialSnapshotSha256": snapshot_sha,
-        })
 
-        v12._validate_vi_transition(
-            module=module,
-            workspace=root,
-            date=date,
-            new_state="editorial_snapshot_valid",
-            evidence_paths=[snapshot],
+        # The current-v1.2 editorial snapshot gate is intentionally semantic-frozen.
+        # Prove that the old snapshot-only fixture now fails closed, then provide the
+        # explicit synthetic Acceptance / Freeze / WS-4 lineage required by production.
+        expect_error(
+            "E_STALE_INPUT",
+            lambda: v12._validate_vi_transition(
+                module=module,
+                workspace=root,
+                date=date,
+                new_state="editorial_snapshot_valid",
+                evidence_paths=[snapshot],
+            ),
+        )
+
+        acceptance = write(
+            root / "verification" / date / "editorial_semantic_acceptance.json",
+            {"status": "PASS", "episodeDate": date},
+        )
+        authoring_sha = "a" * 64
+        projection = write(
+            work / "story-engine" / "story_projection_report.json",
+            {
+                "status": "pass",
+                "episode_date": date,
+                "source_daily_authoring_sha256": authoring_sha,
+            },
+        )
+        freeze_path = write(
+            root / "semantic-freezes" / f"{date}.json",
+            {"contractVersion": "1.2.0", "episodeDate": date},
+        )
+        acceptance_sha = module.sha256_file(acceptance)
+
+        class AcceptanceModule:
+            @staticmethod
+            def verify_acceptance(*args, **kwargs):
+                return {"status": "PASS", "episodeDate": date}
+
+        class FreezeModule:
+            @staticmethod
+            def verify_manifest(*args, **kwargs):
+                return {
+                    "contractVersion": "1.2.0",
+                    "episodeDate": date,
+                    "editorialSemanticAcceptance": {"sha256": acceptance_sha},
+                    "canonicalAuthoring": {"sha256": authoring_sha},
+                }
+
+        original_loader = v12.hardened._load_module
+
+        def semantic_loader(name, path):
+            if path.name == "validate_editorial_semantic_boundary.py":
+                return AcceptanceModule
+            if path.name == "chatgpt_semantic_freeze.py":
+                return FreezeModule
+            return original_loader(name, path)
+
+        v12.hardened._load_module = semantic_loader
+        try:
+            v12._validate_vi_transition(
+                module=module,
+                workspace=root,
+                date=date,
+                new_state="editorial_snapshot_valid",
+                evidence_paths=[snapshot, acceptance, projection, freeze_path],
+            )
+        finally:
+            v12.hardened._load_module = original_loader
+
+        requirements = write(
+            vi / "visual_requirements.json",
+            {
+                "contractVersion": "1.0.0",
+                "bridgeContractVersion": "visual-intelligence-bridge/1.2.0",
+                "episodeDate": date,
+                "editorialSnapshotSha256": snapshot_sha,
+                "intent": {"beats": []},
+                "provisionalDirection": {"requirements": []},
+            },
+        )
+        requirements_report = write(
+            vi / "visual_requirements_validation.json",
+            {
+                "status": "PASS",
+                "episodeDate": date,
+                "beatCount": 0,
+                "editorialSnapshotSha256": snapshot_sha,
+            },
         )
         v12._validate_vi_transition(
             module=module,
@@ -203,20 +272,24 @@ def main() -> int:
             evidence_paths=[requirements, requirements_report],
         )
 
-        package = vi / "visual_intelligence_package.json"
-        write(package, {
-            "contractVersion": "1.0.0",
-            "bridgeContractVersion": "visual-intelligence-bridge/1.2.0",
-            "episodeDate": date,
-            "inputs": {"editorialSnapshotSha256": snapshot_sha},
-            "final": {"status": "PASS"},
-        })
-        validation = vi / "visual_intelligence_validation.json"
-        write(validation, {
-            "status": "PASS",
-            "episodeDate": date,
-            "packageSha256": module.sha256_file(package),
-        })
+        package = write(
+            vi / "visual_intelligence_package.json",
+            {
+                "contractVersion": "1.0.0",
+                "bridgeContractVersion": "visual-intelligence-bridge/1.2.0",
+                "episodeDate": date,
+                "inputs": {"editorialSnapshotSha256": snapshot_sha},
+                "final": {"status": "PASS"},
+            },
+        )
+        validation = write(
+            vi / "visual_intelligence_validation.json",
+            {
+                "status": "PASS",
+                "episodeDate": date,
+                "packageSha256": module.sha256_file(package),
+            },
+        )
         v12._validate_vi_transition(
             module=module,
             workspace=root,
@@ -249,39 +322,48 @@ def main() -> int:
 
         # Recreate a matching snapshot for the Story-final hard-gate check.
         write(snapshot, {"contractVersion": "1.0.0", "episodeDate": date})
-        acceptance = write(root / "working" / date / "story-engine/story_engine_acceptance.json", {"status": "pass"})
-        episode_package = write(root / "episodes" / date / f"episode_package_{date}.md", "# synthetic\n")
-        projection = write(root / "working" / date / "story-engine/story_projection_report.json", {
-            "episode_date": date,
-            "status": "pass",
-        })
-        pre_tts = write(root / "verification" / date / "pre_tts_visual_gate.json", {
-            "episodeDate": date,
-            "status": "PASS",
-            "violations": [],
-        })
+        story_acceptance = write(
+            work / "story-engine" / "story_engine_acceptance.json",
+            {"status": "pass"},
+        )
+        episode_package = write(
+            root / "episodes" / date / f"episode_package_{date}.md",
+            "# synthetic\n",
+        )
+        story_projection = write(
+            work / "story-engine" / "story_projection_report.json",
+            {"episode_date": date, "status": "pass"},
+        )
+        pre_tts = write(
+            root / "verification" / date / "pre_tts_visual_gate.json",
+            {"episodeDate": date, "status": "PASS", "violations": []},
+        )
 
-        original_loader = v12.hardened._load_module
-        class AcceptanceValidator:
+        class StoryAcceptanceValidator:
             @staticmethod
             def validate_acceptance(*args, **kwargs):
                 return {"status": "pass", "errors": []}
-        v12.hardened._load_module = lambda *args, **kwargs: AcceptanceValidator
+
+        original_loader = v12.hardened._load_module
+        v12.hardened._load_module = lambda *args, **kwargs: StoryAcceptanceValidator
         try:
             v12._validate_story_final_gate(
                 module=module,
                 workspace=root,
                 date=date,
-                evidence_paths=[acceptance, episode_package, projection, pre_tts],
+                evidence_paths=[story_acceptance, episode_package, story_projection, pre_tts],
             )
-            write(pre_tts, {"episodeDate": date, "status": "PASS", "violations": ["synthetic"]})
+            write(
+                pre_tts,
+                {"episodeDate": date, "status": "PASS", "violations": ["synthetic"]},
+            )
             expect_error(
                 "E_RENDER_SPEC_INVALID",
                 lambda: v12._validate_story_final_gate(
                     module=module,
                     workspace=root,
                     date=date,
-                    evidence_paths=[acceptance, episode_package, projection, pre_tts],
+                    evidence_paths=[story_acceptance, episode_package, story_projection, pre_tts],
                 ),
             )
         finally:

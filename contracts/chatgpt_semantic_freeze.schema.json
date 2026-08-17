@@ -1,38 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://nasdaq-cafe.local/contracts/chatgpt_semantic_freeze.schema.json",
-  "title": "NASDAQ Cafe ChatGPT Semantic Freeze",
-  "type": "object",
-  "additionalProperties": false,
-  "required": ["contractVersion", "authority", "episodeDate", "canonManifest", "parts", "dailySourcePackage", "sourceSetDigestSha256"],
-  "properties": {
-    "contractVersion": {"const": "1.1.0"},
-    "authority": {"const": "chatgpt-semantic-source"},
-    "episodeDate": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
-    "canonManifest": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["path", "sha256"],
-      "properties": {
-        "path": {"const": "source-of-truth/canon_manifest.json"},
-        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
-      }
-    },
-    "parts": {
-      "type": "array",
-      "minItems": 1,
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["path", "sha256", "semanticSha256"],
-        "properties": {
-          "path": {"type": "string", "minLength": 1},
-          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-          "semanticSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
-        }
-      }
-    },
-    "dailySourcePackage": {
+  "title": "NASDAQ Cafe ChatGPT Semantic Freeze compatibility schema",
+  "oneOf": [
+    {"$ref": "#/$defs/legacyV11"},
+    {"$ref": "#/$defs/currentV12"}
+  ],
+  "$defs": {
+    "fileBinding": {
       "type": "object",
       "additionalProperties": false,
       "required": ["path", "sha256"],
@@ -41,6 +16,67 @@
         "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
       }
     },
-    "sourceSetDigestSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    "jsonBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "semanticSha256"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "semanticSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "legacyV11": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contractVersion",
+        "authority",
+        "episodeDate",
+        "canonManifest",
+        "parts",
+        "dailySourcePackage",
+        "sourceSetDigestSha256"
+      ],
+      "properties": {
+        "contractVersion": {"const": "1.1.0"},
+        "authority": {"const": "chatgpt-semantic-source"},
+        "episodeDate": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+        "canonManifest": {"$ref": "#/$defs/fileBinding"},
+        "parts": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/jsonBinding"}},
+        "dailySourcePackage": {"$ref": "#/$defs/fileBinding"},
+        "sourceSetDigestSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "currentV12": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contractVersion",
+        "authority",
+        "episodeDate",
+        "canonManifest",
+        "parts",
+        "dailySourcePackage",
+        "canonicalAuthoring",
+        "causalDossier",
+        "causalDossierValidation",
+        "editorialSemanticAcceptance",
+        "sourceSetDigestSha256"
+      ],
+      "properties": {
+        "contractVersion": {"const": "1.2.0"},
+        "authority": {"const": "chatgpt-semantic-source"},
+        "episodeDate": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+        "canonManifest": {"$ref": "#/$defs/fileBinding"},
+        "parts": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/jsonBinding"}},
+        "dailySourcePackage": {"$ref": "#/$defs/fileBinding"},
+        "canonicalAuthoring": {"$ref": "#/$defs/jsonBinding"},
+        "causalDossier": {"$ref": "#/$defs/jsonBinding"},
+        "causalDossierValidation": {"$ref": "#/$defs/jsonBinding"},
+        "editorialSemanticAcceptance": {"$ref": "#/$defs/jsonBinding"},
+        "sourceSetDigestSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    }
   }
 }
