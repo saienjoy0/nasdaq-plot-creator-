@@ -1,0 +1,112 @@
+name: TEMP Regenerate 2026-08-17 Authoring
+
+on:
+  push:
+    branches:
+      - production/2026-08-17-scene9-chunk-fix
+
+permissions:
+  contents: read
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install validator dependencies
+        run: python -m pip install --disable-pip-version-check jsonschema referencing
+
+      - name: Apply explicit Scene 9 chunk boundary in working tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path('daily-authoring-parts/2026-08-17/08_scenes_c.json')
+          value = json.loads(path.read_text(encoding='utf-8'))
+          scenes = value['production']['scenes']
+          scene = scenes[-1]
+          assert scene['sceneRole'] == 'fixed_closing'
+          assert len(scene['beats']) == 2
+          assert len(scene['chunks']) == 1
+          assert scene['chunks'][0]['text'] == '以上、朝のNASDAQカフェでした。今日も気をつけて、いってらっしゃい。こちらはそろそろ、おやすみなさい。'
+          scene['chunks'] = [
+              {
+                  'expression': '通常',
+                  'text': '以上、朝のNASDAQカフェでした。今日も気をつけて、いってらっしゃい。',
+              },
+              {
+                  'expression': '通常',
+                  'text': 'こちらはそろそろ、おやすみなさい。',
+              },
+          ]
+          path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
+
+      - name: Reassemble canonical Daily Authoring v2
+        run: python3 scripts/assemble_chatgpt_daily_authoring_parts.py --date 2026-08-17 --repo-root .
+
+      - name: Reissue official Editorial Semantic Acceptance
+        run: python3 scripts/validate_editorial_semantic_boundary.py --date 2026-08-17 --repo-root .
+
+      - name: Recreate and verify Semantic Freeze v1.2
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/chatgpt_semantic_freeze.py --repo-root . create --date 2026-08-17
+          python3 scripts/chatgpt_semantic_freeze.py --repo-root . verify --date 2026-08-17 --manifest semantic-freezes/2026-08-17.json
+
+      - name: Verify 9 scenes / 18 beats / chunk-beat alignment
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          value=json.loads(Path('daily-authoring/2026-08-17.json').read_text(encoding='utf-8'))
+          scenes=value['production']['scenes']
+          assert len(scenes) == 9
+          assert sum(len(s['beats']) for s in scenes) == 18
+          for i, scene in enumerate(scenes, 1):
+              assert len(scene['chunks']) == len(scene['beats']), (i, len(scene['chunks']), len(scene['beats']))
+          assert ''.join(c['text'] for c in scenes[-1]['chunks']) == '以上、朝のNASDAQカフェでした。今日も気をつけて、いってらっしゃい。こちらはそろそろ、おやすみなさい。'
+          print('Scene structure PASS: 9 scenes / 18 beats / 1:1 chunk-beat alignment')
+          PY
+
+      - name: Write hash report
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          paths = [
+              'daily-authoring-parts/2026-08-17/08_scenes_c.json',
+              'daily-authoring/2026-08-17.json',
+              'verification/2026-08-17/editorial_semantic_acceptance.json',
+              'semantic-freezes/2026-08-17.json',
+          ]
+          report={p: hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in paths}
+          Path('scene9-regeneration-hashes.json').write_text(json.dumps(report, indent=2, sort_keys=True)+'\n', encoding='utf-8')
+          print(json.dumps(report, indent=2, sort_keys=True))
+          PY
+
+      - name: Upload regenerated authoritative files
+        uses: actions/upload-artifact@v4
+        with:
+          name: scene9-authoring-regeneration-${{ github.run_id }}
+          path: |
+            daily-authoring-parts/2026-08-17/08_scenes_c.json
+            daily-authoring/2026-08-17.json
+            verification/2026-08-17/editorial_semantic_acceptance.json
+            semantic-freezes/2026-08-17.json
+            scene9-regeneration-hashes.json
+          if-no-files-found: error
+          retention-days: 1
