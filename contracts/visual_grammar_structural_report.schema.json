@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.nasdaq-cafe.local/visual_grammar_structural_report.schema.json",
   "title": "NASDAQ Cafe Visual Grammar Structural Report",
+  "$comment": "warnings remains schema-optional only for historical 1.0.0 artifacts; current generators always emit a warnings array and current-contract tests enforce that channel.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -25,7 +26,11 @@
     "frontHalfMajorShiftCount": {"type": "integer", "minimum": 0},
     "backHalfMajorShiftCount": {"type": "integer", "minimum": 0},
     "bridgeTextBeatCount": {"type": "integer", "minimum": 0},
-    "violations": {
+    "violations": {"$ref": "#/$defs/findings"},
+    "warnings": {"$ref": "#/$defs/findings"}
+  },
+  "$defs": {
+    "findings": {
       "type": "array",
       "items": {
         "type": "object",

@@ -11,6 +11,16 @@ class VisualGrammarReportRecomputeError(ValueError):
     pass
 
 
+QUALITY_WARNING_CODES = {
+    "VG_SAME_APPEARANCE_RUN_TOO_LONG",
+    "VG_DOMINANT_SURFACE_OVERWEIGHT",
+    "VG_CARD_BOARD_OVERWEIGHT",
+    "VG_NON_ANALYSIS_DURATION_TOO_LOW",
+    "VG_BRIDGE_TEXT_OVERUSED",
+    "VG_MAJOR_SHIFT_HOLD_TOO_SHORT",
+}
+
+
 def _require_equal(label: str, actual: Any, expected: Any) -> None:
     if actual != expected:
         raise VisualGrammarReportRecomputeError(
@@ -81,6 +91,12 @@ def validate_structural_report_against_render(
         raise VisualGrammarReportRecomputeError(
             "structural PASS report must contain zero violations"
         )
+    # New/current reports must carry the editorial-warning channel. The JSON schema
+    # keeps this optional only so historical 1.0.0 artifacts do not need rewriting.
+    if "warnings" in structural_report and not isinstance(structural_report["warnings"], list):
+        raise VisualGrammarReportRecomputeError(
+            "structural report warnings must be an array when present"
+        )
 
 
 def _validate_static_state_report(timing_report: dict[str, Any]) -> None:
@@ -138,12 +154,31 @@ def _validate_static_state_report(timing_report: dict[str, Any]) -> None:
         raise VisualGrammarReportRecomputeError(
             "staticState longestStaticStateMs exceeds warning threshold without warning row"
         )
-    # Phase 1 is deliberately report-only. Static findings must not be inserted into
-    # the existing hard-gate failures array or change the report status by themselves.
     if any(str(row.get("code", "")).startswith("VG_STATIC_STATE") for row in timing_report.get("failures", [])):
         raise VisualGrammarReportRecomputeError(
             "Static State 1.1.0 is report-only and must not appear in hard failures"
         )
+
+
+def _quality_signature(row: dict[str, Any]) -> tuple[Any, ...]:
+    return (
+        str(row.get("code")),
+        str(row.get("path")),
+        row.get("beatId"),
+        row.get("actual"),
+        row.get("limit"),
+        str(row.get("unit")),
+    )
+
+
+def _sorted_quality_signatures(rows: list[dict[str, Any]]) -> list[tuple[Any, ...]]:
+    return sorted(
+        (_quality_signature(row) for row in rows),
+        key=lambda item: (
+            item[0], item[1], "" if item[2] is None else str(item[2]),
+            repr(item[3]), repr(item[4]), item[5],
+        ),
+    )
 
 
 def validate_timing_report_metrics(timing_report: dict[str, Any]) -> None:
@@ -173,6 +208,7 @@ def validate_timing_report_metrics(timing_report: dict[str, Any]) -> None:
     non_analysis_appearances = {
         "entity-canvas", "document-media", "picturebook-canvas"
     }
+    expected_quality_warnings: list[dict[str, Any]] = []
 
     longest_run_ms = 0.0
     longest_run_ids: list[str] = []
@@ -186,8 +222,16 @@ def validate_timing_report_metrics(timing_report: dict[str, Any]) -> None:
             longest_run_ms = current_run_ms
             longest_run_ids = list(current_run_ids)
         if current_run_ms > thresholds["sameAppearanceRunMaxMs"]:
-            raise VisualGrammarReportRecomputeError(
-                f"same Appearance run exceeds threshold: {current_run_ms}"
+            first_id = current_run_ids[0] if current_run_ids else "unknown"
+            expected_quality_warnings.append(
+                {
+                    "code": "VG_SAME_APPEARANCE_RUN_TOO_LONG",
+                    "path": f"episode://{first_id}/appearance-run",
+                    "beatId": first_id if current_run_ids else None,
+                    "actual": current_run_ms,
+                    "limit": thresholds["sameAppearanceRunMaxMs"],
+                    "unit": "ms",
+                }
             )
 
     for index, row in enumerate(rows):
@@ -209,8 +253,15 @@ def validate_timing_report_metrics(timing_report: dict[str, Any]) -> None:
         if row["transitionRole"] == "major-shift":
             major_shift_count += 1
             if duration < thresholds["majorShiftStageMinMs"]:
-                raise VisualGrammarReportRecomputeError(
-                    f"major-shift Beat {row['beatId']} is shorter than threshold"
+                expected_quality_warnings.append(
+                    {
+                        "code": "VG_MAJOR_SHIFT_HOLD_TOO_SHORT",
+                        "path": f"episode://{row['sceneId']}/{row['beatId']}/durationMs",
+                        "beatId": row["beatId"],
+                        "actual": duration,
+                        "limit": thresholds["majorShiftStageMinMs"],
+                        "unit": "ms",
+                    }
                 )
 
         if appearance != current_appearance:
@@ -233,24 +284,64 @@ def validate_timing_report_metrics(timing_report: dict[str, Any]) -> None:
     bridge_ratio = _round_ratio(_ratio(bridge_ms, total_ms))
 
     if surface_max_ratio > thresholds["dominantSurfaceMaxRatio"]:
-        raise VisualGrammarReportRecomputeError(
-            f"Dominant Surface ratio exceeds threshold: {surface_max_ratio}"
+        expected_quality_warnings.append(
+            {
+                "code": "VG_DOMINANT_SURFACE_OVERWEIGHT",
+                "path": f"$.metrics.dominantSurfaceDurationMs.{surface_max_id or 'unknown'}",
+                "beatId": None,
+                "actual": surface_max_ratio,
+                "limit": thresholds["dominantSurfaceMaxRatio"],
+                "unit": "ratio",
+            }
         )
     if card_ratio > thresholds["cardBoardMaxRatio"]:
-        raise VisualGrammarReportRecomputeError(
-            f"card-board ratio exceeds threshold: {card_ratio}"
+        expected_quality_warnings.append(
+            {
+                "code": "VG_CARD_BOARD_OVERWEIGHT",
+                "path": "$.metrics.dominantSurfaceDurationMs.card-board",
+                "beatId": None,
+                "actual": card_ratio,
+                "limit": thresholds["cardBoardMaxRatio"],
+                "unit": "ratio",
+            }
         )
     if non_analysis_ms < thresholds["nonAnalysisMinMs"]:
-        raise VisualGrammarReportRecomputeError(
-            f"non-analysis duration is below threshold: {non_analysis_ms}"
+        expected_quality_warnings.append(
+            {
+                "code": "VG_NON_ANALYSIS_DURATION_TOO_LOW",
+                "path": "$.metrics.nonAnalysisDurationMs",
+                "beatId": None,
+                "actual": non_analysis_ms,
+                "limit": thresholds["nonAnalysisMinMs"],
+                "unit": "ms",
+            }
         )
     if (
         bridge_ms > thresholds["bridgeTextMaxMs"]
         or bridge_ratio > thresholds["bridgeTextMaxRatio"]
     ):
-        raise VisualGrammarReportRecomputeError(
-            f"bridge-text exceeds threshold: {bridge_ms}ms / {bridge_ratio}"
+        absolute_exceeded = bridge_ms > thresholds["bridgeTextMaxMs"]
+        expected_quality_warnings.append(
+            {
+                "code": "VG_BRIDGE_TEXT_OVERUSED",
+                "path": "$.metrics.bridgeTextDurationMs",
+                "beatId": None,
+                "actual": bridge_ms if absolute_exceeded else bridge_ratio,
+                "limit": thresholds["bridgeTextMaxMs"] if absolute_exceeded else thresholds["bridgeTextMaxRatio"],
+                "unit": "ms" if absolute_exceeded else "ratio",
+            }
         )
+
+    actual_quality_warnings = [
+        row
+        for row in timing_report.get("warnings", [])
+        if str(row.get("code")) in QUALITY_WARNING_CODES
+    ]
+    _require_equal(
+        "timing quality warning payloads",
+        _sorted_quality_signatures(actual_quality_warnings),
+        _sorted_quality_signatures(expected_quality_warnings),
+    )
 
     metrics = timing_report["metrics"]
     expected_metrics = {

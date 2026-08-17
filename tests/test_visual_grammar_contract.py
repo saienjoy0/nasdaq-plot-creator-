@@ -81,9 +81,11 @@ class VisualGrammarContractTests(unittest.TestCase):
     def test_registry_is_valid_and_complete(self):
         module.validate_registry(REGISTRY, SCHEMA)
 
-    def test_valid_episode_passes(self):
+    def test_valid_episode_passes_without_hard_failures(self):
         report = module.validate_episode(valid_episode(), REGISTRY)
         self.assertEqual(report["status"], "PASS")
+        self.assertEqual(report["violations"], [])
+        self.assertEqual(report["warnings"], [])
         self.assertGreaterEqual(report["semanticGrammarCount"], 6)
         self.assertGreaterEqual(report["majorShiftCount"], 4)
 
@@ -91,6 +93,7 @@ class VisualGrammarContractTests(unittest.TestCase):
         episode = valid_episode()
         episode["scenes"][0]["visualBeats"][0].pop("visualGrammar")
         report = module.validate_episode(episode, REGISTRY)
+        self.assertEqual(report["status"], "FAIL")
         self.assertIn(
             "VG_DECLARATION_MISSING",
             {violation["code"] for violation in report["violations"]},
@@ -102,6 +105,7 @@ class VisualGrammarContractTests(unittest.TestCase):
             "grammarId"
         ] = "auto-guessed"
         report = module.validate_episode(episode, REGISTRY)
+        self.assertEqual(report["status"], "FAIL")
         self.assertIn(
             "VG_UNKNOWN_GRAMMAR",
             {violation["code"] for violation in report["violations"]},
@@ -113,12 +117,13 @@ class VisualGrammarContractTests(unittest.TestCase):
             "returnTargetBeatId"
         ] = "vb-99-99"
         report = module.validate_episode(episode, REGISTRY)
+        self.assertEqual(report["status"], "FAIL")
         self.assertIn(
             "VG_RETURN_TARGET_UNKNOWN",
             {violation["code"] for violation in report["violations"]},
         )
 
-    def test_bridge_text_does_not_inflate_diversity(self):
+    def test_low_diversity_is_warning_not_production_stop(self):
         episode = valid_episode()
         for scene in episode["scenes"][:8]:
             for visual_beat in scene["visualBeats"]:
@@ -126,22 +131,38 @@ class VisualGrammarContractTests(unittest.TestCase):
                 visual_beat["visualGrammar"]["transitionRole"] = "continuation"
                 visual_beat["visualGrammar"]["returnTargetBeatId"] = None
         report = module.validate_episode(episode, REGISTRY)
-        codes = {violation["code"] for violation in report["violations"]}
-        self.assertIn("VG_GRAMMAR_COUNT_TOO_LOW", codes)
-        self.assertIn("VG_BRIDGE_TEXT_OVERUSED", codes)
+        warning_codes = {warning["code"] for warning in report["warnings"]}
+        self.assertEqual(report["status"], "PASS")
+        self.assertEqual(report["violations"], [])
+        self.assertIn("VG_GRAMMAR_COUNT_TOO_LOW", warning_codes)
+        self.assertIn("VG_BRIDGE_TEXT_OVERUSED", warning_codes)
+        self.assertIn("VG_MAJOR_SHIFT_COUNT_TOO_LOW", warning_codes)
 
-    def test_expected_confirmed_requires_gap_in_scene4(self):
+    def test_scene_number_grammar_preference_is_warning(self):
+        episode = valid_episode()
+        episode["scenes"][0]["visualBeats"][0]["visualGrammar"][
+            "grammarId"
+        ] = "evidence"
+        report = module.validate_episode(episode, REGISTRY)
+        self.assertEqual(report["status"], "PASS")
+        self.assertIn(
+            "VG_REQUIRED_SCENE_GRAMMAR_MISSING",
+            {warning["code"] for warning in report["warnings"]},
+        )
+
+    def test_expected_confirmed_gap_visual_is_warning(self):
         episode = valid_episode()
         episode["scenes"][3]["visualBeats"][0]["visualGrammar"][
             "grammarId"
         ] = "evidence"
         report = module.validate_episode(episode, REGISTRY)
+        self.assertEqual(report["status"], "PASS")
         self.assertIn(
             "VG_SCENE4_GAP_MISSING",
-            {violation["code"] for violation in report["violations"]},
+            {warning["code"] for warning in report["warnings"]},
         )
 
-    def test_reason_unknown_may_omit_scene5_causal_with_reason(self):
+    def test_reason_unknown_may_omit_scene5_causal_without_warning(self):
         episode = valid_episode()
         episode["scenes"][4]["visualBeats"][0]["visualGrammar"][
             "grammarId"
@@ -150,7 +171,7 @@ class VisualGrammarContractTests(unittest.TestCase):
         report = module.validate_episode(episode, REGISTRY)
         self.assertNotIn(
             "VG_SCENE5_CAUSAL_MISSING",
-            {violation["code"] for violation in report["violations"]},
+            {warning["code"] for warning in report["warnings"]},
         )
 
     def test_registry_rejects_counted_assembly(self):

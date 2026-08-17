@@ -54,6 +54,7 @@
       "items": {
         "oneOf": [
           {"$ref": "#/$defs/warning"},
+          {"$ref": "#/$defs/thresholdWarning"},
           {"$ref": "#/$defs/stagnationWarning"}
         ]
       }
@@ -234,6 +235,23 @@
         "durationMs": {"type": "number", "minimum": 0},
         "recommendedMinMs": {"const": 5000},
         "recommendedMaxMs": {"const": 8000}
+      }
+    },
+    "thresholdWarning": {
+      "type": "object", "additionalProperties": false,
+      "required": ["code", "path", "beatId", "message", "actual", "limit", "unit"],
+      "properties": {
+        "code": {"enum": [
+          "VG_SAME_APPEARANCE_RUN_TOO_LONG", "VG_DOMINANT_SURFACE_OVERWEIGHT",
+          "VG_CARD_BOARD_OVERWEIGHT", "VG_NON_ANALYSIS_DURATION_TOO_LOW",
+          "VG_BRIDGE_TEXT_OVERUSED", "VG_MAJOR_SHIFT_HOLD_TOO_SHORT"
+        ]},
+        "path": {"type": "string", "minLength": 1},
+        "beatId": {"type": ["string", "null"]},
+        "message": {"type": "string", "minLength": 1},
+        "actual": {"type": "number"},
+        "limit": {"type": "number"},
+        "unit": {"enum": ["ms", "ratio", "count"]}
       }
     },
     "stagnationWarning": {
