@@ -8,6 +8,7 @@ external Critic receipt; callers may request `auto` or `required` explicitly.
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import importlib.util
 import json
