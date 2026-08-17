@@ -1,0 +1,238 @@
+{
+  "production": {
+    "scenes": [
+      {
+        "beats": [
+          {
+            "changeCue": "next",
+            "contentType": "text",
+            "evidenceSourceIds": [
+              "source-004"
+            ],
+            "grammarId": "gap",
+            "primaryElement": "Expected / Actual / Gap",
+            "primaryFunction": "Explain",
+            "screenQuestion": "Formal consensusとの差は？",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "Q3売上：$8.99B → $9.12B",
+              "Q4売上：$9.54B → $10.25B",
+              "Q4 EPS：$3.69 → $4.02"
+            ],
+            "visualMode": "expectation-gap",
+            "visualTemplate": "expected-actual-gap-flow"
+          },
+          {
+            "changeCue": "next",
+            "contentType": "text",
+            "evidenceSourceIds": [
+              "source-004",
+              "source-005"
+            ],
+            "grammarId": "evidence",
+            "primaryElement": "Reutersの市場解釈",
+            "primaryFunction": "Explain",
+            "screenQuestion": "高期待の根拠は？",
+            "screenState": "Source",
+            "transitionRole": "continuation",
+            "viewerTexts": [
+              "formal beatでも株価下落",
+              "高い期待が背景",
+              "独自の数値期待は作らない"
+            ],
+            "visualMode": "text-focus",
+            "visualTemplate": "source-receipt"
+          }
+        ],
+        "causalScope": "company_direct",
+        "chunks": [
+          {
+            "expression": "分析",
+            "text": "ExpectedとActualを同じ表に置きます。Q3売上は八十九・九億ドル予想に対して九十一・二億ドル。Q4売上ガイドは九十五・四億ドル予想に対して百二・五億ドル。Q4調整EPSも三・六九ドル予想に対して四・〇二ドル中心です。"
+          },
+          {
+            "expression": "分析",
+            "text": "数字だけならGapはプラスです。それでも株価は下落しました。試験で合格点を超えたのに、周りが満点を想定していたような構図です。ただし、その『満点』を僕が勝手に数値化はしません。確認できるのは、Reutersが高い期待が背景にあると報じたところまでです。"
+          }
+        ],
+        "evidenceSourceIds": [
+          "source-002",
+          "source-004"
+        ],
+        "expectedBasisType": "major-reporting",
+        "formalName": "Expected / Actual / Gap",
+        "headline": "Expectedを超えた。それでも株価は下",
+        "initialExpression": "分析",
+        "performanceIntent": "数字のbeatと株価下落を同じ尺度で見せる",
+        "purpose": "formal consensusと実績の差を確認し、後付けの期待値を作らない",
+        "sceneRole": "expected_actual_gap",
+        "sourceLabel": "Reuters/LSEG + Applied Materials",
+        "supportingTexts": [
+          "Q3売上：9.12 > 8.99",
+          "Q4売上：10.25 > 9.54"
+        ],
+        "timelineBasis": "Q3 report and Q4 guidance disclosed 2026-08-13 after close",
+        "uncertainty": "『市場はもっと高い数字を期待した』という定量値は確認できない。高期待という解釈はReuters報道の範囲に限定する。",
+        "visualMode": "expectation-gap"
+      },
+      {
+        "beats": [
+          {
+            "changeCue": "next",
+            "contentType": "text",
+            "evidenceSourceIds": [
+              "source-005",
+              "source-007",
+              "source-008"
+            ],
+            "grammarId": "causal",
+            "primaryElement": "二つのエンジン",
+            "primaryFunction": "Explain",
+            "screenQuestion": "NASDAQへ何が重なった？",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "個別：高期待値の選別",
+              "マクロ：ホルムズ・原油 / 弱い小売",
+              "NASDAQ -0.28%"
+            ],
+            "visualMode": "causal-chain",
+            "visualTemplate": "causal-lane"
+          },
+          {
+            "changeCue": "next",
+            "contentType": "text",
+            "evidenceSourceIds": [
+              "source-007"
+            ],
+            "grammarId": "causal",
+            "primaryElement": "成長不安 vs 利上げ観測後退",
+            "primaryFunction": "Explain",
+            "screenQuestion": "小売悪化は一方向？",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "成長：弱い → 株の重し",
+              "金利期待：利上げ観測後退 → 相殺",
+              "単一方向ではない"
+            ],
+            "visualMode": "causal-chain",
+            "visualTemplate": "tailwind-headwind"
+          }
+        ],
+        "causalScope": "multiple",
+        "chunks": [
+          {
+            "expression": "分析",
+            "text": "ここからNASDAQ全体は別にします。AMAT一社の決算が指数全体を下げた、とまでは言えません。金曜はホルムズを巡る緊張と原油上昇が残り、七月の米小売売上高も〇・六パーセント減りました。成長不安というマクロの重しが重なっています。"
+          },
+          {
+            "expression": "分析",
+            "text": "ただ、小売の弱さは利上げ観測を後退させるので、テックには相殺方向もあります。だから昨夜を一つの矢印にすると壊れます。会社側では高期待値の選別、指数側ではマクロ不確実性。この二つを分けるのが今の中心仮説です。"
+          }
+        ],
+        "evidenceSourceIds": [
+          "source-005",
+          "source-006",
+          "source-007",
+          "source-008"
+        ],
+        "expectedBasisType": "not-applicable",
+        "formalName": "NASDAQまでの経路",
+        "headline": "個別の期待値調整 ＋ マクロ不確実性",
+        "initialExpression": "分析",
+        "performanceIntent": "個別株を指数原因へ拡大せず、相殺要因も同時に残す",
+        "purpose": "AMAT直接反応とNASDAQ-wideのマクロoverlayを二つのエンジンとして分ける",
+        "sceneRole": "global_context",
+        "sourceLabel": "Reuters / Census / fresh Collector",
+        "supportingTexts": [
+          "ホルムズ・原油",
+          "小売弱化：成長不安 / 利上げ観測後退"
+        ],
+        "timelineBasis": "AMAT reaction from 8/13 after close; macro data/tensions on 8/14",
+        "uncertainty": "AMATや原油のNASDAQ寄与率は確定できない。小売弱化には利上げ観測後退という相殺経路もある。",
+        "visualMode": "causal-chain"
+      },
+      {
+        "beats": [
+          {
+            "changeCue": "next",
+            "contentType": "text",
+            "evidenceSourceIds": [
+              "source-003",
+              "source-006",
+              "source-001"
+            ],
+            "grammarId": "reaction",
+            "primaryElement": "AMAT after close → Retail 08:30 → Nasdaq open",
+            "primaryFunction": "Explain",
+            "screenQuestion": "二つの時計は同じ？",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "8/13引け後：AMAT反応開始",
+              "8/14 08:30：小売発表",
+              "09:30：NASDAQは前日終値より上"
+            ],
+            "visualMode": "comparison",
+            "visualTemplate": "event-reaction-timeline"
+          },
+          {
+            "changeCue": "next",
+            "contentType": "text",
+            "evidenceSourceIds": [
+              "source-001"
+            ],
+            "grammarId": "verification",
+            "primaryElement": "NASDAQ 09:30 open > prior close",
+            "primaryFunction": "Explain",
+            "screenQuestion": "金曜朝から一直線に弱かった？",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "前日終値 26,803.025",
+              "09:30 open 26,851.148",
+              "引け 26,729.164",
+              "一日を単一材料で説明しない"
+            ],
+            "visualMode": "comparison",
+            "visualTemplate": "verification-matrix"
+          }
+        ],
+        "causalScope": "multiple",
+        "chunks": [
+          {
+            "expression": "分析",
+            "text": "時系列を置くと、ここで話が二つに分かれます。AMATの売りは八月十三日の引け後、決算発表の直後から始まっています。一方、七月の小売売上高が出たのは翌十四日の朝八時三十分です。同じ時計ではありません。"
+          },
+          {
+            "expression": "分析",
+            "text": "さらにNasdaq Compositeは九時三十分に二万六千八百五十一で寄り、前日の終値二万六千八百三を上回っていました。その後、引けでは二万六千七百二十九まで下げています。小売だけ、AMATだけで一日を説明するより、別の材料が重なったと見る方が時系列に合います。"
+          }
+        ],
+        "evidenceSourceIds": [
+          "source-001",
+          "source-003",
+          "source-006"
+        ],
+        "expectedBasisType": "not-applicable",
+        "formalName": "市場反応を時系列で確認",
+        "headline": "AMATは前夜から、NASDAQは金曜に失速",
+        "initialExpression": "分析",
+        "performanceIntent": "時系列を使って単純な単一原因説明を落とす",
+        "purpose": "AMAT反応と翌日マクロ材料の時計を分離し、二エンジン仮説をタイミングで検証する",
+        "sceneRole": "market_reaction",
+        "sourceLabel": "Applied Materials / Census / fresh Collector",
+        "supportingTexts": [
+          "8/13 after close：AMAT反応",
+          "8/14 08:30：小売",
+          "09:30：NASDAQは前日終値より上"
+        ],
+        "timelineBasis": "2026-08-13 after close → 2026-08-14 08:30 ET → 09:30 ET → close",
+        "uncertainty": "Nasdaq寄り付きが高かったことだけで午後の要因を特定はできない。タイミングは単独の因果証明ではない。",
+        "visualMode": "comparison"
+      }
+    ]
+  }
+}

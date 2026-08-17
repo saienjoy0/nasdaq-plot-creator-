@@ -1,0 +1,66 @@
+{
+  "authority": "chatgpt-semantic-source",
+  "canonManifest": {
+    "path": "source-of-truth/canon_manifest.json",
+    "sha256": "c454839e632654fe2473b08cf65937e158f27774ac6c6fcb430a57450356d9cd"
+  },
+  "canonicalAuthoring": {
+    "path": "daily-authoring/2026-08-17.json",
+    "semanticSha256": "7c27752710aaf623330327022a1864c5b6c81e536de8c6be71331dd89170e726",
+    "sha256": "636f84de092437d07670c2b27eec2c482f6da546c14df5b53ff78859a69e0b7e"
+  },
+  "causalDossier": {
+    "path": "research/2026-08-17/causal_research_dossier_2026-08-17.json",
+    "semanticSha256": "da6f859034f5cf138fab1c10996b8b4e98aef271b415b701243ca4dae123dc50",
+    "sha256": "1d490a22333e39a3972e11ea7378a885c1f34458da0b357bcc1f2f10e6281992"
+  },
+  "causalDossierValidation": {
+    "path": "research/2026-08-17/causal_dossier_validation.json",
+    "semanticSha256": "d104de387a198994287efaf92c27c6a37a33b8df3f97ec5532721f33ccca53be",
+    "sha256": "67fb914792121795fd5a97e63e63c49a9fe5e3ac8f0faf74bede31d2ab79d93c"
+  },
+  "contractVersion": "1.2.0",
+  "dailySourcePackage": {
+    "path": "daily-inputs/2026-08-17/daily_source_package_2026-08-17.md",
+    "sha256": "94b79aa7945e7008e86eaa9678a57d92e74e94049015c8215f6d3381484861f9"
+  },
+  "editorialSemanticAcceptance": {
+    "path": "verification/2026-08-17/editorial_semantic_acceptance.json",
+    "semanticSha256": "1fe33f9db8b1f32c8a9fac48c291489dcbd97aade2d6de9b71a6a35d27dcbb8d",
+    "sha256": "9a7dab78a3eef38a2b4526f88b9bb3545b7d3413a531eab50f1b76623f115d42"
+  },
+  "episodeDate": "2026-08-17",
+  "parts": [
+    {
+      "path": "daily-authoring-parts/2026-08-17/00_meta.json",
+      "semanticSha256": "4d1c1399a27b6b289f68902d1562189335b437aa4f232d096c40adec8937ef1f",
+      "sha256": "e7d39c7b884f973ad610f634569d4598b613467f62af89723eff35ea6720b41c"
+    },
+    {
+      "path": "daily-authoring-parts/2026-08-17/01_dossier.json",
+      "semanticSha256": "f789950e14a347f069e375fa75fd07aac8b12643792930032092399a2aa6abc2",
+      "sha256": "baba84be23032bfe4471e8624a7b55fac879261b8f58665d8beaf87e0644919e"
+    },
+    {
+      "path": "daily-authoring-parts/2026-08-17/05_context.json",
+      "semanticSha256": "f9bd4058e1498bac7b41c4e839a6328f1932b480b989a71df6c47b8fdf35aba9",
+      "sha256": "2e02c0e624f4ffdf2647e229c18ad86f730e10ad8ab5917215f3cf93391112e9"
+    },
+    {
+      "path": "daily-authoring-parts/2026-08-17/06_scenes_a.json",
+      "semanticSha256": "e4f98bbc4a4ea86dc8f4fc8633c914628c6f2cf6ebc3fd0d08c064c3f93e0a35",
+      "sha256": "5ca5b1c5ce6b9f1036d3cdb413f0c697b08c7b264aefac56cc3570393bc0e702"
+    },
+    {
+      "path": "daily-authoring-parts/2026-08-17/07_scenes_b.json",
+      "semanticSha256": "35e9af34df37efefd2f716c5f220ce550f4f1e3656d98e64615efd4a303e65b5",
+      "sha256": "c163470a48266b1b0624966e6ded8829a5fd45504a2bdf1b54c0c48fed947866"
+    },
+    {
+      "path": "daily-authoring-parts/2026-08-17/08_scenes_c.json",
+      "semanticSha256": "164e506de547678dda8fe6bf7d4fa8e5c62d149c779a9c694b296f5d5de26cf0",
+      "sha256": "cc909d15a8e8d5a94daccee47ce2149b4b28a628e7eeef9e5d7f301f84879c0e"
+    }
+  ],
+  "sourceSetDigestSha256": "8ca5be3c1c8b5a5fdb6155da574a14edb52d584f8cc3af74fb3f3969b7b23b43"
+}

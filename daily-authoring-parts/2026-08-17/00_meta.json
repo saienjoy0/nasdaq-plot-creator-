@@ -1,0 +1,73 @@
+{
+  "contractVersion": "2.0.0",
+  "durationMode": "standard",
+  "episodeDate": "2026-08-17",
+  "informationCutoff": "2026-08-17T04:59:02Z",
+  "marketDate": "2026-08-14",
+  "researchAuthoring": {
+    "memoryQueryPlan": {
+      "comparison_questions": [
+        "過去のAI決算回と比べ、formal beatでも売られる期待値差が中心か",
+        "マクロと会社固有反応を分離できるか"
+      ],
+      "contract_version": "1.0.0",
+      "entities": [
+        {
+          "canonical": "Applied Materials",
+          "entity_id": null,
+          "raw": "AMAT",
+          "resolution": "unresolved"
+        }
+      ],
+      "episode_date": "2026-08-17",
+      "indicators": [
+        "Nasdaq Composite",
+        "SOXX ETF",
+        "US retail sales"
+      ],
+      "lead_candidates": [
+        "AMAT beat-and-raiseでも下落",
+        "半導体の反応分裂"
+      ],
+      "limits": {
+        "max_characters": 18000,
+        "max_claims": 0,
+        "max_episodes": 0,
+        "max_lessons": 0,
+        "max_threads": 0
+      },
+      "policies": [
+        "Federal Reserve policy"
+      ],
+      "relations": [
+        {
+          "relation": "expectation repricing",
+          "source": "AMAT results",
+          "target": "AMAT price"
+        },
+        {
+          "relation": "macro overlay",
+          "source": "Hormuz/oil/retail",
+          "target": "Nasdaq"
+        }
+      ],
+      "technologies": [
+        "AI semiconductor manufacturing",
+        "advanced packaging"
+      ],
+      "time_window": {
+        "from": "2026-08-13",
+        "to": "2026-08-17"
+      },
+      "topics": [
+        "Applied Materials",
+        "AI expectations",
+        "semiconductor dispersion",
+        "retail sales",
+        "Strait of Hormuz",
+        "oil"
+      ]
+    }
+  },
+  "shortenedReason": null
+}

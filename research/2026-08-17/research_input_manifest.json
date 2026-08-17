@@ -1,0 +1,80 @@
+{
+  "contract_version": "1.1.0",
+  "episode_date": "2026-08-17",
+  "inputs": {
+    "daily_source_package": {
+      "path": "daily-inputs/2026-08-17/daily_source_package_2026-08-17.md",
+      "sha256": "94b79aa7945e7008e86eaa9678a57d92e74e94049015c8215f6d3381484861f9"
+    },
+    "memory_context": {
+      "path": "working/2026-08-17/memory_context_2026-08-17.md",
+      "sha256": "754007b745abd1b697da2457bac9dc7dc7bc22b42dedf76d0a95779711746ee3"
+    },
+    "memory_query_plan": {
+      "path": "working/2026-08-17/memory_query_plan.json",
+      "sha256": "675f63e3523ee687abb6492980f430133fc3f303c13add92bc5088a4c7647863"
+    },
+    "memory_retrieval_report": {
+      "path": "working/2026-08-17/memory_retrieval_report_2026-08-17.json",
+      "sha256": "e0171057da8ccc5b18f3230802ac0e25bd9c4fbd779c72a693375e50fa72ad97"
+    }
+  },
+  "memory_intake": {
+    "current_revalidation_required": [],
+    "historical_context_only": [],
+    "not_selected": [
+      {
+        "detail": "",
+        "item_id": "ai-capex-evaluation-axis",
+        "item_type": "claim",
+        "reason": "outside_time_window"
+      },
+      {
+        "detail": "",
+        "item_id": "2026-07-31",
+        "item_type": "episode",
+        "reason": "outside_time_window"
+      },
+      {
+        "detail": "",
+        "item_id": "ai-capex-payback",
+        "item_type": "thread",
+        "reason": "outside_time_window"
+      }
+    ],
+    "procedural": [
+      {
+        "historical_confidence": "unknown",
+        "item_id": "active-context",
+        "item_type": "core",
+        "path": "editorial-memory/active_context.md",
+        "provenance_paths": [
+          "editorial-memory/active_context.md"
+        ],
+        "requires_current_revalidation": false,
+        "retrieval_status": "read_only"
+      },
+      {
+        "historical_confidence": "unknown",
+        "item_id": "fox-editorial-state",
+        "item_type": "core",
+        "path": "editorial-memory/core/fox_editorial_state.md",
+        "provenance_paths": [
+          "editorial-memory/core/fox_editorial_state.md"
+        ],
+        "requires_current_revalidation": false,
+        "retrieval_status": "read_only"
+      }
+    ]
+  },
+  "session": {
+    "information_cutoff": "2026-08-17T04:59:02Z",
+    "market_date": "2026-08-14",
+    "timezone": "America/New_York"
+  },
+  "validation": {
+    "errors": [],
+    "status": "pass",
+    "warnings": []
+  }
+}
