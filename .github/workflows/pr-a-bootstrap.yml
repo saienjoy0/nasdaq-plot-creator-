@@ -1,4 +1,4 @@
-name: PR-A Semantic Boundary Bootstrap
+name: PR-A Workflow Projection Bootstrap
 
 on:
   push:
@@ -11,203 +11,122 @@ permissions:
   contents: write
 
 jobs:
-  apply-and-verify:
+  project-workflows:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install semantic test dependencies
-        run: python -m pip install --disable-pip-version-check jsonschema referencing pytest
-
-      - name: Reassemble and unpack fail-closed PR-A overlay
+      - name: Materialize the two already-tested workflow projections
         shell: bash
         run: |
           set -euo pipefail
-          test "$(find . -maxdepth 1 -name '.pr-a-overlay.part*' -type f | wc -l)" -eq 10
-          cat .pr-a-overlay.part00 .pr-a-overlay.part01 .pr-a-overlay.part02 .pr-a-overlay.part03 .pr-a-overlay.part04 \
-              .pr-a-overlay.part05 .pr-a-overlay.part06 .pr-a-overlay.part07 .pr-a-overlay.part08 .pr-a-overlay.part09 \
-              | base64 -d > /tmp/pr-a-overlay.tar.xz
-          test "$(wc -c < /tmp/pr-a-overlay.tar.xz)" -gt 40000
-          rm -rf /tmp/pr-a-overlay
-          mkdir -p /tmp/pr-a-overlay
-          tar -xJf /tmp/pr-a-overlay.tar.xz -C /tmp/pr-a-overlay
-          test -f /tmp/pr-a-overlay/nasdaq-pr-a-implementation/apply_pr_a_overlay.py
-
-      - name: Verify exact main baseline
-        shell: bash
-        run: |
-          set -euo pipefail
-          python /tmp/pr-a-overlay/nasdaq-pr-a-implementation/apply_pr_a_overlay.py . --check-only
-
-      - name: Apply PR-A overlay
-        shell: bash
-        run: |
-          set -euo pipefail
-          python /tmp/pr-a-overlay/nasdaq-pr-a-implementation/apply_pr_a_overlay.py .
-
-      - name: Patch bootstrap-discovered test harness issues
-        shell: bash
-        run: |
-          set -euo pipefail
-          python - <<'PY'
+          python3 - <<'PY'
           from pathlib import Path
-          import textwrap
 
-          p = Path('tests/editorial-semantic-boundary/test_boundary_architecture.py')
-          s = p.read_text(encoding='utf-8')
-          marker = 'def test_overlay_does_not_touch_aug17_daily_artifacts():'
-          if marker not in s:
-              raise SystemExit('architecture test marker missing')
-          replacement = textwrap.dedent(r'''def _text(rel: str) -> str:
-              return (ROOT / rel).read_text(encoding="utf-8")
+          def replace_once(text, old, new, label):
+              if text.count(old) != 1:
+                  raise SystemExit(f'{label}: expected exactly one anchor; found={text.count(old)}')
+              return text.replace(old, new, 1)
 
+          out = Path('.pr-a-generated')
+          out.mkdir(exist_ok=True)
 
-          def test_pr_a_current_v2_core_has_no_aug17_migration_literal():
-              for rel in (
-                  "scripts/materialize_causal_research.py",
-                  "scripts/validate_editorial_semantic_boundary.py",
-                  "scripts/chatgpt_semantic_freeze.py",
-                  "contracts/chatgpt_daily_authoring_v2.schema.json",
-                  "contracts/editorial_semantic_acceptance.schema.json",
-              ):
-                  assert "2026-08-17" not in _text(rel), rel
+          src = Path('.github/workflows/daily-renderer-closure-gate.yml')
+          text = src.read_text(encoding='utf-8')
+          anchor = '      - "contracts/viewer_surface_*.json"\n'
+          addition = anchor + '''      - "contracts/chatgpt_daily_authoring_v2.schema.json"
+          - "contracts/editorial_semantic_acceptance.schema.json"
+          - "contracts/chatgpt_semantic_freeze.schema.json"
+          - "contracts/canon_manifest.schema.json"
+          - "scripts/materialize_causal_research.py"
+          - "scripts/validate_editorial_semantic_boundary.py"
+          - "scripts/chatgpt_semantic_freeze.py"
+          - "scripts/canon_manifest.py"
+          - "scripts/build_research_input_manifest.py"
+          - "scripts/editorial_memory_retrieval.py"
+          - "scripts/temporal_evidence.py"
+          - "scripts/story-engine/materialize_story_engine.py"
+          - "scripts/story-engine/project_story_script_to_production.py"
+          - "scripts/story-engine/validate_story_engine_bundle.py"
+          - "scripts/story-engine/validate_story_engine_acceptance_v1_1.py"
+          - "scripts/run_daily_renderer_closure_v12.py"
+          - "scripts/run_semantic_frozen_renderer_closure_v12.py"
+          - "scripts/run_daily_production_v12.py"
+          - "skills/nasdaq-cafe-causal-research/contracts/**"
+          - "skills/nasdaq-cafe-causal-research/validators/**"
+          - "skills/nasdaq-cafe-editorial-memory/contracts/**"
+          - "skills/nasdaq-cafe-story-plan/contracts/**"
+          - "skills/nasdaq-cafe-story-plan/validators/**"
+          - "skills/nasdaq-cafe-story-authoring/contracts/**"
+          - "skills/nasdaq-cafe-story-authoring/validators/**"
+          - "skills/nasdaq-cafe-entertainment-critic/contracts/**"
+          - "skills/nasdaq-cafe-entertainment-critic/validators/**"
+          - "tests/editorial-semantic-boundary/**"
+          '''
+          # Strip bootstrap indentation from the embedded YAML rows.
+          addition = addition.replace('          - ', '      - ')
+          text = replace_once(text, anchor, addition, 'daily gate semantic triggers')
+          text = text.replace('jsonschema pytest pillow', 'jsonschema referencing pytest pillow', 1)
+          text = replace_once(
+              text,
+              '            tests/viewer-surface/test_viewer_surface_projection.py\n',
+              '            tests/viewer-surface/test_viewer_surface_projection.py \\\n            tests/editorial-semantic-boundary/test_current_contract_e2e.py \\\n            tests/editorial-semantic-boundary/test_boundary_architecture.py\n',
+              'daily gate semantic tests',
+          )
+          text = replace_once(
+              text,
+              '            scripts/visual_director_bridge.py\n',
+              '            scripts/visual_director_bridge.py \\\n            scripts/materialize_causal_research.py \\\n            scripts/validate_editorial_semantic_boundary.py \\\n            scripts/chatgpt_semantic_freeze.py \\\n            scripts/story-engine/materialize_story_engine.py \\\n            scripts/story-engine/project_story_script_to_production.py \\\n            scripts/run_daily_renderer_closure_v12.py \\\n            scripts/run_semantic_frozen_renderer_closure_v12.py \\\n            scripts/run_daily_production_v12.py\n',
+              'daily gate semantic py_compile',
+          )
+          (out / 'daily-renderer-closure-gate.yml').write_text(text, encoding='utf-8')
 
+          src = Path('.github/workflows/chatgpt-daily-preview-production.yml')
+          text = src.read_text(encoding='utf-8')
+          setup = '''      - uses: actions/setup-python@v5
+          with:
+            python-version: "3.12"
 
-          def test_current_v2_runtime_path_has_no_fixup_or_semantic_creation():
-              closure = _text("scripts/run_daily_renderer_closure_v12.py")
-              frozen_wrapper = _text("scripts/run_semantic_frozen_renderer_closure_v12.py")
-              assert "fixup_chatgpt_daily_materialization.py" not in closure
-              assert "NASDAQ_CAFE_SEMANTIC_FREEZE_PATH" in closure
-              assert "editorial_semantic_acceptance.json" in closure
-              assert '"scripts/materialize_causal_research.py"' not in closure
-              assert '"scripts/validate_editorial_semantic_boundary.py"' not in closure
-              assert "create_manifest" not in frozen_wrapper
-              assert "write_manifest" not in frozen_wrapper
+          '''.replace('          with:', '        with:').replace('            python-version', '          python-version').replace('          ', '      ', 1)
+          # Use the exact existing setup block to avoid YAML reformatting.
+          setup = '      - uses: actions/setup-python@v5\n        with:\n          python-version: "3.12"\n\n'
+          text = replace_once(text, setup, '', 'preview move Python setup')
+          freeze = '      - name: Verify committed ChatGPT semantic freeze\n'
+          semantic_setup = setup + '''      - name: Install semantic verification dependencies
+              shell: bash
+              run: python -m pip install --disable-pip-version-check jsonschema referencing
 
+          '''
+          semantic_setup = semantic_setup.replace('              shell:', '        shell:').replace('              run:', '        run:').replace('          ', '      ', 1)
+          text = replace_once(text, freeze, semantic_setup + freeze, 'preview semantic dependencies')
+          renderer = '      - name: Resolve canonical Renderer binding\n'
+          acceptance = '''      - name: Verify current Editorial Semantic Acceptance
+              shell: bash
+              run: |
+                set -euo pipefail
+                test "$(python3 -c 'import json,os; print(json.load(open(os.environ["SEMANTIC_FREEZE_PATH"], encoding="utf-8"))["contractVersion"])')" = "1.2.0"
+                ACCEPTANCE_PATH="$(python3 -c 'import json,os; print(json.load(open(os.environ["SEMANTIC_FREEZE_PATH"], encoding="utf-8"))["editorialSemanticAcceptance"]["path"])')"
+                python3 scripts/validate_editorial_semantic_boundary.py --repo-root . --date "$EPISODE_DATE" --verify "$ACCEPTANCE_PATH"
 
-          def test_story_materializer_is_projection_only_for_v2():
-              text = _text("scripts/story-engine/materialize_story_engine.py")
-              start = text.index("def _materialize_current_v2")
-              end = text.index("def main()", start)
-              v2 = text[start:end]
-              assert 'authoring["storyPlan"]' in v2
-              assert 'authoring["storyScript"]' in v2
-              assert 'authoring["creativeReview"]' in v2
-              assert '"semantic_writer": False' in v2
-              assert "temporalUsage" not in v2
-              assert "temporal_usage" not in v2
-
-
-          def test_ws4_contains_v2_identity_branch_and_legacy_fallback():
-              text = _text("scripts/story-engine/project_story_script_to_production.py")
-              assert 'authoring.get("contractVersion") == "2.0.0"' in text
-              assert "projected Story Plan differs from frozen Daily Authoring v2" in text
-              assert "projected Story Script differs from frozen Daily Authoring v2" in text
-              assert "retainedCounterevidenceIds" in text
-
-
-          def test_preview_workflow_installs_semantic_dependencies_before_freeze_verify():
-              text = _text(".github/workflows/chatgpt-daily-preview-production.yml")
-              dependency = text.index("Install semantic verification dependencies")
-              freeze = text.index("Verify committed ChatGPT semantic freeze")
-              acceptance = text.index("Verify current Editorial Semantic Acceptance")
-              renderer = text.index("Resolve canonical Renderer binding")
-              assert dependency < freeze < acceptance < renderer
-              assert "jsonschema referencing" in text
-              assert "actions/setup-python@v5" in text
-          ''')
-          p.write_text(s[:s.index(marker)] + replacement, encoding='utf-8')
-
-          p = Path('tests/editorial-semantic-boundary/test_current_contract_e2e.py')
-          s = p.read_text(encoding='utf-8')
-          old = textwrap.dedent('''def test_missing_temporal_usage_fails_official_story_validator(tmp_path: Path):
-              root, authoring = build_workspace(tmp_path)
-              del authoring["storyPlan"]["temporal_usage"]
-              path = root / "daily-authoring" / f"{fx.DATE}.json"
-              fx.write_json(path, authoring)
-              semantic = load_module("fixture_semantic_missing_temporal", root / "scripts/validate_editorial_semantic_boundary.py")
-              with pytest.raises(Exception, match="temporal_usage|Temporal"):
-                  semantic.validate_boundary(root, fx.DATE, path)
-          ''')
-          new = textwrap.dedent('''def test_missing_temporal_usage_fails_official_story_validator(tmp_path: Path):
-              root, authoring = build_workspace(tmp_path)
-              del authoring["storyPlan"]["temporal_usage"]
-              authoring["storyScript"]["story_plan"]["sha256"] = fx.sha_bytes(
-                  fx.canonical_projection_bytes(authoring["storyPlan"])
-              )
-              path = root / "daily-authoring" / f"{fx.DATE}.json"
-              fx.write_json(path, authoring)
-              semantic = load_module("fixture_semantic_missing_temporal", root / "scripts/validate_editorial_semantic_boundary.py")
-              with pytest.raises(Exception, match="temporal_usage|Temporal"):
-                  semantic.validate_boundary(root, fx.DATE, path)
-          ''')
-          if old not in s:
-              raise SystemExit('Temporal test block missing')
-          p.write_text(s.replace(old, new), encoding='utf-8')
+          '''
+          acceptance = acceptance.replace('              shell:', '        shell:').replace('              run:', '        run:').replace('                ', '          ').replace('          ', '      ', 1)
+          text = replace_once(text, renderer, acceptance + renderer, 'preview acceptance verify')
+          (out / 'chatgpt-daily-preview-production.yml').write_text(text, encoding='utf-8')
           PY
 
-      - name: Run semantic boundary tests
-        shell: bash
-        env:
-          PYTHONPATH: scripts
-        run: |
-          set -euo pipefail
-          python -m pytest -q \
-            tests/editorial-semantic-boundary/test_boundary_architecture.py \
-            tests/editorial-semantic-boundary/test_current_contract_e2e.py \
-            tests/remotion-compat/test_chatgpt_daily_authoring_closure.py
+          grep -q 'tests/editorial-semantic-boundary/test_current_contract_e2e.py' .pr-a-generated/daily-renderer-closure-gate.yml
+          grep -q 'Verify current Editorial Semantic Acceptance' .pr-a-generated/chatgpt-daily-preview-production.yml
+          git diff --check -- .pr-a-generated
 
-      - name: Guard PR-A scope
+      - name: Push generated workflow blobs as ordinary files
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --name-only HEAD -- | grep -E '^(daily-authoring-parts/2026-08-17/|daily-authoring/2026-08-17\.json$|semantic-freezes/2026-08-17\.json$|daily-inputs/2026-08-17/)'; then
-            echo '::error::PR-A touched forbidden 2026-08-17 migration paths'
-            exit 1
-          fi
-          git diff --check
-
-      - name: Commit and push verified non-workflow implementation
-        shell: bash
-        run: |
-          set -euo pipefail
-          git checkout HEAD -- \
-            .github/workflows/chatgpt-daily-preview-production.yml \
-            .github/workflows/daily-renderer-closure-gate.yml
-          rm -f .pr-a-overlay.tar.xz.b64 .pr-a-overlay.part*
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- \
-            contracts/chatgpt_daily_authoring_v2.schema.json \
-            contracts/editorial_semantic_acceptance.schema.json \
-            contracts/chatgpt_semantic_freeze.schema.json \
-            skills/nasdaq-cafe-causal-research/contracts/causal_dossier_validation_receipt.schema.json \
-            skills/nasdaq-cafe-causal-research/validators/validate_causal_research_dossier.py \
-            skills/nasdaq-cafe-daily-production/SKILL.md \
-            scripts/assemble_chatgpt_daily_authoring_parts.py \
-            scripts/chatgpt_semantic_freeze.py \
-            scripts/materialize_causal_research.py \
-            scripts/validate_editorial_semantic_boundary.py \
-            scripts/validate_chatgpt_daily_authoring_closure.py \
-            scripts/story-engine/materialize_story_engine.py \
-            scripts/story-engine/project_story_script_to_production.py \
-            scripts/materialize_chatgpt_daily_authoring.py \
-            scripts/materialize_daily_episode.py \
-            scripts/run_semantic_frozen_renderer_closure_v12.py \
-            scripts/run_daily_production_v12.py \
-            scripts/run_daily_renderer_closure_v12.py \
-            tests/editorial-semantic-boundary/current_fixture.py \
-            tests/editorial-semantic-boundary/test_boundary_architecture.py \
-            tests/editorial-semantic-boundary/test_current_contract_e2e.py
-          git add -u -- .pr-a-overlay.tar.xz.b64 .pr-a-overlay.part00 .pr-a-overlay.part01 .pr-a-overlay.part02 .pr-a-overlay.part03 .pr-a-overlay.part04 .pr-a-overlay.part05 .pr-a-overlay.part06 .pr-a-overlay.part07 .pr-a-overlay.part08 .pr-a-overlay.part09
-          git status --short
-          git diff --cached --check
-          git commit -m 'PR-A: harden editorial semantic boundary core'
+          git add -- .pr-a-generated/daily-renderer-closure-gate.yml .pr-a-generated/chatgpt-daily-preview-production.yml
+          git commit -m 'PR-A: stage verified workflow projections'
           git push origin HEAD:hardening/editorial-semantic-boundary-v1-3
