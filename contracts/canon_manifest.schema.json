@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nasdaq-cafe.local/contracts/canon_manifest.schema.json",
+  "title": "NASDAQ Cafe Semantic Canon Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contractVersion", "authority", "documents"],
+  "properties": {
+    "contractVersion": {"const": "1.0.0"},
+    "authority": {"const": "nasdaq-cafe-semantic-canon"},
+    "documents": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "prefixItems": [
+        {"$ref": "#/$defs/doc01"},
+        {"$ref": "#/$defs/doc02"},
+        {"$ref": "#/$defs/doc03"},
+        {"$ref": "#/$defs/doc04"}
+      ],
+      "items": false
+    }
+  },
+  "$defs": {
+    "storage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "parts"],
+      "properties": {
+        "mode": {"enum": ["direct", "gzip+base64-concatenated"]},
+        "parts": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "baseDoc": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "logicalPath", "sha256", "rawBytes", "storage"],
+      "properties": {
+        "id": {"type": "string"},
+        "logicalPath": {"type": "string"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "rawBytes": {"type": "integer", "minimum": 1},
+        "storage": {"$ref": "#/$defs/storage"}
+      }
+    },
+    "doc01": {"allOf": [{"$ref": "#/$defs/baseDoc"}, {"properties": {"id": {"const": "01"}, "logicalPath": {"const": "source-of-truth/01_fox_character_bible.md"}}}]},
+    "doc02": {"allOf": [{"$ref": "#/$defs/baseDoc"}, {"properties": {"id": {"const": "02"}, "logicalPath": {"const": "source-of-truth/02_editorial_bible.md"}}}]},
+    "doc03": {"allOf": [{"$ref": "#/$defs/baseDoc"}, {"properties": {"id": {"const": "03"}, "logicalPath": {"const": "source-of-truth/03_episode_production_spec.md"}}}]},
+    "doc04": {"allOf": [{"$ref": "#/$defs/baseDoc"}, {"properties": {"id": {"const": "04"}, "logicalPath": {"const": "source-of-truth/04_entertainment_inquisitor.md"}}}]}
+  }
+}
