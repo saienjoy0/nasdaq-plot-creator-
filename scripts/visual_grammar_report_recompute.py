@@ -11,6 +11,16 @@ class VisualGrammarReportRecomputeError(ValueError):
     pass
 
 
+QUALITY_WARNING_CODES = {
+    "VG_SAME_APPEARANCE_RUN_TOO_LONG",
+    "VG_DOMINANT_SURFACE_OVERWEIGHT",
+    "VG_CARD_BOARD_OVERWEIGHT",
+    "VG_NON_ANALYSIS_DURATION_TOO_LOW",
+    "VG_BRIDGE_TEXT_OVERUSED",
+    "VG_MAJOR_SHIFT_HOLD_TOO_SHORT",
+}
+
+
 def _require_equal(label: str, actual: Any, expected: Any) -> None:
     if actual != expected:
         raise VisualGrammarReportRecomputeError(
@@ -138,8 +148,6 @@ def _validate_static_state_report(timing_report: dict[str, Any]) -> None:
         raise VisualGrammarReportRecomputeError(
             "staticState longestStaticStateMs exceeds warning threshold without warning row"
         )
-    # Phase 1 is deliberately report-only. Static findings must not be inserted into
-    # the existing hard-gate failures array or change the report status by themselves.
     if any(str(row.get("code", "")).startswith("VG_STATIC_STATE") for row in timing_report.get("failures", [])):
         raise VisualGrammarReportRecomputeError(
             "Static State 1.1.0 is report-only and must not appear in hard failures"
@@ -173,6 +181,7 @@ def validate_timing_report_metrics(timing_report: dict[str, Any]) -> None:
     non_analysis_appearances = {
         "entity-canvas", "document-media", "picturebook-canvas"
     }
+    expected_quality_warnings: set[str] = set()
 
     longest_run_ms = 0.0
     longest_run_ids: list[str] = []
@@ -186,9 +195,7 @@ def validate_timing_report_metrics(timing_report: dict[str, Any]) -> None:
             longest_run_ms = current_run_ms
             longest_run_ids = list(current_run_ids)
         if current_run_ms > thresholds["sameAppearanceRunMaxMs"]:
-            raise VisualGrammarReportRecomputeError(
-                f"same Appearance run exceeds threshold: {current_run_ms}"
-            )
+            expected_quality_warnings.add("VG_SAME_APPEARANCE_RUN_TOO_LONG")
 
     for index, row in enumerate(rows):
         duration = row["endMs"] - row["startMs"]
@@ -209,9 +216,7 @@ def validate_timing_report_metrics(timing_report: dict[str, Any]) -> None:
         if row["transitionRole"] == "major-shift":
             major_shift_count += 1
             if duration < thresholds["majorShiftStageMinMs"]:
-                raise VisualGrammarReportRecomputeError(
-                    f"major-shift Beat {row['beatId']} is shorter than threshold"
-                )
+                expected_quality_warnings.add("VG_MAJOR_SHIFT_HOLD_TOO_SHORT")
 
         if appearance != current_appearance:
             close_run()
@@ -233,24 +238,27 @@ def validate_timing_report_metrics(timing_report: dict[str, Any]) -> None:
     bridge_ratio = _round_ratio(_ratio(bridge_ms, total_ms))
 
     if surface_max_ratio > thresholds["dominantSurfaceMaxRatio"]:
-        raise VisualGrammarReportRecomputeError(
-            f"Dominant Surface ratio exceeds threshold: {surface_max_ratio}"
-        )
+        expected_quality_warnings.add("VG_DOMINANT_SURFACE_OVERWEIGHT")
     if card_ratio > thresholds["cardBoardMaxRatio"]:
-        raise VisualGrammarReportRecomputeError(
-            f"card-board ratio exceeds threshold: {card_ratio}"
-        )
+        expected_quality_warnings.add("VG_CARD_BOARD_OVERWEIGHT")
     if non_analysis_ms < thresholds["nonAnalysisMinMs"]:
-        raise VisualGrammarReportRecomputeError(
-            f"non-analysis duration is below threshold: {non_analysis_ms}"
-        )
+        expected_quality_warnings.add("VG_NON_ANALYSIS_DURATION_TOO_LOW")
     if (
         bridge_ms > thresholds["bridgeTextMaxMs"]
         or bridge_ratio > thresholds["bridgeTextMaxRatio"]
     ):
-        raise VisualGrammarReportRecomputeError(
-            f"bridge-text exceeds threshold: {bridge_ms}ms / {bridge_ratio}"
-        )
+        expected_quality_warnings.add("VG_BRIDGE_TEXT_OVERUSED")
+
+    actual_quality_warnings = {
+        str(row.get("code"))
+        for row in timing_report.get("warnings", [])
+        if str(row.get("code")) in QUALITY_WARNING_CODES
+    }
+    _require_equal(
+        "timing quality warning codes",
+        actual_quality_warnings,
+        expected_quality_warnings,
+    )
 
     metrics = timing_report["metrics"]
     expected_metrics = {
