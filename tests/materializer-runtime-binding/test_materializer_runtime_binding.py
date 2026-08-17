@@ -124,8 +124,10 @@ class MaterializerRuntimeBindingTests(unittest.TestCase):
             "--dossier-template-sha",
         ):
             self.assertIn(f'ap.add_argument("{flag}", required=True)', materializer)
-            self.assertIn(flag, canonical)
-            self.assertIn(flag, legacy)
+        self.assertIn("MaterializerRuntimeBinding.from_workspace", canonical)
+        self.assertIn("*runtime_binding.cli_args()", canonical)
+        self.assertIn("materializer_runtime_args(root, date)", legacy)
+        self.assertIn("*runtime_args", legacy)
 
 
 if __name__ == "__main__":
