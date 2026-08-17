@@ -6,8 +6,11 @@ canonical Daily Authoring v2, validated Causal Dossier + validation receipt, Edi
 Semantic Acceptance, and Canon Manifest. Story Plan/Script/04 authority is embedded in
 canonical authoring and is bound by semantic digests inside the acceptance receipt.
 
-Historical v1.1 manifests remain verification-compatible but are never newly created.
-Production Runtime must call only ``verify``; ``create`` belongs to authoring/PR prep.
+Legacy v1.1 source sets remain build/verify-compatible for historical tooling and tests.
+Current production is still fail-closed: whenever canonical Daily Authoring exists it
+must be v2, and the Preview workflow separately requires a committed Freeze v1.2.
+Production Runtime must call only ``verify``; current-v2 ``create`` belongs to
+ChatGPT authoring/PR preparation.
 """
 from __future__ import annotations
 
@@ -133,10 +136,40 @@ def _require_current_chain(root: Path, date: str) -> dict[str, dict[str, str]]:
     }
 
 
+def _build_legacy_manifest(root: Path, date: str) -> dict[str, Any]:
+    parts = _parts(root, date)
+    daily = _file_binding(root, f"daily-inputs/{date}/daily_source_package_{date}.md", "daily source package")
+    canon = _canon_binding(root)
+    digest_payload = {
+        "episodeDate": date,
+        "parts": [{"path": item["path"], "semanticSha256": item["semanticSha256"]} for item in parts],
+        "dailySourceSha256": daily["sha256"],
+        "canonManifest": canon,
+    }
+    return {
+        "contractVersion": LEGACY_CONTRACT_VERSION,
+        "authority": AUTHORITY,
+        "episodeDate": date,
+        "canonManifest": canon,
+        "parts": parts,
+        "dailySourcePackage": daily,
+        "sourceSetDigestSha256": canonical_sha(digest_payload),
+    }
+
+
 def build_manifest(root: Path, date: str) -> dict[str, Any]:
     if not DATE_RE.fullmatch(date):
         raise SemanticFreezeError("episode date must be YYYY-MM-DD")
     root = root.resolve()
+
+    # Historical source sets predate canonical Daily Authoring v2. Preserve their
+    # deterministic v1.1 builder for compatibility, but never downgrade an existing
+    # canonical authoring file: presence of that file means current-v2 rules apply and
+    # any unsupported/stale version fails closed inside _require_current_chain().
+    authoring_path = root / "daily-authoring" / f"{date}.json"
+    if not authoring_path.is_file():
+        return _build_legacy_manifest(root, date)
+
     parts = _parts(root, date)
     daily = _file_binding(root, f"daily-inputs/{date}/daily_source_package_{date}.md", "daily source package")
     canon = _canon_binding(root)
@@ -159,27 +192,6 @@ def build_manifest(root: Path, date: str) -> dict[str, Any]:
         "parts": parts,
         "dailySourcePackage": daily,
         **chain,
-        "sourceSetDigestSha256": canonical_sha(digest_payload),
-    }
-
-
-def _build_legacy_manifest(root: Path, date: str) -> dict[str, Any]:
-    parts = _parts(root, date)
-    daily = _file_binding(root, f"daily-inputs/{date}/daily_source_package_{date}.md", "daily source package")
-    canon = _canon_binding(root)
-    digest_payload = {
-        "episodeDate": date,
-        "parts": [{"path": item["path"], "semanticSha256": item["semanticSha256"]} for item in parts],
-        "dailySourceSha256": daily["sha256"],
-        "canonManifest": canon,
-    }
-    return {
-        "contractVersion": LEGACY_CONTRACT_VERSION,
-        "authority": AUTHORITY,
-        "episodeDate": date,
-        "canonManifest": canon,
-        "parts": parts,
-        "dailySourcePackage": daily,
         "sourceSetDigestSha256": canonical_sha(digest_payload),
     }
 
