@@ -6,8 +6,8 @@
   },
   "canonicalAuthoring": {
     "path": "daily-authoring/2026-08-17.json",
-    "semanticSha256": "7c27752710aaf623330327022a1864c5b6c81e536de8c6be71331dd89170e726",
-    "sha256": "636f84de092437d07670c2b27eec2c482f6da546c14df5b53ff78859a69e0b7e"
+    "semanticSha256": "4992542c13437d7b55ecc019abe37640601377c96ad5783f1864989c3ce945cc",
+    "sha256": "138c482bf452382fa7905b246aa5cf56693cacc4d1503594c99e6c847a65170c"
   },
   "causalDossier": {
     "path": "research/2026-08-17/causal_research_dossier_2026-08-17.json",
@@ -26,8 +26,8 @@
   },
   "editorialSemanticAcceptance": {
     "path": "verification/2026-08-17/editorial_semantic_acceptance.json",
-    "semanticSha256": "1fe33f9db8b1f32c8a9fac48c291489dcbd97aade2d6de9b71a6a35d27dcbb8d",
-    "sha256": "9a7dab78a3eef38a2b4526f88b9bb3545b7d3413a531eab50f1b76623f115d42"
+    "semanticSha256": "678b37ee6e2f8fdc78ca92b3f71347581efb02f9753ff33be255f85c6ea56063",
+    "sha256": "36f667bee8c3a44b12fa4c4447d02064900d1363d10d2055794081432e789f62"
   },
   "episodeDate": "2026-08-17",
   "parts": [
@@ -43,8 +43,8 @@
     },
     {
       "path": "daily-authoring-parts/2026-08-17/05_context.json",
-      "semanticSha256": "f9bd4058e1498bac7b41c4e839a6328f1932b480b989a71df6c47b8fdf35aba9",
-      "sha256": "2e02c0e624f4ffdf2647e229c18ad86f730e10ad8ab5917215f3cf93391112e9"
+      "semanticSha256": "f484e5976038bac3ba349a3e7d4c279493eb23f157399a859ab11a2986d3dc0c",
+      "sha256": "21ac0cd1a1a17b4557c2c616ad5db1e5e7d9bd5dc76f87ce4c9ebd856a6baa1a"
     },
     {
       "path": "daily-authoring-parts/2026-08-17/06_scenes_a.json",
@@ -58,9 +58,9 @@
     },
     {
       "path": "daily-authoring-parts/2026-08-17/08_scenes_c.json",
-      "semanticSha256": "164e506de547678dda8fe6bf7d4fa8e5c62d149c779a9c694b296f5d5de26cf0",
-      "sha256": "cc909d15a8e8d5a94daccee47ce2149b4b28a628e7eeef9e5d7f301f84879c0e"
+      "semanticSha256": "ea0d04260bc799798ba0cc2592381f01995ae10f347d2f0a9137e7ef72092915",
+      "sha256": "31715861dfc014fc9ca65e40b8df534c5070339eb6ee77798ec8c057a9c87a88"
     }
   ],
-  "sourceSetDigestSha256": "8ca5be3c1c8b5a5fdb6155da574a14edb52d584f8cc3af74fb3f3969b7b23b43"
+  "sourceSetDigestSha256": "121f67735232c198551f1c1b34e567cd8c6414b21e111d06f097a6d57f73fe9f"
 }

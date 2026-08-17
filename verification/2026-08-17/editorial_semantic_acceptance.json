@@ -1,8 +1,8 @@
 {
   "authoring": {
     "path": "daily-authoring/2026-08-17.json",
-    "semanticSha256": "7c27752710aaf623330327022a1864c5b6c81e536de8c6be71331dd89170e726",
-    "sha256": "636f84de092437d07670c2b27eec2c482f6da546c14df5b53ff78859a69e0b7e"
+    "semanticSha256": "4992542c13437d7b55ecc019abe37640601377c96ad5783f1864989c3ce945cc",
+    "sha256": "138c482bf452382fa7905b246aa5cf56693cacc4d1503594c99e6c847a65170c"
   },
   "canonManifest": {
     "path": "source-of-truth/canon_manifest.json",
@@ -103,7 +103,7 @@
     },
     "storyScript": {
       "jsonPointer": "/storyScript",
-      "semanticSha256": "fb4d3e715a6e0776238b17e7119882023c73a62d8f0ea3d863ea50515d32d411"
+      "semanticSha256": "cee610485a07f42a15355c1afcfae3f1ef61d010a9eeabba04c83dffc5832ee6"
     }
   },
   "validationProjections": {
@@ -117,7 +117,7 @@
     },
     "storyScript": {
       "path": "verification/2026-08-17/editorial-semantic-preflight/story_script.json",
-      "sha256": "13c367b86919ffeab8d3ddf72d4238e19dc8efec86d7b9c12d1c0ad1faa7d9e7"
+      "sha256": "fc19458cb3dbd6c9812d680ff3ea97b1f6760ca7cb39185887d6de272a4b90fb"
     }
   }
 }
