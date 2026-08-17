@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 """Create and verify the committed ChatGPT semantic-source freeze.
 
-WS-3 freezes only the committed semantic authority inputs: ChatGPT-authored JSON
-fragments plus the exact daily evidence package they cite. It deliberately does not
-freeze generated render_spec / episode-package outputs yet; WS-4 removes the remaining
-secondary Story Engine semantic projection before those outputs can become immutable.
-
-The manifest contains no timestamp, so identical inputs produce identical bytes.
+The freeze binds ChatGPT-authored JSON fragments, the exact daily evidence package,
+and the exact verified 01-04 Canon Manifest bytes. The manifest contains no timestamp,
+so identical inputs produce identical bytes.
 """
 from __future__ import annotations
 
@@ -14,12 +11,20 @@ import argparse
 import hashlib
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from canon_manifest import DEFAULT_MANIFEST as DEFAULT_CANON_MANIFEST
+from canon_manifest import CanonManifestError, manifest_binding
+
 DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 SHA_RE = re.compile(r"[0-9a-f]{64}")
-CONTRACT_VERSION = "1.0.0"
+CONTRACT_VERSION = "1.1.0"
 AUTHORITY = "chatgpt-semantic-source"
 
 
@@ -28,12 +33,7 @@ class SemanticFreezeError(ValueError):
 
 
 def canonical_bytes(value: Any) -> bytes:
-    return json.dumps(
-        value,
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-    ).encode("utf-8")
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
 
 def canonical_sha(value: Any) -> str:
@@ -66,16 +66,19 @@ def _json_binding(root: Path, relative: str, label: str) -> dict[str, str]:
     value = load_json(path, label)
     if not isinstance(value, dict):
         raise SemanticFreezeError(f"{label} root must be an object: {relative}")
-    return {
-        "path": relative,
-        "sha256": sha256_file(path),
-        "semanticSha256": canonical_sha(value),
-    }
+    return {"path": relative, "sha256": sha256_file(path), "semanticSha256": canonical_sha(value)}
 
 
 def _file_binding(root: Path, relative: str, label: str) -> dict[str, str]:
     path = _repo_file(root, relative, label)
     return {"path": relative, "sha256": sha256_file(path)}
+
+
+def _canon_binding(root: Path) -> dict[str, str]:
+    try:
+        return manifest_binding(root, DEFAULT_CANON_MANIFEST)
+    except CanonManifestError as exc:
+        raise SemanticFreezeError(f"E_CANON_INVALID: {exc}") from exc
 
 
 def build_manifest(root: Path, date: str) -> dict[str, Any]:
@@ -94,18 +97,18 @@ def build_manifest(root: Path, date: str) -> dict[str, Any]:
 
     daily_rel = f"daily-inputs/{date}/daily_source_package_{date}.md"
     daily = _file_binding(root, daily_rel, "daily source package")
+    canon = _canon_binding(root)
     digest_payload = {
         "episodeDate": date,
-        "parts": [
-            {"path": item["path"], "semanticSha256": item["semanticSha256"]}
-            for item in part_bindings
-        ],
+        "parts": [{"path": item["path"], "semanticSha256": item["semanticSha256"]} for item in part_bindings],
         "dailySourceSha256": daily["sha256"],
+        "canonManifest": canon,
     }
     return {
         "contractVersion": CONTRACT_VERSION,
         "authority": AUTHORITY,
         "episodeDate": date,
+        "canonManifest": canon,
         "parts": part_bindings,
         "dailySourcePackage": daily,
         "sourceSetDigestSha256": canonical_sha(digest_payload),
@@ -121,6 +124,9 @@ def validate_manifest_shape(manifest: dict[str, Any], date: str) -> None:
         raise SemanticFreezeError("semantic freeze episodeDate mismatch")
     if not SHA_RE.fullmatch(str(manifest.get("sourceSetDigestSha256", ""))):
         raise SemanticFreezeError("semantic freeze sourceSetDigestSha256 invalid")
+    canon = manifest.get("canonManifest")
+    if not isinstance(canon, dict) or canon.get("path") != DEFAULT_CANON_MANIFEST.as_posix() or not SHA_RE.fullmatch(str(canon.get("sha256", ""))):
+        raise SemanticFreezeError("semantic freeze canonManifest binding invalid")
     parts = manifest.get("parts")
     if not isinstance(parts, list) or not parts:
         raise SemanticFreezeError("semantic freeze parts must be a non-empty array")
@@ -130,10 +136,7 @@ def write_manifest(root: Path, date: str, output: Path) -> dict[str, Any]:
     manifest = build_manifest(root, date)
     output = output if output.is_absolute() else root.resolve() / output
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    output.write_text(json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return manifest
 
 
@@ -146,9 +149,7 @@ def verify_manifest(root: Path, date: str, manifest_path: Path) -> dict[str, Any
     validate_manifest_shape(value, date)
     expected = build_manifest(root, date)
     if value != expected:
-        raise SemanticFreezeError(
-            "E_CHATGPT_SEMANTIC_FREEZE_STALE: committed semantic freeze no longer matches ChatGPT source"
-        )
+        raise SemanticFreezeError("E_CHATGPT_SEMANTIC_FREEZE_STALE: committed semantic freeze no longer matches ChatGPT source or Canon Manifest")
     return value
 
 
@@ -164,15 +165,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-root", type=Path, default=Path.cwd())
     sub = parser.add_subparsers(dest="command", required=True)
-
     create = sub.add_parser("create")
     create.add_argument("--date", required=True)
     create.add_argument("--output", type=Path)
-
-    verify = sub.add_parser("verify")
-    verify.add_argument("--date", required=True)
-    verify.add_argument("--manifest", type=Path, required=True)
-
+    verify_parser = sub.add_parser("verify")
+    verify_parser.add_argument("--date", required=True)
+    verify_parser.add_argument("--manifest", type=Path, required=True)
     args = parser.parse_args()
     root = args.repo_root.resolve()
     try:
@@ -180,21 +178,10 @@ def main() -> int:
             output = args.output or Path("semantic-freezes") / f"{args.date}.json"
             manifest = write_manifest(root, args.date, output)
             path = output if output.is_absolute() else root / output
-            result = {
-                "status": "PASS",
-                "episodeDate": args.date,
-                "manifest": path.relative_to(root).as_posix(),
-                "manifestSha256": sha256_file(path),
-                "sourceSetDigestSha256": manifest["sourceSetDigestSha256"],
-            }
+            result = {"status": "PASS", "episodeDate": args.date, "manifest": path.relative_to(root).as_posix(), "manifestSha256": sha256_file(path), "sourceSetDigestSha256": manifest["sourceSetDigestSha256"], "canonManifest": manifest["canonManifest"]}
         else:
             manifest = verify_manifest(root, args.date, args.manifest)
-            result = {
-                "status": "PASS",
-                "episodeDate": args.date,
-                "manifestSha256": manifest_sha256(root, args.manifest),
-                "sourceSetDigestSha256": manifest["sourceSetDigestSha256"],
-            }
+            result = {"status": "PASS", "episodeDate": args.date, "manifestSha256": manifest_sha256(root, args.manifest), "sourceSetDigestSha256": manifest["sourceSetDigestSha256"], "canonManifest": manifest["canonManifest"]}
         code = 0
     except (OSError, SemanticFreezeError) as exc:
         result = {"status": "FAIL", "error": str(exc)}
