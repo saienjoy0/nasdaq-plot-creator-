@@ -1,0 +1,129 @@
+name: tmp-fix-v2-public-package-newlines
+
+on:
+  push:
+    branches:
+      - fix/current-v2-public-package-newlines
+
+permissions:
+  contents: write
+
+jobs:
+  patch-test-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Patch v2 package newline serialization
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('scripts/materialize_chatgpt_daily_authoring.py')
+          text=path.read_text(encoding='utf-8')
+          old='    return "\\\\n".join(lines).rstrip() + "\\\\n"\n'
+          new='    return "\\n".join(lines).rstrip() + "\\n"\n'
+          if old not in text:
+              if new in text:
+                  print('patch already applied')
+              else:
+                  raise SystemExit('v2 package newline patch anchor missing')
+          else:
+              path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+
+      - name: Add regression test
+        shell: bash
+        run: |
+          cat > tests/test_current_v2_public_package_newlines.py <<'PY'
+          from __future__ import annotations
+
+          import sys
+          from pathlib import Path
+
+          ROOT = Path(__file__).resolve().parents[1]
+          SCRIPTS = ROOT / 'scripts'
+          if str(SCRIPTS) not in sys.path:
+              sys.path.insert(0, str(SCRIPTS))
+
+          import materialize_chatgpt_daily_authoring as mat
+          from story_engine_import_helper import public_scene_narration
+
+
+          def test_v2_public_package_uses_real_newlines_and_is_ws4_parseable() -> None:
+              root_authoring = {
+                  'episodeDate': '2099-01-07',
+                  'marketDate': '2099-01-06',
+                  'informationCutoff': '2099-01-07T05:00:00Z',
+                  'storyPlan': {'story_spine': 'synthetic spine'},
+                  'creativeReview': {
+                      'verdict': 'pass',
+                      'total_score': 30,
+                      'scores': {'opening': 5},
+                  },
+                  'storyScript': {
+                      'scenes': [
+                          {'narration': '一段落目です。\n\n二段落目です。'},
+                      ]
+                  },
+              }
+              projected = {
+                  'scenes': [
+                      {
+                          'formalName': 'Synthetic',
+                          'purpose': 'purpose',
+                          'performanceIntent': 'intent',
+                          'initialExpression': '分析',
+                          'visualMode': 'text-focus',
+                          'headline': 'headline',
+                          'supportingTexts': ['support'],
+                          'uncertainty': 'none',
+                      }
+                  ],
+                  'publishing': {
+                      'titleCandidates': ['title'],
+                      'thumbnailTextCandidates': ['thumb'],
+                      'description': 'description',
+                  },
+              }
+              md = mat.build_episode_markdown_v2(root_authoring, projected)
+              assert '# 朝のNASDAQカフェ｜2099-01-07 制作パッケージ\n\n## エピソード概要\n' in md
+              assert '\\n\\n## エピソード概要' not in md
+              assert public_scene_narration(md, 1) == '一段落目です。\n\n二段落目です。'
+          PY
+          cat > tests/story_engine_import_helper.py <<'PY'
+          from __future__ import annotations
+          import importlib.util
+          from pathlib import Path
+          ROOT = Path(__file__).resolve().parents[1]
+          target = ROOT / 'scripts' / 'story-engine' / 'project_story_script_to_production.py'
+          spec = importlib.util.spec_from_file_location('story_projection_module', target)
+          module = importlib.util.module_from_spec(spec)
+          assert spec and spec.loader
+          spec.loader.exec_module(module)
+          public_scene_narration = module._public_scene_narration
+          PY
+
+      - name: Run regression
+        run: |
+          python3 -m py_compile scripts/materialize_chatgpt_daily_authoring.py scripts/story-engine/project_story_script_to_production.py
+          python3 -m pytest -q tests/test_current_v2_public_package_newlines.py
+
+      - name: Commit implementation only
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/materialize_chatgpt_daily_authoring.py tests/test_current_v2_public_package_newlines.py tests/story_engine_import_helper.py
+          if git diff --cached --quiet; then
+            echo 'No implementation changes to commit'
+            exit 0
+          fi
+          git commit -m "Fix current-v2 public package newline serialization"
+          git push origin HEAD:fix/current-v2-public-package-newlines
