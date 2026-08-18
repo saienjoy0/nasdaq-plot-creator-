@@ -1,0 +1,109 @@
+name: tmp-fix-v2-public-package-beat-headings
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch-test-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/current-v2-public-package-beat-headings
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Add deterministic Beat sections to v2 public package
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('scripts/materialize_chatgpt_daily_authoring.py')
+          text=path.read_text(encoding='utf-8')
+          old='''            f"- 補助テロップ：{' / '.join(scene['supportingTexts'])}", "",\n            "### 完成ナレーション", "", scripted["narration"], "",\n            f"- 根拠と不確実性：{scene['uncertainty']}", "",\n        ]\n'''
+          new='''            f"- 補助テロップ：{' / '.join(scene['supportingTexts'])}", "",\n            "### Visual Beats", "",\n        ]\n        for beat_index, beat in enumerate(scene["beats"], 1):\n            beat_id = f"scene-{index:02d}-beat-{beat_index:03d}"\n            lines += [\n                f"- **{beat_id}**",\n                f"  - 画面状態：{beat['screenState']}",\n                f"  - Visual Grammar：{beat['grammarId']} / {beat['transitionRole']}",\n                f"  - Visual Template ID：{beat['visualTemplate']}",\n                f"  - 画面の問い：{beat['screenQuestion']}",\n                f"  - 主要要素：{beat['primaryElement']}",\n                f"  - 視聴者向けテキスト：{' / '.join(beat['viewerTexts'])}",\n                f"  - 根拠ID：{', '.join(beat['evidenceSourceIds'])}",\n                f"  - Shot数：{len(beat.get('shots', []))}",\n                "",\n            ]\n        lines += [\n            "### 完成ナレーション", "", scripted["narration"], "",\n            f"- 根拠と不確実性：{scene['uncertainty']}", "",\n        ]\n'''
+          if old in text:
+              path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          elif 'beat_id = f"scene-{index:02d}-beat-{beat_index:03d}"' not in text:
+              raise SystemExit('v2 Beat section patch anchor missing')
+          PY
+
+      - name: Add focused regression
+        shell: bash
+        run: |
+          cat > tests/test_current_v2_public_package_beat_headings.py <<'PY'
+          from __future__ import annotations
+
+          import re
+          import sys
+          from pathlib import Path
+
+          ROOT = Path(__file__).resolve().parents[1]
+          SCRIPTS = ROOT / 'scripts'
+          if str(SCRIPTS) not in sys.path:
+              sys.path.insert(0, str(SCRIPTS))
+
+          import materialize_chatgpt_daily_authoring as mat
+
+          BEAT_HEADING_RE = re.compile(r'(?m)^- \*\*(scene-0[1-9]-beat-[0-9]{3})\*\*$')
+
+
+          def test_v2_public_package_exposes_renderer_beat_headings() -> None:
+              root_authoring = {
+                  'episodeDate': '2099-01-07',
+                  'marketDate': '2099-01-06',
+                  'informationCutoff': '2099-01-07T05:00:00Z',
+                  'storyPlan': {'story_spine': 'synthetic spine'},
+                  'creativeReview': {'verdict': 'pass', 'total_score': 30, 'scores': {'opening': 5}},
+                  'storyScript': {'scenes': [{'narration': 'synthetic narration'}]},
+              }
+              beat = {
+                  'screenState': 'synthetic-state',
+                  'grammarId': 'synthetic-grammar',
+                  'transitionRole': 'continuation',
+                  'visualTemplate': 'conclusion-card',
+                  'screenQuestion': 'question',
+                  'primaryElement': 'element',
+                  'viewerTexts': ['viewer'],
+                  'evidenceSourceIds': ['SRC-1'],
+              }
+              projected = {
+                  'scenes': [{
+                      'formalName': 'Synthetic', 'purpose': 'purpose', 'performanceIntent': 'intent',
+                      'initialExpression': '分析', 'visualMode': 'text-focus', 'headline': 'headline',
+                      'supportingTexts': ['support'], 'uncertainty': 'none', 'beats': [beat, dict(beat)],
+                  }],
+                  'publishing': {'titleCandidates': ['title'], 'thumbnailTextCandidates': ['thumb'], 'description': 'description'},
+              }
+              md = mat.build_episode_markdown_v2(root_authoring, projected)
+              headings = BEAT_HEADING_RE.findall(md)
+              assert headings == ['scene-01-beat-001', 'scene-01-beat-002']
+              assert '### Visual Beats' in md
+              assert '### 完成ナレーション' in md
+          PY
+
+      - name: Run regression
+        run: |
+          python3 -m pip install --disable-pip-version-check pytest
+          python3 -m py_compile scripts/materialize_chatgpt_daily_authoring.py
+          python3 -m pytest -q tests/test_current_v2_public_package_newlines.py tests/test_current_v2_public_package_beat_headings.py
+
+      - name: Commit implementation only
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/materialize_chatgpt_daily_authoring.py tests/test_current_v2_public_package_beat_headings.py
+          if git diff --cached --quiet; then
+            echo 'No implementation changes to commit'
+            exit 0
+          fi
+          git commit -m "Restore Beat headings in current-v2 public package"
+          git push origin HEAD:fix/current-v2-public-package-beat-headings
