@@ -183,9 +183,9 @@ def _run_current_v2(root: Path, args: argparse.Namespace, authoring: dict) -> in
         "asset_catalog":asset_catalog, "render_spec":render,
     }
     public = normalize_scene_headings(contract_package.read_text(encoding="utf-8").rstrip())
-    final = (public + "\\n\\n" + STORY_BEGIN + "\\n```json\\n" + dump(story_annex) + "\\n```\\n" + STORY_END
-             + "\\n\\n" + MEM_BEGIN + "\\n```json\\n" + dump(memory_annex) + "\\n```\\n" + MEM_END
-             + "\\n\\n" + PROD_BEGIN + "\\n```json\\n" + dump(production_annex) + "\\n```\\n" + PROD_END + "\\n")
+    final = (public + "\n\n" + STORY_BEGIN + "\n```json\n" + dump(story_annex) + "\n```\n" + STORY_END
+             + "\n\n" + MEM_BEGIN + "\n```json\n" + dump(memory_annex) + "\n```\n" + MEM_END
+             + "\n\n" + PROD_BEGIN + "\n```json\n" + dump(production_annex) + "\n```\n" + PROD_END + "\n")
     final_package.write_text(final, encoding="utf-8")
 
     verification = root / "verification" / date
@@ -202,12 +202,12 @@ def _run_current_v2(root: Path, args: argparse.Namespace, authoring: dict) -> in
             raise SystemExit("Visual Source asset_resolution_log selected_path mismatch")
     else:
         asset_log.write_text(dump({"episode_date":date,"status":"resolved","selected_path":"not-required","unresolved_count":0,
-                                   "registered_assets":[item["asset_id"] for item in asset_catalog]}) + "\\n", encoding="utf-8")
+                                   "registered_assets":[item["asset_id"] for item in asset_catalog]}) + "\n", encoding="utf-8")
     selected_generated = [item for item in visual_source["selected_assets"] if item.get("sourceKind") == "generated-image"]
     image_generation_log = verification / "image_generation_log.json"
     if not selected_generated:
         image_generation_log.write_text(dump({"episode_date":date,"status":"not-required","attempts":0,
-                                              "selected_path":visual_source["selected_path"]}) + "\\n", encoding="utf-8")
+                                              "selected_path":visual_source["selected_path"]}) + "\n", encoding="utf-8")
     elif not image_generation_log.is_file():
         raise SystemExit("selected generated-image requires precomputed image_generation_log.json from ChatGPT image generation")
     print(f"WROTE {final_package}")
@@ -217,19 +217,13 @@ def _run_current_v2(root: Path, args: argparse.Namespace, authoring: dict) -> in
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--date", required=True)
-    ap.add_argument("--market-date", required=True)
-    ap.add_argument("--information-cutoff", required=True)
-    ap.add_argument("--dossier-template-sha", required=True)
+    ap.add_argument("--market-date")
+    ap.add_argument("--information-cutoff")
+    ap.add_argument("--dossier-template-sha")
     ap.add_argument("--repo-root", type=Path, default=Path.cwd())
     args = ap.parse_args()
     if not DATE_RE.fullmatch(args.date):
         raise SystemExit("--date must be YYYY-MM-DD")
-    if not DATE_RE.fullmatch(args.market_date):
-        raise SystemExit("--market-date must be YYYY-MM-DD")
-    if not args.information_cutoff.strip():
-        raise SystemExit("--information-cutoff must be non-empty")
-    if not SHA256_RE.fullmatch(args.dossier_template_sha):
-        raise SystemExit("--dossier-template-sha must be a lowercase SHA-256")
 
     root = args.repo_root.resolve()
     date = args.date
@@ -238,6 +232,14 @@ def main() -> int:
         authoring_probe = json.loads(authoring_path.read_text(encoding="utf-8"))
         if isinstance(authoring_probe, dict) and authoring_probe.get("contractVersion") == "2.0.0":
             return _run_current_v2(root, args, authoring_probe)
+
+    if not isinstance(args.market_date, str) or not DATE_RE.fullmatch(args.market_date):
+        raise SystemExit("--market-date must be YYYY-MM-DD")
+    if not isinstance(args.information_cutoff, str) or not args.information_cutoff.strip():
+        raise SystemExit("--information-cutoff must be non-empty")
+    if not isinstance(args.dossier_template_sha, str) or not SHA256_RE.fullmatch(args.dossier_template_sha):
+        raise SystemExit("--dossier-template-sha must be a lowercase SHA-256")
+
     work = root / "working" / date
     story_work = work / "story-engine"
     research = root / "research" / date

@@ -101,6 +101,24 @@ class MaterializerRuntimeBindingTests(unittest.TestCase):
                 ],
             )
 
+    def test_current_v2_routes_before_legacy_runtime_validation(self) -> None:
+        materializer = (
+            REPO_ROOT / "scripts" / "materialize_daily_episode.py"
+        ).read_text(encoding="utf-8")
+        v2_route = materializer.index("return _run_current_v2(root, args, authoring_probe)")
+        legacy_market_validation = materializer.index(
+            "if not isinstance(args.market_date, str) or not DATE_RE.fullmatch(args.market_date):"
+        )
+        legacy_cutoff_validation = materializer.index(
+            "if not isinstance(args.information_cutoff, str) or not args.information_cutoff.strip():"
+        )
+        legacy_dossier_validation = materializer.index(
+            "if not isinstance(args.dossier_template_sha, str) or not SHA256_RE.fullmatch(args.dossier_template_sha):"
+        )
+        self.assertLess(v2_route, legacy_market_validation)
+        self.assertLess(v2_route, legacy_cutoff_validation)
+        self.assertLess(v2_route, legacy_dossier_validation)
+
     def test_production_scripts_do_not_rewrite_materializer_source(self) -> None:
         legacy = (REPO_ROOT / "scripts" / "run_daily_renderer_closure.py").read_text(
             encoding="utf-8"
@@ -123,9 +141,11 @@ class MaterializerRuntimeBindingTests(unittest.TestCase):
             "--information-cutoff",
             "--dossier-template-sha",
         ):
-            self.assertIn(f'ap.add_argument("{flag}", required=True)', materializer)
-        self.assertIn("MaterializerRuntimeBinding.from_workspace", canonical)
-        self.assertIn("*runtime_binding.cli_args()", canonical)
+            self.assertIn(f'ap.add_argument("{flag}")', materializer)
+            self.assertNotIn(f'ap.add_argument("{flag}", required=True)', materializer)
+        self.assertNotIn("MaterializerRuntimeBinding.from_workspace", canonical)
+        self.assertNotIn("*runtime_binding.cli_args()", canonical)
+        self.assertIn('"scripts/materialize_daily_episode.py"', canonical)
         self.assertIn("materializer_runtime_args(root, date)", legacy)
         self.assertIn("*runtime_args", legacy)
 

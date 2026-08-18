@@ -22,7 +22,6 @@ import shutil
 import subprocess
 from pathlib import Path
 
-import materializer_runtime_binding
 import renderer_binding
 import run_daily_renderer_closure as legacy
 
@@ -183,12 +182,16 @@ def prepare_common(
     _restore_visual_source_authoring(root, date, preserved_visual_source_authoring)
     run(root, "python3", "scripts/story-engine/materialize_story_engine.py", "--date", date, "--repo-root", ".",
         "--semantic-freeze", str(freeze), env=env)
-    try:
-        runtime_binding = materializer_runtime_binding.MaterializerRuntimeBinding.from_workspace(root, date)
-    except materializer_runtime_binding.MaterializerRuntimeBindingError as exc:
-        raise VisualIntelligenceClosureError(str(exc)) from exc
-    run(root, "python3", "scripts/materialize_daily_episode.py", "--date", date, "--repo-root", ".",
-        *runtime_binding.cli_args(), env=env)
+    run(
+        root,
+        "python3",
+        "scripts/materialize_daily_episode.py",
+        "--date",
+        date,
+        "--repo-root",
+        ".",
+        env=env,
+    )
     run(root, "python3", "scripts/materialize_financial_contract_1_0.py", "--date", date, "--repo-root", ".", env=env)
     run(root, "python3", "scripts/validate_chatgpt_daily_authoring_closure.py",
         "--authoring", f"daily-authoring/{date}.json", "--registry", "contracts/financial_recipe_registry.json",
