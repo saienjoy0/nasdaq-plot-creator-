@@ -590,6 +590,23 @@ def build_episode_markdown_v2(root_authoring: dict[str, Any], projected: dict[st
             f"- 画面モード：{scene['visualMode']}",
             f"- 大テロップ：{scene['headline']}",
             f"- 補助テロップ：{' / '.join(scene['supportingTexts'])}", "",
+            "### Visual Beats", "",
+        ]
+        for beat_index, beat in enumerate(scene["beats"], 1):
+            beat_id = f"scene-{index:02d}-beat-{beat_index:03d}"
+            lines += [
+                f"- **{beat_id}**",
+                f"  - 画面状態：{beat['screenState']}",
+                f"  - Visual Grammar：{beat['grammarId']} / {beat['transitionRole']}",
+                f"  - Visual Template ID：{beat['visualTemplate']}",
+                f"  - 画面の問い：{beat['screenQuestion']}",
+                f"  - 主要要素：{beat['primaryElement']}",
+                f"  - 視聴者向けテキスト：{' / '.join(beat['viewerTexts'])}",
+                f"  - 根拠ID：{', '.join(beat['evidenceSourceIds'])}",
+                f"  - Shot数：{len(beat.get('shots', []))}",
+                "",
+            ]
+        lines += [
             "### 完成ナレーション", "", scripted["narration"], "",
             f"- 根拠と不確実性：{scene['uncertainty']}", "",
         ]
