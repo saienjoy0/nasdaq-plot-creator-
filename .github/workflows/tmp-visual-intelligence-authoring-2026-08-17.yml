@@ -1,0 +1,91 @@
+name: tmp-visual-intelligence-authoring-2026-08-17
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  prepare-inputs:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Resolve canonical Renderer binding
+        shell: bash
+        run: |
+          python3 - <<'PY' >> "$GITHUB_ENV"
+          import json
+          from pathlib import Path
+          value=json.loads(Path('contracts/renderer_binding.json').read_text(encoding='utf-8'))
+          print('RENDERER_COMMIT='+value['renderer']['commit'])
+          PY
+
+      - name: Checkout pinned Renderer
+        uses: actions/checkout@v6
+        with:
+          repository: saienjoy0/saienjoy0-nasdaq-cafe-remotion
+          ref: ${{ env.RENDERER_COMMIT }}
+          path: .renderer
+          persist-credentials: false
+
+      - name: Install prepare dependencies
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
+          python -m pip install --disable-pip-version-check jsonschema referencing pillow
+
+      - name: Materialize mechanical authoring inputs only
+        id: materialize
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/run_semantic_frozen_renderer_closure_v12.py \
+            --phase prepare \
+            --date 2026-08-17 \
+            --repo-root . \
+            --renderer-root .renderer \
+            --semantic-freeze semantic-freezes/2026-08-17.json
+
+      - name: Upload mechanical authoring inputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-authoring-inputs-2026-08-17
+          path: |
+            episodes/2026-08-17/episode_package_public_2026-08-17.md
+            render-specs/2026-08-17/render_spec.json
+            working/2026-08-17/story-engine/story_script.json
+            working/2026-08-17/story-engine/story_projection_report.json
+            working/2026-08-17/visual-intelligence/editorial_snapshot.json
+            working/2026-08-17/visual-intelligence/financial_candidate_provider.json
+            working/2026-08-17/visual_source_intents.json
+            working/2026-08-17/visual_source_selection.json
+            verification/2026-08-17/renderer_closure_gate_v12.json
+          if-no-files-found: warn
+          retention-days: 2
+
+      - name: Require authoring pause
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          gate=Path('verification/2026-08-17/renderer_closure_gate_v12.json')
+          value=json.loads(gate.read_text(encoding='utf-8'))
+          assert value.get('status') == 'PREPARED', value
+          assert value.get('requiredAction') == 'AUTHOR_VISUAL_REQUIREMENTS', value
+          assert Path('working/2026-08-17/visual-intelligence/editorial_snapshot.json').is_file()
+          assert Path('working/2026-08-17/visual-intelligence/financial_candidate_provider.json').is_file()
+          print(json.dumps(value, ensure_ascii=False, indent=2))
+          PY
