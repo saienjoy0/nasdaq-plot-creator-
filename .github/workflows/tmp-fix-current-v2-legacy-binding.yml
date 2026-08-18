@@ -1,0 +1,95 @@
+name: tmp-fix-current-v2-legacy-binding
+
+on:
+  push:
+    branches:
+      - fix/current-v2-skip-legacy-research-binding
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch current-v2 runtime path
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: Path, old: str, new: str) -> None:
+              text = path.read_text(encoding="utf-8")
+              if old in text:
+                  path.write_text(text.replace(old, new, 1), encoding="utf-8")
+                  return
+              if new in text:
+                  return
+              raise SystemExit(f"expected patch anchor missing in {path}: {old[:80]!r}")
+
+          closure = Path("scripts/run_daily_renderer_closure_v12.py")
+          replace_once(
+              closure,
+              "import materializer_runtime_binding\n",
+              "",
+          )
+          replace_once(
+              closure,
+              '''    try:\n        runtime_binding = materializer_runtime_binding.MaterializerRuntimeBinding.from_workspace(root, date)\n    except materializer_runtime_binding.MaterializerRuntimeBindingError as exc:\n        raise VisualIntelligenceClosureError(str(exc)) from exc\n    run(root, "python3", "scripts/materialize_daily_episode.py", "--date", date, "--repo-root", ".",\n        *runtime_binding.cli_args(), env=env)\n''',
+              '''    run(\n        root,\n        "python3",\n        "scripts/materialize_daily_episode.py",\n        "--date",\n        date,\n        "--repo-root",\n        ".",\n        env=env,\n    )\n''',
+          )
+
+          materializer = Path("scripts/materialize_daily_episode.py")
+          replace_once(
+              materializer,
+              '''    ap.add_argument("--market-date", required=True)\n    ap.add_argument("--information-cutoff", required=True)\n    ap.add_argument("--dossier-template-sha", required=True)\n''',
+              '''    ap.add_argument("--market-date")\n    ap.add_argument("--information-cutoff")\n    ap.add_argument("--dossier-template-sha")\n''',
+          )
+          replace_once(
+              materializer,
+              '''    args = ap.parse_args()\n    if not DATE_RE.fullmatch(args.date):\n        raise SystemExit("--date must be YYYY-MM-DD")\n    if not DATE_RE.fullmatch(args.market_date):\n        raise SystemExit("--market-date must be YYYY-MM-DD")\n    if not args.information_cutoff.strip():\n        raise SystemExit("--information-cutoff must be non-empty")\n    if not SHA256_RE.fullmatch(args.dossier_template_sha):\n        raise SystemExit("--dossier-template-sha must be a lowercase SHA-256")\n\n    root = args.repo_root.resolve()\n    date = args.date\n    authoring_path = root / "daily-authoring" / f"{date}.json"\n    if authoring_path.is_file():\n        authoring_probe = json.loads(authoring_path.read_text(encoding="utf-8"))\n        if isinstance(authoring_probe, dict) and authoring_probe.get("contractVersion") == "2.0.0":\n            return _run_current_v2(root, args, authoring_probe)\n''',
+              '''    args = ap.parse_args()\n    if not DATE_RE.fullmatch(args.date):\n        raise SystemExit("--date must be YYYY-MM-DD")\n\n    root = args.repo_root.resolve()\n    date = args.date\n    authoring_path = root / "daily-authoring" / f"{date}.json"\n    if authoring_path.is_file():\n        authoring_probe = json.loads(authoring_path.read_text(encoding="utf-8"))\n        if isinstance(authoring_probe, dict) and authoring_probe.get("contractVersion") == "2.0.0":\n            return _run_current_v2(root, args, authoring_probe)\n\n    if not isinstance(args.market_date, str) or not DATE_RE.fullmatch(args.market_date):\n        raise SystemExit("--market-date must be YYYY-MM-DD")\n    if not isinstance(args.information_cutoff, str) or not args.information_cutoff.strip():\n        raise SystemExit("--information-cutoff must be non-empty")\n    if not isinstance(args.dossier_template_sha, str) or not SHA256_RE.fullmatch(args.dossier_template_sha):\n        raise SystemExit("--dossier-template-sha must be a lowercase SHA-256")\n''',
+          )
+
+          tests = Path("tests/materializer-runtime-binding/test_materializer_runtime_binding.py")
+          replace_once(
+              tests,
+              "import json\nimport sys\n",
+              "import json\nimport subprocess\nimport sys\n",
+          )
+          replace_once(
+              tests,
+              '''        for flag in (\n            "--market-date",\n            "--information-cutoff",\n            "--dossier-template-sha",\n        ):\n            self.assertIn(f'ap.add_argument("{flag}", required=True)', materializer)\n        self.assertIn("MaterializerRuntimeBinding.from_workspace", canonical)\n        self.assertIn("*runtime_binding.cli_args()", canonical)\n        self.assertIn("materializer_runtime_args(root, date)", legacy)\n        self.assertIn("*runtime_args", legacy)\n''',
+              '''        for flag in (\n            "--market-date",\n            "--information-cutoff",\n            "--dossier-template-sha",\n        ):\n            self.assertIn(f'ap.add_argument("{flag}")', materializer)\n            self.assertNotIn(f'ap.add_argument("{flag}", required=True)', materializer)\n        self.assertNotIn("MaterializerRuntimeBinding.from_workspace", canonical)\n        self.assertNotIn("*runtime_binding.cli_args()", canonical)\n        self.assertIn('"scripts/materialize_daily_episode.py"', canonical)\n        self.assertIn("materializer_runtime_args(root, date)", legacy)\n        self.assertIn("*runtime_args", legacy)\n''',
+          )
+
+          marker = '''    def test_production_scripts_do_not_rewrite_materializer_source(self) -> None:\n'''
+          addition = '''    def test_current_v2_routes_without_legacy_runtime_flags(self) -> None:\n        with tempfile.TemporaryDirectory() as tmp:\n            root = Path(tmp)\n            authoring = root / "daily-authoring" / "2026-08-17.json"\n            authoring.parent.mkdir(parents=True, exist_ok=True)\n            authoring.write_text(\n                json.dumps({"contractVersion": "2.0.0"}),\n                encoding="utf-8",\n            )\n            completed = subprocess.run(\n                [\n                    sys.executable,\n                    str(REPO_ROOT / "scripts" / "materialize_daily_episode.py"),\n                    "--date",\n                    "2026-08-17",\n                    "--repo-root",\n                    str(root),\n                ],\n                cwd=REPO_ROOT,\n                text=True,\n                capture_output=True,\n                check=False,\n            )\n            self.assertNotEqual(completed.returncode, 0)\n            self.assertIn("current-v2 production input missing", completed.stderr + completed.stdout)\n            self.assertNotIn("the following arguments are required", completed.stderr)\n\n    def test_legacy_path_still_requires_runtime_flags(self) -> None:\n        with tempfile.TemporaryDirectory() as tmp:\n            root = Path(tmp)\n            authoring = root / "daily-authoring" / "2026-08-17.json"\n            authoring.parent.mkdir(parents=True, exist_ok=True)\n            authoring.write_text(json.dumps({}), encoding="utf-8")\n            completed = subprocess.run(\n                [\n                    sys.executable,\n                    str(REPO_ROOT / "scripts" / "materialize_daily_episode.py"),\n                    "--date",\n                    "2026-08-17",\n                    "--repo-root",\n                    str(root),\n                ],\n                cwd=REPO_ROOT,\n                text=True,\n                capture_output=True,\n                check=False,\n            )\n            self.assertNotEqual(completed.returncode, 0)\n            self.assertIn("--market-date must be YYYY-MM-DD", completed.stderr + completed.stdout)\n\n'''
+          text = tests.read_text(encoding="utf-8")
+          if addition not in text:
+              if marker not in text:
+                  raise SystemExit("test insertion anchor missing")
+              tests.write_text(text.replace(marker, addition + marker, 1), encoding="utf-8")
+          PY
+
+      - name: Run focused regression tests
+        run: |
+          python3 -m py_compile scripts/materialize_daily_episode.py scripts/run_daily_renderer_closure_v12.py
+          python3 tests/materializer-runtime-binding/test_materializer_runtime_binding.py
+
+      - name: Commit patch back to branch
+        shell: bash
+        run: |
+          if git diff --quiet -- scripts/run_daily_renderer_closure_v12.py scripts/materialize_daily_episode.py tests/materializer-runtime-binding/test_materializer_runtime_binding.py; then
+            echo "No patch changes to commit"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/run_daily_renderer_closure_v12.py scripts/materialize_daily_episode.py tests/materializer-runtime-binding/test_materializer_runtime_binding.py
+          git commit -m "Fix current-v2 legacy research runtime binding"
+          git push origin HEAD:fix/current-v2-skip-legacy-research-binding
