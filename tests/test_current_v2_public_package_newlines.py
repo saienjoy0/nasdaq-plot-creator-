@@ -33,6 +33,16 @@ def test_v2_public_package_uses_real_newlines_and_is_ws4_parseable() -> None:
             'scenes': [{'narration': '一段落目です。\n\n二段落目です。'}],
         },
     }
+    beat = {
+        'screenState': 'synthetic-state',
+        'grammarId': 'synthetic-grammar',
+        'transitionRole': 'continuation',
+        'visualTemplate': 'conclusion-card',
+        'screenQuestion': 'question',
+        'primaryElement': 'element',
+        'viewerTexts': ['viewer'],
+        'evidenceSourceIds': ['SRC-1'],
+    }
     projected = {
         'scenes': [{
             'formalName': 'Synthetic',
@@ -43,6 +53,7 @@ def test_v2_public_package_uses_real_newlines_and_is_ws4_parseable() -> None:
             'headline': 'headline',
             'supportingTexts': ['support'],
             'uncertainty': 'none',
+            'beats': [beat],
         }],
         'publishing': {
             'titleCandidates': ['title'],
