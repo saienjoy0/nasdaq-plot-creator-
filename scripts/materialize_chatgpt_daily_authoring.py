@@ -605,7 +605,7 @@ def build_episode_markdown_v2(root_authoring: dict[str, Any], projected: dict[st
         "- GitHub Actions / Remotionは市場因果、Story、04、ナレーションを変更しない。",
         "- このパッケージはCanonical Daily Authoring v2からのdeterministic projectionである。", "",
     ]
-    return "\\n".join(lines).rstrip() + "\\n"
+    return "\n".join(lines).rstrip() + "\n"
 
 
 def _materialize_current_v2(root: Path, date: str, raw_authoring: dict[str, Any]) -> int:
