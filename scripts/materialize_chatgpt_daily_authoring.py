@@ -651,6 +651,7 @@ def _materialize_current_v2(root: Path, date: str, raw_authoring: dict[str, Any]
     }
     derived_review = {
         "verdict": "approved" if review["verdict"] == "pass" else review["verdict"],
+        "approvedForCodex": review["verdict"] == "pass",
         "scores": copy.deepcopy(review["scores"]),
         "totalScore": review["total_score"],
         "largestDropoffRisk": review["findings"][0]["viewer_impact"] if review.get("findings") else "",
