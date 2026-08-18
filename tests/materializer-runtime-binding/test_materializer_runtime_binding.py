@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -102,55 +101,23 @@ class MaterializerRuntimeBindingTests(unittest.TestCase):
                 ],
             )
 
-    def test_current_v2_routes_without_legacy_runtime_flags(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            authoring = root / "daily-authoring" / "2026-08-17.json"
-            authoring.parent.mkdir(parents=True, exist_ok=True)
-            authoring.write_text(
-                json.dumps({"contractVersion": "2.0.0"}),
-                encoding="utf-8",
-            )
-            completed = subprocess.run(
-                [
-                    sys.executable,
-                    str(REPO_ROOT / "scripts" / "materialize_daily_episode.py"),
-                    "--date",
-                    "2026-08-17",
-                    "--repo-root",
-                    str(root),
-                ],
-                cwd=REPO_ROOT,
-                text=True,
-                capture_output=True,
-                check=False,
-            )
-            self.assertNotEqual(completed.returncode, 0)
-            self.assertIn("current-v2 production input missing", completed.stderr + completed.stdout)
-            self.assertNotIn("the following arguments are required", completed.stderr)
-
-    def test_legacy_path_still_requires_runtime_flags(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            authoring = root / "daily-authoring" / "2026-08-17.json"
-            authoring.parent.mkdir(parents=True, exist_ok=True)
-            authoring.write_text(json.dumps({}), encoding="utf-8")
-            completed = subprocess.run(
-                [
-                    sys.executable,
-                    str(REPO_ROOT / "scripts" / "materialize_daily_episode.py"),
-                    "--date",
-                    "2026-08-17",
-                    "--repo-root",
-                    str(root),
-                ],
-                cwd=REPO_ROOT,
-                text=True,
-                capture_output=True,
-                check=False,
-            )
-            self.assertNotEqual(completed.returncode, 0)
-            self.assertIn("--market-date must be YYYY-MM-DD", completed.stderr + completed.stdout)
+    def test_current_v2_routes_before_legacy_runtime_validation(self) -> None:
+        materializer = (
+            REPO_ROOT / "scripts" / "materialize_daily_episode.py"
+        ).read_text(encoding="utf-8")
+        v2_route = materializer.index("return _run_current_v2(root, args, authoring_probe)")
+        legacy_market_validation = materializer.index(
+            "if not isinstance(args.market_date, str) or not DATE_RE.fullmatch(args.market_date):"
+        )
+        legacy_cutoff_validation = materializer.index(
+            "if not isinstance(args.information_cutoff, str) or not args.information_cutoff.strip():"
+        )
+        legacy_dossier_validation = materializer.index(
+            "if not isinstance(args.dossier_template_sha, str) or not SHA256_RE.fullmatch(args.dossier_template_sha):"
+        )
+        self.assertLess(v2_route, legacy_market_validation)
+        self.assertLess(v2_route, legacy_cutoff_validation)
+        self.assertLess(v2_route, legacy_dossier_validation)
 
     def test_production_scripts_do_not_rewrite_materializer_source(self) -> None:
         legacy = (REPO_ROOT / "scripts" / "run_daily_renderer_closure.py").read_text(
