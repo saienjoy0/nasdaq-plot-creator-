@@ -30,7 +30,9 @@ def main() -> int:
     base = text("scripts/run_daily_production.py")
     closure = text("scripts/run_daily_renderer_closure_v12.py")
     frozen = text("scripts/run_semantic_frozen_renderer_closure_v12.py")
+    facade = text("scripts/current_production_facade_v12.py")
     preview = text(".github/workflows/chatgpt-daily-preview-production.yml")
+    canary = text(".github/workflows/visual-intelligence-real-day-canary.yml")
 
     # PR-1 resolves Current -> legacy policy inheritance. The historical policy name
     # may remain in explanatory prose, so this guard intentionally checks imports.
@@ -96,21 +98,40 @@ def main() -> int:
         "Renderer contract sync mechanism",
     )
 
-    # PR-4 will consolidate these two current procedure entries behind one facade.
+    # PR-4 makes the facade the only public current workflow entry. Lower-level
+    # semantic/control-plane scripts remain internal stage executors behind it.
+    require(facade, 'FACADE_VERSION = "1.0.0"', "canonical facade version")
     require(
-        preview,
-        "scripts/run_semantic_frozen_renderer_closure_v12.py",
-        "Preview semantic closure entry",
+        facade,
+        '"scripts/run_semantic_frozen_renderer_closure_v12.py"',
+        "facade semantic closure executor",
     )
     require(
+        facade,
+        '"scripts/run_daily_production_v12.py"',
+        "facade current control-plane executor",
+    )
+    require(preview, "scripts/current_production_facade_v12.py", "Production facade entry")
+    forbid(
+        preview,
+        "scripts/run_semantic_frozen_renderer_closure_v12.py",
+        "Production lower-level semantic closure bypass",
+    )
+    forbid(
         preview,
         "scripts/run_daily_production_v12.py --workspace . build-handoff",
-        "Preview handoff entry",
+        "Production lower-level handoff bypass",
+    )
+    require(canary, "scripts/current_production_facade_v12.py", "Canary facade entry")
+    forbid(
+        canary,
+        "scripts/run_daily_renderer_closure_v12.py",
+        "Canary lower-level closure bypass",
     )
     require(
         frozen,
         '"scripts/run_daily_renderer_closure_v12.py"',
-        "semantic wrapper delegates to closure v1.2",
+        "semantic wrapper remains internal executor",
     )
 
     print("current spine characterization PASS")
