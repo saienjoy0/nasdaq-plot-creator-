@@ -18,6 +18,7 @@ import visual_intelligence_causal_inventory
 import visual_intelligence_intraday_evidence
 import visual_intelligence_object_references
 import visual_intelligence_pipeline_v12 as pipeline
+import visual_intelligence_read_set_v12
 import visual_intelligence_renderer_projection
 import visual_intelligence_terminal_projection
 
@@ -112,6 +113,18 @@ def main() -> int:
             date=args.date,
             renderer_root=renderer_root,
         )
+        direct_read_sets = visual_intelligence_read_set_v12.build(
+            root=root,
+            date=args.date,
+            renderer_root=renderer_root,
+        )
+        stale = visual_intelligence_read_set_v12.verify(
+            root, direct_read_sets, renderer_root=renderer_root
+        )
+        if stale:
+            raise visual_intelligence_read_set_v12.VisualIntelligenceReadSetError(
+                "E_VISUAL_READ_SET_STALE:" + ";".join(stale)
+            )
         report = {
             **validation,
             "bridgeContractVersion": renderer_binding.BRIDGE_CONTRACT_VERSION,
@@ -121,6 +134,7 @@ def main() -> int:
             "compiledVisual": str(
                 (root / "working" / args.date / "visual-intelligence" / "visual_direction_compiled_render.json").relative_to(root)
             ),
+            "directReadSets": direct_read_sets,
         }
         code = 0
     except pipeline.VisualIntelligenceStageError as exc:
@@ -166,6 +180,7 @@ def main() -> int:
         visual_intelligence_causal_inventory.VisualIntelligenceCausalInventoryError,
         visual_intelligence_intraday_evidence.IntradayEvidenceBindingError,
         visual_intelligence_object_references.ObjectReferenceReconciliationError,
+        visual_intelligence_read_set_v12.VisualIntelligenceReadSetError,
         visual_intelligence_renderer_projection.VisualIntelligenceRendererProjectionError,
         visual_intelligence_terminal_projection.VisualIntelligenceTerminalProjectionError,
     ) as exc:
