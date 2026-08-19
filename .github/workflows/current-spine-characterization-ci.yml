@@ -6,6 +6,7 @@ on:
       - "scripts/run_daily_production.py"
       - "scripts/run_daily_production_hardened.py"
       - "scripts/run_daily_production_v12.py"
+      - "scripts/current_daily_mechanisms_v12.py"
       - "scripts/run_semantic_frozen_renderer_closure_v12.py"
       - "scripts/run_daily_renderer_closure_v12.py"
       - ".github/workflows/chatgpt-daily-preview-production.yml"
@@ -31,10 +32,20 @@ jobs:
           python-version: "3.12"
 
       - name: Syntax gate
-        run: python3 -m py_compile tests/current-spine/test_current_spine_characterization.py
+        run: |
+          python3 -m py_compile \
+            scripts/run_daily_production_v12.py \
+            scripts/current_daily_mechanisms_v12.py \
+            tests/current-spine/test_current_spine_characterization.py \
+            tests/current-spine/test_current_request_immutability.py
 
-      - name: Freeze observable current divergences
+      - name: Freeze observable current boundaries
         run: python3 tests/current-spine/test_current_spine_characterization.py
+
+      - name: Verify attempt-scoped request immutability
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/current-spine/test_current_request_immutability.py
 
       - name: Diff hygiene
         run: git diff --check
