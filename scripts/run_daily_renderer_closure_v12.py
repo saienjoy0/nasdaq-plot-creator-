@@ -24,6 +24,12 @@ from pathlib import Path
 
 import renderer_binding
 import renderer_contract_sync_v12
+from current_renderer_closure_mechanisms_v12 import (
+    ensure_renderer,
+    evidence_if_exists,
+    load,
+    run,
+)
 
 
 class VisualIntelligenceClosureError(RuntimeError):
