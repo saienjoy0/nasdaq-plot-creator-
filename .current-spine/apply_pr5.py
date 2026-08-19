@@ -21,7 +21,6 @@ def replace_between(path: Path, start: str, end: str, replacement: str, label: s
         raise SystemExit(f"{label}: marker drift")
     path.write_text(text[:a] + replacement + text[b:], encoding="utf-8")
 
-# 1) Current v2 Creative Review -> legacy-shaped boolean lives in one adapter.
 materializer = root / "scripts/materialize_chatgpt_daily_authoring.py"
 replace_once(
     materializer,
@@ -37,14 +36,11 @@ replace_between(
     "Creative Review compatibility projection",
 )
 
-# 2) Persist the already-built production_annex as the current machine authority
-# before embedding the same semantic object into the human Markdown projection.
 daily = root / "scripts/materialize_daily_episode.py"
 needle = '''    production_annex = {\n        "contract_version": "1.0.0",\n        "episode_date": date,\n        "post_inquisition": {\n            "status": "pass",\n            "required_changes_applied": True,\n            "unresolved_required_changes": 0,\n        },\n        "image_resolution": image_resolution,\n        "renderer_contract": {"repository": "saienjoy0/saienjoy0-nasdaq-cafe-remotion", "schema_version": render["schemaVersion"]},\n        "asset_catalog": asset_catalog,\n        "render_spec": render,\n    }\n    public = normalize_scene_headings(contract_package.read_text(encoding="utf-8").rstrip())\n'''
 replacement = '''    production_annex = {\n        "contract_version": "1.0.0",\n        "episode_date": date,\n        "post_inquisition": {\n            "status": "pass",\n            "required_changes_applied": True,\n            "unresolved_required_changes": 0,\n        },\n        "image_resolution": image_resolution,\n        "renderer_contract": {"repository": "saienjoy0/saienjoy0-nasdaq-cafe-remotion", "schema_version": render["schemaVersion"]},\n        "asset_catalog": asset_catalog,\n        "render_spec": render,\n    }\n    structured_source = work / "current_final_production_source.json"\n    structured_source.write_text(dump(production_annex) + "\\n", encoding="utf-8")\n    public = normalize_scene_headings(contract_package.read_text(encoding="utf-8").rstrip())\n'''
 replace_once(daily, needle, replacement, "structured production source persistence")
 
-# 3) Current final authority consumes separated Director/Critic canonical artifacts.
 v12 = root / "scripts/build_final_production_package_v12.py"
 replace_once(
     v12,
@@ -79,7 +75,7 @@ replace_once(
     '''    result = hardened.build_hardened(\n        package,\n        output_root,\n        schema,\n        repo_root=repo_root,\n        builder=structured_builder.build,\n        renderer_finalizer=_renderer_finalizer_v12,\n    )\n''',
     "current structured builder injection",
 )
-if "visual_intelligence_decision.json" in v12:
+if "visual_intelligence_decision.json" in v12.read_text(encoding="utf-8"):
     raise SystemExit("combined Visual Intelligence decision authority remains in current final builder")
 
 print("PR-5 structured authority migration applied")
