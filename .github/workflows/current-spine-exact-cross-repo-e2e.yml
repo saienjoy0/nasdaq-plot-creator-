@@ -1,0 +1,97 @@
+name: Current Spine Exact Cross-Repo E2E
+
+on:
+  pull_request:
+    paths:
+      - "contracts/renderer_binding.json"
+      - "tests/current-spine/**"
+      - "tests/editorial-semantic-boundary/**"
+      - "tests/remotion-compat/run_visual_intelligence_v12_cross_repo.py"
+      - "scripts/run_daily_production_v12.py"
+      - "scripts/run_daily_renderer_closure_v12.py"
+      - "scripts/run_semantic_frozen_renderer_closure_v12.py"
+      - ".github/workflows/current-spine-exact-cross-repo-e2e.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  exact-current-e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout Plot
+        uses: actions/checkout@v6
+
+      - name: Resolve canonical Renderer binding
+        id: binding
+        shell: bash
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          from pathlib import Path
+          value=json.loads(Path('contracts/renderer_binding.json').read_text(encoding='utf-8'))
+          renderer=value['renderer']
+          print('repository='+renderer['repository'])
+          print('commit='+renderer['commit'])
+          print('contract='+renderer['contractVersion'])
+          print('registry_path='+renderer['registrySnapshotPath'])
+          print('registry_sha='+renderer['registrySnapshotSha256'])
+          print('bridge='+value['bridgeContractVersion'])
+          PY
+
+      - name: Checkout exact pinned Renderer
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ steps.binding.outputs.repository }}
+          ref: ${{ steps.binding.outputs.commit }}
+          path: renderer
+          persist-credentials: false
+          clean: true
+
+      - name: Verify exact Renderer and Registry identity before tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C renderer rev-parse HEAD)" = "${{ steps.binding.outputs.commit }}"
+          test "$(sha256sum "renderer/${{ steps.binding.outputs.registry_path }}" | awk '{print $1}')" = "${{ steps.binding.outputs.registry_sha }}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: renderer/package-lock.json
+
+      - name: Install exact current test dependencies
+        run: |
+          python -m pip install --disable-pip-version-check 'jsonschema>=4.18' referencing pytest pillow
+          npm --prefix renderer ci
+
+      - name: Verify current semantic fixture remains current
+        run: pytest -q tests/editorial-semantic-boundary/test_current_contract_e2e.py
+
+      - name: Verify exact pinned Visual Intelligence progression
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/current-spine/run_exact_cross_repo_current_e2e.py --renderer-root renderer
+
+      - name: Verify current state and handoff/final gates
+        env:
+          PYTHONPATH: scripts
+        run: |
+          python3 tests/remotion-compat/test_visual_intelligence_v12_state.py
+          python3 tests/remotion-compat/test_visual_intelligence_preflight_binding.py
+          python3 tests/remotion-compat/test_final_render_authorization_v12.py
+
+      - name: Characterization remains consistent
+        run: python3 tests/current-spine/test_current_spine_characterization.py
+
+      - name: Diff hygiene
+        run: git diff --check
