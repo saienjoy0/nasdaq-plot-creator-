@@ -28,6 +28,10 @@ closure = load_module(
     "current_authoring_closure_for_parity",
     ROOT / "scripts/validate_chatgpt_daily_authoring_closure.py",
 )
+renderer_sources = load_module(
+    "current_renderer_sources_for_parity",
+    ROOT / "scripts/materialize_renderer_sources.py",
+)
 
 
 def registry() -> dict:
@@ -56,14 +60,15 @@ def write_authoring(root: Path, fx, authoring: dict) -> Path:
     return path
 
 
-def test_current_runtime_fixture_schema_closure_and_materializer_agree(tmp_path: Path):
+def semantic_validator(root: Path, name: str):
+    return load_module(name, root / "scripts/validate_editorial_semantic_boundary.py")
+
+
+def test_current_runtime_fixture_schema_closure_materializer_and_source_projection_agree(tmp_path: Path):
     root, fx, authoring = fixture.build_workspace(tmp_path)
     authoring_path = root / "daily-authoring" / f"{fx.DATE}.json"
 
-    semantic = load_module(
-        "current_authoring_semantic_for_parity",
-        root / "scripts/validate_editorial_semantic_boundary.py",
-    )
+    semantic = semantic_validator(root, "current_authoring_semantic_for_parity")
     acceptance = semantic.validate_boundary(root, fx.DATE, authoring_path)
     acceptance_path = root / "verification" / fx.DATE / "editorial_semantic_acceptance.json"
     semantic.atomic_write_json(acceptance_path, acceptance)
@@ -77,6 +82,43 @@ def test_current_runtime_fixture_schema_closure_and_materializer_agree(tmp_path:
     render = json.loads(render_path.read_text(encoding="utf-8"))
     assert len(render["scenes"]) == 9
     assert sum(len(scene["visualBeats"]) for scene in render["scenes"]) == 18
+    normalized, _ = renderer_sources.normalize_render_base(render)
+    assert [source["sourceId"] for source in normalized["sources"]] == ["source-001"]
+
+
+def test_empty_source_registry_fails_schema_closure_and_renderer_projection(tmp_path: Path):
+    root, fx, authoring = fixture.build_workspace(tmp_path)
+    broken = copy.deepcopy(authoring)
+    broken["production"]["sources"] = []
+    errors = closure.validate_authoring(broken, registry())
+    assert any("at least one renderable source-NNN" in error for error in errors)
+
+    path = write_authoring(root, fx, broken)
+    semantic = semantic_validator(root, "current_authoring_semantic_empty_sources")
+    with pytest.raises(Exception, match="sources|minItems|non-empty"):
+        semantic.validate_boundary(root, fx.DATE, path)
+
+    render = json.loads((root / "render-specs" / fx.DATE / "render_spec.json").read_text(encoding="utf-8")) if (root / "render-specs" / fx.DATE / "render_spec.json").is_file() else None
+    if render is None:
+        write_authoring(root, fx, authoring)
+        completed = run_materializer(root, fx.DATE)
+        assert completed.returncode == 0, completed.stdout + completed.stderr
+        render = json.loads((root / "render-specs" / fx.DATE / "render_spec.json").read_text(encoding="utf-8"))
+    render["sources"] = []
+    with pytest.raises(renderer_sources.RendererSourceError, match="renderer source registry would be empty"):
+        renderer_sources.normalize_render_base(render)
+
+
+def test_historical_only_sources_fail_closure_before_renderer_projection(tmp_path: Path):
+    _, _, authoring = fixture.build_workspace(tmp_path)
+    broken = copy.deepcopy(authoring)
+    broken["production"]["sources"] = [{
+        "sourceId": "memory-001",
+        "sourceType": "historical-memory",
+        "title": "historical context",
+    }]
+    errors = closure.validate_authoring(broken, registry())
+    assert any("at least one renderable source-NNN" in error for error in errors)
 
 
 def test_chunk_beat_drift_is_rejected_by_closure_and_direct_materializer(tmp_path: Path):
@@ -120,9 +162,6 @@ def test_schema_rejects_empty_authored_progression_arrays(tmp_path: Path):
     broken = copy.deepcopy(authoring)
     broken["production"]["scenes"][0]["beats"][0]["shots"] = []
     path = write_authoring(root, fx, broken)
-    semantic = load_module(
-        "current_authoring_semantic_empty_shots",
-        root / "scripts/validate_editorial_semantic_boundary.py",
-    )
+    semantic = semantic_validator(root, "current_authoring_semantic_empty_shots")
     with pytest.raises(Exception, match="shots|minItems|non-empty"):
         semantic.validate_boundary(root, fx.DATE, path)
