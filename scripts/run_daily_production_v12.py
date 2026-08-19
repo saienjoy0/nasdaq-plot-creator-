@@ -13,8 +13,8 @@ from pathlib import Path
 from typing import Any
 
 import build_final_production_package_v12 as final_v12
+import current_daily_mechanisms_v12 as current_mechanisms
 import renderer_binding
-import run_daily_production_hardened as hardened
 
 ROOT = Path(__file__).resolve().parents[1]
 VI_STATES = [
@@ -41,7 +41,7 @@ VI_STATES = [
 
 
 def load_module():
-    return hardened.load_hardened_daily_module()
+    return current_mechanisms.load_module()
 
 
 def _request(module: Any, workspace: Path, date: str) -> dict[str, Any]:
@@ -66,21 +66,6 @@ def _validate_vi_binding(module: Any, request: dict[str, Any]) -> None:
         )
 
 
-def _rebind_request_sha(module: Any, workspace: Path, date: str) -> None:
-    req_path = module.request_path(workspace, date)
-    st_path = module.state_path(workspace, date)
-    state = module.load_json(st_path, "production state")
-    new_sha = module.sha256_file(req_path)
-    old_sha = state.get("request_sha256")
-    state["request_sha256"] = new_sha
-    request_rel = req_path.relative_to(workspace.resolve()).as_posix()
-    for transition in state.get("transitions", []):
-        for evidence in transition.get("evidence", []):
-            if evidence.get("path") == request_rel and evidence.get("sha256") == old_sha:
-                evidence["sha256"] = new_sha
-    module.write_atomic(st_path, state)
-
-
 def init_request(
     *,
     module: Any,
@@ -91,7 +76,10 @@ def init_request(
     renderer_commit: str,
     renderer_contract_version: str,
     visual_intelligence_bridge_version: str,
+    semantic_freeze_path: Path,
+    semantic_freeze_sha256: str,
 ) -> dict[str, Any]:
+    workspace = workspace.resolve()
     if visual_intelligence_bridge_version != renderer_binding.BRIDGE_CONTRACT_VERSION:
         raise module.DailyProductionError(
             module.ERROR_CODES["renderer"], "unsupported Visual Intelligence bridge version"
@@ -106,43 +94,195 @@ def init_request(
             module.ERROR_CODES["renderer"],
             "request Renderer does not match canonical binding",
         )
-    result = module.init_request(
-        workspace=workspace,
-        date=date,
-        daily_source=daily_source,
-        requested_scope=requested_scope,
-        renderer_commit=renderer_commit,
-        renderer_contract_version=renderer_contract_version,
-    )
-    request = _request(module, workspace, date)
-    if result.get("status") == "noop":
+
+    daily_source = module.safe_path(workspace, daily_source, "daily source")
+    module.validate_date_in_name(date, daily_source, "daily source")
+    if daily_source.stat().st_size == 0:
+        raise module.DailyProductionError(
+            module.ERROR_CODES["stale"], "daily source must be non-empty"
+        )
+    if requested_scope not in {"package", "preview"}:
+        raise module.DailyProductionError(
+            module.ERROR_CODES["final"],
+            "initial requested_scope may only be package or preview",
+        )
+    freeze = module.safe_path(workspace, semantic_freeze_path, "semantic freeze")
+    actual_freeze_sha = module.sha256_file(freeze)
+    if semantic_freeze_sha256 != actual_freeze_sha:
+        raise module.DailyProductionError(
+            module.ERROR_CODES["stale"],
+            "semantic freeze SHA does not match request input",
+        )
+
+    req_path = module.request_path(workspace, date)
+    st_path = module.state_path(workspace, date)
+    if req_path.exists() or st_path.exists():
+        existing = status(module=module, workspace=workspace, date=date)
+        if existing["validation"]["status"] != "pass":
+            raise module.DailyProductionError(
+                module.ERROR_CODES["stale"],
+                "existing current request/state is stale or invalid",
+            )
+        request = _request(module, workspace, date)
         _validate_vi_binding(module, request)
-        return result
-    request["visual_intelligence"] = {
-        "required": True,
-        "bridge_contract_version": renderer_binding.BRIDGE_CONTRACT_VERSION,
-        "frozen_interface_sha256": renderer_binding.FROZEN_INTERFACE_SHA256,
+        expected_freeze = {
+            "path": freeze.relative_to(workspace).as_posix(),
+            "sha256": actual_freeze_sha,
+        }
+        if request.get("semantic_freeze") != expected_freeze:
+            raise module.DailyProductionError(
+                module.ERROR_CODES["stale"],
+                "existing current request binds a different Semantic Freeze",
+            )
+        return {"status": "noop", **existing}
+
+    request = {
+        "contract_version": "1.2.0",
+        "episode_date": date,
+        "requested_scope": requested_scope,
+        "daily_source": {
+            "path": daily_source.relative_to(workspace).as_posix(),
+            "sha256": module.sha256_file(daily_source),
+        },
+        "semantic_freeze": {
+            "path": freeze.relative_to(workspace).as_posix(),
+            "sha256": actual_freeze_sha,
+        },
+        "renderer": {
+            "repository": renderer_binding.RENDERER_REPOSITORY,
+            "commit": renderer_commit,
+            "contract_version": renderer_contract_version,
+            "registry_snapshot_sha256": renderer["registrySnapshotSha256"],
+        },
+        "visual_director": {"required": True, "contract_version": "1.0.0"},
+        "visual_intelligence": {
+            "required": True,
+            "bridge_contract_version": renderer_binding.BRIDGE_CONTRACT_VERSION,
+            "frozen_interface_sha256": renderer_binding.FROZEN_INTERFACE_SHA256,
+        },
+        "approvals": {
+            "preview_requested": requested_scope == "preview",
+            "final_requested": False,
+            "memory_promotion_requested": False,
+        },
     }
-    module.write_atomic(module.request_path(workspace, date), request)
-    _rebind_request_sha(module, workspace, date)
-    return result
+    module.write_atomic(req_path, request)
+    request_sha = module.sha256_file(req_path)
+    state = {
+        "contract_version": "1.2.0",
+        "episode_date": date,
+        "current_state": "intake_ready",
+        "request_sha256": request_sha,
+        "daily_source_sha256": request["daily_source"]["sha256"],
+        "invalidated": False,
+        "transitions": [
+            {
+                "state": "intake_ready",
+                "evidence": [
+                    request["daily_source"],
+                    {
+                        "path": req_path.relative_to(workspace).as_posix(),
+                        "sha256": request_sha,
+                    },
+                    request["semantic_freeze"],
+                ],
+            }
+        ],
+    }
+    module.write_atomic(st_path, state)
+    return {
+        "status": "created",
+        "request_path": str(req_path),
+        "state_path": str(st_path),
+        "current_state": "intake_ready",
+    }
 
 
 def status(*, module: Any, workspace: Path, date: str) -> dict[str, Any]:
-    base = module.status(workspace=workspace, date=date)
-    request = _request(module, workspace, date)
-    if not _is_vi_request(request):
-        return base
-    _validate_vi_binding(module, request)
-    current = base.get("current_state")
+    workspace = workspace.resolve()
+    req_path = module.request_path(workspace, date)
+    st_path = module.state_path(workspace, date)
+    request = module.load_json(req_path, "production request")
+    state = module.load_json(st_path, "production state")
+    errors: list[str] = []
+    if request.get("episode_date") != date or state.get("episode_date") != date:
+        errors.append("request/state episode date mismatch")
+    if module.sha256_file(req_path) != state.get("request_sha256"):
+        errors.append("production request SHA changed")
+    try:
+        _validate_vi_binding(module, request)
+    except module.DailyProductionError as exc:
+        errors.append(exc.message)
+
+    try:
+        daily_source = module.safe_path(
+            workspace,
+            request.get("daily_source", {}).get("path", ""),
+            "daily source",
+        )
+        daily_sha = module.sha256_file(daily_source)
+        if daily_sha != request.get("daily_source", {}).get("sha256"):
+            errors.append("daily source SHA changed from production request")
+        if daily_sha != state.get("daily_source_sha256"):
+            errors.append("daily source SHA changed from production state")
+        freeze = module.safe_path(
+            workspace,
+            request.get("semantic_freeze", {}).get("path", ""),
+            "semantic freeze",
+        )
+        if module.sha256_file(freeze) != request.get("semantic_freeze", {}).get("sha256"):
+            errors.append("Semantic Freeze SHA changed from production request")
+    except module.DailyProductionError as exc:
+        errors.append(exc.message)
+
+    try:
+        canonical = renderer_binding.load_binding(workspace)
+        renderer = canonical["renderer"]
+        requested_renderer = request.get("renderer", {})
+        if requested_renderer.get("commit") != renderer["commit"]:
+            errors.append("production request Renderer commit drifted from canonical binding")
+        if requested_renderer.get("contract_version") != renderer["contractVersion"]:
+            errors.append("production request Renderer contract drifted from canonical binding")
+        if (
+            requested_renderer.get("registry_snapshot_sha256")
+            != renderer["registrySnapshotSha256"]
+        ):
+            errors.append("production request Registry SHA drifted from canonical binding")
+    except renderer_binding.RendererBindingError as exc:
+        errors.append(str(exc))
+
+    for t_index, transition in enumerate(state.get("transitions", [])):
+        for e_index, evidence in enumerate(transition.get("evidence", [])):
+            try:
+                path = module.safe_path(
+                    workspace,
+                    evidence.get("path", ""),
+                    f"transitions[{t_index}].evidence[{e_index}]",
+                )
+            except module.DailyProductionError as exc:
+                errors.append(exc.message)
+                continue
+            if module.sha256_file(path) != evidence.get("sha256"):
+                errors.append(
+                    f"transitions[{t_index}].evidence[{e_index}] SHA mismatch: "
+                    f"{evidence.get('path')}"
+                )
+
+    current = state.get("current_state")
     next_state = (
         VI_STATES[VI_STATES.index(current) + 1]
         if current in VI_STATES and current != VI_STATES[-1]
         else None
     )
     return {
-        **base,
+        "episode_date": date,
+        "current_state": current,
         "next_state": next_state,
+        "requested_scope": request.get("requested_scope"),
+        "validation": {
+            "status": "pass" if not errors and not state.get("invalidated") else "fail",
+            "errors": errors,
+        },
         "visual_intelligence_bridge": renderer_binding.BRIDGE_CONTRACT_VERSION,
     }
 
@@ -199,7 +339,7 @@ def _validate_story_final_gate(
             module.ERROR_CODES["render"],
             "episode_package_final requires exactly one pre_tts_visual_gate.json",
         )
-    acceptance_validator = hardened._load_module(
+    acceptance_validator = current_mechanisms.load_external_module(
         "story_engine_acceptance_v12_gate",
         ROOT / "scripts/story-engine/validate_story_engine_acceptance_v1_1.py",
     )
@@ -256,7 +396,7 @@ def _validate_vi_transition(
             module=module, grouped=grouped, name="causal_dossier_validation.json", code=module.ERROR_CODES["stale"],
             message="causal_dossier_valid requires exactly one SHA-bound Causal Dossier validation receipt",
         )
-        verifier = hardened._load_module(
+        verifier = current_mechanisms.load_external_module(
             "causal_dossier_receipt_v12_gate", ROOT / "scripts/materialize_causal_research.py"
         )
         try:
@@ -290,10 +430,10 @@ def _validate_vi_transition(
         if len(freeze_candidates) != 1:
             raise module.DailyProductionError(module.ERROR_CODES["stale"], "editorial_snapshot_valid requires exactly one Semantic Freeze")
         freeze_path = freeze_candidates[0]
-        acceptance_module = hardened._load_module(
+        acceptance_module = current_mechanisms.load_external_module(
             "editorial_semantic_acceptance_v12_gate", ROOT / "scripts/validate_editorial_semantic_boundary.py"
         )
-        freeze_module = hardened._load_module(
+        freeze_module = current_mechanisms.load_external_module(
             "chatgpt_semantic_freeze_v12_state_gate", ROOT / "scripts/chatgpt_semantic_freeze.py"
         )
         try:
@@ -393,12 +533,9 @@ def add_transition(
 ) -> dict[str, Any]:
     request = _request(module, workspace, date)
     if not _is_vi_request(request):
-        return module.add_transition(
-            workspace=workspace,
-            date=date,
-            new_state=new_state,
-            evidence_paths=evidence_paths,
-            allow_multi_step=False,
+        raise module.DailyProductionError(
+            module.ERROR_CODES["stale"],
+            "current-v1.2 control plane requires Visual Intelligence binding",
         )
     current_status = status(module=module, workspace=workspace, date=date)
     if current_status["validation"]["status"] != "pass":
@@ -502,6 +639,8 @@ def main(argv: list[str] | None = None) -> int:
     p_init.add_argument("--renderer-commit", required=True)
     p_init.add_argument("--renderer-contract-version", required=True)
     p_init.add_argument("--visual-intelligence-bridge-version", required=True)
+    p_init.add_argument("--semantic-freeze-path", required=True, type=Path)
+    p_init.add_argument("--semantic-freeze-sha256", required=True)
 
     p_status = sub.add_parser("status")
     p_status.add_argument("--episode-date", required=True)
@@ -547,6 +686,8 @@ def main(argv: list[str] | None = None) -> int:
                 renderer_commit=args.renderer_commit,
                 renderer_contract_version=args.renderer_contract_version,
                 visual_intelligence_bridge_version=args.visual_intelligence_bridge_version,
+                semantic_freeze_path=args.semantic_freeze_path,
+                semantic_freeze_sha256=args.semantic_freeze_sha256,
             )
         elif args.command == "status":
             result = status(module=module, workspace=workspace, date=args.episode_date)
