@@ -1,0 +1,44 @@
+name: Current Spine PR-5 Targeted Validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "scripts/build_final_production_package_structured_v12.py"
+      - "scripts/build_final_production_package_v12.py"
+      - "scripts/current_compatibility_adapter_v12.py"
+      - "scripts/materialize_daily_episode.py"
+      - "scripts/materialize_chatgpt_daily_authoring.py"
+      - "tests/current-spine/test_structured_machine_authority_v12.py"
+      - "tests/remotion-compat/test_visual_intelligence_post_pass_authority.py"
+      - ".github/workflows/current-spine-pr5-targeted-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install validation dependencies
+        run: python -m pip install --disable-pip-version-check jsonschema referencing pytest
+      - name: Structured machine authority
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/current-spine/test_structured_machine_authority_v12.py
+      - name: Post-PASS Visual Intelligence integrity
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/remotion-compat/test_visual_intelligence_post_pass_authority.py
+      - name: Current v2 compatibility projection
+        run: pytest -q tests/test_current_v2_review_production_approval.py
+      - name: Syntax and diff hygiene
+        run: |
+          python3 -m py_compile scripts/build_final_production_package_structured_v12.py scripts/build_final_production_package_v12.py scripts/current_compatibility_adapter_v12.py
+          git diff --check
