@@ -1,0 +1,124 @@
+name: Current Renderer Runtime Qualification Handoff
+
+on:
+  pull_request:
+    paths:
+      - "tests/current-spine/build_renderer_runtime_qualification_handoff.py"
+      - ".github/workflows/current-renderer-runtime-qualification-handoff.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: current-renderer-runtime-qualification-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  QUALIFICATION_RENDERER_COMMIT: dec72ae998fdf4873c29fe99b4891881cd5dcd1a
+  QUALIFICATION_RENDERER_CONTRACT: "2.4.0"
+
+jobs:
+  build-fresh-handoff:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout Plot candidate head
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Checkout exact Renderer C
+        uses: actions/checkout@v6
+        with:
+          repository: saienjoy0/saienjoy0-nasdaq-cafe-remotion
+          ref: ${{ env.QUALIFICATION_RENDERER_COMMIT }}
+          path: .renderer
+          fetch-depth: 1
+          persist-credentials: false
+          clean: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: .renderer/package-lock.json
+
+      - name: Install existing Current qualification dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
+          python -m pip install --disable-pip-version-check jsonschema referencing pytest pillow playwright==1.61.0
+          python -m playwright install --with-deps chromium
+          npm --prefix .renderer ci
+
+      - name: Syntax-check qualification fixture
+        run: python3 -m py_compile tests/current-spine/build_renderer_runtime_qualification_handoff.py
+
+      - name: Build fresh C-bound immutable handoff
+        id: build
+        shell: bash
+        run: |
+          set -euo pipefail
+          PLOT_COMMIT="$(git rev-parse HEAD)"
+          WORK_PARENT="${RUNNER_TEMP}/current-renderer-qualification-work"
+          BUNDLE_ROOT="${RUNNER_TEMP}/current-renderer-qualification-bundles"
+          ARTIFACT_ROOT="${RUNNER_TEMP}/current-renderer-qualification-artifact"
+          rm -rf "$WORK_PARENT" "$BUNDLE_ROOT" "$ARTIFACT_ROOT"
+          python3 tests/current-spine/build_renderer_runtime_qualification_handoff.py \
+            --plot-root "$GITHUB_WORKSPACE" \
+            --renderer-root "$GITHUB_WORKSPACE/.renderer" \
+            --renderer-commit "$QUALIFICATION_RENDERER_COMMIT" \
+            --renderer-contract-version "$QUALIFICATION_RENDERER_CONTRACT" \
+            --work-parent "$WORK_PARENT" \
+            --bundle-root "$BUNDLE_ROOT" \
+            --artifact-root "$ARTIFACT_ROOT" \
+            --plot-commit "$PLOT_COMMIT" | tee "${RUNNER_TEMP}/qualification.log"
+          test -f "$ARTIFACT_ROOT/qualification_receipt.json"
+          python3 - "$ARTIFACT_ROOT/qualification_receipt.json" <<'PY' >> "$GITHUB_OUTPUT"
+          import json, pathlib, sys
+          value=json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
+          assert value['status']=='PASS'
+          assert value['qualificationOnly'] is True
+          assert value['finalAuthorized'] is False
+          print('episode_date='+value['episodeDate'])
+          print('bundle_id='+value['bundleId'])
+          print('manifest_sha='+value['manifestSha256'])
+          print('renderer_commit='+value['rendererCommit'])
+          print('renderer_contract='+value['rendererContractVersion'])
+          print('registry_sha='+value['registrySnapshotSha256'])
+          PY
+          echo "artifact_root=$ARTIFACT_ROOT" >> "$GITHUB_OUTPUT"
+
+      - name: Upload fresh immutable qualification handoff
+        uses: actions/upload-artifact@v6
+        with:
+          name: nasdaq-cafe-renderer-qualification-${{ github.run_id }}
+          path: ${{ steps.build.outputs.artifact_root }}
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Summarize qualification seed
+        shell: bash
+        run: |
+          {
+            echo '### Current Renderer runtime qualification handoff'
+            echo
+            echo "Renderer C: \`${{ steps.build.outputs.renderer_commit }}\`"
+            echo "Episode: \`${{ steps.build.outputs.episode_date }}\`"
+            echo "Bundle: \`${{ steps.build.outputs.bundle_id }}\`"
+            echo "Manifest SHA: \`${{ steps.build.outputs.manifest_sha }}\`"
+            echo "Registry SHA: \`${{ steps.build.outputs.registry_sha }}\`"
+            echo "Artifact: \`nasdaq-cafe-renderer-qualification-${{ github.run_id }}\`"
+            echo
+            echo 'Final authorization: `false`'
+          } >> "$GITHUB_STEP_SUMMARY"
