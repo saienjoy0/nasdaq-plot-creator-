@@ -50,6 +50,8 @@ def main() -> int:
         "current mechanisms -> legacy base policy import",
     )
     require(mechanisms, "def request_final(", "current Final authorization mechanism")
+    forbid(mechanisms, "evidence_rebindings", "current evidence SHA rebind repair")
+    forbid(mechanisms, "_refresh_handoff_preflight_evidence", "current preflight rebind helper")
 
     # Current request is born complete and immutable for the attempt.
     forbid(current, "def _rebind_request_sha", "post-hoc request SHA repair helper")
@@ -69,18 +71,29 @@ def main() -> int:
         "legacy request evidence SHA rewrite",
     )
 
-    # PR-2 targets these remaining multi-writer/legacy closure collisions.
-    require(
+    # PR-2 resolves the multi-writer/combined VI authority collisions.
+    forbid(
         closure,
         "import run_daily_renderer_closure as legacy",
         "current closure -> legacy procedure dependency",
     )
-    require(closure, "def _capture_visual_source_authoring", "capture workaround")
-    require(closure, "def _restore_visual_source_authoring", "restore workaround")
+    forbid(closure, "def _capture_visual_source_authoring", "capture workaround")
+    forbid(closure, "def _restore_visual_source_authoring", "restore workaround")
+    forbid(closure, "visual_intelligence_decision.json", "combined Director/Critic authority")
     require(
         closure,
-        '"visual_intelligence_decision.json"',
-        "combined Director/Critic decision artifact",
+        "visual_director_decision.semantic.json",
+        "Director semantic payload boundary",
+    )
+    require(
+        closure,
+        "materialize_visual_intelligence_artifact_v12.py",
+        "Requirements machine materializer",
+    )
+    require(
+        closure,
+        "renderer_contract_sync_v12.sync_renderer_owned_contracts",
+        "Renderer contract sync mechanism",
     )
 
     # PR-4 will consolidate these two current procedure entries behind one facade.

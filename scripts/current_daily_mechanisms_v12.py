@@ -137,57 +137,6 @@ def _policy():
     return policy
 
 
-def _refresh_handoff_preflight_evidence(*, workspace: Path, date: str) -> bool:
-    """Temporary compatibility bridge for the old handoff preflight writer.
-
-    PR-2 removes this once the preflight has one canonical writer. Until then, only
-    already-validated hardening fields may justify refreshing that evidence SHA.
-    """
-    workspace = workspace.resolve()
-    st_path = state_path(workspace, date)
-    if not st_path.is_file():
-        return False
-    state = load_json(st_path, "production state")
-    if state.get("current_state") != "production_package_valid":
-        return False
-    preflight_path = workspace / f"verification/{date}/official_execution_preflight.json"
-    if not preflight_path.is_file():
-        return False
-    relative = preflight_path.relative_to(workspace).as_posix()
-    matches: list[dict[str, Any]] = []
-    for transition in state.get("transitions", []):
-        for evidence in transition.get("evidence", []):
-            if evidence.get("path") == relative:
-                matches.append(evidence)
-    if len(matches) != 1:
-        return False
-    evidence = matches[0]
-    actual_sha = sha256_file(preflight_path)
-    if evidence.get("sha256") == actual_sha:
-        return False
-    preflight = load_json(preflight_path, "handoff-updated preflight")
-    hardening = preflight.get("episode_memory_hardening")
-    required = {
-        "pre_build": "pass",
-        "public_artifacts": "pass",
-        "handoff_recheck": "pass",
-    }
-    if not isinstance(hardening, dict) or any(
-        hardening.get(key) != expected for key, expected in required.items()
-    ):
-        return False
-    evidence["sha256"] = actual_sha
-    state.setdefault("evidence_rebindings", []).append(
-        {
-            "path": relative,
-            "sha256": actual_sha,
-            "reason": "compatibility: handoff_recheck_persisted",
-        }
-    )
-    write_atomic(st_path, state)
-    return True
-
-
 def build_handoff(*, workspace: Path, date: str, bundle_root: Path, plot_commit: str) -> dict[str, Any]:
     policy = _policy()
     current = policy.status(module=sys.modules[__name__], workspace=workspace, date=date)
@@ -211,9 +160,6 @@ def build_handoff(*, workspace: Path, date: str, bundle_root: Path, plot_commit:
     except Exception as exc:
         raise DailyProductionError(ERROR_CODES["handoff"], str(exc)) from exc
 
-    # Existing handoff hardening may persist one verified preflight update. Keep
-    # this compatibility repair isolated here until PR-2 removes the multi-writer.
-    _refresh_handoff_preflight_evidence(workspace=workspace, date=date)
     policy.add_transition(
         module=sys.modules[__name__],
         workspace=workspace,

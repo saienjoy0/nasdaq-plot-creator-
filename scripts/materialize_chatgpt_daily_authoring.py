@@ -13,6 +13,8 @@ import argparse
 import copy
 import json
 from pathlib import Path
+
+import visual_source_checkpoint_v12
 from typing import Any
 
 from viewer_surface_projection import (
@@ -677,9 +679,11 @@ def _materialize_current_v2(root: Path, date: str, raw_authoring: dict[str, Any]
     episodes = root / "episodes" / date
     render_dir = root / "render-specs" / date
     dump(work / "financial_visual_bindings.json", {"contractVersion":"1.0.0","episodeDate":date,"bindings":projected.get("financialBindings",[])})
-    dump(work / "visual_source_intents.json", {"contractVersion":"1.0.0","episodeDate":date,"intents":projected.get("visualSourceIntents",[])})
-    if projected.get("visualSourceSelection") is not None:
-        dump(work / "visual_source_selection.json", projected["visualSourceSelection"])
+    visual_source_checkpoint_v12.materialize(
+        work=work,
+        date=date,
+        projected=projected,
+    )
     dump(story / "story_production_bindings.json", {
         "contract_version":"1.0.0","episode_date":date,"scene_overrides":{},"beat_overrides":{}
     })

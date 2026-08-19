@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import run_daily_production_v12 as v12  # noqa: E402
 import run_daily_renderer_closure_v12 as closure_v12  # noqa: E402
+import visual_source_checkpoint_v12  # noqa: E402
 
 
 class FakeDailyProductionError(ValueError):
@@ -97,23 +98,24 @@ def test_post_pass_b_visual_source_authoring_is_preserved() -> None:
         )
         expected_intents = intent_path.read_bytes()
         expected_selection = selection_path.read_bytes()
-
-        captured = closure_v12._capture_visual_source_authoring(root, date)
-        write(
-            intent_path,
-            {
-                "contractVersion": "1.0.0",
-                "episodeDate": date,
-                "intents": [],
+        result = visual_source_checkpoint_v12.materialize(
+            work=work,
+            date=date,
+            projected={
+                "visualSourceIntents": [],
+                "visualSourceSelection": {
+                    "contractVersion": "1.0.0",
+                    "episodeDate": date,
+                    "selectedPath": "fallback",
+                },
             },
         )
-        selection_path.unlink()
-        closure_v12._restore_visual_source_authoring(root, date, captured)
-
+        if result != "preserved":
+            raise AssertionError("sealed Visual Source checkpoint was not preserved")
         if intent_path.read_bytes() != expected_intents:
-            raise AssertionError("post-Pass-B Visual Source intents were not preserved byte-for-byte")
+            raise AssertionError("sealed Visual Source intents changed")
         if selection_path.read_bytes() != expected_selection:
-            raise AssertionError("post-Pass-B Visual Source selection was not preserved byte-for-byte")
+            raise AssertionError("sealed Visual Source selection changed")
 
 
 def test_pre_pass_b_materialization_remains_authoritative() -> None:
@@ -121,17 +123,19 @@ def test_pre_pass_b_materialization_remains_authoritative() -> None:
     with tempfile.TemporaryDirectory(prefix="nasdaq-v12-source-seed-") as temp:
         root = Path(temp)
         work = root / "working" / date
-        write(
-            work / "visual_source_intents.json",
-            {
-                "contractVersion": "1.0.0",
-                "episodeDate": date,
-                "intents": [{"intentId": "pre-pass-b-seed"}],
+        result = visual_source_checkpoint_v12.materialize(
+            work=work,
+            date=date,
+            projected={
+                "visualSourceIntents": [{"intentId": "pre-pass-b-seed"}],
+                "visualSourceSelection": None,
             },
         )
-        captured = closure_v12._capture_visual_source_authoring(root, date)
-        if captured:
-            raise AssertionError("Visual Source authoring must not be preserved before Visual Requirements exist")
+        if result != "seeded":
+            raise AssertionError("pre-Requirements Visual Source was not seeded")
+        value = json.loads((work / "visual_source_intents.json").read_text(encoding="utf-8"))
+        if value.get("intents") != [{"intentId": "pre-pass-b-seed"}]:
+            raise AssertionError("pre-Requirements Visual Source seed drifted")
 
 
 def test_semantic_pause_carries_required_action() -> None:

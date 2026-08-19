@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Synthetic cross-repo acceptance for visual-intelligence-bridge/1.2.0.
+"""Synthetic Cross-Repo acceptance for the separated current VI artifact order.
 
-This test makes no editorial recommendation. It uses the Renderer's current synthetic
-fixture and an identity-preserving authored selection only to prove the frozen order:
-requirements -> Candidate generation -> Director -> Compile/Warnings -> Critic -> PASS.
+No editorial recommendation is encoded. The pinned Renderer's current fixture and
+identity Candidate prove only machinery and lifecycle boundaries.
 """
 from __future__ import annotations
 
@@ -19,13 +18,10 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import validate_visual_intelligence_package as package_validator  # noqa: E402
+import visual_intelligence_artifacts_v12 as artifacts  # noqa: E402
 import visual_intelligence_bridge as base_bridge  # noqa: E402
-import visual_intelligence_bridge_staged as staged_bridge  # noqa: E402
+import visual_intelligence_pipeline_v12 as pipeline  # noqa: E402
 
-# Exact enum from the pinned Renderer's visual_candidate_catalog.schema.json.
-# Synthetic acceptance is deliberately capability-broad: it validates machinery,
-# not a fake editorial preference that could accidentally outlaw the fixture's
-# authored identity Candidate.
 SUPPORTED_CAPABILITIES = [
     "source-document",
     "quote-social",
@@ -65,40 +61,56 @@ def beat_ids(spec: dict) -> list[str]:
 
 def identity_candidate(beat: dict, candidates: list[dict]) -> dict:
     keys = (
-        "visualTemplate", "templateVariant", "screenState", "visualMode",
-        "templateConfig", "objectIds", "assetPlacementIds",
+        "visualTemplate",
+        "templateVariant",
+        "screenState",
+        "visualMode",
+        "templateConfig",
+        "objectIds",
+        "assetPlacementIds",
     )
-    matches = [candidate for candidate in candidates if all(candidate.get(key) == beat.get(key) for key in keys)]
+    matches = [
+        candidate
+        for candidate in candidates
+        if all(candidate.get(key) == beat.get(key) for key in keys)
+    ]
     if not matches:
-        raise AssertionError(f"current vNext catalog lacks identity Candidate: {beat['beatId']}")
+        raise AssertionError(
+            f"current vNext catalog lacks identity Candidate: {beat['beatId']}"
+        )
     return matches[0]
 
 
 def requirement_rows(spec: dict) -> tuple[list[dict], list[dict]]:
-    intents = []
-    requirements = []
+    intents: list[dict] = []
+    requirements: list[dict] = []
     for beat in [item for scene in spec["scenes"] for item in scene["visualBeats"]]:
         beat_id = beat["beatId"]
-        intents.append({
-            "visualBeatId": beat_id,
-            "purpose": "synthetic machine acceptance",
-            "audienceBeliefBefore": "synthetic before",
-            "audienceBeliefAfter": "synthetic after",
-            "visualInformationGain": "synthetic machine-contract check",
-            "preferredEvidenceModes": list(SUPPORTED_CAPABILITIES),
-            "realityAnchorPreference": "neutral",
-            "editorialReason": "fixture-only requirement; not a production editorial judgment",
-        })
-        requirements.append({
-            "visualBeatId": beat_id,
-            "requiredModes": list(SUPPORTED_CAPABILITIES),
-            "imageRequirement": "not-required",
-            "reason": "synthetic fixture accepts the pinned Renderer capability enum; no editorial ranking is encoded",
-        })
+        intents.append(
+            {
+                "visualBeatId": beat_id,
+                "purpose": "synthetic machine acceptance",
+                "audienceBeliefBefore": "synthetic before",
+                "audienceBeliefAfter": "synthetic after",
+                "visualInformationGain": "synthetic machine-contract check",
+                "preferredEvidenceModes": list(SUPPORTED_CAPABILITIES),
+                "realityAnchorPreference": "neutral",
+                "editorialReason": "fixture-only requirement; not production judgment",
+            }
+        )
+        requirements.append(
+            {
+                "visualBeatId": beat_id,
+                "requiredModes": list(SUPPORTED_CAPABILITIES),
+                "imageRequirement": "not-required",
+                "reason": "synthetic fixture accepts the pinned capability enum",
+            }
+        )
     return intents, requirements
 
 
 def write_json(path: Path, value: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
@@ -107,18 +119,28 @@ def run(renderer_root: Path) -> dict:
     spec = generate_current_fixture(renderer_root)
     date = spec["episode"]["targetDate"]
     expected_commit = subprocess.run(
-        ["git", "rev-parse", "HEAD"], cwd=renderer_root, check=True,
-        capture_output=True, text=True,
+        ["git", "rev-parse", "HEAD"],
+        cwd=renderer_root,
+        check=True,
+        capture_output=True,
+        text=True,
     ).stdout.strip()
 
     with tempfile.TemporaryDirectory(prefix="nasdaq-visual-intelligence-v12-") as temp:
         root = Path(temp)
         (root / "contracts").mkdir(parents=True)
-        shutil.copyfile(ROOT / "contracts/renderer_binding.json", root / "contracts/renderer_binding.json")
-        principles = root / "skills/nasdaq-cafe-visual-intelligence/references/VISUAL_EDITORIAL_INTELLIGENCE.md"
+        shutil.copyfile(
+            ROOT / "contracts/renderer_binding.json",
+            root / "contracts/renderer_binding.json",
+        )
+        principles = (
+            root
+            / "skills/nasdaq-cafe-visual-intelligence/references/VISUAL_EDITORIAL_INTELLIGENCE.md"
+        )
         principles.parent.mkdir(parents=True)
         shutil.copyfile(
-            ROOT / "skills/nasdaq-cafe-visual-intelligence/references/VISUAL_EDITORIAL_INTELLIGENCE.md",
+            ROOT
+            / "skills/nasdaq-cafe-visual-intelligence/references/VISUAL_EDITORIAL_INTELLIGENCE.md",
             principles,
         )
         working = root / "working" / date
@@ -130,144 +152,210 @@ def run(renderer_root: Path) -> dict:
         vi = working / "visual-intelligence"
         vi.mkdir(parents=True)
 
-        editorial_snapshot = base_bridge.build_editorial_snapshot(spec)
-        base_bridge.write_json(vi / "editorial_snapshot.json", editorial_snapshot)
-        snapshot_sha = base_bridge.sha256_file(vi / "editorial_snapshot.json")
-        pre_intents, pre_requirements = requirement_rows(spec)
-        requirements_doc = {
-            "contractVersion": "1.0.0",
-            "bridgeContractVersion": base_bridge.BRIDGE_CONTRACT_VERSION,
+        base_bridge.write_json(
+            vi / "editorial_snapshot.json",
+            base_bridge.build_editorial_snapshot(spec),
+        )
+        intents, requirements = requirement_rows(spec)
+        requirements_semantic = {
+            "semanticPayloadVersion": "1.0.0",
             "episodeDate": date,
-            "editorialSnapshotSha256": snapshot_sha,
-            "intent": {"beats": pre_intents},
-            "provisionalDirection": {"requirements": pre_requirements},
+            "intent": {"beats": intents},
+            "provisionalDirection": {"requirements": requirements},
         }
-        requirements_path = vi / "visual_requirements.json"
-        write_json(requirements_path, requirements_doc)
-        requirements_sha = base_bridge.sha256_file(requirements_path)
+        write_json(vi / artifacts.REQUIREMENTS_SEMANTIC, requirements_semantic)
 
-        # Stage 1: Machine produces Candidates and must stop before any Director choice.
+        # Stage 1: semantic Requirements are materialized, Candidates are built once,
+        # and the machine must pause before any Director choice.
         try:
-            staged_bridge.prepare_and_compile(
-                render=spec, output_root=root, date=date, renderer_root=renderer_root,
-                expected_renderer_commit=expected_commit, plot_root=root,
+            pipeline.prepare_and_compile(
+                render=spec,
+                output_root=root,
+                date=date,
+                renderer_root=renderer_root,
+                expected_renderer_commit=expected_commit,
+                plot_root=root,
             )
-        except staged_bridge.VisualIntelligenceStageError as exc:
+        except pipeline.VisualIntelligenceStageError as exc:
             if "E_VISUAL_INTELLIGENCE_DECISION_REQUIRED" not in str(exc):
                 raise
         else:
-            raise AssertionError("machine bridge must pause before AI-B Director decision")
+            raise AssertionError("pipeline must pause before Director semantic payload")
 
-        for name in (
-            "editorial_snapshot.json", "financial_candidate_provider.json",
-            "visual_candidate_input.json", "visual_capability_inventory.json",
-            "visual_capability_hints.json", "visual_candidate_catalog.json",
-            "recent_visual_pattern_context.json",
-        ):
-            if not (vi / name).is_file():
-                raise AssertionError(f"pre-decision bridge artifact missing: {name}")
+        requirements_canonical = vi / artifacts.REQUIREMENTS_CANONICAL
+        catalog_path = vi / "visual_candidate_catalog.json"
+        if not requirements_canonical.is_file() or not catalog_path.is_file():
+            raise AssertionError("Requirements canonical/Candidate Catalog missing")
+        if any(key.endswith("Sha256") for key in requirements_semantic):
+            raise AssertionError("semantic Requirements authored a machine SHA")
 
-        catalog = json.loads((vi / "visual_candidate_catalog.json").read_text(encoding="utf-8"))
-        catalog_sha = base_bridge.canonical_sha(catalog)
+        catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
         by_beat: dict[str, list[dict]] = {}
         for candidate in catalog["candidates"]:
             by_beat.setdefault(candidate["visualBeatId"], []).append(candidate)
-        selections = []
+        selections: list[dict] = []
         spec_beats = [beat for scene in spec["scenes"] for beat in scene["visualBeats"]]
         for beat in spec_beats:
             beat_id = beat["beatId"]
             legal = by_beat[beat_id]
             selected = identity_candidate(beat, legal)
-            alternative = next((item for item in legal if item["candidateId"] != selected["candidateId"]), None)
-            selections.append({
-                "visualBeatId": beat_id,
-                "selectedCandidateId": selected["candidateId"],
-                "strongestAlternativeCandidateId": alternative["candidateId"] if alternative else None,
-                "whySelected": "identity-preserving synthetic acceptance",
-                "whyNotAlternative": "fixture validates machinery, not editorial preference" if alternative else "",
-            })
-
-        # A legal Candidate ID from the wrong Catalog must be treated as stale, not reused.
-        stale_decision = {
-            "contractVersion": "1.0.0",
-            "bridgeContractVersion": base_bridge.BRIDGE_CONTRACT_VERSION,
-            "episodeDate": date,
-            "editorialSnapshotSha256": snapshot_sha,
-            "visualRequirementsSha256": requirements_sha,
-            "director": {
-                "candidateCatalogSha256": "0" * 64,
-                "selections": selections,
-            },
-        }
-        write_json(vi / "visual_intelligence_decision.json", stale_decision)
-        try:
-            staged_bridge.prepare_and_compile(
-                render=spec, output_root=root, date=date, renderer_root=renderer_root,
-                expected_renderer_commit=expected_commit, plot_root=root,
+            alternative = next(
+                (
+                    item
+                    for item in legal
+                    if item["candidateId"] != selected["candidateId"]
+                ),
+                None,
             )
-        except staged_bridge.VisualIntelligenceStageError as exc:
-            if "E_VISUAL_DECISION_STALE: Candidate Catalog SHA mismatch" not in str(exc):
+            selections.append(
+                {
+                    "visualBeatId": beat_id,
+                    "selectedCandidateId": selected["candidateId"],
+                    "strongestAlternativeCandidateId": (
+                        alternative["candidateId"] if alternative else None
+                    ),
+                    "whySelected": "identity-preserving synthetic acceptance",
+                    "whyNotAlternative": (
+                        "fixture validates machinery, not editorial preference"
+                        if alternative
+                        else ""
+                    ),
+                }
+            )
+
+        # Invalid semantic selection is rejected before compile and remains correctable
+        # because Director canonical is not yet lifecycle-frozen.
+        bad = [dict(item) for item in selections]
+        bad[0]["selectedCandidateId"] = "candidate-does-not-exist"
+        director_semantic_path = vi / artifacts.DIRECTOR_SEMANTIC
+        write_json(
+            director_semantic_path,
+            {
+                "semanticPayloadVersion": "1.0.0",
+                "episodeDate": date,
+                "selections": bad,
+            },
+        )
+        try:
+            pipeline.prepare_and_compile(
+                render=spec,
+                output_root=root,
+                date=date,
+                renderer_root=renderer_root,
+                expected_renderer_commit=expected_commit,
+                plot_root=root,
+            )
+        except pipeline.VisualIntelligenceStageError as exc:
+            if "selectedCandidateId is not a legal Candidate" not in str(exc):
                 raise
         else:
-            raise AssertionError("stale Candidate Catalog decision must be rejected")
+            raise AssertionError("illegal Director selection must be rejected")
 
-        # Stage 2: Director-only decision is legal, but Critic must not be pre-baked.
-        director_decision = {
-            "contractVersion": "1.0.0",
-            "bridgeContractVersion": base_bridge.BRIDGE_CONTRACT_VERSION,
+        director_semantic = {
+            "semanticPayloadVersion": "1.0.0",
             "episodeDate": date,
-            "editorialSnapshotSha256": snapshot_sha,
-            "visualRequirementsSha256": requirements_sha,
-            "director": {
-                "candidateCatalogSha256": catalog_sha,
-                "selections": selections,
-            },
+            "selections": selections,
         }
-        write_json(vi / "visual_intelligence_decision.json", director_decision)
+        write_json(director_semantic_path, director_semantic)
+
+        # Stage 2: legal Director canonical is sealed by compile; no Critic can be
+        # authored before actual compiled/warning bytes exist.
         try:
-            staged_bridge.prepare_and_compile(
-                render=spec, output_root=root, date=date, renderer_root=renderer_root,
-                expected_renderer_commit=expected_commit, plot_root=root,
+            pipeline.prepare_and_compile(
+                render=spec,
+                output_root=root,
+                date=date,
+                renderer_root=renderer_root,
+                expected_renderer_commit=expected_commit,
+                plot_root=root,
             )
-        except staged_bridge.VisualIntelligenceStageError as exc:
+        except pipeline.VisualIntelligenceStageError as exc:
             if "E_VISUAL_INTELLIGENCE_REVIEW_REQUIRED" not in str(exc):
                 raise
         else:
-            raise AssertionError("Director-only decision must stop for post-compile AI-B Critic review")
+            raise AssertionError("Director must stop for post-compile Critic review")
 
+        director_path = vi / artifacts.DIRECTOR_CANONICAL
         compiled_path = vi / "visual_direction_compiled_render.json"
         warning_path = vi / "visual_editorial_warning_report.json"
         compile_report_path = vi / "visual_direction_compile_report.json"
-        if not compiled_path.is_file() or not warning_path.is_file() or not compile_report_path.is_file():
-            raise AssertionError("REVIEW_REQUIRED must be emitted only after compile/warning artifacts exist")
+        for path in (director_path, compiled_path, warning_path, compile_report_path):
+            if not path.is_file():
+                raise AssertionError(f"REVIEW_REQUIRED artifact missing: {path.name}")
         report = json.loads(compile_report_path.read_text(encoding="utf-8"))
         if report.get("semanticDiff") != "PASS":
-            raise AssertionError("Protected Semantic Diff did not PASS before Critic")
-        compiled_sha = base_bridge.sha256_file(compiled_path)
-        warning_sha = base_bridge.sha256_file(warning_path)
+            raise AssertionError("Protected Semantic Diff did not PASS")
+        director_before = director_path.read_bytes()
+        compiled_before = compiled_path.read_bytes()
 
-        # Stage 3: only a Critic PASS bound to these exact outputs may finalize the package.
-        reviewed_decision = {
-            **director_decision,
-            "reviewRounds": [{
-                "round": 1,
-                "status": "PASS",
-                "findings": [],
-                "note": "synthetic fixture-only critic pass after actual compile",
-                "compiledVisualSha256": compiled_sha,
-                "warningReportSha256": warning_sha,
-            }],
+        changed_director = json.loads(json.dumps(director_semantic))
+        changed_director["selections"][0]["whySelected"] = "attempted post-compile rewrite"
+        write_json(director_semantic_path, changed_director)
+        try:
+            pipeline.prepare_and_compile(
+                render=spec,
+                output_root=root,
+                date=date,
+                renderer_root=renderer_root,
+                expected_renderer_commit=expected_commit,
+                plot_root=root,
+            )
+        except pipeline.VisualIntelligenceStageError as exc:
+            if "E_VISUAL_IMMUTABLE_CLOBBER:Visual Director Decision canonical" not in str(exc):
+                raise
+        else:
+            raise AssertionError("post-compile Director rewrite must fail closed")
+        if director_path.read_bytes() != director_before or compiled_path.read_bytes() != compiled_before:
+            raise AssertionError("sealed Director/compiled bytes changed after rejected rewrite")
+        write_json(director_semantic_path, director_semantic)
+
+        # Stage 3: Critic semantic contains no machine SHA. Materializer binds it to
+        # exact Director/compiled/warning bytes and only then may the package PASS.
+        critic_semantic = {
+            "semanticPayloadVersion": "1.0.0",
+            "episodeDate": date,
+            "reviewRounds": [
+                {
+                    "round": 1,
+                    "status": "PASS",
+                    "findings": [],
+                    "viewerImpact": "none in synthetic fixture",
+                    "reason": "synthetic fixture-only post-compile review",
+                }
+            ],
         }
-        write_json(vi / "visual_intelligence_decision.json", reviewed_decision)
-        compiled = staged_bridge.prepare_and_compile(
-            render=spec, output_root=root, date=date, renderer_root=renderer_root,
-            expected_renderer_commit=expected_commit, plot_root=root,
+        write_json(vi / artifacts.CRITIC_SEMANTIC, critic_semantic)
+        compiled = pipeline.prepare_and_compile(
+            render=spec,
+            output_root=root,
+            date=date,
+            renderer_root=renderer_root,
+            expected_renderer_commit=expected_commit,
+            plot_root=root,
         )
         if compiled["render"] != spec:
-            raise AssertionError("identity acceptance changed the synthetic RenderSpec")
-        validation = package_validator.validate(root=root, date=date, renderer_root=renderer_root)
+            raise AssertionError("identity acceptance changed synthetic RenderSpec")
+        if compiled_path.read_bytes() != compiled_before:
+            raise AssertionError("Critic pass recompiled or rewrote compiled visual")
+
+        critic_path = vi / artifacts.CRITIC_CANONICAL
+        critic = json.loads(critic_path.read_text(encoding="utf-8"))
+        if critic.get("compiledVisualSha256") != base_bridge.sha256_file(compiled_path):
+            raise AssertionError("canonical Critic is not bound to compiled visual")
+        if critic.get("warningReportSha256") != base_bridge.sha256_file(warning_path):
+            raise AssertionError("canonical Critic is not bound to warning report")
+        if any(key.endswith("Sha256") for key in critic_semantic):
+            raise AssertionError("semantic Critic authored a machine SHA")
+
+        validation = package_validator.validate(
+            root=root,
+            date=date,
+            renderer_root=renderer_root,
+        )
         if validation["status"] != "PASS":
             raise AssertionError("Visual Intelligence package validator did not PASS")
+        if (vi / "visual_intelligence_decision.json").exists():
+            raise AssertionError("combined Director/Critic artifact reappeared in current path")
         return {
             "status": "PASS",
             "episodeDate": date,
@@ -279,6 +367,9 @@ def run(renderer_root: Path) -> dict:
             "staleCatalogDecisionRejected": True,
             "machinePausedBeforeCritic": True,
             "criticBoundToCompiledVisual": True,
+            "directorSealedBeforeCritic": True,
+            "semanticPayloadShaFree": True,
+            "combinedDecisionAuthorityAbsent": True,
             "packageValidation": validation["status"],
         }
 
