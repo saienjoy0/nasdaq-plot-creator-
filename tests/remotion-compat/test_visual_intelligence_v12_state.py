@@ -223,7 +223,7 @@ def main() -> int:
                     "canonicalAuthoring": {"sha256": authoring_sha},
                 }
 
-        original_loader = v12.hardened._load_module
+        original_loader = v12.current_mechanisms.load_external_module
 
         def semantic_loader(name, path):
             if path.name == "validate_editorial_semantic_boundary.py":
@@ -232,7 +232,7 @@ def main() -> int:
                 return FreezeModule
             return original_loader(name, path)
 
-        v12.hardened._load_module = semantic_loader
+        v12.current_mechanisms.load_external_module = semantic_loader
         try:
             v12._validate_vi_transition(
                 module=module,
@@ -242,7 +242,7 @@ def main() -> int:
                 evidence_paths=[snapshot, acceptance, projection, freeze_path],
             )
         finally:
-            v12.hardened._load_module = original_loader
+            v12.current_mechanisms.load_external_module = original_loader
 
         requirements = write(
             vi / "visual_requirements.json",
@@ -344,8 +344,8 @@ def main() -> int:
             def validate_acceptance(*args, **kwargs):
                 return {"status": "pass", "errors": []}
 
-        original_loader = v12.hardened._load_module
-        v12.hardened._load_module = lambda *args, **kwargs: StoryAcceptanceValidator
+        original_loader = v12.current_mechanisms.load_external_module
+        v12.current_mechanisms.load_external_module = lambda *args, **kwargs: StoryAcceptanceValidator
         try:
             v12._validate_story_final_gate(
                 module=module,
@@ -367,7 +367,7 @@ def main() -> int:
                 ),
             )
         finally:
-            v12.hardened._load_module = original_loader
+            v12.current_mechanisms.load_external_module = original_loader
 
     print("visual intelligence v1.2 state tests passed")
     return 0

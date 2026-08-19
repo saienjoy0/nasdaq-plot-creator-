@@ -170,7 +170,10 @@ def prepare_common(
         "--episode-date", date, "--daily-source-package", f"daily-inputs/{date}/daily_source_package_{date}.md",
         "--requested-scope", "preview", "--renderer-commit", renderer["commit"],
         "--renderer-contract-version", renderer["contractVersion"],
-        "--visual-intelligence-bridge-version", binding["bridgeContractVersion"], env=env,
+        "--visual-intelligence-bridge-version", binding["bridgeContractVersion"],
+        "--semantic-freeze-path", str(freeze.relative_to(root)),
+        "--semantic-freeze-sha256", env.get("NASDAQ_CAFE_SEMANTIC_FREEZE_SHA256", ""),
+        env=env,
     )
     advance(root, date=date, state="research_inputs_bound",
             evidence=[f"research/{date}/research_input_manifest.json"], env=env)

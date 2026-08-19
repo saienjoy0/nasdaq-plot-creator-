@@ -24,6 +24,11 @@ def require(source: str, needle: str, label: str) -> None:
         raise AssertionError(f"current characterization drifted: {label}: {needle!r}")
 
 
+def forbid(source: str, needle: str, label: str) -> None:
+    if needle in source:
+        raise AssertionError(f"resolved divergence regressed: {label}: {needle!r}")
+
+
 def main() -> int:
     current = text("scripts/run_daily_production_v12.py")
     base = text("scripts/run_daily_production.py")
@@ -31,20 +36,20 @@ def main() -> int:
     frozen = text("scripts/run_semantic_frozen_renderer_closure_v12.py")
     preview = text(".github/workflows/chatgpt-daily-preview-production.yml")
 
-    # CURRENT_POLICY still inherits policy from the hardened/legacy stack.
-    require(current, "import run_daily_production_hardened as hardened", "current -> hardened policy dependency")
-    require(current, "return hardened.load_hardened_daily_module()", "v1.2 control-plane loader")
+    # PR-1 resolves Current -> legacy policy inheritance. Shared hardened stage
+    # executors remain behind the dedicated mechanism module only.
+    require(current, "import current_daily_mechanisms_v12 as current_mechanisms", "current mechanisms dependency")
+    forbid(current, "run_daily_production_hardened", "current -> hardened policy dependency")
 
-    # Current request is not born complete yet: VI binding is appended and the
-    # request/state lineage is repaired after the initial request write.
-    require(current, "def _rebind_request_sha", "post-hoc request SHA repair helper")
-    require(current, 'request["visual_intelligence"] = {', "post-init Visual Intelligence binding")
-    require(current, "_rebind_request_sha(module, workspace, date)", "post-init request SHA rebind")
+    # Current request is now born complete and immutable for the attempt.
+    forbid(current, "def _rebind_request_sha", "post-hoc request SHA repair helper")
+    require(current, '"semantic_freeze": {', "Semantic Freeze bound at request creation")
+    require(current, '"registry_snapshot_sha256":', "Registry identity bound at request creation")
 
-    # The base request is also mutated when Final is requested, including evidence
-    # SHA rewrite. PR-1 must make the current request immutable for the full attempt.
-    require(base, 'request["approvals"]["final_requested"] = True', "base request mutation at Final request")
-    require(base, 'evidence["sha256"] = state["request_sha256"]', "request evidence SHA rewrite")
+    # Legacy/base still mutates its own request. That is permitted only outside the
+    # current path and remains visible until PR-8 legacy isolation documentation.
+    require(base, 'request["approvals"]["final_requested"] = True', "legacy request mutation at Final request")
+    require(base, 'evidence["sha256"] = state["request_sha256"]', "legacy request evidence SHA rewrite")
 
     # Current closure still imports legacy procedure and preserves semantic files via
     # capture/restore around deterministic rematerialization.
