@@ -130,8 +130,6 @@ jobs:
           ready_fallback=[row for row in fallback if row.get('status') == 'ready']
           unavailable_fallback=[row for row in fallback if row.get('status') != 'ready']
 
-          # A ready externally captured Primary must point to a real, valid image.
-          # Registry-backed rows may be ready without a generated outputPath.
           for row in ready_primary:
               output=row.get('outputPath')
               if output is None:
@@ -148,8 +146,6 @@ jobs:
               if row.get('mimeType') != 'image/png' or not row.get('outputSha256'):
                   raise SystemExit(f'captured Primary asset metadata invalid: {row}')
 
-          # Approved Fallback is part of the production contract, not a test-only
-          # decoration. It must remain resolvable even when Primary succeeds.
           if unavailable_fallback:
               raise SystemExit(
                   'Approved Fallback resolution failed: ' +
@@ -162,9 +158,6 @@ jobs:
                   json.dumps(unavailable_primary, ensure_ascii=False)
               )
 
-          # Provider-side failure of Primary is a normal resolved state when the
-          # pre-authored production selection is Approved Fallback. Do not turn a
-          # valid fallback into a false production failure.
           if selected_path == 'fallback':
               resolution_class = 'fallback-resolved' if unavailable_primary else 'fallback-selected'
           else:
@@ -187,16 +180,18 @@ jobs:
           print(json.dumps(report, ensure_ascii=False, indent=2))
           PY
 
-      - name: Run real-day v1.2 closure
+      - name: Run real-day current facade
         if: inputs.phase != 'source-probe'
         env:
           PYTHONPATH: scripts
         run: |
-          python scripts/run_daily_renderer_closure_v12.py \
+          python scripts/current_production_facade_v12.py \
+            --workspace . \
+            --renderer-root .renderer \
+            closure \
             --phase "${{ inputs.phase }}" \
-            --date "${{ inputs.episode_date }}" \
-            --repo-root . \
-            --renderer-root .renderer
+            --episode-date "${{ inputs.episode_date }}" \
+            --semantic-freeze "semantic-freezes/${{ inputs.episode_date }}.json"
 
       - name: Upload Visual Intelligence canary evidence
         if: always()
