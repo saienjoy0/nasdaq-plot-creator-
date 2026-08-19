@@ -34,7 +34,11 @@ visual_critic_review.json
 
 ## Visual Source checkpoint
 
-Daily Authoring seeds Visual Source working files before Requirements exist. Once canonical Requirements exist, deterministic Daily Authoring reruns preserve the already-authored Visual Source checkpoint instead of overwriting it. The old capture/restore workaround is therefore removed from the current closure.
+Daily Authoring delegates Visual Source persistence to `visual_source_checkpoint_v12.py`, which is the only current writer. Before canonical Requirements exist it seeds the checkpoint; once Requirements exist it preserves the exact checkpoint bytes. The old capture/restore workaround is removed from the current closure.
+
+## Sealed evidence
+
+Current production no longer contains `_refresh_handoff_preflight_evidence` or an `evidence_rebindings` repair path. The hardened handoff temporarily augments only the copy consumed by the bundle builder and restores the original production preflight bytes in `finally`, so previously hash-bound evidence is not rewritten.
 
 ## Semantic Freeze identity
 
@@ -55,4 +59,6 @@ The exact Cross-Repo E2E must prove:
 - Critic semantic payload is SHA-free;
 - canonical Critic binds exact Director/compiled/warning bytes;
 - combined decision authority is absent;
-- VI package validator PASSes against the exact pinned Renderer.
+- VI package validator PASSes against the exact pinned Renderer;
+- state regression proves sealed Visual Source bytes are preserved without capture/restore;
+- characterization proves current evidence SHA rebind repair is absent.
