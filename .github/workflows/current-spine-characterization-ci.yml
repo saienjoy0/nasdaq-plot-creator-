@@ -1,0 +1,40 @@
+name: Current Spine Characterization
+
+on:
+  pull_request:
+    paths:
+      - "scripts/run_daily_production.py"
+      - "scripts/run_daily_production_hardened.py"
+      - "scripts/run_daily_production_v12.py"
+      - "scripts/run_semantic_frozen_renderer_closure_v12.py"
+      - "scripts/run_daily_renderer_closure_v12.py"
+      - ".github/workflows/chatgpt-daily-preview-production.yml"
+      - "tests/current-spine/**"
+      - "docs/current-spine/**"
+      - ".github/workflows/current-spine-characterization-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  characterize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Plot
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Syntax gate
+        run: python3 -m py_compile tests/current-spine/test_current_spine_characterization.py
+
+      - name: Freeze observable current divergences
+        run: python3 tests/current-spine/test_current_spine_characterization.py
+
+      - name: Diff hygiene
+        run: git diff --check
