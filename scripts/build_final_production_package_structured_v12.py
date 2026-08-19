@@ -15,10 +15,16 @@ from typing import Any
 import build_final_production_package as base
 
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+STORY_BEGIN = "<!--BEGIN_STORY_ENGINE_ANNEX-->"
+STORY_END = "<!--END_STORY_ENGINE_ANNEX-->"
+MEM_BEGIN = "<!--BEGIN_EPISODE_MEMORY_ANNEX-->"
+MEM_END = "<!--END_EPISODE_MEMORY_ANNEX-->"
+PROD_BEGIN = "<!--BEGIN_FINAL_PRODUCTION_SOURCE-->"
+PROD_END = "<!--END_FINAL_PRODUCTION_SOURCE-->"
 ANNEX_BLOCKS = (
-    (base.STORY_BEGIN, base.STORY_END),
-    (base.MEM_BEGIN, base.MEM_END),
-    (base.PROD_BEGIN, base.PROD_END),
+    (STORY_BEGIN, STORY_END),
+    (MEM_BEGIN, MEM_END),
+    (PROD_BEGIN, PROD_END),
 )
 
 
@@ -80,8 +86,6 @@ def build(package_path: Path, output_root: Path, schema_path: Path) -> dict[str,
     public = _strip_human_annex_blocks(markdown)
     schema = base.load_schema(schema_path)
 
-    # The schema and public-string identity gate remain unchanged. Only the source
-    # of the technical object changes from Markdown JSON to the structured sidecar.
     errors, warnings = base.validate_source(annex, public, schema)
     if errors:
         raise StructuredFinalProductionError("\n".join(errors))
