@@ -306,7 +306,17 @@ def production(script: dict[str, Any]) -> dict[str, Any]:
         })
     return {
         "episodeType": "single-news",
-        "sources": [],
+        "sources": [{
+            "sourceId": "source-001",
+            "title": "Synthetic Current source",
+            "publisher": "Synthetic IR",
+            "sourceType": "official",
+            "reference": "synthetic://source-001",
+            "publishedAt": None,
+            "accessedAt": CUTOFF,
+            "usedFor": ["synthetic Current machinery qualification"],
+            "narrationAttribution": "Synthetic IR",
+        }],
         "pronunciations": [], "corrections": [], "visualSourceIntents": [], "visualSourceSelection": None,
         "financialBindings": [], "scenes": scenes,
     }
