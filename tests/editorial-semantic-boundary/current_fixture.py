@@ -93,7 +93,6 @@ def make_canon(root: Path) -> None:
                 "parts": [f"source-of-truth/{name}"] if number in {"01", "02"} else [],
             },
         })
-    # 03/04 must be packed according to the real canon contract.
     import base64, gzip
     for item in docs[2:]:
         logical = root / item["logicalPath"]
@@ -232,20 +231,27 @@ def story_plan(dossier_ref: dict[str, str]) -> dict[str, Any]:
 def story_script(plan: dict[str, Any], plan_ref: dict[str, str], dossier_ref: dict[str, str]) -> dict[str, Any]:
     scenes = []
     for index, (role, planned) in enumerate(zip(ROLES, plan["scenes"], strict=True), 1):
-        narration = f"僕はScene {index}で市場の意味を確認します。"
-        evid = list(planned["new_evidence_ids"])
         if index == 9:
-            narration = "僕からは以上、朝のNASDAQカフェでした。いってらっしゃい。おやすみなさい。"
+            parts = [
+                "僕からは以上、朝のNASDAQカフェでした。",
+                "いってらっしゃい。おやすみなさい。",
+            ]
             claims = []
         else:
-            claim_evidence = ["E-002"] if "E-002" in evid else [evid[0]]
+            parts = [
+                f"僕はScene {index}で市場を確認します。",
+                "ここから市場の意味を確認します。",
+            ]
+            evid_for_claim = list(planned["new_evidence_ids"])
+            claim_evidence = ["E-002"] if "E-002" in evid_for_claim else [evid_for_claim[0]]
             claims = [{
                 "claim_id": f"claim-{index:02d}", "statement": f"Scene {index}の主張", "claim_type": "fact",
                 "evidence_ids": claim_evidence, "confidence": "medium",
                 "scope": "nasdaq_support" if "E-002" in claim_evidence else "company",
             }]
+        evid = list(planned["new_evidence_ids"])
         scenes.append({
-            "scene_id": f"scene-{index:02d}", "formal_role": role, "narration": narration,
+            "scene_id": f"scene-{index:02d}", "formal_role": role, "narration": "\n\n".join(parts),
             "connection_to_previous": planned["connector"],
             "evidence_ids": evid, "causal_claims": claims,
         })
@@ -277,7 +283,10 @@ def creative_review() -> dict[str, Any]:
 def production(script: dict[str, Any]) -> dict[str, Any]:
     scenes = []
     for index, scripted in enumerate(script["scenes"], 1):
-        chunks = [{"text": scripted["narration"], "expression": "分析"}]
+        parts = scripted["narration"].split("\n\n")
+        if len(parts) != 2 or any(not part for part in parts):
+            raise ValueError(f"scene-{index:02d}: synthetic Current narration must contain exactly two paragraphs")
+        chunks = [{"text": part, "expression": "分析"} for part in parts]
         beats = []
         for beat_index in (1, 2):
             beats.append({
@@ -286,7 +295,7 @@ def production(script: dict[str, Any]) -> dict[str, Any]:
                 "screenQuestion": f"Scene {index} question {beat_index}", "primaryElement": f"Scene {index} element",
                 "viewerTexts": [f"Scene {index} text {beat_index}"], "changeCue": "next",
                 "grammarId": "vg-basic", "transitionRole": "continuation", "evidenceSourceIds": scripted["evidence_ids"],
-                "metrics": [], "nodes": [], "edges": [], "shots": [], "visualEvents": [],
+                "metrics": [], "nodes": [], "edges": [],
             })
         scenes.append({
             "sceneRole": ROLES[index-1], "formalName": f"Scene {index}", "purpose": f"purpose {index}",
