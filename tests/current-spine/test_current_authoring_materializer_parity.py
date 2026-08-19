@@ -34,6 +34,28 @@ def registry() -> dict:
     return json.loads((ROOT / "contracts/financial_recipe_registry.json").read_text(encoding="utf-8"))
 
 
+def run_materializer(root: Path, date: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts/materialize_chatgpt_daily_authoring.py"),
+            "--date",
+            date,
+            "--repo-root",
+            str(root),
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+    )
+
+
+def write_authoring(root: Path, fx, authoring: dict) -> Path:
+    path = root / "daily-authoring" / f"{fx.DATE}.json"
+    fx.write_json(path, authoring)
+    return path
+
+
 def test_current_runtime_fixture_schema_closure_and_materializer_agree(tmp_path: Path):
     root, fx, authoring = fixture.build_workspace(tmp_path)
     authoring_path = root / "daily-authoring" / f"{fx.DATE}.json"
@@ -49,19 +71,7 @@ def test_current_runtime_fixture_schema_closure_and_materializer_agree(tmp_path:
 
     assert closure.validate_authoring(authoring, registry()) == []
 
-    completed = subprocess.run(
-        [
-            sys.executable,
-            str(ROOT / "scripts/materialize_chatgpt_daily_authoring.py"),
-            "--date",
-            fx.DATE,
-            "--repo-root",
-            str(root),
-        ],
-        cwd=ROOT,
-        text=True,
-        capture_output=True,
-    )
+    completed = run_materializer(root, fx.DATE)
     assert completed.returncode == 0, completed.stdout + completed.stderr
     render_path = root / "render-specs" / fx.DATE / "render_spec.json"
     render = json.loads(render_path.read_text(encoding="utf-8"))
@@ -69,36 +79,47 @@ def test_current_runtime_fixture_schema_closure_and_materializer_agree(tmp_path:
     assert sum(len(scene["visualBeats"]) for scene in render["scenes"]) == 18
 
 
-def test_closure_rejects_chunk_beat_drift_before_materialization(tmp_path: Path):
-    _, _, authoring = fixture.build_workspace(tmp_path)
+def test_chunk_beat_drift_is_rejected_by_closure_and_direct_materializer(tmp_path: Path):
+    root, fx, authoring = fixture.build_workspace(tmp_path)
     broken = copy.deepcopy(authoring)
     broken["production"]["scenes"][0]["chunks"].pop()
     errors = closure.validate_authoring(broken, registry())
     assert any("chunks/beats length mismatch" in error for error in errors)
+    write_authoring(root, fx, broken)
+    completed = run_materializer(root, fx.DATE)
+    assert completed.returncode != 0
+    assert "chunks/beats length mismatch" in completed.stdout + completed.stderr
 
 
-def test_closure_rejects_empty_shots_placeholder(tmp_path: Path):
-    _, _, authoring = fixture.build_workspace(tmp_path)
+def test_empty_shots_placeholder_is_rejected_by_closure_and_direct_materializer(tmp_path: Path):
+    root, fx, authoring = fixture.build_workspace(tmp_path)
     broken = copy.deepcopy(authoring)
     broken["production"]["scenes"][0]["beats"][0]["shots"] = []
     errors = closure.validate_authoring(broken, registry())
     assert any("authored shots must contain 1-4" in error for error in errors)
+    write_authoring(root, fx, broken)
+    completed = run_materializer(root, fx.DATE)
+    assert completed.returncode != 0
+    assert "authored shots must contain 1-4" in completed.stdout + completed.stderr
 
 
-def test_closure_rejects_empty_visual_events_placeholder(tmp_path: Path):
-    _, _, authoring = fixture.build_workspace(tmp_path)
+def test_empty_visual_events_placeholder_is_rejected_by_closure_and_direct_materializer(tmp_path: Path):
+    root, fx, authoring = fixture.build_workspace(tmp_path)
     broken = copy.deepcopy(authoring)
     broken["production"]["scenes"][0]["beats"][0]["visualEvents"] = []
     errors = closure.validate_authoring(broken, registry())
     assert any("visualEvents must be a non-empty array" in error for error in errors)
+    write_authoring(root, fx, broken)
+    completed = run_materializer(root, fx.DATE)
+    assert completed.returncode != 0
+    assert "visualEvents must be a non-empty array" in completed.stdout + completed.stderr
 
 
 def test_schema_rejects_empty_authored_progression_arrays(tmp_path: Path):
     root, fx, authoring = fixture.build_workspace(tmp_path)
     broken = copy.deepcopy(authoring)
     broken["production"]["scenes"][0]["beats"][0]["shots"] = []
-    path = root / "daily-authoring" / f"{fx.DATE}.json"
-    fx.write_json(path, broken)
+    path = write_authoring(root, fx, broken)
     semantic = load_module(
         "current_authoring_semantic_empty_shots",
         root / "scripts/validate_editorial_semantic_boundary.py",
