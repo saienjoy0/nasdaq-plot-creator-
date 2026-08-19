@@ -403,6 +403,8 @@ def main() -> int:
         "asset_catalog": asset_catalog,
         "render_spec": render,
     }
+    structured_source = work / "current_final_production_source.json"
+    structured_source.write_text(dump(production_annex) + "\n", encoding="utf-8")
     public = normalize_scene_headings(contract_package.read_text(encoding="utf-8").rstrip())
     final = (
         public

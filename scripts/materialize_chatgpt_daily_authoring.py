@@ -15,6 +15,7 @@ import json
 from pathlib import Path
 
 import visual_source_checkpoint_v12
+import current_compatibility_adapter_v12
 from typing import Any
 
 from viewer_surface_projection import (
@@ -651,15 +652,7 @@ def _materialize_current_v2(root: Path, date: str, raw_authoring: dict[str, Any]
         "expectedBasisDetails": expected["statement"],
         "counterEvidence": [item["statement"] for item in dossier.get("contrary_evidence", [])],
     }
-    derived_review = {
-        "verdict": "approved" if review["verdict"] == "pass" else review["verdict"],
-        "approvedForCodex": review["verdict"] == "pass",
-        "scores": copy.deepcopy(review["scores"]),
-        "totalScore": review["total_score"],
-        "largestDropoffRisk": review["findings"][0]["viewer_impact"] if review.get("findings") else "",
-        "requiredChanges": [item["minimal_fix"] for item in review.get("findings", []) if item.get("severity") in {"critical", "major"}],
-        "changesApplied": [],
-    }
+    derived_review = current_compatibility_adapter_v12.project_creative_review(review)
     a = dict(production)
     a.update({
         "episodeDate": raw_authoring["episodeDate"],
