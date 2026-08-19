@@ -118,7 +118,9 @@ def main() -> int:
             date=args.date,
             renderer_root=renderer_root,
         )
-        stale = visual_intelligence_read_set_v12.verify(root, direct_read_sets)
+        stale = visual_intelligence_read_set_v12.verify(
+            root, direct_read_sets, renderer_root=renderer_root
+        )
         if stale:
             raise visual_intelligence_read_set_v12.VisualIntelligenceReadSetError(
                 "E_VISUAL_READ_SET_STALE:" + ";".join(stale)
