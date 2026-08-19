@@ -10,6 +10,8 @@ on:
       - "scripts/run_semantic_frozen_renderer_closure_v12.py"
       - "scripts/run_daily_renderer_closure_v12.py"
       - "scripts/visual_intelligence_read_set_v12.py"
+      - "scripts/build_final_production_package_structured_v12.py"
+      - "scripts/current_compatibility_adapter_v12.py"
       - ".github/workflows/chatgpt-daily-preview-production.yml"
       - "tests/current-spine/**"
       - "docs/current-spine/**"
@@ -32,15 +34,21 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install current validation dependencies
+        run: python -m pip install --disable-pip-version-check jsonschema referencing
+
       - name: Syntax gate
         run: |
           python3 -m py_compile \
             scripts/run_daily_production_v12.py \
             scripts/current_daily_mechanisms_v12.py \
             scripts/visual_intelligence_read_set_v12.py \
+            scripts/build_final_production_package_structured_v12.py \
+            scripts/current_compatibility_adapter_v12.py \
             tests/current-spine/test_current_spine_characterization.py \
             tests/current-spine/test_current_request_immutability.py \
-            tests/current-spine/test_visual_intelligence_read_set_v12.py
+            tests/current-spine/test_visual_intelligence_read_set_v12.py \
+            tests/current-spine/test_structured_machine_authority_v12.py
 
       - name: Freeze observable current boundaries
         run: python3 tests/current-spine/test_current_spine_characterization.py
@@ -54,6 +62,11 @@ jobs:
         env:
           PYTHONPATH: scripts
         run: python3 tests/current-spine/test_visual_intelligence_read_set_v12.py
+
+      - name: Verify structured machine authority and compatibility adapter
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/current-spine/test_structured_machine_authority_v12.py
 
       - name: Diff hygiene
         run: git diff --check
