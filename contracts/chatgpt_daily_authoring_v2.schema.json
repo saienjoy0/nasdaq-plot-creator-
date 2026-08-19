@@ -28,7 +28,7 @@
     },
     "marketDate": {
       "type": "string",
-      "format": "date-time"
+      "format": "date"
     },
     "informationCutoff": {
       "type": "string",
