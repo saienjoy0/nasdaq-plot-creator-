@@ -1,8 +1,8 @@
 name: Current Spine PR-1 Apply
 
 on:
-  push:
-    branches: ["agent/current-spine-pr1"]
+  pull_request:
+    types: [opened, synchronize, reopened]
     paths:
       - ".current-spine/pr1.patch"
 
@@ -11,13 +11,16 @@ permissions:
 
 jobs:
   apply:
-    if: github.actor != 'github-actions[bot]'
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'agent/current-spine-pr1' &&
+      github.actor != 'github-actions[bot]'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: agent/current-spine-pr1
+          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
           persist-credentials: true
 
@@ -34,4 +37,4 @@ jobs:
           git add -A
           git diff --cached --check
           git commit -m "PR-1: separate current policy and freeze request identity"
-          git push origin HEAD:agent/current-spine-pr1
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
