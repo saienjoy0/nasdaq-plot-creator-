@@ -310,6 +310,7 @@ def prepare_and_compile(
         runner=runner,
     )
     catalog_sha = base.sha256_file(catalog_path)
+    catalog_content_sha = base.canonical_sha(catalog)
 
     director_semantic = vi_dir / artifacts.DIRECTOR_SEMANTIC
     if not director_semantic.is_file():
@@ -345,8 +346,7 @@ def prepare_and_compile(
             {
                 "contractVersion": "1.0.0",
                 "episodeDate": date,
-                "directorDecisionSha256": base.sha256_file(director_path),
-                "candidateCatalogSha256": catalog_sha,
+                "candidateCatalogSha256": catalog_content_sha,
                 "selections": [
                     {
                         "visualBeatId": item["visualBeatId"],
@@ -389,10 +389,8 @@ def prepare_and_compile(
         )
     else:
         plan_value = base.load_json(plan, "Visual Direction Plan")
-        if plan_value.get("directorDecisionSha256") != base.sha256_file(director_path):
-            raise VisualIntelligenceStageError("E_VISUAL_COMPILE_STALE: Director Decision SHA mismatch")
-        if plan_value.get("candidateCatalogSha256") != catalog_sha:
-            raise VisualIntelligenceStageError("E_VISUAL_COMPILE_STALE: Candidate Catalog SHA mismatch")
+        if plan_value.get("candidateCatalogSha256") != catalog_content_sha:
+            raise VisualIntelligenceStageError("E_VISUAL_COMPILE_STALE: Candidate Catalog content SHA mismatch")
         report = base.load_json(compile_report, "Visual Direction compile report")
         if report.get("semanticDiff") != "PASS":
             raise VisualIntelligenceStageError("E_VISUAL_SEMANTIC_DIFF_FAIL")
