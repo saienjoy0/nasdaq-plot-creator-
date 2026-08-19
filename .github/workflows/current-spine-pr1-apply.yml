@@ -4,7 +4,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
-      - ".current-spine/apply_pr1.py"
+      - ".current-spine/fix_pr1_migration.py"
 
 permissions:
   contents: write
@@ -28,14 +28,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          python3 .current-spine/fix_pr1_migration.py
           python3 .current-spine/apply_pr1.py
           python3 -m py_compile \
             scripts/run_daily_production_v12.py \
             scripts/run_daily_renderer_closure_v12.py \
             scripts/current_daily_mechanisms_v12.py \
             tests/remotion-compat/test_visual_intelligence_v12_state.py \
-            tests/current-spine/test_current_spine_characterization.py
+            tests/current-spine/test_current_spine_characterization.py \
+            tests/current-spine/test_current_request_immutability.py
           rm -f \
+            .current-spine/fix_pr1_migration.py \
             .current-spine/apply_pr1.py \
             .current-spine/pr1.patch \
             .github/workflows/current-spine-pr1-apply.yml
