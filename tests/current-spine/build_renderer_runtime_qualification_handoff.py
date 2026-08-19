@@ -76,6 +76,38 @@ def gate(root: Path, date: str) -> dict[str, Any]:
     return load_json(root / "verification" / date / "renderer_closure_gate_v12.json")
 
 
+def normalize_qualification_chunk_alignment(authoring: dict[str, Any]) -> None:
+    """Make the synthetic fixture obey the Current 1 chunk : 1 Beat projection contract.
+
+    The shared semantic fixture intentionally carries 18 Beats but historically used one
+    narration chunk per Scene. Runtime materialization requires one chunk per Beat. For
+    qualification only, split the already-authored narration text into two non-empty parts
+    and rejoin it with the canonical paragraph separator. No words or market meaning change.
+    """
+    script_scenes = authoring.get("storyScript", {}).get("scenes", [])
+    production_scenes = authoring.get("production", {}).get("scenes", [])
+    if len(script_scenes) != 9 or len(production_scenes) != 9:
+        raise RuntimeError("qualification fixture must contain exactly 9 script/production Scenes")
+    for index, (script_scene, production_scene) in enumerate(
+        zip(script_scenes, production_scenes, strict=True), 1
+    ):
+        beats = production_scene.get("beats")
+        narration = script_scene.get("narration")
+        if not isinstance(beats, list) or len(beats) != 2:
+            raise RuntimeError(f"scene-{index:02d}: qualification fixture must contain exactly 2 Beats")
+        if not isinstance(narration, str) or len(narration) < 2:
+            raise RuntimeError(f"scene-{index:02d}: qualification narration must be splittable")
+        split_at = max(1, len(narration) // 2)
+        left, right = narration[:split_at], narration[split_at:]
+        if not left or not right:
+            raise RuntimeError(f"scene-{index:02d}: qualification narration split produced an empty chunk")
+        script_scene["narration"] = left + "\n\n" + right
+        production_scene["chunks"] = [
+            {"text": left, "expression": "分析"},
+            {"text": right, "expression": "分析"},
+        ]
+
+
 def prepare_fixture(source_root: Path, work_parent: Path) -> tuple[Path, Any, dict[str, Any]]:
     test_path = source_root / "tests/editorial-semantic-boundary/test_current_contract_e2e.py"
     current_test = load_module("renderer_qualification_current_fixture_test", test_path)
@@ -84,11 +116,14 @@ def prepare_fixture(source_root: Path, work_parent: Path) -> tuple[Path, Any, di
     copy_missing_tree(source_root, root)
 
     fx = current_test.fx
+    authoring_path = root / "daily-authoring" / f"{fx.DATE}.json"
+    normalize_qualification_chunk_alignment(authoring)
+    write_json(authoring_path, authoring)
+
     semantic = load_module(
         "renderer_qualification_semantic_boundary",
         root / "scripts/validate_editorial_semantic_boundary.py",
     )
-    authoring_path = root / "daily-authoring" / f"{fx.DATE}.json"
     acceptance = semantic.validate_boundary(root, fx.DATE, authoring_path)
     acceptance_path = root / "verification" / fx.DATE / "editorial_semantic_acceptance.json"
     semantic.atomic_write_json(acceptance_path, acceptance)
