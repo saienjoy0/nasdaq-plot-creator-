@@ -677,9 +677,16 @@ def _materialize_current_v2(root: Path, date: str, raw_authoring: dict[str, Any]
     episodes = root / "episodes" / date
     render_dir = root / "render-specs" / date
     dump(work / "financial_visual_bindings.json", {"contractVersion":"1.0.0","episodeDate":date,"bindings":projected.get("financialBindings",[])})
-    dump(work / "visual_source_intents.json", {"contractVersion":"1.0.0","episodeDate":date,"intents":projected.get("visualSourceIntents",[])})
-    if projected.get("visualSourceSelection") is not None:
-        dump(work / "visual_source_selection.json", projected["visualSourceSelection"])
+    requirements_sealed = work / "visual-intelligence" / "visual_requirements.json"
+    visual_source_intents = work / "visual_source_intents.json"
+    if not requirements_sealed.is_file():
+        dump(visual_source_intents, {"contractVersion":"1.0.0","episodeDate":date,"intents":projected.get("visualSourceIntents",[])})
+        if projected.get("visualSourceSelection") is not None:
+            dump(work / "visual_source_selection.json", projected["visualSourceSelection"])
+    elif not visual_source_intents.is_file():
+        raise SystemExit(
+            "sealed Visual Requirements require the existing ChatGPT Visual Source checkpoint"
+        )
     dump(story / "story_production_bindings.json", {
         "contract_version":"1.0.0","episode_date":date,"scene_overrides":{},"beat_overrides":{}
     })

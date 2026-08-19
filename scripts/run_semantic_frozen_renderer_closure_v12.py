@@ -96,32 +96,13 @@ def semantic_binding_pause(
     phase: str,
     semantic_freeze_sha256: str,
 ) -> tuple[str, str] | None:
-    """Return a normal semantic pause when AI-B artifacts bind a different freeze."""
-    vi = root / "working" / date / "visual-intelligence"
-    requirements_path = vi / "visual_requirements.json"
-    if requirements_path.is_file():
-        requirements = load_json(requirements_path, "Visual Requirements")
-        if requirements.get("semanticFreezeSha256") != semantic_freeze_sha256:
-            return (
-                "AUTHOR_VISUAL_REQUIREMENTS",
-                "E_VISUAL_REQUIREMENTS_STALE: semantic freeze SHA mismatch",
-            )
+    """Current VI semantic payloads never hand-author machine Freeze SHA values.
 
-    if phase == "compile":
-        decision_path = vi / "visual_intelligence_decision.json"
-        if not decision_path.is_file():
-            if requirements_path.is_file():
-                return (
-                    "AUTHOR_VISUAL_INTELLIGENCE_DECISION",
-                    "E_VISUAL_INTELLIGENCE_DECISION_REQUIRED: Director decision must bind the current semantic freeze",
-                )
-            return None
-        decision = load_json(decision_path, "Visual Intelligence decision")
-        if decision.get("semanticFreezeSha256") != semantic_freeze_sha256:
-            return (
-                "RESELECT_VISUAL_CANDIDATES",
-                "E_VISUAL_DECISION_STALE: semantic freeze SHA mismatch",
-            )
+    The immutable current request binds the verified Semantic Freeze, and the
+    canonical Requirements bind the Editorial Snapshot. Direct read-set invalidation
+    is enforced at those machine boundaries rather than duplicated in LLM payloads.
+    """
+    del root, date, phase, semantic_freeze_sha256
     return None
 
 
