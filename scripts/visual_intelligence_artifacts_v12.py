@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Current Visual Intelligence semantic-payload -> canonical-artifact materializers.
 
-Semantic payloads contain only authored meaning. Machine-derived identity (parent
-SHA, contract/version binding, compiled output identity) is attached here. Canonical
-artifacts are write-once within a production attempt: an identical rematerialization
-is a no-op and a different rematerialization fails closed.
+Semantic payloads contain authored meaning only. Machine-derived identity is attached
+here. A canonical artifact may be rematerialized by its single machine writer until
+its lifecycle freeze point; after a downstream freeze guard exists, changing bytes
+fails closed. This permits correction of an invalid draft without permitting sealed
+evidence to be clobbered.
 """
 from __future__ import annotations
 
@@ -98,6 +99,25 @@ def write_once(path: Path, value: dict[str, Any], *, label: str) -> Path:
     return path
 
 
+def _write_until_frozen(
+    path: Path,
+    value: dict[str, Any],
+    *,
+    label: str,
+    freeze_guards: tuple[Path, ...],
+) -> Path:
+    payload = canonical_bytes(value)
+    if path.is_file() and path.read_bytes() == payload:
+        return path
+    if path.is_file() and any(guard.exists() for guard in freeze_guards):
+        raise VisualIntelligenceArtifactError(
+            f"E_VISUAL_IMMUTABLE_CLOBBER:{label}:{path.name}"
+        )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(payload)
+    return path
+
+
 def materialize_requirements(*, vi_dir: Path, date: str) -> Path:
     semantic_path = vi_dir / REQUIREMENTS_SEMANTIC
     snapshot_path = vi_dir / "editorial_snapshot.json"
@@ -127,10 +147,11 @@ def materialize_requirements(*, vi_dir: Path, date: str) -> Path:
         "intent": intent,
         "provisionalDirection": provisional,
     }
-    return write_once(
+    return _write_until_frozen(
         vi_dir / REQUIREMENTS_CANONICAL,
         canonical,
         label="Visual Requirements canonical",
+        freeze_guards=(vi_dir / "visual_candidate_catalog.json",),
     )
 
 
@@ -161,10 +182,11 @@ def materialize_director(*, vi_dir: Path, date: str) -> Path:
         "candidateCatalogSha256": sha256_file(catalog_path),
         "selections": selections,
     }
-    return write_once(
+    return _write_until_frozen(
         vi_dir / DIRECTOR_CANONICAL,
         canonical,
         label="Visual Director Decision canonical",
+        freeze_guards=(vi_dir / "visual_direction_compiled_render.json",),
     )
 
 
@@ -204,10 +226,11 @@ def materialize_critic(*, vi_dir: Path, date: str) -> Path:
         "warningReportSha256": sha256_file(warning_path),
         "reviewRounds": rounds,
     }
-    return write_once(
+    return _write_until_frozen(
         vi_dir / CRITIC_CANONICAL,
         canonical,
         label="Visual Critic Review canonical",
+        freeze_guards=(vi_dir / "visual_intelligence_package.json",),
     )
 
 
