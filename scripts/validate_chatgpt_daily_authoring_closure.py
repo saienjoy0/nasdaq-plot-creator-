@@ -2,17 +2,16 @@
 """Validate ChatGPT daily authoring closure before renderer production.
 
 This gate makes no editorial or visual selection. It checks the author-owned duration
-mode contract, the fixed nine-Scene/chunk-to-Beat closure, authored presentation
-invariants that the deterministic materializer requires, and that every authored
-financial-only Visual Template has one explicit authored financial binding pointing to
-the exact Scene/Beat/template it claims to drive. Financial template ownership is
-derived from the existing financial recipe registry, with explicit dual-use Templates
-excluded from financial-only ownership.
+mode contract, renderer-source availability, the fixed nine-Scene/chunk-to-Beat closure,
+authored presentation invariants that the deterministic materializer requires, and that
+every authored financial-only Visual Template has one explicit authored financial binding
+pointing to the exact Scene/Beat/template it claims to drive.
 """
 from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -21,11 +20,11 @@ class AuthoringClosureError(ValueError):
     pass
 
 
-# `source-receipt` is intentionally dual-use in Renderer 2.4: it can be the preferred
-# Template of a traced Financial source-receipt recipe, but Visual Intelligence v1.2
-# also exposes the same physical Template as a generic source-document Reality Anchor.
-# Therefore the template name alone cannot require a financialBindings owner.
 DUAL_USE_VISUAL_TEMPLATE_IDS = {"source-receipt"}
+RENDERABLE_SOURCE_TYPES = {
+    "official", "company", "company-ir", "major-media", "analyst", "market-data", "other",
+}
+SOURCE_ID_RE = re.compile(r"^source-[0-9]{3}$")
 
 
 def load_json(path: Path, label: str) -> dict[str, Any]:
@@ -57,8 +56,6 @@ def financial_template_ids(registry: dict[str, Any]) -> set[str]:
             )
         result.update(templates)
     result.difference_update(DUAL_USE_VISUAL_TEMPLATE_IDS)
-    if not result:
-        return set()
     return result
 
 
@@ -73,6 +70,60 @@ def validate_duration_ownership(authoring: dict[str, Any]) -> list[str]:
         errors.append("$.shortenedReason: standard duration requires null")
     if mode == "shortened" and (not isinstance(reason, str) or not reason.strip()):
         errors.append("$.shortenedReason: shortened duration requires a non-empty reason")
+    return errors
+
+
+def validate_renderer_source_registry(surface: dict[str, Any]) -> list[str]:
+    """Fail before materialization when no source can survive Renderer normalization."""
+    errors: list[str] = []
+    sources = surface.get("sources")
+    if not isinstance(sources, list):
+        return ["$.sources: must be an array"]
+
+    renderable = 0
+    seen_renderable_ids: set[str] = set()
+    for index, source in enumerate(sources):
+        path = f"$.sources[{index}]"
+        if not isinstance(source, dict):
+            errors.append(f"{path}: must be an object")
+            continue
+        source_type = source.get("sourceType")
+        source_id = source.get("sourceId")
+
+        # Historical memory may remain in Authoring but is intentionally not delivered to Renderer.
+        if source_type == "historical-memory":
+            continue
+
+        if source_type not in RENDERABLE_SOURCE_TYPES:
+            errors.append(f"{path}.sourceType: unsupported renderer sourceType {source_type!r}")
+            continue
+        if not isinstance(source_id, str) or not SOURCE_ID_RE.fullmatch(source_id):
+            errors.append(f"{path}.sourceId: must match source-NNN for Renderer delivery")
+            continue
+        if source_id in seen_renderable_ids:
+            errors.append(f"{path}.sourceId: duplicate renderable source {source_id}")
+            continue
+        seen_renderable_ids.add(source_id)
+        renderable += 1
+
+        for key in ("title", "publisher", "reference", "accessedAt"):
+            value = source.get(key)
+            if not isinstance(value, str) or not value.strip():
+                errors.append(f"{path}.{key}: non-empty string required for Renderer delivery")
+        published = source.get("publishedAt")
+        if published is not None and (not isinstance(published, str) or not published.strip()):
+            errors.append(f"{path}.publishedAt: must be null or a non-empty string")
+        used_for = source.get("usedFor")
+        if not isinstance(used_for, list) or not used_for or not all(
+            isinstance(item, str) and item.strip() for item in used_for
+        ):
+            errors.append(f"{path}.usedFor: non-empty string array required for Renderer delivery")
+        attribution = source.get("narrationAttribution")
+        if attribution is not None and (not isinstance(attribution, str) or not attribution.strip()):
+            errors.append(f"{path}.narrationAttribution: must be omitted or a non-empty string")
+
+    if renderable == 0:
+        errors.append("$.sources: at least one renderable source-NNN is required")
     return errors
 
 
@@ -143,10 +194,7 @@ def validate_authored_presentation(
                 if start_ok and end_ok and float(end) <= float(start):
                     errors.append(f"{bid}: shot {shot_index} must end after it starts")
                 for key in (
-                    "primaryTargetId",
-                    "referenceTargetId",
-                    "outcomeTargetId",
-                    "cameraTargetId",
+                    "primaryTargetId", "referenceTargetId", "outcomeTargetId", "cameraTargetId",
                 ):
                     target = shot.get(key)
                     if target is not None and target not in valid_targets:
@@ -211,8 +259,6 @@ def validate_authoring(authoring: dict[str, Any], registry: dict[str, Any]) -> l
     errors: list[str] = []
     errors.extend(validate_duration_ownership(authoring))
 
-    # Current-v2 keeps presentation authoring under production while duration ownership
-    # remains at the canonical root. This is a structural projection only.
     surface = authoring
     if authoring.get("contractVersion") == "2.0.0":
         production = authoring.get("production")
@@ -221,6 +267,8 @@ def validate_authoring(authoring: dict[str, Any], registry: dict[str, Any]) -> l
         surface = dict(production)
         surface["durationMode"] = authoring.get("durationMode")
         surface["shortenedReason"] = authoring.get("shortenedReason")
+
+    errors.extend(validate_renderer_source_registry(surface))
 
     scenes = surface.get("scenes")
     if not isinstance(scenes, list):
