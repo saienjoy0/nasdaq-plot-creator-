@@ -10,6 +10,7 @@ on:
       - "scripts/run_daily_production_v12.py"
       - "scripts/run_daily_renderer_closure_v12.py"
       - "scripts/run_semantic_frozen_renderer_closure_v12.py"
+      - "scripts/current_production_facade_v12.py"
       - ".github/workflows/current-spine-exact-cross-repo-e2e.yml"
   workflow_dispatch:
 
@@ -92,6 +93,11 @@ jobs:
 
       - name: Characterization remains consistent
         run: python3 tests/current-spine/test_current_spine_characterization.py
+
+      - name: Verify canonical current facade routing
+        run: |
+          python3 scripts/current_production_facade_v12.py --help >/dev/null
+          python3 tests/current-spine/test_current_production_facade_contract.py
 
       - name: Diff hygiene
         run: git diff --check
