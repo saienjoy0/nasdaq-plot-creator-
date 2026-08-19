@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 import importlib.util
 import sys
 from pathlib import Path
@@ -20,38 +19,15 @@ def _load_module(name: str, path: Path):
     return module
 
 
-def _runtime_paragraphs(index: int, narration: str) -> list[str]:
-    if index == 9:
-        expected = "僕からは以上、朝のNASDAQカフェでした。いってらっしゃい。おやすみなさい。"
-        if narration != expected:
-            raise RuntimeError("scene-09 shared synthetic closing changed; review runtime fixture explicitly")
-        return [
-            "僕からは以上、朝のNASDAQカフェでした。",
-            "いってらっしゃい。おやすみなさい。",
-        ]
+def assert_runtime_presentation(authoring: dict[str, Any]) -> None:
+    """Assert that the single shared Current fixture is already production-facing.
 
-    expected = f"僕はScene {index}で市場の意味を確認します。"
-    if narration != expected:
-        raise RuntimeError(
-            f"scene-{index:02d} shared synthetic narration changed; review runtime fixture explicitly"
-        )
-    return [
-        f"僕はScene {index}で市場を確認します。",
-        "ここから市場の意味を確認します。",
-    ]
-
-
-def author_runtime_presentation(authoring: dict[str, Any]) -> dict[str, Any]:
-    """Return one production-facing Current fixture without post-hoc qualification repair.
-
-    The editorial-semantic fixture remains intentionally tiny. This shared runtime factory
-    promotes it once into the exact 2 chunks / 2 Beats Current presentation contract used by
-    parity tests and Renderer qualification. Optional authored progression fields are omitted
-    when no progression has been authored; an empty array is never used as a placeholder.
+    This module intentionally performs no normalization or repair. If the semantic Current
+    fixture drifts from the production contract, parity and qualification must fail at the
+    source instead of manufacturing a second fixture representation.
     """
-    value = copy.deepcopy(authoring)
-    script_scenes = value.get("storyScript", {}).get("scenes", [])
-    production_scenes = value.get("production", {}).get("scenes", [])
+    script_scenes = authoring.get("storyScript", {}).get("scenes", [])
+    production_scenes = authoring.get("production", {}).get("scenes", [])
     if len(script_scenes) != 9 or len(production_scenes) != 9:
         raise RuntimeError("Current runtime fixture requires exactly 9 script/production Scenes")
 
@@ -59,36 +35,29 @@ def author_runtime_presentation(authoring: dict[str, Any]) -> dict[str, Any]:
         zip(script_scenes, production_scenes, strict=True), 1
     ):
         beats = production_scene.get("beats")
+        chunks = production_scene.get("chunks")
         if not isinstance(beats, list) or len(beats) != 2:
-            raise RuntimeError(f"scene-{index:02d}: runtime fixture requires exactly 2 Beats")
+            raise RuntimeError(f"scene-{index:02d}: Current fixture requires exactly 2 Beats")
+        if not isinstance(chunks, list) or len(chunks) != 2:
+            raise RuntimeError(f"scene-{index:02d}: Current fixture requires exactly 2 chunks")
         narration = script_scene.get("narration")
         if not isinstance(narration, str):
-            raise RuntimeError(f"scene-{index:02d}: runtime narration must be a string")
-        parts = _runtime_paragraphs(index, narration)
-        script_scene["narration"] = "\n\n".join(parts)
-        production_scene["chunks"] = [
-            {"text": part, "expression": "分析"}
-            for part in parts
-        ]
-        for beat in beats:
+            raise RuntimeError(f"scene-{index:02d}: Current narration must be a string")
+        projected = "\n\n".join(str(chunk.get("text", "")) for chunk in chunks)
+        if projected != narration:
+            raise RuntimeError(f"scene-{index:02d}: Current narration/chunk projection mismatch")
+        for beat_index, beat in enumerate(beats, 1):
             if beat.get("shots") == []:
-                beat.pop("shots")
+                raise RuntimeError(f"scene-{index:02d}-beat-{beat_index:03d}: empty shots placeholder")
             if beat.get("visualEvents") == []:
-                beat.pop("visualEvents")
-
-        projected = "\n\n".join(chunk["text"] for chunk in production_scene["chunks"])
-        if projected != script_scene["narration"]:
-            raise RuntimeError(f"scene-{index:02d}: runtime narration/chunk projection mismatch")
+                raise RuntimeError(f"scene-{index:02d}-beat-{beat_index:03d}: empty visualEvents placeholder")
 
     if "以上、朝のNASDAQカフェでした" not in script_scenes[8]["narration"]:
         raise RuntimeError("scene-09 fixed closing phrase was not preserved")
-    return value
 
 
 def build_workspace(tmp_path: Path) -> tuple[Path, Any, dict[str, Any]]:
     semantic = _load_module("current_runtime_semantic_fixture", SEMANTIC_TEST)
     root, authoring = semantic.build_workspace(tmp_path)
-    runtime_authoring = author_runtime_presentation(authoring)
-    authoring_path = root / "daily-authoring" / f"{semantic.fx.DATE}.json"
-    semantic.fx.write_json(authoring_path, runtime_authoring)
-    return root, semantic.fx, runtime_authoring
+    assert_runtime_presentation(authoring)
+    return root, semantic.fx, authoring
