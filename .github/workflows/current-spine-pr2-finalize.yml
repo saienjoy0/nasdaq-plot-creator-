@@ -1,0 +1,43 @@
+name: Current Spine PR-2 Finalize
+
+on:
+  pull_request:
+    types: [synchronize]
+    paths:
+      - ".current-spine/finalize_pr2.py"
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'agent/current-spine-pr2' &&
+      github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Finalize PR-2 single-writer boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .current-spine/finalize_pr2.py
+          python3 -m py_compile \
+            scripts/visual_source_checkpoint_v12.py \
+            scripts/materialize_chatgpt_daily_authoring.py \
+            scripts/current_daily_mechanisms_v12.py \
+            tests/remotion-compat/test_visual_intelligence_v12_state.py \
+            tests/current-spine/test_current_spine_characterization.py
+          rm -f .current-spine/finalize_pr2.py .github/workflows/current-spine-pr2-finalize.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "PR-2: finalize current single-writer boundaries"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
