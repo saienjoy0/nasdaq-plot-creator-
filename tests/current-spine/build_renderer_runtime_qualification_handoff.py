@@ -76,36 +76,62 @@ def gate(root: Path, date: str) -> dict[str, Any]:
     return load_json(root / "verification" / date / "renderer_closure_gate_v12.json")
 
 
-def normalize_qualification_chunk_alignment(authoring: dict[str, Any]) -> None:
-    """Make the synthetic fixture obey the Current 1 chunk : 1 Beat projection contract.
+def author_qualification_chunk_alignment(authoring: dict[str, Any]) -> None:
+    """Author the qualification-only synthetic fixture directly as 2 chunks / 2 Beats.
 
-    The shared semantic fixture intentionally carries 18 Beats but historically used one
-    narration chunk per Scene. Runtime materialization requires one chunk per Beat. For
-    qualification only, split the already-authored narration text into two non-empty parts
-    and rejoin it with the canonical paragraph separator. No words or market meaning change.
+    The shared semantic fixture is intentionally small and is reused by many semantic tests,
+    so runtime qualification does not rewrite that shared source. Instead this adapter owns
+    the qualification-only presentation authoring explicitly. It never splits strings by
+    character count. Each Scene is authored as two complete paragraphs, then projected to
+    two chunks that match the two existing Beats one-for-one.
     """
     script_scenes = authoring.get("storyScript", {}).get("scenes", [])
     production_scenes = authoring.get("production", {}).get("scenes", [])
     if len(script_scenes) != 9 or len(production_scenes) != 9:
         raise RuntimeError("qualification fixture must contain exactly 9 script/production Scenes")
+
     for index, (script_scene, production_scene) in enumerate(
         zip(script_scenes, production_scenes, strict=True), 1
     ):
         beats = production_scene.get("beats")
-        narration = script_scene.get("narration")
         if not isinstance(beats, list) or len(beats) != 2:
             raise RuntimeError(f"scene-{index:02d}: qualification fixture must contain exactly 2 Beats")
-        if not isinstance(narration, str) or len(narration) < 2:
-            raise RuntimeError(f"scene-{index:02d}: qualification narration must be splittable")
-        split_at = max(1, len(narration) // 2)
-        left, right = narration[:split_at], narration[split_at:]
-        if not left or not right:
-            raise RuntimeError(f"scene-{index:02d}: qualification narration split produced an empty chunk")
-        script_scene["narration"] = left + "\n\n" + right
+
+        if index == 9:
+            expected = "僕からは以上、朝のNASDAQカフェでした。いってらっしゃい。おやすみなさい。"
+            parts = [
+                "僕からは以上、朝のNASDAQカフェでした。",
+                "いってらっしゃい。おやすみなさい。",
+            ]
+        else:
+            expected = f"僕はScene {index}で市場の意味を確認します。"
+            parts = [
+                f"僕はScene {index}で市場を確認します。",
+                "ここから市場の意味を確認します。",
+            ]
+
+        if script_scene.get("narration") != expected:
+            raise RuntimeError(
+                f"scene-{index:02d}: shared synthetic narration changed; "
+                "qualification adapter must be reviewed instead of guessing a new split"
+            )
+        if any(not part for part in parts):
+            raise RuntimeError(f"scene-{index:02d}: qualification paragraph must be non-empty")
+
+        narration = "\n\n".join(parts)
+        script_scene["narration"] = narration
         production_scene["chunks"] = [
-            {"text": left, "expression": "分析"},
-            {"text": right, "expression": "分析"},
+            {"text": part, "expression": "分析"}
+            for part in parts
         ]
+
+        projected = "\n\n".join(chunk["text"] for chunk in production_scene["chunks"])
+        if projected != narration:
+            raise RuntimeError(f"scene-{index:02d}: qualification narration/chunk projection mismatch")
+
+    closing = script_scenes[8]["narration"]
+    if "以上、朝のNASDAQカフェでした" not in closing:
+        raise RuntimeError("scene-09: qualification fixed closing phrase was not preserved")
 
 
 def prepare_fixture(source_root: Path, work_parent: Path) -> tuple[Path, Any, dict[str, Any]]:
@@ -117,7 +143,7 @@ def prepare_fixture(source_root: Path, work_parent: Path) -> tuple[Path, Any, di
 
     fx = current_test.fx
     authoring_path = root / "daily-authoring" / f"{fx.DATE}.json"
-    normalize_qualification_chunk_alignment(authoring)
+    author_qualification_chunk_alignment(authoring)
     write_json(authoring_path, authoring)
 
     semantic = load_module(
