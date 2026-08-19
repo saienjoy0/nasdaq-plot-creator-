@@ -50,6 +50,8 @@ def main() -> int:
         "current mechanisms -> legacy base policy import",
     )
     require(mechanisms, "def request_final(", "current Final authorization mechanism")
+    forbid(mechanisms, "evidence_rebindings", "current evidence SHA rebind repair")
+    forbid(mechanisms, "_refresh_handoff_preflight_evidence", "current preflight rebind helper")
 
     # Current request is born complete and immutable for the attempt.
     forbid(current, "def _rebind_request_sha", "post-hoc request SHA repair helper")
