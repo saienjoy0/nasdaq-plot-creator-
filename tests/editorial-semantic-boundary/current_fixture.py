@@ -38,6 +38,23 @@ def file_ref(root: Path, path: Path) -> dict[str, str]:
     return {"path": path.relative_to(root).as_posix(), "sha256": sha(path)}
 
 
+def current_grammar_id(visual_template: str) -> str:
+    """Resolve synthetic Current grammar from the existing compatibility contract.
+
+    This intentionally mirrors Renderer makeCurrentVisualGrammarFixture(): the fixture never
+    owns a second grammar literal and takes the first allowed grammar for its visual template.
+    """
+    contract_path = Path(__file__).resolve().parents[2] / "contracts/visual_grammar_renderer_compatibility.json"
+    value = json.loads(contract_path.read_text(encoding="utf-8"))
+    for item in value.get("templates", []):
+        if not isinstance(item, dict) or item.get("visualTemplateId") != visual_template:
+            continue
+        allowed = item.get("allowedGrammarIds")
+        if isinstance(allowed, list) and allowed and all(isinstance(grammar_id, str) and grammar_id for grammar_id in allowed):
+            return allowed[0]
+    raise ValueError(f"Current visual template is absent from compatibility contract: {visual_template}")
+
+
 def install_runtime(source_root: Path, root: Path) -> None:
     """Copy only current contracts/validators used by the synthetic E2E."""
     copies = [
@@ -45,6 +62,7 @@ def install_runtime(source_root: Path, root: Path) -> None:
         "contracts/editorial_semantic_acceptance.schema.json",
         "contracts/chatgpt_semantic_freeze.schema.json",
         "contracts/canon_manifest.schema.json",
+        "contracts/visual_grammar_renderer_compatibility.json",
         "skills/nasdaq-cafe-causal-research/contracts",
         "skills/nasdaq-cafe-causal-research/validators/validate_causal_research_dossier.py",
         "skills/nasdaq-cafe-editorial-memory/contracts",
@@ -289,12 +307,13 @@ def production(script: dict[str, Any]) -> dict[str, Any]:
         chunks = [{"text": part, "expression": "分析"} for part in parts]
         beats = []
         for beat_index in (1, 2):
+            visual_template = "opening-contradiction"
             beats.append({
                 "primaryFunction": "Explain", "screenState": f"scene-{index:02d}-state-{beat_index}",
-                "visualMode": "text-focus", "visualTemplate": "opening-contradiction", "contentType": "text",
+                "visualMode": "text-focus", "visualTemplate": visual_template, "contentType": "text",
                 "screenQuestion": f"Scene {index} question {beat_index}", "primaryElement": f"Scene {index} element",
                 "viewerTexts": [f"Scene {index} text {beat_index}"], "changeCue": "next",
-                "grammarId": "vg-basic", "transitionRole": "continuation", "evidenceSourceIds": scripted["evidence_ids"],
+                "grammarId": current_grammar_id(visual_template), "transitionRole": "continuation", "evidenceSourceIds": scripted["evidence_ids"],
                 "metrics": [], "nodes": [], "edges": [],
             })
         scenes.append({
