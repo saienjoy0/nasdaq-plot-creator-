@@ -21,20 +21,19 @@ def _load_module(name: str, path: Path):
     return module
 
 
-def _bind_existing_current_visual_grammar(authoring: dict[str, Any]) -> None:
-    """Use the existing Plot↔Renderer compatibility contract as the sole grammar source.
+def _assert_existing_current_visual_grammar(authoring: dict[str, Any]) -> None:
+    """Verify the fixture already uses the existing Plot↔Renderer compatibility contract.
 
-    The semantic fixture deliberately does not own Renderer grammar literals. Runtime-facing
-    Current tests resolve the authored template through the same frozen compatibility contract
-    that production uses. This mirrors Renderer makeCurrentVisualGrammarFixture(), which also
-    selects the first allowed grammar for the current visual template.
+    This helper does not normalize or repair grammar. The semantic Current fixture owns no
+    standalone grammar literal: it resolves grammar from the canonical compatibility contract
+    at construction time, and this runtime wrapper only fails closed if that source drifts.
     """
     compatibility = json.loads(VISUAL_GRAMMAR_COMPATIBILITY.read_text(encoding="utf-8"))
     templates = compatibility.get("templates")
     if not isinstance(templates, list):
         raise RuntimeError("Current visual grammar compatibility templates must be an array")
 
-    allowed_by_template: dict[str, list[str]] = {}
+    allowed_by_template: dict[str, set[str]] = {}
     for item in templates:
         if not isinstance(item, dict):
             continue
@@ -46,7 +45,7 @@ def _bind_existing_current_visual_grammar(authoring: dict[str, Any]) -> None:
             and grammar_ids
             and all(isinstance(grammar_id, str) and grammar_id for grammar_id in grammar_ids)
         ):
-            allowed_by_template[template_id] = grammar_ids
+            allowed_by_template[template_id] = set(grammar_ids)
 
     production = authoring.get("production")
     if not isinstance(production, dict):
@@ -67,23 +66,29 @@ def _bind_existing_current_visual_grammar(authoring: dict[str, Any]) -> None:
                     f"scene-{scene_index:02d}-beat-{beat_index:03d}: Current Beat must be an object"
                 )
             template_id = beat.get("visualTemplate")
+            grammar_id = beat.get("grammarId")
             allowed = allowed_by_template.get(str(template_id))
             if not allowed:
                 raise RuntimeError(
                     f"scene-{scene_index:02d}-beat-{beat_index:03d}: "
                     f"visualTemplate {template_id!r} is absent from Current compatibility contract"
                 )
-            beat["grammarId"] = allowed[0]
+            if grammar_id not in allowed:
+                raise RuntimeError(
+                    f"scene-{scene_index:02d}-beat-{beat_index:03d}: "
+                    f"grammarId {grammar_id!r} is not allowed for {template_id!r}; "
+                    f"allowed={sorted(allowed)}"
+                )
 
 
 def assert_runtime_presentation(authoring: dict[str, Any]) -> None:
     """Assert that the single shared Current fixture is already production-facing.
 
-    Runtime grammar comes from the existing frozen Plot↔Renderer compatibility contract;
-    everything else is consumed exactly as authored. If the semantic Current fixture drifts
-    from the production contract, parity and qualification fail at this shared source instead
-    of manufacturing another fixture representation.
+    This module intentionally performs no normalization or repair. If the semantic Current
+    fixture drifts from the production contract, parity and qualification fail at the source
+    instead of manufacturing a second fixture representation.
     """
+    _assert_existing_current_visual_grammar(authoring)
     script_scenes = authoring.get("storyScript", {}).get("scenes", [])
     production_scenes = authoring.get("production", {}).get("scenes", [])
     if len(script_scenes) != 9 or len(production_scenes) != 9:
@@ -117,7 +122,5 @@ def assert_runtime_presentation(authoring: dict[str, Any]) -> None:
 def build_workspace(tmp_path: Path) -> tuple[Path, Any, dict[str, Any]]:
     semantic = _load_module("current_runtime_semantic_fixture", SEMANTIC_TEST)
     root, authoring = semantic.build_workspace(tmp_path)
-    _bind_existing_current_visual_grammar(authoring)
-    semantic.fx.write_json(root / "daily-authoring" / f"{semantic.fx.DATE}.json", authoring)
     assert_runtime_presentation(authoring)
     return root, semantic.fx, authoring
