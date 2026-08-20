@@ -9,7 +9,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import build_final_production_package as base  # noqa: E402
 import build_final_production_package_structured_v12 as structured  # noqa: E402
 import current_compatibility_adapter_v12 as compatibility  # noqa: E402
 
@@ -32,16 +31,16 @@ def test_markdown_format_is_not_machine_source() -> None:
         package = package_dir / f"episode_package_{DATE}.md"
         first = (
             "# human projection\n\n"
-            + base.PROD_BEGIN
+            + structured.PROD_BEGIN
             + "\n```json\n{\"render_spec\":{\"identity\":\"markdown-A\"}}\n```\n"
-            + base.PROD_END
+            + structured.PROD_END
             + "\n"
         )
         second = (
             "# human projection\n\n\n"
-            + base.PROD_BEGIN
+            + structured.PROD_BEGIN
             + "\n```json\n{\n  \"render_spec\": {\n    \"identity\": \"markdown-B\"\n  }\n}\n```\n"
-            + base.PROD_END
+            + structured.PROD_END
             + "\n\n"
         )
         package.write_text(first, encoding="utf-8")

@@ -38,6 +38,23 @@ def file_ref(root: Path, path: Path) -> dict[str, str]:
     return {"path": path.relative_to(root).as_posix(), "sha256": sha(path)}
 
 
+def current_grammar_id(visual_template: str) -> str:
+    """Resolve synthetic Current grammar from the existing compatibility contract.
+
+    This intentionally mirrors Renderer makeCurrentVisualGrammarFixture(): the fixture never
+    owns a second grammar literal and takes the first allowed grammar for its visual template.
+    """
+    contract_path = Path(__file__).resolve().parents[2] / "contracts/visual_grammar_renderer_compatibility.json"
+    value = json.loads(contract_path.read_text(encoding="utf-8"))
+    for item in value.get("templates", []):
+        if not isinstance(item, dict) or item.get("visualTemplateId") != visual_template:
+            continue
+        allowed = item.get("allowedGrammarIds")
+        if isinstance(allowed, list) and allowed and all(isinstance(grammar_id, str) and grammar_id for grammar_id in allowed):
+            return allowed[0]
+    raise ValueError(f"Current visual template is absent from compatibility contract: {visual_template}")
+
+
 def install_runtime(source_root: Path, root: Path) -> None:
     """Copy only current contracts/validators used by the synthetic E2E."""
     copies = [
@@ -45,6 +62,7 @@ def install_runtime(source_root: Path, root: Path) -> None:
         "contracts/editorial_semantic_acceptance.schema.json",
         "contracts/chatgpt_semantic_freeze.schema.json",
         "contracts/canon_manifest.schema.json",
+        "contracts/visual_grammar_renderer_compatibility.json",
         "skills/nasdaq-cafe-causal-research/contracts",
         "skills/nasdaq-cafe-causal-research/validators/validate_causal_research_dossier.py",
         "skills/nasdaq-cafe-editorial-memory/contracts",
@@ -93,7 +111,6 @@ def make_canon(root: Path) -> None:
                 "parts": [f"source-of-truth/{name}"] if number in {"01", "02"} else [],
             },
         })
-    # 03/04 must be packed according to the real canon contract.
     import base64, gzip
     for item in docs[2:]:
         logical = root / item["logicalPath"]
@@ -232,20 +249,27 @@ def story_plan(dossier_ref: dict[str, str]) -> dict[str, Any]:
 def story_script(plan: dict[str, Any], plan_ref: dict[str, str], dossier_ref: dict[str, str]) -> dict[str, Any]:
     scenes = []
     for index, (role, planned) in enumerate(zip(ROLES, plan["scenes"], strict=True), 1):
-        narration = f"僕はScene {index}で市場の意味を確認します。"
-        evid = list(planned["new_evidence_ids"])
         if index == 9:
-            narration = "僕からは以上、朝のNASDAQカフェでした。いってらっしゃい。おやすみなさい。"
+            parts = [
+                "僕からは以上、朝のNASDAQカフェでした。",
+                "いってらっしゃい。おやすみなさい。",
+            ]
             claims = []
         else:
-            claim_evidence = ["E-002"] if "E-002" in evid else [evid[0]]
+            parts = [
+                f"僕はScene {index}で市場を確認します。",
+                "ここから市場の意味を確認します。",
+            ]
+            evid_for_claim = list(planned["new_evidence_ids"])
+            claim_evidence = ["E-002"] if "E-002" in evid_for_claim else [evid_for_claim[0]]
             claims = [{
                 "claim_id": f"claim-{index:02d}", "statement": f"Scene {index}の主張", "claim_type": "fact",
                 "evidence_ids": claim_evidence, "confidence": "medium",
                 "scope": "nasdaq_support" if "E-002" in claim_evidence else "company",
             }]
+        evid = list(planned["new_evidence_ids"])
         scenes.append({
-            "scene_id": f"scene-{index:02d}", "formal_role": role, "narration": narration,
+            "scene_id": f"scene-{index:02d}", "formal_role": role, "narration": "\n\n".join(parts),
             "connection_to_previous": planned["connector"],
             "evidence_ids": evid, "causal_claims": claims,
         })
@@ -277,16 +301,20 @@ def creative_review() -> dict[str, Any]:
 def production(script: dict[str, Any]) -> dict[str, Any]:
     scenes = []
     for index, scripted in enumerate(script["scenes"], 1):
-        chunks = [{"text": scripted["narration"], "expression": "分析"}]
+        parts = scripted["narration"].split("\n\n")
+        if len(parts) != 2 or any(not part for part in parts):
+            raise ValueError(f"scene-{index:02d}: synthetic Current narration must contain exactly two paragraphs")
+        chunks = [{"text": part, "expression": "分析"} for part in parts]
         beats = []
         for beat_index in (1, 2):
+            visual_template = "opening-contradiction"
             beats.append({
                 "primaryFunction": "Explain", "screenState": f"scene-{index:02d}-state-{beat_index}",
-                "visualMode": "text-focus", "visualTemplate": "opening-contradiction", "contentType": "text",
+                "visualMode": "text-focus", "visualTemplate": visual_template, "contentType": "text",
                 "screenQuestion": f"Scene {index} question {beat_index}", "primaryElement": f"Scene {index} element",
                 "viewerTexts": [f"Scene {index} text {beat_index}"], "changeCue": "next",
-                "grammarId": "vg-basic", "transitionRole": "continuation", "evidenceSourceIds": scripted["evidence_ids"],
-                "metrics": [], "nodes": [], "edges": [], "shots": [], "visualEvents": [],
+                "grammarId": current_grammar_id(visual_template), "transitionRole": "continuation", "evidenceSourceIds": scripted["evidence_ids"],
+                "metrics": [], "nodes": [], "edges": [],
             })
         scenes.append({
             "sceneRole": ROLES[index-1], "formalName": f"Scene {index}", "purpose": f"purpose {index}",
@@ -297,7 +325,17 @@ def production(script: dict[str, Any]) -> dict[str, Any]:
         })
     return {
         "episodeType": "single-news",
-        "sources": [],
+        "sources": [{
+            "sourceId": "source-001",
+            "title": "Synthetic Current source",
+            "publisher": "Synthetic IR",
+            "sourceType": "official",
+            "reference": "synthetic://source-001",
+            "publishedAt": None,
+            "accessedAt": CUTOFF,
+            "usedFor": ["synthetic Current machinery qualification"],
+            "narrationAttribution": "Synthetic IR",
+        }],
         "pronunciations": [], "corrections": [], "visualSourceIntents": [], "visualSourceSelection": None,
         "financialBindings": [], "scenes": scenes,
     }
