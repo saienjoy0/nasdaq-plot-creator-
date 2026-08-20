@@ -8,8 +8,8 @@
   },
   "renderer": {
     "repository": "saienjoy0/saienjoy0-nasdaq-cafe-remotion",
-    "requestWorkflow": ".github/workflows/nasdaq-cafe-handoff-preview-request-v3.yml",
-    "workerWorkflow": ".github/workflows/nasdaq-cafe-preview-handoff.yml"
+    "requestWorkflow": ".github/workflows/nasdaq-cafe-handoff-preview-request-v4.yml",
+    "workerWorkflow": ".github/workflows/nasdaq-cafe-preview-handoff-v2.yml"
   },
   "semanticPauseIsSuccess": true,
   "finalAllowed": false
