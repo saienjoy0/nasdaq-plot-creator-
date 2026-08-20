@@ -2,16 +2,16 @@
 """Validate ChatGPT daily authoring closure before renderer production.
 
 This gate makes no editorial or visual selection. It checks the author-owned duration
-mode contract, the fixed nine-Scene/chunk-to-Beat closure, and that every authored
-financial-only Visual Template has one explicit authored financial binding pointing to
-the exact Scene/Beat/template it claims to drive. Financial template ownership is
-derived from the existing financial recipe registry, with explicit dual-use Templates
-excluded from financial-only ownership.
+mode contract, renderer-source availability, the fixed nine-Scene/chunk-to-Beat closure,
+authored presentation invariants that the deterministic materializer requires, and that
+every authored financial-only Visual Template has one explicit authored financial binding
+pointing to the exact Scene/Beat/template it claims to drive.
 """
 from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -20,11 +20,11 @@ class AuthoringClosureError(ValueError):
     pass
 
 
-# `source-receipt` is intentionally dual-use in Renderer 2.4: it can be the preferred
-# Template of a traced Financial source-receipt recipe, but Visual Intelligence v1.2
-# also exposes the same physical Template as a generic source-document Reality Anchor.
-# Therefore the template name alone cannot require a financialBindings owner.
 DUAL_USE_VISUAL_TEMPLATE_IDS = {"source-receipt"}
+RENDERABLE_SOURCE_TYPES = {
+    "official", "company", "company-ir", "major-media", "analyst", "market-data", "other",
+}
+SOURCE_ID_RE = re.compile(r"^source-[0-9]{3}$")
 
 
 def load_json(path: Path, label: str) -> dict[str, Any]:
@@ -56,10 +56,6 @@ def financial_template_ids(registry: dict[str, Any]) -> set[str]:
             )
         result.update(templates)
     result.difference_update(DUAL_USE_VISUAL_TEMPLATE_IDS)
-    if not result:
-        # A registry containing only dual-use preferred Templates is valid; it simply
-        # exposes no financial-only Template that can be inferred by template name.
-        return set()
     return result
 
 
@@ -77,12 +73,192 @@ def validate_duration_ownership(authoring: dict[str, Any]) -> list[str]:
     return errors
 
 
+def validate_renderer_source_registry(surface: dict[str, Any]) -> list[str]:
+    """Fail before materialization when no source can survive Renderer normalization."""
+    errors: list[str] = []
+    sources = surface.get("sources")
+    if not isinstance(sources, list):
+        return ["$.sources: must be an array"]
+
+    renderable = 0
+    seen_renderable_ids: set[str] = set()
+    for index, source in enumerate(sources):
+        path = f"$.sources[{index}]"
+        if not isinstance(source, dict):
+            errors.append(f"{path}: must be an object")
+            continue
+        source_type = source.get("sourceType")
+        source_id = source.get("sourceId")
+
+        # Historical memory may remain in Authoring but is intentionally not delivered to Renderer.
+        if source_type == "historical-memory":
+            continue
+
+        if source_type not in RENDERABLE_SOURCE_TYPES:
+            errors.append(f"{path}.sourceType: unsupported renderer sourceType {source_type!r}")
+            continue
+        if not isinstance(source_id, str) or not SOURCE_ID_RE.fullmatch(source_id):
+            errors.append(f"{path}.sourceId: must match source-NNN for Renderer delivery")
+            continue
+        if source_id in seen_renderable_ids:
+            errors.append(f"{path}.sourceId: duplicate renderable source {source_id}")
+            continue
+        seen_renderable_ids.add(source_id)
+        renderable += 1
+
+        for key in ("title", "publisher", "reference", "accessedAt"):
+            value = source.get(key)
+            if not isinstance(value, str) or not value.strip():
+                errors.append(f"{path}.{key}: non-empty string required for Renderer delivery")
+        published = source.get("publishedAt")
+        if published is not None and (not isinstance(published, str) or not published.strip()):
+            errors.append(f"{path}.publishedAt: must be null or a non-empty string")
+        used_for = source.get("usedFor")
+        if not isinstance(used_for, list) or not used_for or not all(
+            isinstance(item, str) and item.strip() for item in used_for
+        ):
+            errors.append(f"{path}.usedFor: non-empty string array required for Renderer delivery")
+        attribution = source.get("narrationAttribution")
+        if attribution is not None and (not isinstance(attribution, str) or not attribution.strip()):
+            errors.append(f"{path}.narrationAttribution: must be omitted or a non-empty string")
+
+    if renderable == 0:
+        errors.append("$.sources: at least one renderable source-NNN is required")
+    return errors
+
+
+def _authored_object_ids(
+    scene_index: int,
+    beat_index: int,
+    beat: dict[str, Any],
+) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    sid = f"scene-{scene_index:02d}"
+    metrics = beat.get("metrics", [])
+    nodes = beat.get("nodes", [])
+    if not isinstance(metrics, list):
+        errors.append(f"{sid}-beat-{beat_index:03d}: metrics must be an array when present")
+        metrics = []
+    if not isinstance(nodes, list):
+        errors.append(f"{sid}-beat-{beat_index:03d}: nodes must be an array when present")
+        nodes = []
+    object_ids = [
+        f"{sid}-number-{beat_index:02d}-{metric_index:02d}"
+        for metric_index, _ in enumerate(metrics, 1)
+    ]
+    object_ids.extend(
+        f"{sid}-node-{beat_index:02d}-{node_index:02d}"
+        for node_index, _ in enumerate(nodes, 1)
+    )
+    if not object_ids:
+        object_ids.append(f"{sid}-card-{beat_index:03d}")
+    return object_ids, errors
+
+
+def validate_authored_presentation(
+    scene_index: int,
+    beat_index: int,
+    beat: dict[str, Any],
+) -> list[str]:
+    errors: list[str] = []
+    sid = f"scene-{scene_index:02d}"
+    bid = f"{sid}-beat-{beat_index:03d}"
+    cid = f"{sid}-chunk-{beat_index:03d}"
+    object_ids, object_errors = _authored_object_ids(scene_index, beat_index, beat)
+    errors.extend(object_errors)
+    valid_targets = set(object_ids)
+
+    shots_present = "shots" in beat
+    shots = beat.get("shots")
+    if shots_present:
+        if not isinstance(shots, list) or not 1 <= len(shots) <= 4:
+            errors.append(f"{bid}: authored shots must contain 1-4 existing Renderer shots")
+        else:
+            for shot_index, shot in enumerate(shots, 1):
+                if not isinstance(shot, dict):
+                    errors.append(f"{bid}: shot {shot_index} must be an object")
+                    continue
+                expected_id = f"{bid}-shot-{shot_index:03d}"
+                if shot.get("shotId") != expected_id:
+                    errors.append(f"{bid}: shot {shot_index} must use deterministic ID {expected_id}")
+                if shot.get("startChunkId") != cid or shot.get("endChunkId") != cid:
+                    errors.append(f"{bid}: authored shots must stay inside {cid}")
+                start = shot.get("startProgress")
+                end = shot.get("endProgress")
+                start_ok = isinstance(start, (int, float)) and not isinstance(start, bool) and 0 <= start <= 1
+                end_ok = isinstance(end, (int, float)) and not isinstance(end, bool) and 0 <= end <= 1
+                if not start_ok:
+                    errors.append(f"{bid}: shot {shot_index}.startProgress must be within 0..1")
+                if not end_ok:
+                    errors.append(f"{bid}: shot {shot_index}.endProgress must be within 0..1")
+                if start_ok and end_ok and float(end) <= float(start):
+                    errors.append(f"{bid}: shot {shot_index} must end after it starts")
+                for key in (
+                    "primaryTargetId", "referenceTargetId", "outcomeTargetId", "cameraTargetId",
+                ):
+                    target = shot.get(key)
+                    if target is not None and target not in valid_targets:
+                        errors.append(f"{bid}: shot {shot_index}.{key} targets unknown object {target}")
+                secondary = shot.get("secondaryTargetIds", [])
+                if not isinstance(secondary, list) or any(
+                    target not in valid_targets for target in secondary
+                ):
+                    errors.append(f"{bid}: shot {shot_index}.secondaryTargetIds contains unknown objects")
+            if shots and isinstance(shots[0], dict):
+                start = shots[0].get("startProgress")
+                if isinstance(start, (int, float)) and not isinstance(start, bool) and float(start) != 0:
+                    errors.append(f"{bid}: first authored shot must start at progress 0")
+            if shots and isinstance(shots[-1], dict):
+                end = shots[-1].get("endProgress")
+                if isinstance(end, (int, float)) and not isinstance(end, bool) and float(end) != 1:
+                    errors.append(f"{bid}: final authored shot must end at progress 1")
+
+    events_present = "visualEvents" in beat
+    events = beat.get("visualEvents")
+    if events_present:
+        if not isinstance(events, list) or not events:
+            errors.append(f"{bid}: visualEvents must be a non-empty array when present")
+        else:
+            visibility_targets: set[str] = set()
+            for item_index, item in enumerate(events, 1):
+                if not isinstance(item, dict):
+                    errors.append(f"{bid}: visualEvents[{item_index}] must be an object")
+                    continue
+                action = item.get("action")
+                if action not in {"show", "hide", "highlight", "unhighlight", "set-expression"}:
+                    errors.append(f"{bid}: visualEvents[{item_index}] has invalid action {action!r}")
+                    continue
+                target = item.get("targetId")
+                if action == "set-expression":
+                    if target is not None:
+                        errors.append(f"{bid}: set-expression must not target an object")
+                else:
+                    if target not in valid_targets:
+                        errors.append(f"{bid}: visualEvents[{item_index}] targets unknown object {target!r}")
+                    if action in {"show", "hide"} and target in valid_targets:
+                        visibility_targets.add(str(target))
+                offset = item.get("offsetMs", 0)
+                if not isinstance(offset, int) or isinstance(offset, bool) or not 0 <= offset <= 10_000:
+                    errors.append(f"{bid}: visualEvents[{item_index}].offsetMs must be 0..10000")
+            if len(object_ids) > 1 and not set(object_ids).issubset(visibility_targets):
+                missing = sorted(set(object_ids) - visibility_targets)
+                errors.append(
+                    f"{bid}: multi-object visualEvents must explicitly author first visibility "
+                    f"for every object; missing={missing}"
+                )
+
+    if len(object_ids) > 1 and not shots_present and not events_present:
+        errors.append(
+            f"{bid}: multi-object Beat requires authored shots or visualEvents; "
+            "automatic reveal order is not production-authoritative"
+        )
+    return errors
+
+
 def validate_authoring(authoring: dict[str, Any], registry: dict[str, Any]) -> list[str]:
     errors: list[str] = []
     errors.extend(validate_duration_ownership(authoring))
 
-    # Current-v2 keeps presentation authoring under production while duration ownership
-    # remains at the canonical root. This is a structural projection only.
     surface = authoring
     if authoring.get("contractVersion") == "2.0.0":
         production = authoring.get("production")
@@ -91,6 +267,8 @@ def validate_authoring(authoring: dict[str, Any], registry: dict[str, Any]) -> l
         surface = dict(production)
         surface["durationMode"] = authoring.get("durationMode")
         surface["shortenedReason"] = authoring.get("shortenedReason")
+
+    errors.extend(validate_renderer_source_registry(surface))
 
     scenes = surface.get("scenes")
     if not isinstance(scenes, list):
@@ -124,6 +302,7 @@ def validate_authoring(authoring: dict[str, Any], registry: dict[str, Any]) -> l
             if not isinstance(beat, dict):
                 errors.append(f"{beat_id}: beat must be an object")
                 continue
+            errors.extend(validate_authored_presentation(scene_index, beat_index, beat))
             beat_map[beat_id] = (scene_index, beat)
     if total_beats != 18:
         errors.append(f"$.scenes[*].beats: expected 18 total Visual Beats; found={total_beats}")

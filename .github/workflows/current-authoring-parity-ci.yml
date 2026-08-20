@@ -1,0 +1,46 @@
+name: Current Authoring Parity CI
+
+on:
+  pull_request:
+    paths:
+      - "contracts/chatgpt_daily_authoring_v2.schema.json"
+      - "scripts/validate_chatgpt_daily_authoring_closure.py"
+      - "scripts/materialize_chatgpt_daily_authoring.py"
+      - "tests/editorial-semantic-boundary/current_fixture.py"
+      - "tests/editorial-semantic-boundary/test_current_contract_e2e.py"
+      - "tests/current-spine/current_authoring_runtime_fixture.py"
+      - "tests/current-spine/test_current_authoring_materializer_parity.py"
+      - ".github/workflows/current-authoring-parity-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  parity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Plot candidate head
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install validation dependencies
+        run: python -m pip install --disable-pip-version-check pytest jsonschema referencing
+
+      - name: Syntax-check Current authoring contract
+        run: |
+          python3 -m py_compile \
+            scripts/validate_chatgpt_daily_authoring_closure.py \
+            tests/current-spine/current_authoring_runtime_fixture.py \
+            tests/current-spine/test_current_authoring_materializer_parity.py
+
+      - name: Verify schema closure materializer parity
+        run: pytest -q tests/current-spine/test_current_authoring_materializer_parity.py

@@ -25,17 +25,17 @@ class PreviewProductionBoundaryTests(unittest.TestCase):
         self.assertIn("python -m playwright install --with-deps chromium", self.text)
 
     def test_semantic_pause_does_not_build_handoff(self) -> None:
-        self.assertIn("renderer_closure_gate_v12.json", self.text)
+        self.assertIn("current_production_facade_outcome.json", self.text)
         self.assertIn("status in {'PREPARED', 'REVIEW_REQUIRED'}", self.text)
-        self.assertGreaterEqual(
-            self.text.count("if: steps.closure.outputs.continue == 'true'"),
-            3,
-        )
+        self.assertIn("print('continue=false')", self.text)
+        self.assertIn("if: steps.closure.outputs.continue == 'true'", self.text)
+        self.assertIn("previewHandoffReady", self.text)
 
     def test_only_pass_may_continue(self) -> None:
         self.assertIn("if status == 'PASS':", self.text)
         self.assertIn("print('continue=true')", self.text)
-        self.assertIn("unexpected renderer closure status", self.text)
+        self.assertIn("PASS facade outcome must include immutable handoff", self.text)
+        self.assertIn("unexpected current facade status", self.text)
 
     def test_existing_canary_has_real_source_probe_with_fallback_semantics(self) -> None:
         self.assertIn("- source-probe", self.canary)

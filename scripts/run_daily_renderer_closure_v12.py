@@ -119,6 +119,9 @@ def prepare_common(
     advance(root, date=date, state="causal_dossier_valid",
             evidence=[f"research/{date}/causal_research_dossier_{date}.json", f"research/{date}/causal_dossier_validation.json"], env=env)
 
+    run(root, "python3", "scripts/validate_chatgpt_daily_authoring_closure.py",
+        "--authoring", f"daily-authoring/{date}.json", "--registry", "contracts/financial_recipe_registry.json",
+        "--json-output", f"verification/{date}/authoring_renderer_closure.json", env=env)
     run(root, "python3", "scripts/materialize_chatgpt_daily_authoring.py", "--date", date, "--repo-root", ".", env=env)
     run(root, "python3", "scripts/story-engine/materialize_story_engine.py", "--date", date, "--repo-root", ".",
         "--semantic-freeze", str(freeze), env=env)
@@ -133,9 +136,6 @@ def prepare_common(
         env=env,
     )
     run(root, "python3", "scripts/materialize_financial_contract_1_0.py", "--date", date, "--repo-root", ".", env=env)
-    run(root, "python3", "scripts/validate_chatgpt_daily_authoring_closure.py",
-        "--authoring", f"daily-authoring/{date}.json", "--registry", "contracts/financial_recipe_registry.json",
-        "--json-output", f"verification/{date}/authoring_renderer_closure.json", env=env)
     run(root, "python3", "scripts/pre_tts_visual_gate.py", "--render-spec", f"render-specs/{date}/render_spec.json",
         "--story-bindings", f"working/{date}/story-engine/story_production_bindings.json",
         "--output", f"verification/{date}/pre_tts_visual_gate.json", env=env)
