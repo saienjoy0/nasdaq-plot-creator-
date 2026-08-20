@@ -191,6 +191,41 @@ jobs:
           retention-days: 14
           compression-level: 0
 
+      - name: Build and validate Renderer Current Preview request V4
+        id: preview_request
+        if: steps.closure.outputs.continue == 'true' && steps.handoff_upload.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          STATE="working/$EPISODE_DATE/production_state.json"
+          MANIFEST_PATH="$(python3 - "$STATE" <<'PY'
+          import json, pathlib, sys
+          state=json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
+          matches=[t for t in state.get('transitions', []) if t.get('state') == 'handoff_ready']
+          if len(matches) != 1:
+              raise SystemExit(f'exactly one handoff_ready transition required; found {len(matches)}')
+          evidence=matches[0].get('evidence')
+          if not isinstance(evidence, list) or len(evidence) != 1:
+              raise SystemExit('handoff_ready must bind exactly one manifest evidence file')
+          path=evidence[0].get('path') if isinstance(evidence[0], dict) else None
+          if not isinstance(path, str) or not path:
+              raise SystemExit('handoff_ready manifest evidence path missing')
+          print(path)
+          PY
+          )"
+          test -f "$MANIFEST_PATH"
+          ARTIFACT_NAME="nasdaq-cafe-handoff-$EPISODE_DATE-${{ github.run_id }}"
+          OUTPUT="verification/$EPISODE_DATE/current_preview_request_v4.json"
+          python3 scripts/build_current_preview_request_v4.py \
+            --root . \
+            --date "$EPISODE_DATE" \
+            --manifest "$MANIFEST_PATH" \
+            --plot-run-id "${{ github.run_id }}" \
+            --artifact-name "$ARTIFACT_NAME" \
+            --output "$OUTPUT"
+          python3 "$NASDAQ_CAFE_RENDERER_ROOT/scripts/validate-current-request.py" preview "$OUTPUT"
+          echo "path=$OUTPUT" >> "$GITHUB_OUTPUT"
+
       - name: Write canonical Preview production outcome
         if: always() && env.EPISODE_DATE != '' && env.RENDERER_COMMIT != ''
         shell: bash
@@ -243,7 +278,7 @@ jobs:
           print(f"Semantic freeze: `{os.environ['SEMANTIC_FREEZE_SHA256']}`")
           print()
           print('Canonical Plot entry: `scripts/current_production_facade_v12.py`')
-          print('Canonical Renderer request: `.github/workflows/nasdaq-cafe-handoff-preview-request-v3.yml`')
+          print('Canonical Renderer request: `.github/workflows/nasdaq-cafe-handoff-preview-request-v4.yml`')
           PY
           fi
 
