@@ -26,6 +26,18 @@ Only these entrypoints are current production authority:
 
 Machine execution authority is structured JSON/RenderSpec. `episode_package_<date>.md` remains the human-readable production package and an identity-validation target, not a source from which technical Renderer objects are reconstructed.
 
+## CURRENT QUALIFICATION BOUNDARIES
+
+Current qualification must compose the existing authorities; it must not create another full production/Renderer fixture.
+
+- Plot Current authoring is qualified by the shared Current authoring fixture and materializer parity tests.
+- Renderer runtime/Visual Intelligence is qualified by `tests/current-spine/run_exact_cross_repo_current_e2e.py`, which consumes the canonical `contracts/renderer_binding.json` and the Renderer's own Current fixture/Registry.
+- Renderer 2.4 handoff lineage is qualified by the existing `tests/remotion-compat/test_visual_director_handoff.py` gates.
+- Immutable Preview / explicit Final request construction is qualified by `tests/current-spine/test_current_preview_final_request_builders.py`.
+- `.github/workflows/current-renderer-runtime-qualification-handoff.yml` composes those existing boundaries and emits a qualification receipt only. It does not manufacture or render a second synthetic production package.
+
+A qualification-only helper may not own a parallel Renderer commit, Registry identity, grammar vocabulary, screen-state vocabulary, editorial schema, publishing schema, or full RenderSpec fixture. Those authorities remain with the existing canonical binding/contracts/Renderer Current fixture.
+
 ## LEGACY READ-ONLY / COMPATIBILITY
 
 These remain for historical compatibility and migration evidence. Current production must not route through them:
@@ -41,7 +53,7 @@ Shared security/mechanical helpers may be extracted from legacy modules, but Cur
 ## TEST / HISTORICAL ONLY
 
 - historical real-day fixtures used only for regression/history;
-- synthetic current fixtures created by the current fixture factory for CI;
+- synthetic Current fixtures may cover the contract layer that owns them, but must not duplicate a downstream authority as another all-in-one production fixture;
 - one-shot migration scripts are not production entrypoints and must be deleted after successful application.
 
 ## Renderer handoff targets
@@ -53,3 +65,4 @@ Current Plot output targets the Renderer Current Preview V4 / Final V2 contracts
 - Never change market causality, narration, Scene order, Visual meaning, or Primary/Fallback selection in GitHub Actions/Renderer.
 - Never auto-run Final. Preview -> human review -> explicit Final only.
 - Never repair lineage by rewriting a sealed request/evidence SHA in the same attempt.
+- Never fix Current contract drift by growing a second full synthetic production/Renderer fixture; reconnect the test to the existing Current authority instead.
