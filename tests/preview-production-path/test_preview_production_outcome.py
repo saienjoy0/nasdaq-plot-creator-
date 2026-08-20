@@ -81,7 +81,9 @@ class PreviewProductionPathTests(unittest.TestCase):
             self.assertTrue(outcome["previewHandoffReady"])
 
     def test_plot_has_exactly_one_production_request_entrypoint(self) -> None:
-        contract = json.loads((ROOT / "contracts" / "preview_production_path.json").read_text(encoding="utf-8"))
+        contract = json.loads(
+            (ROOT / "contracts" / "preview_production_path.json").read_text(encoding="utf-8")
+        )
         canonical = ROOT / contract["plot"]["entryWorkflow"]
         request_glob = contract["plot"]["requestGlob"]
         owners = []
@@ -92,11 +94,11 @@ class PreviewProductionPathTests(unittest.TestCase):
         self.assertEqual("PREVIEW", contract["scope"])
         self.assertFalse(contract["finalAllowed"])
         self.assertEqual(
-            ".github/workflows/nasdaq-cafe-handoff-preview-request-v3.yml",
+            ".github/workflows/nasdaq-cafe-handoff-preview-request-v4.yml",
             contract["renderer"]["requestWorkflow"],
         )
         self.assertEqual(
-            ".github/workflows/nasdaq-cafe-preview-handoff.yml",
+            ".github/workflows/nasdaq-cafe-preview-handoff-v2.yml",
             contract["renderer"]["workerWorkflow"],
         )
 

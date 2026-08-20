@@ -1,35 +1,30 @@
 from __future__ import annotations
 
-import ast
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / 'scripts' / 'materialize_chatgpt_daily_authoring.py'
+SCRIPTS = ROOT / "scripts"
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
 
-
-def _derived_review_ast() -> ast.Dict:
-    tree = ast.parse(SOURCE.read_text(encoding='utf-8'))
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Assign) and any(
-            isinstance(target, ast.Name) and target.id == 'derived_review'
-            for target in node.targets
-        ):
-            assert isinstance(node.value, ast.Dict)
-            return node.value
-    raise AssertionError('derived_review assignment not found')
+import current_compatibility_adapter_v12 as adapter  # noqa: E402
 
 
 def test_current_v2_review_projects_pass_into_legacy_approval_flag() -> None:
-    value = _derived_review_ast()
-    mapping = {
-        key.value: item
-        for key, item in zip(value.keys, value.values, strict=True)
-        if isinstance(key, ast.Constant) and isinstance(key.value, str)
+    review = {
+        "verdict": "pass",
+        "scores": {"hook": 5},
+        "total_score": 5,
+        "findings": [],
     }
-    assert 'approvedForCodex' in mapping
-    expr = mapping['approvedForCodex']
-    assert isinstance(expr, ast.Compare)
-    assert isinstance(expr.left, ast.Subscript)
-    assert isinstance(expr.ops[0], ast.Eq)
-    assert isinstance(expr.comparators[0], ast.Constant)
-    assert expr.comparators[0].value == 'pass'
+    projected = adapter.project_creative_review(review)
+    assert projected["approvedForCodex"] is True
+    assert projected["verdict"] == "approved"
+
+
+def test_current_materializer_delegates_compatibility_projection() -> None:
+    source = (SCRIPTS / "materialize_chatgpt_daily_authoring.py").read_text(encoding="utf-8")
+    assert "current_compatibility_adapter_v12.project_creative_review(review)" in source
+    # The Current v2 materializer must not independently derive the legacy boolean.
+    assert '"approvedForCodex": review["verdict"] == "pass"' not in source

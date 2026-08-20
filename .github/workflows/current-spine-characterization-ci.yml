@@ -1,0 +1,72 @@
+name: Current Spine Characterization
+
+on:
+  pull_request:
+    paths:
+      - "scripts/run_daily_production.py"
+      - "scripts/run_daily_production_hardened.py"
+      - "scripts/run_daily_production_v12.py"
+      - "scripts/current_daily_mechanisms_v12.py"
+      - "scripts/run_semantic_frozen_renderer_closure_v12.py"
+      - "scripts/run_daily_renderer_closure_v12.py"
+      - "scripts/visual_intelligence_read_set_v12.py"
+      - "scripts/build_final_production_package_structured_v12.py"
+      - "scripts/current_compatibility_adapter_v12.py"
+      - ".github/workflows/chatgpt-daily-preview-production.yml"
+      - "tests/current-spine/**"
+      - "docs/current-spine/**"
+      - ".github/workflows/current-spine-characterization-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  characterize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Plot
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install current validation dependencies
+        run: python -m pip install --disable-pip-version-check jsonschema referencing
+
+      - name: Syntax gate
+        run: |
+          python3 -m py_compile \
+            scripts/run_daily_production_v12.py \
+            scripts/current_daily_mechanisms_v12.py \
+            scripts/visual_intelligence_read_set_v12.py \
+            scripts/build_final_production_package_structured_v12.py \
+            scripts/current_compatibility_adapter_v12.py \
+            tests/current-spine/test_current_spine_characterization.py \
+            tests/current-spine/test_current_request_immutability.py \
+            tests/current-spine/test_visual_intelligence_read_set_v12.py \
+            tests/current-spine/test_structured_machine_authority_v12.py
+
+      - name: Freeze observable current boundaries
+        run: python3 tests/current-spine/test_current_spine_characterization.py
+
+      - name: Verify attempt-scoped request immutability
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/current-spine/test_current_request_immutability.py
+
+      - name: Verify exact direct read-set stale invalidation A-D
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/current-spine/test_visual_intelligence_read_set_v12.py
+
+      - name: Verify structured machine authority and compatibility adapter
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/current-spine/test_structured_machine_authority_v12.py
+
+      - name: Diff hygiene
+        run: git diff --check

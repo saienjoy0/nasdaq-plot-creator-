@@ -23,7 +23,14 @@ import subprocess
 from pathlib import Path
 
 import renderer_binding
-import run_daily_renderer_closure as legacy
+import renderer_contract_sync_v12
+from current_renderer_closure_mechanisms_v12 import (
+    CurrentRendererClosureMechanismError,
+    ensure_renderer,
+    evidence_if_exists,
+    load,
+    run,
+)
 
 
 class VisualIntelligenceClosureError(RuntimeError):
@@ -43,74 +50,6 @@ class VisualIntelligenceDecisionRequired(RuntimeError):
         super().__init__(message)
         self.required_action = required_action
         self.include_candidate_catalog = include_candidate_catalog
-
-
-VISUAL_SOURCE_AUTHORING_FILES = (
-    "visual_source_intents.json",
-    "visual_source_selection.json",
-)
-
-
-def run(root: Path, *args: str, env: dict[str, str] | None = None, ok_codes=(0,)) -> int:
-    command = list(args)
-    print("+", " ".join(command), flush=True)
-    completed = subprocess.run(command, cwd=root, env=env, check=False)
-    if completed.returncode not in ok_codes:
-        raise VisualIntelligenceClosureError(
-            f"command failed ({completed.returncode}): {' '.join(command)}"
-        )
-    return completed.returncode
-
-
-def load(path: Path) -> dict:
-    value = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(value, dict):
-        raise VisualIntelligenceClosureError(f"JSON root must be object: {path}")
-    return value
-
-
-def ensure_renderer(root: Path, renderer_root: Path) -> dict:
-    try:
-        return renderer_binding.verify_renderer_checkout(root, renderer_root)
-    except renderer_binding.RendererBindingError as exc:
-        raise VisualIntelligenceClosureError(str(exc)) from exc
-
-
-def evidence_if_exists(root: Path, values: list[str]) -> list[str]:
-    return [value for value in values if (root / value).is_file()]
-
-
-def _capture_visual_source_authoring(root: Path, date: str) -> dict[str, bytes]:
-    """Preserve post-Pass-B semantic authoring across mechanical rematerialization.
-
-    Before Visual Requirements exist, Daily Authoring remains the source that seeds
-    the working Visual Source files. Once Pass B exists, the working files are an
-    explicit ChatGPT semantic checkpoint and must not be silently replaced by the
-    baseline values embedded in Daily Authoring on a deterministic rerun.
-    """
-    work = root / "working" / date
-    requirements = work / "visual-intelligence" / "visual_requirements.json"
-    if not requirements.is_file():
-        return {}
-    captured: dict[str, bytes] = {}
-    for name in VISUAL_SOURCE_AUTHORING_FILES:
-        path = work / name
-        if path.is_file():
-            captured[name] = path.read_bytes()
-    return captured
-
-
-def _restore_visual_source_authoring(
-    root: Path,
-    date: str,
-    captured: dict[str, bytes],
-) -> None:
-    if not captured:
-        return
-    work = root / "working" / date
-    work.mkdir(parents=True, exist_ok=True)
-    for name, payload in captured.items():
-        (work / name).write_bytes(payload)
 
 
 def advance(
@@ -170,16 +109,20 @@ def prepare_common(
         "--episode-date", date, "--daily-source-package", f"daily-inputs/{date}/daily_source_package_{date}.md",
         "--requested-scope", "preview", "--renderer-commit", renderer["commit"],
         "--renderer-contract-version", renderer["contractVersion"],
-        "--visual-intelligence-bridge-version", binding["bridgeContractVersion"], env=env,
+        "--visual-intelligence-bridge-version", binding["bridgeContractVersion"],
+        "--semantic-freeze-path", str(freeze.relative_to(root)),
+        "--semantic-freeze-sha256", env.get("NASDAQ_CAFE_SEMANTIC_FREEZE_SHA256", ""),
+        env=env,
     )
     advance(root, date=date, state="research_inputs_bound",
             evidence=[f"research/{date}/research_input_manifest.json"], env=env)
     advance(root, date=date, state="causal_dossier_valid",
             evidence=[f"research/{date}/causal_research_dossier_{date}.json", f"research/{date}/causal_dossier_validation.json"], env=env)
 
-    preserved_visual_source_authoring = _capture_visual_source_authoring(root, date)
+    run(root, "python3", "scripts/validate_chatgpt_daily_authoring_closure.py",
+        "--authoring", f"daily-authoring/{date}.json", "--registry", "contracts/financial_recipe_registry.json",
+        "--json-output", f"verification/{date}/authoring_renderer_closure.json", env=env)
     run(root, "python3", "scripts/materialize_chatgpt_daily_authoring.py", "--date", date, "--repo-root", ".", env=env)
-    _restore_visual_source_authoring(root, date, preserved_visual_source_authoring)
     run(root, "python3", "scripts/story-engine/materialize_story_engine.py", "--date", date, "--repo-root", ".",
         "--semantic-freeze", str(freeze), env=env)
     run(
@@ -193,9 +136,6 @@ def prepare_common(
         env=env,
     )
     run(root, "python3", "scripts/materialize_financial_contract_1_0.py", "--date", date, "--repo-root", ".", env=env)
-    run(root, "python3", "scripts/validate_chatgpt_daily_authoring_closure.py",
-        "--authoring", f"daily-authoring/{date}.json", "--registry", "contracts/financial_recipe_registry.json",
-        "--json-output", f"verification/{date}/authoring_renderer_closure.json", env=env)
     run(root, "python3", "scripts/pre_tts_visual_gate.py", "--render-spec", f"render-specs/{date}/render_spec.json",
         "--story-bindings", f"working/{date}/story-engine/story_production_bindings.json",
         "--output", f"verification/{date}/pre_tts_visual_gate.json", env=env)
@@ -211,12 +151,24 @@ def prepare_common(
     ], env=env)
 
     vi = root / "working" / date / "visual-intelligence"
-    requirements = vi / "visual_requirements.json"
-    if not requirements.is_file():
+    requirements_semantic = vi / "visual_requirements.semantic.json"
+    if not requirements_semantic.is_file():
         raise VisualIntelligenceDecisionRequired(
-            "E_VISUAL_REQUIREMENTS_MISSING: AI-B must author working/<date>/visual-intelligence/visual_requirements.json",
+            "E_VISUAL_REQUIREMENTS_MISSING: AI-B must author working/<date>/visual-intelligence/visual_requirements.semantic.json",
             required_action="AUTHOR_VISUAL_REQUIREMENTS",
         )
+    run(
+        root,
+        "python3",
+        "scripts/materialize_visual_intelligence_artifact_v12.py",
+        "requirements",
+        "--root",
+        ".",
+        "--date",
+        date,
+        env=env,
+    )
+    requirements = vi / "visual_requirements.json"
     run(root, "python3", "scripts/visual_intelligence_requirements.py", "--requirements", str(requirements.relative_to(root)),
         "--render-spec", f"render-specs/{date}/render_spec.json", "--editorial-snapshot", f"working/{date}/visual-intelligence/editorial_snapshot.json",
         "--date", date, "--output", f"working/{date}/visual-intelligence/visual_requirements_validation.json", env=env)
@@ -335,10 +287,16 @@ def main() -> int:
             )
             return 0
 
-        decision = root / "working" / date / "visual-intelligence" / "visual_intelligence_decision.json"
-        if not decision.is_file():
+        director_semantic = (
+            root
+            / "working"
+            / date
+            / "visual-intelligence"
+            / "visual_director_decision.semantic.json"
+        )
+        if not director_semantic.is_file():
             raise VisualIntelligenceClosureError(
-                "compile phase requires AI-B visual_intelligence_decision.json"
+                "compile phase requires AI-B visual_director_decision.semantic.json"
             )
         code = run(root, *vi_command, env=env, ok_codes=(0, 3, 4))
         vi_report = load(verification / "visual_intelligence_validation.json")
@@ -424,7 +382,7 @@ def main() -> int:
             root / "contracts/financial_visual_compatibility_2_4.json",
             root / "contracts/financial_visual_compatibility.json",
         )
-        legacy.sync_renderer_owned_contracts(root, renderer_root)
+        renderer_contract_sync_v12.sync_renderer_owned_contracts(root, renderer_root)
         run(
             root,
             "python3",
@@ -459,7 +417,7 @@ def main() -> int:
             include_candidate_catalog=exc.include_candidate_catalog,
         )
         return 0
-    except VisualIntelligenceClosureError as exc:
+    except (VisualIntelligenceClosureError, CurrentRendererClosureMechanismError) as exc:
         result = {
             "contractVersion": "1.0.0",
             "bridgeContractVersion": binding["bridgeContractVersion"],

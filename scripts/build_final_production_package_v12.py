@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 
 import build_final_production_package_hardened as hardened
+import build_final_production_package_structured_v12 as structured_builder
 import renderer_binding
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -202,14 +203,16 @@ def _load_approved_visual_authority(
     compiled_path = vi_dir / "visual_direction_compiled_render.json"
     warning_path = vi_dir / "visual_editorial_warning_report.json"
     package_path = vi_dir / "visual_intelligence_package.json"
-    decision_path = vi_dir / "visual_intelligence_decision.json"
+    director_path = vi_dir / "visual_director_decision.json"
+    critic_path = vi_dir / "visual_critic_review.json"
     validation_path = verification / "visual_intelligence_validation.json"
 
     for path, label in (
         (compiled_path, "Critic-approved compiled visual"),
         (warning_path, "Visual warning report"),
         (package_path, "Visual Intelligence package"),
-        (decision_path, "Visual Intelligence decision"),
+        (director_path, "Visual Director Decision"),
+        (critic_path, "Visual Critic Review"),
         (validation_path, "Visual Intelligence validation"),
     ):
         if not path.is_file():
@@ -219,14 +222,17 @@ def _load_approved_visual_authority(
 
     compiled = _load_json_object(compiled_path, "Critic-approved compiled visual")
     package = _load_json_object(package_path, "Visual Intelligence package")
-    decision = _load_json_object(decision_path, "Visual Intelligence decision")
+    director = _load_json_object(director_path, "Visual Director Decision")
+    critic = _load_json_object(critic_path, "Visual Critic Review")
     validation = _load_json_object(validation_path, "Visual Intelligence validation")
 
     compiled_sha = _sha256_file(compiled_path)
     warning_sha = _sha256_file(warning_path)
     package_sha = _sha256_file(package_path)
+    director_sha = _sha256_file(director_path)
+    critic_sha = _sha256_file(critic_path)
     final = package.get("final")
-    rounds = decision.get("reviewRounds")
+    rounds = critic.get("reviewRounds")
     last_round = rounds[-1] if isinstance(rounds, list) and rounds else None
 
     if package.get("episodeDate") != date or not isinstance(final, dict) or final.get("status") != "PASS":
@@ -255,14 +261,24 @@ def _load_approved_visual_authority(
         raise VisualIntelligenceFinalBuildError(
             "E_VISUAL_INTELLIGENCE_POST_PASS_AUTHORITY_STALE: warning report SHA mismatch"
         )
+    inputs = package.get("inputs")
+    if not isinstance(inputs, dict):
+        raise VisualIntelligenceFinalBuildError(
+            "E_VISUAL_INTELLIGENCE_POST_PASS_AUTHORITY_INVALID: package inputs missing"
+        )
     if (
-        not isinstance(last_round, dict)
+        validation.get("visualDirectorDecisionSha256") != director_sha
+        or inputs.get("visualDirectorDecisionSha256") != director_sha
+        or validation.get("visualCriticReviewSha256") != critic_sha
+        or final.get("criticReviewSha256") != critic_sha
+        or critic.get("directorDecisionSha256") != director_sha
+        or critic.get("compiledVisualSha256") != compiled_sha
+        or critic.get("warningReportSha256") != warning_sha
+        or not isinstance(last_round, dict)
         or last_round.get("status") != "PASS"
-        or last_round.get("compiledVisualSha256") != compiled_sha
-        or last_round.get("warningReportSha256") != warning_sha
     ):
         raise VisualIntelligenceFinalBuildError(
-            "E_VISUAL_INTELLIGENCE_POST_PASS_AUTHORITY_STALE: Critic PASS lineage mismatch"
+            "E_VISUAL_INTELLIGENCE_POST_PASS_AUTHORITY_STALE: separated Director/Critic lineage mismatch"
         )
     if (
         compiled.get("schemaVersion") != "2.4.0"
@@ -280,6 +296,10 @@ def _load_approved_visual_authority(
         "warningSha256": warning_sha,
         "packagePath": package_path,
         "packageSha256": package_sha,
+        "directorPath": director_path,
+        "directorSha256": director_sha,
+        "criticPath": critic_path,
+        "criticSha256": critic_sha,
         "catalogPath": vi_dir / "visual_candidate_catalog.json",
         "planPath": vi_dir / "visual_direction_plan.json",
         "compileReportPath": vi_dir / "visual_direction_compile_report.json",
@@ -605,6 +625,7 @@ def build_hardened_v12(
         output_root,
         schema,
         repo_root=repo_root,
+        builder=structured_builder.build,
         renderer_finalizer=_renderer_finalizer_v12,
     )
     date = hardened._production_date(result.get("paths", {}))

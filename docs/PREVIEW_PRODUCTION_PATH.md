@@ -13,11 +13,13 @@ daily-production-requests/*.json
   ↓
 Visual Intelligence / semantic closure
   ↓ PASS only
+Renderer Current Preview request V4 build / validate
+  ↓
 immutable Plot handoff artifact
   ↓
-Renderer: .github/workflows/nasdaq-cafe-handoff-preview-request-v3.yml
+Renderer: .github/workflows/nasdaq-cafe-handoff-preview-request-v4.yml
   ↓
-Renderer: .github/workflows/nasdaq-cafe-preview-handoff.yml
+Renderer: .github/workflows/nasdaq-cafe-preview-handoff-v2.yml
   ↓
 Preview MP4 + technical report
 ```
@@ -26,7 +28,7 @@ Preview MP4 + technical report
 
 Plot内の他のworkflowはCI、contract test、canary、technical preview、legacy compatibility用であり、`daily-production-requests/*.json` を本番入力として受け取ってはいけない。
 
-Renderer側のMotion Preview、scheduled preview、visual grammar previewなどは本番handoff Previewの代替入口として扱わない。本番のPlot handoffをRendererへ渡す正規request workflowは `nasdaq-cafe-handoff-preview-request-v3.yml`、実レンダーworkerは `nasdaq-cafe-preview-handoff.yml` とする。
+Renderer側のMotion Preview、scheduled preview、visual grammar previewなどは本番handoff Previewの代替入口として扱わない。本番のPlot handoffをRendererへ渡す正規request workflowは `nasdaq-cafe-handoff-preview-request-v4.yml`、実レンダーworkerは `nasdaq-cafe-preview-handoff-v2.yml` とする。
 
 ## safe-pauseは失敗ではない
 
@@ -51,11 +53,11 @@ SAFE_PAUSED
 FAILED
 ```
 
-`PREVIEW_HANDOFF_READY` はsemantic closureがPASSし、immutable Preview handoff Artifactのuploadまで成功した場合だけ許可する。
+`PREVIEW_HANDOFF_READY` はsemantic closureがPASSし、Renderer Current Preview request V4のbuild/validateを通過し、immutable Preview handoff Artifactのuploadまで成功した場合だけ許可する。
 
 `WAITING_FOR_*` と `SAFE_PAUSED` は正常停止であり、Previewが完成したことを意味しない。
 
-`FAILED` は契約違反、予期しないclosure状態、またはPASS後にimmutable handoffを作れなかった場合に使う。
+`FAILED` は契約違反、予期しないclosure状態、またはPASS後にCurrent Preview request V4のbuild/validateもしくはimmutable handoff uploadを完了できなかった場合に使う。
 
 Finalはこの契約の対象外であり、このPreview production pathから自動実行してはいけない。
 

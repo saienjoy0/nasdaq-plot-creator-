@@ -117,27 +117,42 @@ class ChatGPTSemanticFreezeTests(unittest.TestCase):
             self.assertNotEqual(a["sourceSetDigestSha256"], b["sourceSetDigestSha256"])
             self.assertEqual(a["canonManifest"], b["canonManifest"])
 
-    def test_ai_b_artifacts_must_bind_same_manifest_sha(self) -> None:
+    def test_ai_b_semantic_payloads_do_not_duplicate_manifest_sha(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             date = "2026-08-17"
             vi = root / "working" / date / "visual-intelligence"
             vi.mkdir(parents=True, exist_ok=True)
             expected = "a" * 64
-            (vi / "visual_requirements.json").write_text(json.dumps({"semanticFreezeSha256": "b" * 64}), encoding="utf-8")
-            self.assertEqual(frozen_closure.semantic_binding_pause(root, date, phase="compile", semantic_freeze_sha256=expected)[0], "AUTHOR_VISUAL_REQUIREMENTS")
-            (vi / "visual_requirements.json").write_text(json.dumps({"semanticFreezeSha256": expected}), encoding="utf-8")
-            self.assertEqual(frozen_closure.semantic_binding_pause(root, date, phase="compile", semantic_freeze_sha256=expected)[0], "AUTHOR_VISUAL_INTELLIGENCE_DECISION")
-            (vi / "visual_intelligence_decision.json").write_text(json.dumps({"semanticFreezeSha256": expected}), encoding="utf-8")
-            self.assertIsNone(frozen_closure.semantic_binding_pause(root, date, phase="compile", semantic_freeze_sha256=expected))
+            requirements = {
+                "semanticPayloadVersion": "1.0.0",
+                "episodeDate": date,
+                "intent": {"beats": []},
+                "provisionalDirection": {"requirements": []},
+            }
+            (vi / "visual_requirements.semantic.json").write_text(
+                json.dumps(requirements), encoding="utf-8"
+            )
+            self.assertNotIn("semanticFreezeSha256", requirements)
+            self.assertIsNone(
+                frozen_closure.semantic_binding_pause(
+                    root, date, phase="compile", semantic_freeze_sha256=expected
+                )
+            )
+            wrapper = (REPO_ROOT / "scripts/run_semantic_frozen_renderer_closure_v12.py").read_text(encoding="utf-8")
+            self.assertNotIn('decision.get("semanticFreezeSha256")', wrapper)
+            self.assertNotIn('requirements.get("semanticFreezeSha256")', wrapper)
 
-    def test_canonical_workflow_requires_freeze_and_wrapper(self) -> None:
+    def test_canonical_workflow_requires_freeze_and_facade(self) -> None:
         workflow = (REPO_ROOT / ".github/workflows/chatgpt-daily-preview-production.yml").read_text(encoding="utf-8")
+        facade = (REPO_ROOT / "scripts/current_production_facade_v12.py").read_text(encoding="utf-8")
         self.assertIn('["semanticFreeze"]["path"]', workflow)
         self.assertIn('["semanticFreeze"]["sha256"]', workflow)
         self.assertIn("scripts/chatgpt_semantic_freeze.py", workflow)
-        self.assertIn("scripts/run_semantic_frozen_renderer_closure_v12.py", workflow)
+        self.assertIn("scripts/current_production_facade_v12.py", workflow)
+        self.assertNotIn("scripts/run_semantic_frozen_renderer_closure_v12.py", workflow)
         self.assertNotIn("python3 scripts/run_daily_renderer_closure_v12.py", workflow)
+        self.assertIn('"scripts/run_semantic_frozen_renderer_closure_v12.py"', facade)
 
 
 if __name__ == "__main__":

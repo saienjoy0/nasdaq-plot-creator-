@@ -1,0 +1,23 @@
+name: Current Entrypoint Classification CI
+
+on:
+  pull_request:
+    paths:
+      - "docs/current-spine/CURRENT_ENTRYPOINTS.md"
+      - "tests/current-spine/test_current_entrypoint_classification.py"
+      - ".github/workflows/current-entrypoint-classification-ci.yml"
+      - ".github/workflows/chatgpt-daily-preview-production.yml"
+      - "scripts/current_production_facade_v12.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  classify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - run: python3 tests/current-spine/test_current_entrypoint_classification.py
+      - run: git diff --check
