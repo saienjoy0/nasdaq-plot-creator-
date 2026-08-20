@@ -26,7 +26,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  qualify-existing-current-boundaries:
+  build-fresh-handoff:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
