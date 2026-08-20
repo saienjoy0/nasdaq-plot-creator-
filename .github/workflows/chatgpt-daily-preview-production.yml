@@ -180,20 +180,9 @@ jobs:
             --bundle-root production-bundles \
             --output "verification/$EPISODE_DATE/visual_source_baseline.json"
 
-      - name: Upload immutable renderer handoff
-        id: handoff_upload
-        if: steps.closure.outputs.continue == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: nasdaq-cafe-handoff-${{ env.EPISODE_DATE }}-${{ github.run_id }}
-          path: production-bundles/${{ env.EPISODE_DATE }}/
-          if-no-files-found: error
-          retention-days: 14
-          compression-level: 0
-
       - name: Build and validate Renderer Current Preview request V4
         id: preview_request
-        if: steps.closure.outputs.continue == 'true' && steps.handoff_upload.outcome == 'success'
+        if: steps.closure.outputs.continue == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -225,6 +214,17 @@ jobs:
             --output "$OUTPUT"
           python3 "$NASDAQ_CAFE_RENDERER_ROOT/scripts/validate-current-request.py" preview "$OUTPUT"
           echo "path=$OUTPUT" >> "$GITHUB_OUTPUT"
+
+      - name: Upload immutable renderer handoff
+        id: handoff_upload
+        if: steps.closure.outputs.continue == 'true' && steps.preview_request.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nasdaq-cafe-handoff-${{ env.EPISODE_DATE }}-${{ github.run_id }}
+          path: production-bundles/${{ env.EPISODE_DATE }}/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
 
       - name: Write canonical Preview production outcome
         if: always() && env.EPISODE_DATE != '' && env.RENDERER_COMMIT != ''
