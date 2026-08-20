@@ -5,10 +5,16 @@ on:
     paths:
       - "contracts/renderer_binding.json"
       - "contracts/visual_grammar_renderer_compatibility.json"
+      - "contracts/chatgpt_daily_authoring_v2.schema.json"
       - "tests/current-spine/current_authoring_runtime_fixture.py"
+      - "tests/current-spine/test_current_authoring_materializer_parity.py"
       - "tests/current-spine/run_exact_cross_repo_current_e2e.py"
+      - "tests/current-spine/test_current_preview_final_request_builders.py"
+      - "tests/current-spine/test_current_production_facade_contract.py"
       - "tests/remotion-compat/run_visual_intelligence_v12_cross_repo.py"
-      - "tests/current-spine/build_renderer_runtime_qualification_handoff.py"
+      - "tests/remotion-compat/test_visual_director_handoff.py"
+      - "scripts/build_current_preview_request_v4.py"
+      - "scripts/build_current_final_request_v2.py"
       - ".github/workflows/current-renderer-runtime-qualification-handoff.yml"
   workflow_dispatch:
 
@@ -20,9 +26,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-fresh-handoff:
+  qualify-existing-current-boundaries:
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 45
     steps:
       - name: Checkout Plot candidate head
         uses: actions/checkout@v6
@@ -37,17 +43,19 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY' >> "$GITHUB_OUTPUT"
-          import json, pathlib
-          value = json.loads(pathlib.Path('contracts/renderer_binding.json').read_text(encoding='utf-8'))
-          renderer = value['renderer']
-          print('repository=' + renderer['repository'])
-          print('commit=' + renderer['commit'])
-          print('contract=' + renderer['contractVersion'])
-          print('registry_path=' + renderer['registrySnapshotPath'])
-          print('registry_sha=' + renderer['registrySnapshotSha256'])
+          import json
+          from pathlib import Path
+          value=json.loads(Path('contracts/renderer_binding.json').read_text(encoding='utf-8'))
+          renderer=value['renderer']
+          print('repository='+renderer['repository'])
+          print('commit='+renderer['commit'])
+          print('contract='+renderer['contractVersion'])
+          print('registry_path='+renderer['registrySnapshotPath'])
+          print('registry_sha='+renderer['registrySnapshotSha256'])
+          print('bridge='+value['bridgeContractVersion'])
           PY
 
-      - name: Checkout canonical Renderer
+      - name: Checkout exact canonical Renderer
         uses: actions/checkout@v6
         with:
           repository: ${{ steps.renderer-binding.outputs.repository }}
@@ -56,6 +64,13 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
           clean: true
+
+      - name: Verify canonical Renderer and Registry identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C .renderer rev-parse HEAD)" = "${{ steps.renderer-binding.outputs.commit }}"
+          test "$(sha256sum ".renderer/${{ steps.renderer-binding.outputs.registry_path }}" | awk '{print $1}')" = "${{ steps.renderer-binding.outputs.registry_sha }}"
 
       - uses: actions/setup-python@v5
         with:
@@ -67,82 +82,97 @@ jobs:
           cache: npm
           cache-dependency-path: .renderer/package-lock.json
 
-      - name: Install existing Current qualification dependencies
+      - name: Install existing Current test dependencies
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y poppler-utils
-          python -m pip install --disable-pip-version-check jsonschema referencing pytest pillow playwright==1.61.0
-          python -m playwright install --with-deps chromium
+          python -m pip install --disable-pip-version-check 'jsonschema>=4.18' referencing pytest pillow
           npm --prefix .renderer ci
 
-      - name: Verify exact pinned Current Cross-Repo E2E
+      - name: Verify existing Current authoring parity
+        shell: bash
+        run: pytest -q tests/current-spine/test_current_authoring_materializer_parity.py
+
+      - name: Verify exact pinned Current Renderer E2E
+        shell: bash
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/current-spine/run_exact_cross_repo_current_e2e.py --renderer-root "$GITHUB_WORKSPACE/.renderer"
+
+      - name: Verify existing 2.4 handoff lineage gates
+        shell: bash
+        env:
+          PYTHONPATH: scripts
+        run: pytest -q tests/remotion-compat/test_visual_director_handoff.py
+
+      - name: Verify immutable Preview and explicit Final request builders
+        shell: bash
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/current-spine/test_current_preview_final_request_builders.py
+
+      - name: Verify canonical Current facade routing
+        shell: bash
+        run: python3 tests/current-spine/test_current_production_facade_contract.py
+
+      - name: Write boundary qualification receipt
+        id: receipt
         shell: bash
         run: |
           set -euo pipefail
-          python3 tests/current-spine/run_exact_cross_repo_current_e2e.py \
-            --renderer-root "$GITHUB_WORKSPACE/.renderer"
-
-      - name: Syntax-check qualification fixture
-        run: python3 -m py_compile tests/current-spine/build_renderer_runtime_qualification_handoff.py
-
-      - name: Build fresh canonical immutable handoff
-        id: build
-        shell: bash
-        run: |
-          set -euo pipefail
-          PLOT_COMMIT="$(git rev-parse HEAD)"
-          WORK_PARENT="${RUNNER_TEMP}/current-renderer-qualification-work"
-          BUNDLE_ROOT="${RUNNER_TEMP}/current-renderer-qualification-bundles"
-          ARTIFACT_ROOT="${RUNNER_TEMP}/current-renderer-qualification-artifact"
-          rm -rf "$WORK_PARENT" "$BUNDLE_ROOT" "$ARTIFACT_ROOT"
-          python3 tests/current-spine/build_renderer_runtime_qualification_handoff.py \
-            --plot-root "$GITHUB_WORKSPACE" \
-            --renderer-root "$GITHUB_WORKSPACE/.renderer" \
-            --renderer-commit "${{ steps.renderer-binding.outputs.commit }}" \
-            --renderer-contract-version "${{ steps.renderer-binding.outputs.contract }}" \
-            --work-parent "$WORK_PARENT" \
-            --bundle-root "$BUNDLE_ROOT" \
-            --artifact-root "$ARTIFACT_ROOT" \
-            --plot-commit "$PLOT_COMMIT" | tee "${RUNNER_TEMP}/qualification.log"
-          test -f "$ARTIFACT_ROOT/qualification_receipt.json"
-          python3 - "$ARTIFACT_ROOT/qualification_receipt.json" <<'PY' >> "$GITHUB_OUTPUT"
-          import json, pathlib, sys
-          value=json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
-          assert value['status']=='PASS'
-          assert value['qualificationOnly'] is True
-          assert value['finalAuthorized'] is False
-          print('episode_date='+value['episodeDate'])
-          print('bundle_id='+value['bundleId'])
-          print('manifest_sha='+value['manifestSha256'])
-          print('renderer_commit='+value['rendererCommit'])
-          print('renderer_contract='+value['rendererContractVersion'])
-          print('registry_sha='+value['registrySnapshotSha256'])
+          ARTIFACT_ROOT="${RUNNER_TEMP}/current-renderer-boundary-qualification"
+          mkdir -p "$ARTIFACT_ROOT"
+          python3 - "$ARTIFACT_ROOT/qualification_receipt.json" <<'PY'
+          import json, pathlib, subprocess, sys
+          target=pathlib.Path(sys.argv[1])
+          value={
+            'status':'PASS',
+            'qualificationOnly':True,
+            'qualificationModel':'existing-current-boundaries',
+            'plotCommit':subprocess.run(['git','rev-parse','HEAD'],check=True,capture_output=True,text=True).stdout.strip(),
+            'rendererCommit':'${{ steps.renderer-binding.outputs.commit }}',
+            'rendererContractVersion':'${{ steps.renderer-binding.outputs.contract }}',
+            'registrySnapshotSha256':'${{ steps.renderer-binding.outputs.registry_sha }}',
+            'bridgeContractVersion':'${{ steps.renderer-binding.outputs.bridge }}',
+            'checks':[
+              'current-authoring-materializer-parity',
+              'exact-pinned-current-renderer-e2e',
+              'renderer-2.4-handoff-lineage',
+              'immutable-preview-explicit-final-request-builders',
+              'canonical-current-facade-routing'
+            ],
+            'syntheticProductionFixture':False,
+            'previewRendered':False,
+            'finalAuthorized':False,
+            'finalRendered':False,
+          }
+          target.write_text(json.dumps(value,ensure_ascii=False,indent=2,sort_keys=True)+'\n',encoding='utf-8')
           PY
           echo "artifact_root=$ARTIFACT_ROOT" >> "$GITHUB_OUTPUT"
 
-      - name: Upload fresh immutable qualification handoff
+      - name: Upload Current boundary qualification receipt
         uses: actions/upload-artifact@v6
         with:
           name: nasdaq-cafe-renderer-qualification-${{ github.run_id }}
-          path: ${{ steps.build.outputs.artifact_root }}
+          path: ${{ steps.receipt.outputs.artifact_root }}
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
 
-      - name: Summarize qualification seed
+      - name: Summarize Current boundary qualification
         shell: bash
         run: |
           {
-            echo '### Current Renderer runtime qualification handoff'
+            echo '### Current Renderer runtime qualification'
             echo
-            echo "Renderer: \`${{ steps.build.outputs.renderer_commit }}\`"
-            echo "Episode: \`${{ steps.build.outputs.episode_date }}\`"
-            echo "Bundle: \`${{ steps.build.outputs.bundle_id }}\`"
-            echo "Manifest SHA: \`${{ steps.build.outputs.manifest_sha }}\`"
-            echo "Registry SHA: \`${{ steps.build.outputs.registry_sha }}\`"
-            echo "Artifact: \`nasdaq-cafe-renderer-qualification-${{ github.run_id }}\`"
+            echo 'Qualification model: `existing-current-boundaries`'
+            echo "Renderer: \`${{ steps.renderer-binding.outputs.commit }}\`"
+            echo "Registry SHA: \`${{ steps.renderer-binding.outputs.registry_sha }}\`"
             echo
+            echo 'No second synthetic production fixture is built.'
+            echo 'Preview rendered: `false`'
             echo 'Final authorization: `false`'
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Diff hygiene
+        run: git diff --check
