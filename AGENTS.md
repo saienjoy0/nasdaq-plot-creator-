@@ -122,20 +122,30 @@ Before using Memory or Cross-Market interpretation, construct the current overni
 Production-facing execution begins with:
 
 ```text
-run_daily_production_hardened.py
+scripts/current_production_facade_v12.py
 ```
 
-That wrapper preserves the existing forward-only state machine and injects only the guarded dependencies below:
+The facade is the sole Current production entry. It normalizes one immutable
+semantic-freeze request and delegates to the Current v1.2 control plane and
+stage executors. The lower-level Current scripts are internal; the hardened and
+base scripts are Legacy/compatibility only.
 
 ```text
-validate_episode_package_memory.py
-→ validate_episode_package_memory_hardening.py
-→ build_final_production_package_hardened.py
-→ build_renderer_handoff_hardened.py
-→ run_real_day_acceptance_hardened.py
+scripts/current_production_facade_v12.py
+→ scripts/run_semantic_frozen_renderer_closure_v12.py
+→ scripts/run_daily_renderer_closure_v12.py
+→ scripts/run_daily_production_v12.py
 ```
 
-Do not use the base Daily Production, Final Production, Renderer Handoff, or Real-Day Acceptance scripts as production entrypoints.
+Do not use `run_daily_production.py`, `run_daily_production_hardened.py`, the
+base Final Production/Renderer Handoff/Real-Day Acceptance scripts, or an
+internal Current executor as a public production entrypoint.
+
+After a PASS closure, build the Current Preview V4 request and the deterministic
+publication receipt. The publication target is append-only and keyed by episode
+date, Plot run ID, and exact request SHA. Publish it through a request-only PR in
+the Renderer repository; retrying the same bytes must reuse the same target and
+must not create a second logical request.
 
 Before advancing `causal_dossier_valid`, use the unified causal validator when acquired research evidence is present:
 

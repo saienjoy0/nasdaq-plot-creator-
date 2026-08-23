@@ -17,6 +17,10 @@ Renderer Current Preview request V4 build / validate
   ↓
 immutable Plot handoff artifact
   ↓
+deterministic publication receipt + Plot issue
+  ↓
+GitHub-connected agent: exact request-only PR
+  ↓ publication gate + merge
 Renderer: .github/workflows/nasdaq-cafe-handoff-preview-request-v4.yml
   ↓
 Renderer: .github/workflows/nasdaq-cafe-preview-handoff-v2.yml
@@ -43,7 +47,7 @@ verification/YYYY-MM-DD/preview_production_outcome.json
 正規状態は次のいずれか。
 
 ```text
-PREVIEW_HANDOFF_READY
+PREVIEW_PUBLICATION_READY
 WAITING_FOR_VISUAL_REQUIREMENTS
 WAITING_FOR_VISUAL_SOURCE_SELECTION
 WAITING_FOR_VISUAL_INTELLIGENCE_DECISION
@@ -53,7 +57,15 @@ SAFE_PAUSED
 FAILED
 ```
 
-`PREVIEW_HANDOFF_READY` はsemantic closureがPASSし、Renderer Current Preview request V4のbuild/validateを通過し、immutable Preview handoff Artifactのuploadまで成功した場合だけ許可する。
+`PREVIEW_PUBLICATION_READY` はsemantic closureがPASSし、Renderer Current Preview
+request V4のbuild/validate、immutable Preview handoff Artifactのupload、SHA固定された
+publication receiptの公開まで成功した場合だけ許可する。この状態はRendererでMP4が
+完成したことを意味しない。
+
+publication receiptの`renderer.targetPath`はepisode date、Plot run ID、request bytesの
+SHAで一意に決まる。同じrequestの再試行は同じpathを再利用し、別の論理requestを
+作らない。Rendererにはreceiptが指定したpathへexact request bytesだけを追加する
+request-only PRを作り、publication gate PASS後に一度だけmergeする。
 
 `WAITING_FOR_*` と `SAFE_PAUSED` は正常停止であり、Previewが完成したことを意味しない。
 
@@ -65,6 +77,7 @@ Finalはこの契約の対象外であり、このPreview production pathから�
 
 - 経路: `contracts/preview_production_path.json`
 - 終了状態schema: `contracts/preview_production_outcome.schema.json`
+- publication identity生成: `scripts/build_current_preview_publication.py`
 - outcome生成: `scripts/write_preview_production_outcome.py`
 - invariant test: `tests/preview-production-path/test_preview_production_outcome.py`
 

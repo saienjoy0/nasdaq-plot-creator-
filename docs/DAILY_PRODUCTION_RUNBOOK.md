@@ -30,30 +30,30 @@ CLIはこの意味を変更せず、以後の機械工程だけを管理しま�
 
 ## 2. 正式な日次入口
 
-本番運用では必ずhardening wrapperを使います。
+本番運用では`daily-production-requests/*.json`を一件だけ追加し、Current
+Production workflowから唯一のfacadeを実行します。
 
 ```bash
-python scripts/run_daily_production_hardened.py --workspace . init \
+python scripts/current_production_facade_v12.py \
+  --workspace . \
+  --renderer-root <pinned-renderer-checkout> \
+  closure \
   --episode-date YYYY-MM-DD \
-  --daily-source-package daily_source_package_YYYY-MM-DD.md \
-  --requested-scope preview \
-  --renderer-commit <40-hex-renderer-commit> \
-  --renderer-contract-version 2.2.0
+  --phase compile \
+  --semantic-freeze semantic-freezes/YYYY-MM-DD.json \
+  --build-handoff-on-pass \
+  --bundle-root production-bundles \
+  --plot-commit <40-hex-plot-commit>
 ```
 
-`run_daily_production.py`はstate machine本体と単体テスト用です。本番入口として直接使用しません。
-
-hardening wrapperは既存の前進専用state machineを保持したまま、次の工程だけを安全版へ差し替えます。
+次はすべて公開入口ではありません。
 
 ```text
-build-production
-→ build_final_production_package_hardened.py
-
-build-handoff
-→ build_renderer_handoff_hardened.py
-
-record-preview
-→ run_real_day_acceptance_hardened.py
+scripts/run_daily_production_v12.py（Current内部制御）
+scripts/run_semantic_frozen_renderer_closure_v12.py（Current内部wrapper）
+scripts/run_daily_renderer_closure_v12.py（Current内部stage）
+scripts/run_daily_production.py（Legacy）
+scripts/run_daily_production_hardened.py（Legacy/compatibility）
 ```
 
 生成:
@@ -68,7 +68,7 @@ working/YYYY-MM-DD/production_state.json
 ## 3. 状態確認
 
 ```bash
-python scripts/run_daily_production_hardened.py --workspace . status \
+python scripts/run_daily_production_v12.py --workspace . status \
   --episode-date YYYY-MM-DD
 ```
 
@@ -79,12 +79,14 @@ python scripts/run_daily_production_hardened.py --workspace . status \
 - requested scope
 - SHA・path検査結果
 
+このコマンドはfacade内部の診断用です。本番workflowから直接呼びません。
+
 ## 4. ChatGPT成果物の登録
 
 各工程のvalidator結果または正式成果物を証拠として、必ず一段ずつ進めます。
 
 ```bash
-python scripts/run_daily_production_hardened.py --workspace . advance \
+python scripts/run_daily_production_v12.py --workspace . advance \
   --episode-date YYYY-MM-DD \
   --state research_inputs_bound \
   --evidence working/YYYY-MM-DD/research_input_manifest.json
@@ -103,13 +105,8 @@ assets_resolved
 
 ## 5. 最終制作成果物の生成
 
-`assets_resolved`後に実行します。
-
-```bash
-python scripts/run_daily_production_hardened.py --workspace . build-production \
-  --episode-date YYYY-MM-DD \
-  --episode-package episodes/YYYY-MM-DD/episode_package_YYYY-MM-DD.md
-```
+`assets_resolved`後の生成はfacadeの`closure --phase compile`に集約します。
+下位のbuild-productionやhandoff builderを本番入口として直接実行しません。
 
 この工程では次を順に強制します。
 
@@ -145,42 +142,31 @@ verification/YYYY-MM-DD/official_execution_preflight.json
 
 post-build検査に失敗した場合、生成物を削除し、PASS preflightを残しません。
 
-## 6. Renderer handoff
+## 6. Renderer handoffと一度だけのRequest公開
 
-`production_package_valid`後に実行します。
+PASS closureはimmutable handoff、Current Preview V4 request、publication receiptを
+同じPlot runで生成します。
 
 ```bash
-python scripts/run_daily_production_hardened.py --workspace . build-handoff \
-  --episode-date YYYY-MM-DD \
-  --bundle-root production-bundles \
-  --plot-commit <40-hex-plot-creator-commit>
+python scripts/build_current_preview_publication.py \
+  --root . \
+  --request verification/YYYY-MM-DD/current_preview_request_v4.json \
+  --output verification/YYYY-MM-DD/current_preview_publication.json
 ```
 
-これはpreview bundleだけを作ります。final bundleは作りません。
+出力された`renderer.targetPath`へ、GitHub接続済みエージェントがrequest-only
+PRでexact request bytesを一件だけ追加します。同じepisodeDate、Plot run ID、
+request SHAは常に同じtarget pathになり、再試行で別Requestを増やしません。
+Rendererのpublication gate PASS後にmergeするとCurrent V4が一度だけ起動します。
 
-handoffはhardened preflightの存在を必須とし、bundleへコピーされたpreflightにも同じ証跡が残っていることを再確認します。新規bundleで検証に失敗した場合、そのbundleを削除します。
+handoffはPreview用だけを作り、Finalを自動生成しません。
 
 ## 7. Preview結果の記録
 
-Renderer Actionsでpreviewとtechnical reportが得られた後に実行します。
-
-```bash
-python scripts/run_daily_production_hardened.py --workspace . record-preview \
-  --episode-date YYYY-MM-DD \
-  --daily-source-root . \
-  --bundle-root production-bundles/YYYY-MM-DD/<bundle-id> \
-  --handoff-manifest handoff_manifest.json \
-  --renderer-artifact-root <downloaded-artifact-directory> \
-  --technical-report renderer_technical_report.json
-```
-
-Real-Day Acceptanceは、handoff manifest内のpreflight roleが一件だけで、bundled preflightに完全なhardening証跡がある場合だけMVP判定へ進みます。
-
-ユーザー確認後は、review recordも渡します。
-
-```bash
-... record-preview ... --user-review user_review.json
-```
+Renderer ActionsでPreview MP4、technical report、Current Spine identity、2ブロック
+TTS SHAが揃った時だけPreview完成です。Plot側の
+`PREVIEW_PUBLICATION_READY`はMP4完成を意味しません。Rendererのstatus receiptと
+ArtifactをPlot run IDで照合します。
 
 承認までは`user_review_pending`です。AIによる完成動画の視覚採点へ置き換えません。
 
@@ -188,14 +174,9 @@ Real-Day Acceptanceは、handoff manifest内のpreflight roleが一件だけで�
 
 previewをユーザーが目視確認し、明示的にfinalを依頼した場合だけ記録します。
 
-```bash
-python scripts/run_daily_production_hardened.py --workspace . request-final \
-  --episode-date YYYY-MM-DD \
-  --approval-record final_approval.json \
-  --explicit-final
-```
-
-このコマンドは`final_requested`を記録するだけです。finalレンダーを自動実行しません。
+`scripts/build_current_final_request_v2.py`は、承認済みPreview identity、
+human review、Plot Final authorization、`--explicit-final`がすべて一致する場合だけ
+append-only Final requestを生成します。Finalを自動実行しません。
 
 ## 9. Publicationとmemory
 

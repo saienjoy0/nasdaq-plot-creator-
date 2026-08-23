@@ -1,5 +1,5 @@
 {
-  "contractVersion": "1.0.0",
+  "contractVersion": "1.1.0",
   "scope": "PREVIEW",
   "plot": {
     "repository": "saienjoy0/nasdaq-plot-creator-",
@@ -10,6 +10,13 @@
     "repository": "saienjoy0/saienjoy0-nasdaq-cafe-remotion",
     "requestWorkflow": ".github/workflows/nasdaq-cafe-handoff-preview-request-v4.yml",
     "workerWorkflow": ".github/workflows/nasdaq-cafe-preview-handoff-v2.yml"
+  },
+  "publication": {
+    "builder": "scripts/build_current_preview_publication.py",
+    "receipt": "verification/<date>/current_preview_publication.json",
+    "transport": "github-connected-agent-request-only-pr",
+    "idempotencyKey": "episodeDate+plotRunId+requestSha256",
+    "appendOnly": true
   },
   "semanticPauseIsSuccess": true,
   "finalAllowed": false

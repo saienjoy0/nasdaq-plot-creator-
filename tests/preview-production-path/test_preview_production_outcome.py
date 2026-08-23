@@ -25,6 +25,9 @@ class PreviewProductionPathTests(unittest.TestCase):
             "handoff_artifact_id": "",
             "handoff_artifact_url": "",
             "handoff_artifact_digest": "",
+            "request_publication_outcome": "skipped",
+            "request_publication_receipt": "",
+            "renderer_request_path": "",
         }
         values.update(overrides)
         return argparse.Namespace(**values)
@@ -66,7 +69,7 @@ class PreviewProductionPathTests(unittest.TestCase):
             self.assertEqual("FAILED", outcome["state"])
             self.assertFalse(outcome["previewHandoffReady"])
 
-    def test_pass_with_uploaded_handoff_is_ready(self) -> None:
+    def test_pass_with_uploaded_handoff_but_no_publication_is_failed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             gate = self._gate(Path(tmp), {"status": "PASS"})
             outcome = outcome_writer.build_outcome(
@@ -77,8 +80,27 @@ class PreviewProductionPathTests(unittest.TestCase):
                     handoff_artifact_id="456",
                 )
             )
-            self.assertEqual("PREVIEW_HANDOFF_READY", outcome["state"])
+            self.assertEqual("FAILED", outcome["state"])
+            self.assertFalse(outcome["previewHandoffReady"])
+            self.assertFalse(outcome["previewPublicationReady"])
+
+    def test_pass_with_uploaded_handoff_and_publication_receipt_is_ready(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            gate = self._gate(Path(tmp), {"status": "PASS"})
+            outcome = outcome_writer.build_outcome(
+                self._args(
+                    gate,
+                    handoff_upload_outcome="success",
+                    handoff_artifact_name="nasdaq-cafe-handoff-2026-08-17-123",
+                    handoff_artifact_id="456",
+                    request_publication_outcome="success",
+                    request_publication_receipt="verification/2026-08-17/current_preview_publication.json",
+                    renderer_request_path="handoff-preview-requests-v4/2026-08-17-plot-123-abcdef123456.json",
+                )
+            )
+            self.assertEqual("PREVIEW_PUBLICATION_READY", outcome["state"])
             self.assertTrue(outcome["previewHandoffReady"])
+            self.assertTrue(outcome["previewPublicationReady"])
 
     def test_plot_has_exactly_one_production_request_entrypoint(self) -> None:
         contract = json.loads(

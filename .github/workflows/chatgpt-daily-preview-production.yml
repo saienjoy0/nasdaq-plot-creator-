@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   produce-preview-handoff:
@@ -226,6 +227,77 @@ jobs:
           retention-days: 14
           compression-level: 0
 
+      - name: Build deterministic Renderer publication receipt
+        id: publication
+        if: steps.closure.outputs.continue == 'true' && steps.preview_request.outcome == 'success' && steps.handoff_upload.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          RECEIPT="verification/$EPISODE_DATE/current_preview_publication.json"
+          python3 scripts/build_current_preview_publication.py \
+            --root . \
+            --request "${{ steps.preview_request.outputs.path }}" \
+            --output "$RECEIPT"
+          python3 - "$RECEIPT" <<'PY' >> "$GITHUB_OUTPUT"
+          import json, pathlib, sys
+          path=pathlib.Path(sys.argv[1])
+          value=json.loads(path.read_text(encoding='utf-8'))
+          print(f"receipt={path.as_posix()}")
+          print(f"target_path={value['renderer']['targetPath']}")
+          print(f"request_sha256={value['request']['sha256']}")
+          PY
+
+      - name: Publish deterministic handoff-ready receipt
+        id: publication_issue
+        if: steps.publication.outcome == 'success'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RECEIPT_PATH: ${{ steps.publication.outputs.receipt }}
+          PREVIEW_REQUEST_PATH: ${{ steps.preview_request.outputs.path }}
+          RENDERER_TARGET_PATH: ${{ steps.publication.outputs.target_path }}
+        run: |
+          set -euo pipefail
+          TITLE="NASDAQ CAFE PREVIEW PUBLICATION READY $EPISODE_DATE PLOT RUN ${{ github.run_id }}"
+          BODY="$RUNNER_TEMP/current-preview-publication.md"
+          python3 - "$RECEIPT_PATH" "$PREVIEW_REQUEST_PATH" "$BODY" <<'PY'
+          import json, pathlib, sys
+          receipt_path=pathlib.Path(sys.argv[1])
+          request_path=pathlib.Path(sys.argv[2])
+          output=pathlib.Path(sys.argv[3])
+          receipt=json.loads(receipt_path.read_text(encoding='utf-8'))
+          request=json.loads(request_path.read_text(encoding='utf-8'))
+          output.write_text(
+              "<!-- nasdaq-cafe-current-preview-publication -->\n\n"
+              f"status: {receipt['state']}\n"
+              f"episode_date: {receipt['episodeDate']}\n"
+              f"plot_run_id: {receipt['plotRunId']}\n"
+              f"request_sha256: {receipt['request']['sha256']}\n"
+              f"renderer_target_path: {receipt['renderer']['targetPath']}\n\n"
+              "```json\n" + json.dumps(request, ensure_ascii=False, indent=2, sort_keys=True) + "\n```\n",
+              encoding='utf-8',
+          )
+          PY
+          ISSUE_NUMBER="$(gh issue list --repo "$GITHUB_REPOSITORY" --state all --search "$TITLE in:title" --json number,title --jq ".[] | select(.title == \"$TITLE\") | .number" | head -n 1)"
+          if [[ -n "$ISSUE_NUMBER" ]]; then
+            gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$BODY"
+            gh issue reopen "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || true
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body-file "$BODY"
+          fi
+
+      - name: Upload canonical Preview publication input
+        if: steps.publication.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nasdaq-cafe-current-preview-publication-${{ env.EPISODE_DATE }}-${{ github.run_id }}
+          path: |
+            ${{ steps.preview_request.outputs.path }}
+            ${{ steps.publication.outputs.receipt }}
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
+
       - name: Write canonical Preview production outcome
         if: always() && env.EPISODE_DATE != '' && env.RENDERER_COMMIT != ''
         shell: bash
@@ -233,6 +305,9 @@ jobs:
           HANDOFF_UPLOAD_OUTCOME: ${{ steps.handoff_upload.outcome }}
           HANDOFF_ARTIFACT_ID: ${{ steps.handoff_upload.outputs.artifact-id }}
           HANDOFF_ARTIFACT_URL: ${{ steps.handoff_upload.outputs.artifact-url }}
+          REQUEST_PUBLICATION_OUTCOME: ${{ steps.publication_issue.outcome }}
+          REQUEST_PUBLICATION_RECEIPT: ${{ steps.publication.outputs.receipt }}
+          RENDERER_REQUEST_PATH: ${{ steps.publication.outputs.target_path }}
         run: |
           set -euo pipefail
           args=(
@@ -243,11 +318,16 @@ jobs:
             --plot-commit "$GITHUB_SHA"
             --renderer-commit "$RENDERER_COMMIT"
             --handoff-upload-outcome "${HANDOFF_UPLOAD_OUTCOME:-skipped}"
+            --request-publication-outcome "${REQUEST_PUBLICATION_OUTCOME:-skipped}"
           )
           if [[ "${HANDOFF_UPLOAD_OUTCOME:-}" == "success" ]]; then
             args+=(--handoff-artifact-name "nasdaq-cafe-handoff-$EPISODE_DATE-${{ github.run_id }}")
             [[ -z "${HANDOFF_ARTIFACT_ID:-}" ]] || args+=(--handoff-artifact-id "$HANDOFF_ARTIFACT_ID")
             [[ -z "${HANDOFF_ARTIFACT_URL:-}" ]] || args+=(--handoff-artifact-url "$HANDOFF_ARTIFACT_URL")
+          fi
+          if [[ "${REQUEST_PUBLICATION_OUTCOME:-}" == "success" ]]; then
+            args+=(--request-publication-receipt "$REQUEST_PUBLICATION_RECEIPT")
+            args+=(--renderer-request-path "$RENDERER_REQUEST_PATH")
           fi
           python3 scripts/write_preview_production_outcome.py "${args[@]}"
 
