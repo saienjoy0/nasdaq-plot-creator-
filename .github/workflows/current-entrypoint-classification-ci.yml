@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - "docs/current-spine/CURRENT_ENTRYPOINTS.md"
+      - "docs/DAILY_PRODUCTION_RUNBOOK.md"
+      - "AGENTS.md"
+      - "README.md"
       - "tests/current-spine/test_current_entrypoint_classification.py"
       - ".github/workflows/current-entrypoint-classification-ci.yml"
       - ".github/workflows/chatgpt-daily-preview-production.yml"

@@ -6,9 +6,6 @@ import argparse
 import json
 from pathlib import Path
 
-import jsonschema
-
-
 ACTION_TO_STATE = {
     "AUTHOR_VISUAL_REQUIREMENTS": "WAITING_FOR_VISUAL_REQUIREMENTS",
     "AUTHOR_VISUAL_SOURCE_SELECTION": "WAITING_FOR_VISUAL_SOURCE_SELECTION",
@@ -26,12 +23,13 @@ def _load_object(path: Path) -> dict:
 
 def build_outcome(args: argparse.Namespace) -> dict:
     base = {
-        "contractVersion": "1.0.0",
+        "contractVersion": "1.1.0",
         "episodeDate": args.episode_date,
         "canonicalWorkflow": ".github/workflows/chatgpt-daily-preview-production.yml",
         "plotCommit": args.plot_commit,
         "rendererCommit": args.renderer_commit,
         "previewHandoffReady": False,
+        "previewPublicationReady": False,
         "finalRendered": False,
     }
 
@@ -53,12 +51,21 @@ def build_outcome(args: argparse.Namespace) -> dict:
         outcome["reason"] = reason
 
     if closure_status == "PASS":
-        if args.handoff_upload_outcome == "success" and args.handoff_artifact_name:
+        if (
+            args.handoff_upload_outcome == "success"
+            and args.handoff_artifact_name
+            and args.request_publication_outcome == "success"
+            and args.request_publication_receipt
+            and args.renderer_request_path
+        ):
             outcome.update(
                 {
-                    "state": "PREVIEW_HANDOFF_READY",
+                    "state": "PREVIEW_PUBLICATION_READY",
                     "previewHandoffReady": True,
+                    "previewPublicationReady": True,
                     "handoffArtifactName": args.handoff_artifact_name,
+                    "requestPublicationReceipt": args.request_publication_receipt,
+                    "rendererRequestPath": args.renderer_request_path,
                 }
             )
             for key, value in (
@@ -69,12 +76,11 @@ def build_outcome(args: argparse.Namespace) -> dict:
                 if value:
                     outcome[key] = value
             return outcome
-        outcome.update(
-            {
-                "state": "FAILED",
-                "reason": "semantic closure passed but immutable Preview handoff was not uploaded successfully",
-            }
-        )
+        if args.handoff_upload_outcome != "success" or not args.handoff_artifact_name:
+            reason = "semantic closure passed but immutable Preview handoff was not uploaded successfully"
+        else:
+            reason = "immutable Preview handoff was uploaded but its deterministic Renderer publication receipt was not published successfully"
+        outcome.update({"state": "FAILED", "reason": reason})
         return outcome
 
     if closure_status == "REVIEW_REQUIRED":
@@ -101,6 +107,8 @@ def build_outcome(args: argparse.Namespace) -> dict:
 
 
 def main() -> int:
+    import jsonschema
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--closure-gate", type=Path, required=True)
     parser.add_argument("--schema", type=Path, required=True)
@@ -113,6 +121,9 @@ def main() -> int:
     parser.add_argument("--handoff-artifact-id", default="")
     parser.add_argument("--handoff-artifact-url", default="")
     parser.add_argument("--handoff-artifact-digest", default="")
+    parser.add_argument("--request-publication-outcome", default="skipped")
+    parser.add_argument("--request-publication-receipt", default="")
+    parser.add_argument("--renderer-request-path", default="")
     args = parser.parse_args()
 
     outcome = build_outcome(args)

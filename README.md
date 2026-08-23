@@ -10,7 +10,10 @@
 
 ## 現在地
 
-2026-08-05時点で、日次制作制御の実装経路はmainへ接続可能な状態まで完成しています。
+Current Spineでは、Plotの公開入口は
+`scripts/current_production_facade_v12.py`、RendererのPreview入口はCurrent
+Preview Request V4だけです。旧Daily Production/hardening入口は履歴・互換用であり、
+新しい本番日次制作には使用しません。
 
 ```text
 ユーザーがdaily_source_packageを渡す
@@ -24,6 +27,8 @@
 → episode package memory usage検証
 → final production package生成・整合検査
 → immutable renderer handoff bundle
+→ SHA固定されたRenderer publication receipt
+→ Rendererのrequest-only PR
 → renderer preview
 → real-day acceptance
 → ユーザー目視確認
@@ -55,25 +60,26 @@
 
 - [`docs/DAILY_PRODUCTION_RUNBOOK.md`](docs/DAILY_PRODUCTION_RUNBOOK.md)
 
-開始例:
+本番開始は`daily-production-requests/*.json`を一件だけ追加し、
+`.github/workflows/chatgpt-daily-preview-production.yml`から行います。Workflowは
+必ず次のCurrent facadeを呼びます。
 
 ```bash
-python scripts/run_daily_production.py --workspace . init \
+python scripts/current_production_facade_v12.py \
+  --workspace . \
+  --renderer-root <pinned-renderer-checkout> \
+  closure \
   --episode-date YYYY-MM-DD \
-  --daily-source-package daily_source_package_YYYY-MM-DD.md \
-  --requested-scope preview \
-  --renderer-commit <40-hex-renderer-commit> \
-  --renderer-contract-version 2.2.0
+  --phase compile \
+  --semantic-freeze semantic-freezes/YYYY-MM-DD.json \
+  --build-handoff-on-pass \
+  --bundle-root production-bundles \
+  --plot-commit <40-hex-plot-commit>
 ```
 
-状態確認:
-
-```bash
-python scripts/run_daily_production.py --workspace . status \
-  --episode-date YYYY-MM-DD
-```
-
-このCLIは工程管理専用です。主役、市場因果、狐の文章、04審問、画像生成、Primary/Fallbackを決めません。
+このfacadeも主役、市場因果、狐の文章、04審問、画像生成、Primary/Fallbackを
+決めません。Currentの詳細な入口分類は
+[`docs/current-spine/CURRENT_ENTRYPOINTS.md`](docs/current-spine/CURRENT_ENTRYPOINTS.md)を正本とします。
 
 ## 基本フロー
 
