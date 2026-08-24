@@ -213,6 +213,21 @@ def _validate_critic(review: dict[str, Any], *, date: str, director_sha: str, co
     return rounds
 
 
+def _candidate_coverage_pause(coverage: dict[str, Any], input_render: Path) -> None:
+    if coverage.get("sourceRenderSpecSha256") != base.sha256_file(input_render):
+        raise VisualIntelligenceStageError("E_VISUAL_CANDIDATE_COVERAGE_STALE: render SHA mismatch")
+    if coverage.get("status") != "UNAVAILABLE":
+        raise VisualIntelligenceStageError("E_VISUAL_CANDIDATE_COVERAGE_INVALID: expected UNAVAILABLE")
+    unavailable = coverage.get("unavailableBeats")
+    if not isinstance(unavailable, list) or not unavailable or not all(isinstance(item, str) for item in unavailable):
+        raise VisualIntelligenceStageError("E_VISUAL_CANDIDATE_COVERAGE_INVALID: unavailableBeats missing")
+    raise VisualIntelligenceStageError(
+        "E_VISUAL_INTELLIGENCE_DECISION_REQUIRED:"
+        "E_VISUAL_CANDIDATE_COVERAGE_UNAVAILABLE:"
+        + ",".join(unavailable)
+    )
+
+
 def _ensure_candidate_artifacts(
     *,
     vi_dir: Path,
@@ -229,6 +244,7 @@ def _ensure_candidate_artifacts(
     inventory = vi_dir / "visual_capability_inventory.json"
     hints = vi_dir / "visual_capability_hints.json"
     catalog = vi_dir / "visual_candidate_catalog.json"
+    coverage_path = vi_dir / "visual_candidate_coverage.json"
     asset_state = vi_dir / "asset_resolution_state.json"
     provider = vi_dir / "financial_candidate_provider.json"
     recent = vi_dir / "recent_visual_pattern_context.json"
@@ -244,24 +260,61 @@ def _ensure_candidate_artifacts(
         financial_candidate_provider.write(provider, financial_candidate_provider.build(render))
     _write_once(recent, base._phase1_recent_context(date), "Recent Visual Pattern Context")
 
-    existence = [candidate_input.is_file(), inventory.is_file(), catalog.is_file()]
-    if any(existence) and not all(existence):
-        raise VisualIntelligenceStageError("E_VISUAL_CANDIDATE_PARTIAL_WRITE")
-    if not all(existence):
-        base._run_renderer(
-            runner=runner,
-            renderer_root=renderer_root,
-            command=[
-                "node", "--import", "tsx", "scripts/visual-director-cli.ts", "build",
-                "--spec", str(input_render),
-                "--catalog", str(catalog),
-                "--hints", str(hints),
-                "--candidate-builder", "vnext",
-                "--editorial-snapshot-sha256", snapshot_sha,
-                "--candidate-input", str(candidate_input),
-                "--capability-inventory", str(inventory),
-            ],
+    if coverage_path.is_file():
+        coverage = base.load_json(coverage_path, "Visual Candidate Coverage")
+        if coverage.get("sourceRenderSpecSha256") != base.sha256_file(input_render):
+            raise VisualIntelligenceStageError("E_VISUAL_CANDIDATE_COVERAGE_STALE: render SHA mismatch")
+        if coverage.get("status") == "UNAVAILABLE":
+            if catalog.is_file():
+                raise VisualIntelligenceStageError("E_VISUAL_CANDIDATE_PARTIAL_WRITE: unavailable coverage has Catalog")
+            _candidate_coverage_pause(coverage, input_render)
+        if coverage.get("status") != "PASS":
+            raise VisualIntelligenceStageError("E_VISUAL_CANDIDATE_COVERAGE_INVALID: unsupported status")
+        existence = [candidate_input.is_file(), inventory.is_file(), catalog.is_file()]
+        if not all(existence):
+            raise VisualIntelligenceStageError("E_VISUAL_CANDIDATE_PARTIAL_WRITE")
+    else:
+        if catalog.is_file():
+            catalog.unlink()
+        command = [
+            "node", "--import", "tsx", "scripts/visual-director-cli.ts", "build",
+            "--spec", str(input_render),
+            "--catalog", str(catalog),
+            "--coverage", str(coverage_path),
+            "--hints", str(hints),
+            "--candidate-builder", "vnext",
+            "--editorial-snapshot-sha256", snapshot_sha,
+            "--candidate-input", str(candidate_input),
+            "--capability-inventory", str(inventory),
+        ]
+        completed = runner(
+            command,
+            cwd=renderer_root,
+            check=False,
+            capture_output=True,
+            text=True,
         )
+        if completed.returncode not in (0, 3):
+            detail = (
+                completed.stderr
+                or completed.stdout
+                or "Renderer Visual Intelligence candidate build failed"
+            ).strip()
+            raise VisualIntelligenceStageError(detail)
+        if not coverage_path.is_file():
+            raise VisualIntelligenceStageError("E_VISUAL_CANDIDATE_COVERAGE_MISSING")
+        coverage = base.load_json(coverage_path, "Visual Candidate Coverage")
+        if completed.returncode == 3:
+            if catalog.is_file():
+                raise VisualIntelligenceStageError("E_VISUAL_CANDIDATE_PARTIAL_WRITE: unavailable coverage wrote Catalog")
+            _candidate_coverage_pause(coverage, input_render)
+        if coverage.get("sourceRenderSpecSha256") != base.sha256_file(input_render):
+            raise VisualIntelligenceStageError("E_VISUAL_CANDIDATE_COVERAGE_STALE: render SHA mismatch")
+        if coverage.get("status") != "PASS":
+            raise VisualIntelligenceStageError("E_VISUAL_CANDIDATE_COVERAGE_INVALID: successful build did not PASS coverage")
+        if not candidate_input.is_file() or not inventory.is_file() or not catalog.is_file():
+            raise VisualIntelligenceStageError("E_VISUAL_CANDIDATE_PARTIAL_WRITE")
+
     value = base.load_json(catalog, "Visual Candidate Catalog")
     _validate_catalog_coverage(requirements=requirements, catalog=value)
     return value, catalog, candidate_input, inventory, hints, provider
