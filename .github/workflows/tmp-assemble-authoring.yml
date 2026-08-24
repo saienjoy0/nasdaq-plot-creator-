@@ -1,0 +1,38 @@
+name: Temporary Current Authoring Assembly
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'daily-authoring-parts/2026-08-17/**'
+      - '.github/workflows/tmp-assemble-authoring.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  assemble:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install deterministic assembler dependencies
+        run: python -m pip install --disable-pip-version-check jsonschema referencing
+      - name: Assemble canonical Daily Authoring
+        run: python3 scripts/assemble_chatgpt_daily_authoring_parts.py --date 2026-08-17 --repo-root .
+      - name: Validate assembled visual feasibility
+        run: python3 scripts/validate_chatgpt_visual_feasibility.py --authoring daily-authoring/2026-08-17.json
+      - name: Upload canonical authoring
+        uses: actions/upload-artifact@v4
+        with:
+          name: assembled-authoring-2026-08-17
+          path: daily-authoring/2026-08-17.json
+          if-no-files-found: error
