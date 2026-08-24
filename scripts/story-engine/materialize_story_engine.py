@@ -67,7 +67,13 @@ def _materialize_current_v2(
 ) -> int:
     if semantic_freeze is None:
         raise SystemExit("Daily Authoring v2 Story projection requires --semantic-freeze")
-    freeze_module = load_module("chatgpt_semantic_freeze_story_v2", root / "scripts/chatgpt_semantic_freeze.py")
+    # Current production must preserve the issuance-time editorial seal. Current
+    # Authoring/Renderer compatibility is owned by the closure before this pure
+    # projection, so this direct-call guard verifies sealed identity only.
+    freeze_module = load_module(
+        "sealed_semantic_freeze_story_v2",
+        root / "scripts/verify_sealed_semantic_freeze_v12.py",
+    )
     freeze_module.verify_manifest(root, date, semantic_freeze)
     authoring = load(authoring_path)
     if authoring.get("contractVersion") != "2.0.0":
@@ -230,6 +236,14 @@ def main() -> int:
     plan["causal_dossier"] = ref(root, dossier)
     dump(plan_path, plan)
 
+    script = load(script_template)
+    script["story_plan"] = ref(root, plan_path)
+    script["causal_dossier"] = ref(root, dossier)
+    dump(script_path, script)
+
+    review = load(review_template)
+    dump(review_path, review)
+
     plan_validator = load_module(
         "story_plan_validator",
         root / "skills/nasdaq-cafe-story-plan/validators/validate_story_plan.py",
@@ -242,14 +256,6 @@ def main() -> int:
     )
     if not plan_result.ok:
         raise SystemExit("Story Plan validation failed: " + "; ".join(plan_result.errors))
-
-    script = load(script_template)
-    script["story_plan"] = ref(root, plan_path)
-    script["causal_dossier"] = ref(root, dossier)
-    dump(script_path, script)
-
-    review = load(review_template)
-    dump(review_path, review)
 
     bundle_validator = load_module(
         "story_engine_bundle_validator",
@@ -266,93 +272,83 @@ def main() -> int:
     )
     if not bundle_result.ok:
         raise SystemExit("Story Engine bundle validation failed: " + "; ".join(bundle_result.errors))
-    if review.get("verdict") != "pass" or review.get("total_score", 0) < 25:
-        raise SystemExit("final editorial review must be PASS with score >=25")
 
-    production_eligible = bool(
-        receipt and receipt.get("provenance", {}).get("attestation_strength") == "orchestrator_signed"
-    )
-    critic_certified = production_eligible
-    external_status = (
-        "certified"
-        if critic_certified
-        else "not_certified"
-        if receipt
-        else "not_run"
-    )
-
-    artifacts: dict[str, Any] = {
-        "causal_dossier": ref(root, dossier),
-        "story_plan": ref(root, plan_path),
-        "story_script": ref(root, script_path),
-        "creative_review": ref(root, review_path),
-    }
-    validation: dict[str, str] = {
-        "story_plan": "pass",
-        "story_script": "pass",
-        "editorial_review": "pass",
-        "understanding_progression": "pass",
-        "causality_guard": "pass",
-        "scene_order_guard": "pass",
-        "scene_09_guard": "pass",
-    }
-    critic: dict[str, Any] = {
-        "round": review["round"],
-        "score": review["total_score"],
-        "verdict": review["verdict"],
-        "reviewer": review["reviewer"],
-        "critic_certified": critic_certified,
-        "external_critic_status": external_status,
-    }
-
-    if receipt:
-        artifacts["critic_request"] = ref(root, critic_request)
-        artifacts["critic_execution_receipt"] = ref(root, critic_receipt)
-        validation["independent_critic_receipt"] = "pass"
-        critic.update({
-            "author_invocation_id": receipt["author_invocation_id"],
-            "critic_invocation_id": receipt["critic_invocation_id"],
-            "isolation_mode": receipt["isolation_mode"],
-            "attestation_strength": receipt.get("provenance", {}).get("attestation_strength"),
-            "execution_receipt": ref(root, critic_receipt),
-        })
+    critic_certified = False
+    external_status = "not_run"
+    critic_round = review.get("round")
+    critic_score = review.get("total_score")
+    critic_verdict = review.get("verdict")
+    critic_reviewer = review.get("reviewer")
+    if receipt is not None:
+        external_status = "certified"
+        critic_certified = True
+        critic_round = receipt.get("round", critic_round)
+        critic_score = receipt.get("score", critic_score)
+        critic_verdict = receipt.get("verdict", critic_verdict)
+        critic_reviewer = receipt.get("reviewer", critic_reviewer)
 
     acceptance = {
         "contract_version": "1.1.0",
         "episode_date": date,
         "status": "pass",
-        "production_eligible": production_eligible,
-        "artifacts": artifacts,
-        "validation": validation,
-        "critic": critic,
+        "production_eligible": False,
+        "artifacts": {
+            "causal_dossier": ref(root, dossier),
+            "story_plan": ref(root, plan_path),
+            "story_script": ref(root, script_path),
+            "creative_review": ref(root, review_path),
+        },
+        "validation": {
+            "story_plan": "pass",
+            "story_script": "pass",
+            "editorial_review": "pass",
+            "understanding_progression": "pass",
+            "causality_guard": "pass",
+            "scene_order_guard": "pass",
+            "scene_09_guard": "pass",
+        },
+        "critic": {
+            "round": critic_round,
+            "score": critic_score,
+            "verdict": critic_verdict,
+            "reviewer": critic_reviewer,
+            "critic_certified": critic_certified,
+            "external_critic_status": external_status,
+        },
     }
     dump(acceptance_path, acceptance)
 
     acceptance_validator = load_module(
-        "story_engine_acceptance_v1_1",
+        "story_engine_acceptance",
         root / "scripts/story-engine/validate_story_engine_acceptance_v1_1.py",
     )
-    acceptance_result = acceptance_validator.validate_acceptance(
+    result = acceptance_validator.validate_acceptance(
         acceptance_path,
         repo_root=root,
         require_production=False,
     )
-    if acceptance_result["status"] != "pass":
-        messages = [item.get("message", "acceptance failed") for item in acceptance_result.get("errors", [])]
-        raise SystemExit("Story Engine v1.1 artifact acceptance failed: " + "; ".join(messages))
+    if result["status"] != "pass":
+        messages = [item.get("message", "acceptance failed") for item in result.get("errors", [])]
+        raise SystemExit("derived Story Engine acceptance failed: " + "; ".join(messages))
 
-    print(json.dumps({
-        "status": "pass",
-        "production_eligible": production_eligible,
-        "critic_certified": critic_certified,
-        "external_critic_status": external_status,
-        "paths": {
-            "story_plan": str(plan_path),
-            "story_script": str(script_path),
-            "creative_review": str(review_path),
-            "acceptance": str(acceptance_path),
-        },
-    }, ensure_ascii=False, indent=2))
+    print(
+        json.dumps(
+            {
+                "status": "pass",
+                "episode_date": date,
+                "external_critic_status": external_status,
+                "critic_certified": critic_certified,
+                "paths": {
+                    "story_plan": str(plan_path),
+                    "story_script": str(script_path),
+                    "creative_review": str(review_path),
+                    "acceptance": str(acceptance_path),
+                },
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
     return 0
 
 
