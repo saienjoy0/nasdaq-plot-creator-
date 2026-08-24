@@ -175,5 +175,5 @@ jobs:
             gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$BODY"
             gh issue reopen "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || true
           else
-            gh issue create "$GITHUB_REPOSITORY" --title "$TITLE" --body-file "$BODY"
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body-file "$BODY"
           fi
