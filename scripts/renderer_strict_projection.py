@@ -42,12 +42,15 @@ BEAT_ALLOWED = {
 
 # Reviewed producer vocabulary aliases only. Unknown values are intentionally left
 # untouched here so the strict Renderer schema remains the final fail-closed authority.
+# `comparison` is an early vocabulary admission only; strict projection resolves its
+# concrete Renderer mode from the Visual Template via COMPARISON_MODE_BY_TEMPLATE.
 VISUAL_MODE_MAP = {
     "verification": "verification-points",
     "closing-recap": "conclusion-card",
     "causal-chain": "causal-diagram",
     "intraday-comparison": "number-comparison",
     "expectation-gap": "expected-actual-gap",
+    "comparison": "stock-comparison",
 }
 
 # Producer `comparison` is intentionally generic. Renderer 2.4 assigns the concrete
