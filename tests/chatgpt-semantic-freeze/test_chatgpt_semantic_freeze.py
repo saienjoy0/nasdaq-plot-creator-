@@ -143,13 +143,15 @@ class ChatGPTSemanticFreezeTests(unittest.TestCase):
             self.assertNotIn('decision.get("semanticFreezeSha256")', wrapper)
             self.assertNotIn('requirements.get("semanticFreezeSha256")', wrapper)
 
-    def test_canonical_workflow_requires_freeze_and_facade(self) -> None:
+    def test_canonical_workflow_delegates_semantic_verification_to_facade(self) -> None:
         workflow = (REPO_ROOT / ".github/workflows/chatgpt-daily-preview-production.yml").read_text(encoding="utf-8")
         facade = (REPO_ROOT / "scripts/current_production_facade_v12.py").read_text(encoding="utf-8")
         self.assertIn('["semanticFreeze"]["path"]', workflow)
         self.assertIn('["semanticFreeze"]["sha256"]', workflow)
-        self.assertIn("scripts/chatgpt_semantic_freeze.py", workflow)
         self.assertIn("scripts/current_production_facade_v12.py", workflow)
+        self.assertNotIn("scripts/chatgpt_semantic_freeze.py", workflow)
+        self.assertNotIn("scripts/verify_sealed_semantic_freeze_v12.py", workflow)
+        self.assertNotIn("scripts/validate_editorial_semantic_boundary.py", workflow)
         self.assertNotIn("scripts/run_semantic_frozen_renderer_closure_v12.py", workflow)
         self.assertNotIn("python3 scripts/run_daily_renderer_closure_v12.py", workflow)
         self.assertIn('"scripts/run_semantic_frozen_renderer_closure_v12.py"', facade)
