@@ -68,16 +68,55 @@ def test_markdown_format_is_not_machine_source() -> None:
 def test_compatibility_adapter_is_mechanical() -> None:
     review = {
         "verdict": "pass",
-        "scores": {"hook": 5},
-        "total_score": 5,
+        "scores": {
+            "opening": 5,
+            "progression": 4,
+            "discovery": 5,
+            "clarity": 5,
+            "fox_voice": 4,
+            "late_payoff": 5,
+        },
+        "total_score": 28,
         "findings": [],
     }
     projected = compatibility.project_creative_review(review)
     if projected.get("approvedForCodex") is not True or projected.get("verdict") != "approved":
-        raise AssertionError("PASS did not deterministically project legacy approval")
-    failed = {**review, "verdict": "revise"}
-    if compatibility.project_creative_review(failed).get("approvedForCodex") is not False:
-        raise AssertionError("non-PASS incorrectly projected legacy approval")
+        raise AssertionError("PASS did not deterministically project Renderer approval")
+    if projected.get("scores") != {
+        "openingHook": 5,
+        "storyProgression": 4,
+        "discovery": 5,
+        "clarity": 5,
+        "foxCharacter": 4,
+        "reasonToFinish": 5,
+    }:
+        raise AssertionError("Creative Review score aliases were not projected mechanically")
+    if projected.get("totalScore") != 28:
+        raise AssertionError("Creative Review total was not preserved")
+    if projected.get("titleThumbnailConsistency") != "consistent":
+        raise AssertionError("PASS did not deterministically project consistency receipt")
+    if not str(projected.get("largestDropoffRisk", "")).strip():
+        raise AssertionError("Renderer-required no-unresolved-risk receipt is missing")
+
+    failed = {**review, "verdict": "conditional"}
+    failed_projection = compatibility.project_creative_review(failed)
+    if failed_projection.get("approvedForCodex") is not False:
+        raise AssertionError("non-PASS incorrectly projected Renderer approval")
+    if failed_projection.get("verdict") != "approved-with-changes":
+        raise AssertionError("conditional verdict compatibility drifted")
+
+    stale = dict(projected)
+    stale["scores"] = dict(stale["scores"])
+    stale["scores"]["openingHook"] = 4
+    try:
+        compatibility.assert_compatibility_review_matches(
+            current_review=review,
+            compatibility_review=stale,
+        )
+    except compatibility.CurrentCompatibilityError:
+        pass
+    else:
+        raise AssertionError("drifted compatibility review was accepted")
 
 
 def test_current_final_uses_separated_authority() -> None:
