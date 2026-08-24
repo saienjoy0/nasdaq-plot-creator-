@@ -90,3 +90,10 @@ Verification order:
 ## Review / rollback
 
 Review the diff for exactly one behavioral change: canonicalization of the 04 heading in the existing current-v2 human-package projection. If narration, review content, render data, Semantic Freeze, Director/Critic authority, or validator logic changes, reject the diff. Rollback is a two-file revert (test + materializer); no data migration is required.
+
+## Verification record
+
+- Invalid preliminary RED: run `32782064005`, job `97606060806` failed before the target assertion because importing the full materializer pulled the optional Pillow dependency. This run is not accepted as RED evidence.
+- Valid RED: Current Spine PR-5 Targeted Validation run `32782209875`, job `97606505759` failed specifically with `AssertionError: current-v2 final package did not canonicalize the integrated 04 heading`.
+- Repair commit: `b86bd2acaaa8574d8284398bb1122aee671da67b` adds only the existing legacy-equivalent heading replacement/fail-closed rule to `normalize_scene_headings`; its temporary mechanical patch workflow deletes itself in the same commit.
+- Next verification: re-run targeted/current E2E/real-day PREVIEW checks from a normal user-token commit and require the original episode-memory pre-build boundary to pass.
