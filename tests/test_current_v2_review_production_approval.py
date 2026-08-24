@@ -14,8 +14,15 @@ import current_compatibility_adapter_v12 as adapter  # noqa: E402
 def test_current_v2_review_projects_pass_into_legacy_approval_flag() -> None:
     review = {
         "verdict": "pass",
-        "scores": {"hook": 5},
-        "total_score": 5,
+        "scores": {
+            "opening": 5,
+            "progression": 5,
+            "discovery": 5,
+            "clarity": 5,
+            "fox_voice": 5,
+            "late_payoff": 5,
+        },
+        "total_score": 30,
         "findings": [],
     }
     projected = adapter.project_creative_review(review)
