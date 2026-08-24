@@ -66,7 +66,7 @@ def _validate_catalog_coverage(*, requirements: dict[str, Any], catalog: dict[st
         if not isinstance(beat_id, str) or not isinstance(required_modes, list) or not required_modes:
             raise VisualIntelligenceStageError(f"{beat_id}: invalid requiredModes")
         if not any(
-            candidate.get("capability") in required_modes
+            candidate.get("requirementsSatisfied") is True
             for candidate in by_beat.get(beat_id, [])
         ):
             raise VisualIntelligenceStageError(
