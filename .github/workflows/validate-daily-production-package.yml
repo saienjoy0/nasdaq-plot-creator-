@@ -51,8 +51,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      RENDERER_COMMIT: fc1aa384011549e93bd0698e0bb4790c58dfa153
-      RENDERER_CONTRACT_VERSION: 2.4.0
       NASDAQ_CAFE_RENDERER_ROOT: ${{ github.workspace }}/.renderer
     steps:
       - uses: actions/checkout@v4
@@ -183,10 +181,24 @@ jobs:
             echo "No daily episode artifact changed; running current contract/regression checks only."
           fi
 
+      - name: Resolve canonical Renderer binding
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' >> "$GITHUB_ENV"
+          import json
+          from pathlib import Path
+          value = json.loads(Path('contracts/renderer_binding.json').read_text(encoding='utf-8'))
+          renderer = value['renderer']
+          print('RENDERER_REPOSITORY=' + renderer['repository'])
+          print('RENDERER_COMMIT=' + renderer['commit'])
+          print('RENDERER_CONTRACT_VERSION=' + renderer['contractVersion'])
+          PY
+
       - name: Checkout pinned Remotion renderer
         uses: actions/checkout@v4
         with:
-          repository: saienjoy0/saienjoy0-nasdaq-cafe-remotion
+          repository: ${{ env.RENDERER_REPOSITORY }}
           ref: ${{ env.RENDERER_COMMIT }}
           path: .renderer
           persist-credentials: false
