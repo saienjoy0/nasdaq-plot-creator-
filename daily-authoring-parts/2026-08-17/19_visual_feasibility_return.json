@@ -20,33 +20,9 @@
       "beatNumber": 1,
       "set": {
         "metrics": [
-          {
-            "label": "AMAT",
-            "value": "-5.12%",
-            "numericValue": -5.12,
-            "precision": 2,
-            "unit": "%",
-            "tone": "negative",
-            "comparison": "2026-08-14 US regular session close"
-          },
-          {
-            "label": "AVGO",
-            "value": "-5.94%",
-            "numericValue": -5.94,
-            "precision": 2,
-            "unit": "%",
-            "tone": "negative",
-            "comparison": "2026-08-14 US regular session close"
-          },
-          {
-            "label": "AMD",
-            "value": "+6.50%",
-            "numericValue": 6.5,
-            "precision": 2,
-            "unit": "%",
-            "tone": "positive",
-            "comparison": "2026-08-14 US regular session close"
-          }
+          {"label": "AMAT", "value": "-5.12%", "numericValue": -5.12, "precision": 2, "unit": "%", "tone": "negative", "comparison": "2026-08-14 US regular session close"},
+          {"label": "AVGO", "value": "-5.94%", "numericValue": -5.94, "precision": 2, "unit": "%", "tone": "negative", "comparison": "2026-08-14 US regular session close"},
+          {"label": "AMD", "value": "+6.50%", "numericValue": 6.5, "precision": 2, "unit": "%", "tone": "positive", "comparison": "2026-08-14 US regular session close"}
         ],
         "visualEvents": [
           {"action": "show", "targetId": "scene-03-number-01-01", "timing": "chunk-start", "offsetMs": 0},
@@ -93,36 +69,13 @@
         "visualMode": "timeline",
         "variant": "official-time-plus-close",
         "metrics": [
-          {
-            "label": "8/13 引け後",
-            "value": "AMAT反応開始",
-            "unit": "",
-            "tone": "negative"
-          },
-          {
-            "label": "8/14 08:30",
-            "value": "小売売上 -0.6%",
-            "numericValue": -0.6,
-            "precision": 1,
-            "unit": "%",
-            "tone": "negative"
-          },
-          {
-            "label": "09:30",
-            "value": "NASDAQ 26,851.148",
-            "numericValue": 26851.148,
-            "precision": 3,
-            "unit": "",
-            "tone": "positive"
-          }
+          {"label": "8/13 引け後", "value": "AMAT反応開始", "unit": "", "tone": "negative"},
+          {"label": "8/14 08:30", "value": "小売売上 -0.6%", "numericValue": -0.6, "precision": 1, "unit": "%", "tone": "negative"},
+          {"label": "09:30", "value": "NASDAQ 26,851.148", "numericValue": 26851.148, "precision": 3, "unit": "", "tone": "positive"}
         ],
         "reactionTimeline": {
           "precision": "official-time-plus-close",
-          "eventOrderIds": [
-            "scene-06-number-01-01",
-            "scene-06-number-01-02",
-            "scene-06-number-01-03"
-          ],
+          "eventOrderIds": ["scene-06-number-01-01", "scene-06-number-01-02", "scene-06-number-01-03"],
           "seriesObjectIds": []
         },
         "visualEvents": [
@@ -140,40 +93,16 @@
         "visualTemplate": "event-reaction-timeline",
         "contentType": "event-reaction-timeline",
         "grammarId": "reaction",
+        "transitionRole": "continuation",
         "variant": "official-time-plus-close",
         "metrics": [
-          {
-            "label": "前日終値",
-            "value": "26,803.025",
-            "numericValue": 26803.025,
-            "precision": 3,
-            "unit": "",
-            "tone": "neutral"
-          },
-          {
-            "label": "09:30 open",
-            "value": "26,851.148",
-            "numericValue": 26851.148,
-            "precision": 3,
-            "unit": "",
-            "tone": "positive"
-          },
-          {
-            "label": "引け",
-            "value": "26,729.164",
-            "numericValue": 26729.164,
-            "precision": 3,
-            "unit": "",
-            "tone": "negative"
-          }
+          {"label": "前日終値", "value": "26,803.025", "numericValue": 26803.025, "precision": 3, "unit": "", "tone": "neutral"},
+          {"label": "09:30 open", "value": "26,851.148", "numericValue": 26851.148, "precision": 3, "unit": "", "tone": "positive"},
+          {"label": "引け", "value": "26,729.164", "numericValue": 26729.164, "precision": 3, "unit": "", "tone": "negative"}
         ],
         "reactionTimeline": {
           "precision": "official-time-plus-close",
-          "eventOrderIds": [
-            "scene-06-number-02-01",
-            "scene-06-number-02-02",
-            "scene-06-number-02-03"
-          ],
+          "eventOrderIds": ["scene-06-number-02-01", "scene-06-number-02-02", "scene-06-number-02-03"],
           "seriesObjectIds": []
         },
         "visualEvents": [
@@ -188,24 +117,8 @@
       "beatNumber": 1,
       "set": {
         "metrics": [
-          {
-            "label": "AMD",
-            "value": "+6.50%",
-            "numericValue": 6.5,
-            "precision": 2,
-            "unit": "%",
-            "tone": "positive",
-            "comparison": "2026-08-14 US regular session close"
-          },
-          {
-            "label": "SOXX ETF",
-            "value": "-0.06%",
-            "numericValue": -0.06,
-            "precision": 2,
-            "unit": "%",
-            "tone": "negative",
-            "comparison": "2026-08-14 US regular session close"
-          }
+          {"label": "AMD", "value": "+6.50%", "numericValue": 6.5, "precision": 2, "unit": "%", "tone": "positive", "comparison": "2026-08-14 US regular session close"},
+          {"label": "SOXX ETF", "value": "-0.06%", "numericValue": -0.06, "precision": 2, "unit": "%", "tone": "negative", "comparison": "2026-08-14 US regular session close"}
         ],
         "visualEvents": [
           {"action": "show", "targetId": "scene-07-number-01-01", "timing": "chunk-start", "offsetMs": 0},
