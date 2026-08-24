@@ -40,38 +40,68 @@ BEAT_ALLOWED = {
     "pictureBook", "shots",
 }
 
-# Reviewed producer vocabulary aliases only. Unknown values are intentionally left
-# untouched here so the strict Renderer schema remains the final fail-closed authority.
-# `comparison` is an early vocabulary admission only; strict projection resolves its
-# concrete Renderer mode from the Visual Template via COMPARISON_MODE_BY_TEMPLATE.
-VISUAL_MODE_MAP = {
-    "verification": "verification-points",
+# Canonical Renderer 2.4 mapping, mirrored from the exact pinned Renderer
+# `src/spec/visual-component-registry.ts`. The Visual Template is the more specific
+# contract; producer modes are compatibility vocabulary and must not override the
+# template's Renderer mode when the producer mode is already reviewed/known.
+VISUAL_MODE_BY_TEMPLATE = {
+    "opening-contradiction": "conclusion-card",
+    "market-pulse-grid": "number-comparison",
+    "earnings-surprise": "expected-actual-gap",
+    "dual-asset-split": "stock-comparison",
+    "macro-pressure": "causal-diagram",
+    "source-receipt": "text-focus",
+    "hero-number": "text-focus",
     "closing-recap": "conclusion-card",
+    "final-assembly": "conclusion-card",
+    "conclusion-card": "conclusion-card",
+    "expected-actual-bullet": "expected-actual-gap",
+    "expected-actual-gap-flow": "expected-actual-gap",
+    "metric-comparison-board": "number-comparison",
+    "index-return-bars": "stock-comparison",
+    "diverging-stock-bars": "stock-comparison",
+    "split-comparison": "stock-comparison",
+    "focus-matrix": "stock-comparison",
+    "causal-lane": "causal-diagram",
+    "tailwind-headwind": "causal-diagram",
+    "evidence-boundary": "verification-points",
+    "verification-checklist": "verification-points",
+    "verification-matrix": "verification-points",
+    "analogy-steps": "causal-diagram",
+    "entity-card-full": "text-focus",
+    "news-media": "news-media",
+    "event-reaction-timeline": "timeline",
+    "text-focus": "text-focus",
+}
+
+# Reviewed producer vocabulary aliases. Unknown values are intentionally left
+# untouched so the strict Renderer schema remains the final fail-closed authority.
+# Template IDs are also accepted scene-level aliases because historical producer
+# payloads occasionally used a template name in visualMode.
+VISUAL_MODE_MAP = {
+    **VISUAL_MODE_BY_TEMPLATE,
+    "verification": "verification-points",
     "causal-chain": "causal-diagram",
     "intraday-comparison": "number-comparison",
     "expectation-gap": "expected-actual-gap",
+    # Early vocabulary admission only. Beat projection resolves generic comparison
+    # from the exact Visual Template below.
     "comparison": "stock-comparison",
 }
 
-# Producer `comparison` is intentionally generic. Renderer 2.4 assigns the concrete
-# visualMode by Visual Template, so this compatibility layer must preserve that
-# distinction instead of collapsing every comparison into one Renderer mode.
-COMPARISON_MODE_BY_TEMPLATE = {
-    "event-reaction-timeline": "timeline",
-    "verification-matrix": "verification-points",
-    "split-comparison": "stock-comparison",
-    "focus-matrix": "stock-comparison",
-    "index-return-bars": "stock-comparison",
-    "diverging-stock-bars": "stock-comparison",
-    "dual-asset-split": "stock-comparison",
-    "metric-comparison-board": "number-comparison",
-    "market-pulse-grid": "number-comparison",
-}
+RENDERER_CANONICAL_MODES = frozenset(VISUAL_MODE_BY_TEMPLATE.values())
+TEMPLATE_CANONICALIZABLE_PRODUCER_MODES = frozenset(
+    {*RENDERER_CANONICAL_MODES, "comparison", "verification-matrix"}
+)
 
 
 def normalize_visual_mode(value: Any, visual_template: Any = None) -> Any:
-    if value == "comparison" and isinstance(visual_template, str):
-        return COMPARISON_MODE_BY_TEMPLATE.get(visual_template, value)
+    if (
+        isinstance(visual_template, str)
+        and visual_template in VISUAL_MODE_BY_TEMPLATE
+        and value in TEMPLATE_CANONICALIZABLE_PRODUCER_MODES
+    ):
+        return VISUAL_MODE_BY_TEMPLATE[visual_template]
     return VISUAL_MODE_MAP.get(value, value)
 
 
