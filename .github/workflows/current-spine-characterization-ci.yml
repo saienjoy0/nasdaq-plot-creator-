@@ -11,6 +11,7 @@ on:
       - "scripts/verify_sealed_semantic_freeze_v12.py"
       - "scripts/run_daily_renderer_closure_v12.py"
       - "scripts/visual_intelligence_read_set_v12.py"
+      - "scripts/visual_intelligence_pipeline_v12.py"
       - "scripts/renderer_strict_projection.py"
       - "scripts/build_final_production_package_structured_v12.py"
       - "scripts/current_compatibility_adapter_v12.py"
@@ -40,7 +41,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install current validation dependencies
-        run: python -m pip install --disable-pip-version-check jsonschema referencing
+        run: python -m pip install --disable-pip-version-check jsonschema referencing pytest
 
       - name: Syntax gate
         run: |
@@ -50,6 +51,7 @@ jobs:
             scripts/run_semantic_frozen_renderer_closure_v12.py \
             scripts/verify_sealed_semantic_freeze_v12.py \
             scripts/visual_intelligence_read_set_v12.py \
+            scripts/visual_intelligence_pipeline_v12.py \
             scripts/renderer_strict_projection.py \
             scripts/build_final_production_package_structured_v12.py \
             scripts/current_compatibility_adapter_v12.py \
@@ -63,6 +65,7 @@ jobs:
             tests/current-spine/test_current_preview_request_readiness.py \
             tests/current-spine/test_renderer_template_visual_modes.py \
             tests/current-spine/test_current_renderer_compatibility_projection.py \
+            tests/current-spine/test_visual_candidate_requirements_authority.py \
             tests/remotion-compat/test_visual_intelligence_renderer_projection.py
 
       - name: Freeze observable current boundaries
@@ -85,6 +88,11 @@ jobs:
         env:
           PYTHONPATH: scripts
         run: python3 tests/current-spine/test_current_renderer_compatibility_projection.py
+
+      - name: Verify Renderer-owned candidate requirements authority
+        env:
+          PYTHONPATH: scripts
+        run: python3 -m pytest -q tests/current-spine/test_visual_candidate_requirements_authority.py
 
       - name: Verify sealed Freeze versus Current compatibility split
         env:
