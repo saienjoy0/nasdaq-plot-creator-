@@ -59,7 +59,12 @@
       "sceneNumber": 3,
       "beatNumber": 2,
       "set": {
-        "laneLabels": ["観測", "仮説判定"]
+        "laneLabels": ["観測", "仮説判定"],
+        "viewerTexts": [
+          "観測｜SOXX ETF：ほぼ横ばい",
+          "仮説判定｜全面安説：弱い",
+          "観測｜※PHLX SOX指数ではない"
+        ]
       }
     },
     {
@@ -212,7 +217,13 @@
       "sceneNumber": 8,
       "beatNumber": 1,
       "set": {
-        "laneLabels": ["弱まった仮説", "残った仮説"]
+        "laneLabels": ["弱まった仮説", "残った仮説"],
+        "viewerTexts": [
+          "弱まった仮説｜決算ミス：棄却",
+          "弱まった仮説｜AI需要崩壊：弱い",
+          "弱まった仮説｜小売だけ：弱い",
+          "残った仮説｜二エンジン：最有力"
+        ]
       }
     },
     {
