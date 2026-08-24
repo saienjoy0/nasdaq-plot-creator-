@@ -38,6 +38,10 @@ def main() -> int:
         raise AssertionError("PR validation does not observe formal Preview request changes")
     if "scripts/current_preview_request_readiness_v12.py" not in validation:
         raise AssertionError("PR validation does not run Current Preview readiness")
+    if "contracts/renderer_binding.json" not in validation:
+        raise AssertionError("PR validation does not resolve the canonical Renderer binding")
+    if "RENDERER_COMMIT: fc1aa384011549e93bd0698e0bb4790c58dfa153" in validation:
+        raise AssertionError("PR validation still hard-codes a stale Renderer commit")
     if "scripts/current_production_facade_v12.py" not in readiness:
         raise AssertionError("Preview readiness does not reuse the sole Current facade")
     forbidden_readiness_calls = (
