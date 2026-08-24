@@ -1,0 +1,67 @@
+name: Materialize Current Authoring Reseal 2026-08-17
+
+on:
+  push:
+    branches:
+      - fix/current-preview-readiness-gate
+    paths:
+      - daily-authoring-parts/2026-08-17/**
+      - .github/workflows/materialize-current-authoring-reseal-20260817.yml
+
+permissions:
+  contents: write
+
+jobs:
+  materialize-reseal:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/current-preview-readiness-gate
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install deterministic validation dependencies
+        run: python -m pip install --disable-pip-version-check jsonschema
+      - name: Assemble canonical authoring from ChatGPT-authored parts
+        run: python scripts/assemble_chatgpt_daily_authoring_parts.py --date 2026-08-17 --repo-root .
+      - name: Verify visual feasibility before reseal
+        run: python scripts/validate_chatgpt_visual_feasibility.py --authoring daily-authoring/2026-08-17.json --output verification/2026-08-17/visual_feasibility.json
+      - name: Regenerate Editorial Semantic Acceptance
+        run: python scripts/validate_editorial_semantic_boundary.py --date 2026-08-17 --repo-root . --authoring daily-authoring/2026-08-17.json --output verification/2026-08-17/editorial_semantic_acceptance.json
+      - name: Reseal Semantic Freeze
+        run: python scripts/chatgpt_semantic_freeze.py --repo-root . create --date 2026-08-17 --output semantic-freezes/2026-08-17.json
+      - name: Rebind the single formal PREVIEW request
+        run: |
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          freeze = Path('semantic-freezes/2026-08-17.json')
+          request = Path('daily-production-requests/2026-08-17.json')
+          value = json.loads(request.read_text(encoding='utf-8'))
+          value['semanticFreeze'] = {
+              'path': freeze.as_posix(),
+              'sha256': hashlib.sha256(freeze.read_bytes()).hexdigest(),
+          }
+          request.write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
+      - name: Commit only machine-derived reseal artifacts
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            daily-authoring/2026-08-17.json \
+            verification/2026-08-17/visual_feasibility.json \
+            verification/2026-08-17/editorial_semantic_acceptance.json \
+            verification/2026-08-17/editorial-semantic-preflight/story_plan.json \
+            verification/2026-08-17/editorial-semantic-preflight/story_script.json \
+            verification/2026-08-17/editorial-semantic-preflight/creative_review.json \
+            semantic-freezes/2026-08-17.json \
+            daily-production-requests/2026-08-17.json
+          if git diff --cached --quiet; then
+            echo 'No derived reseal changes to commit.'
+            exit 0
+          fi
+          git commit -m 'Reseal 2026-08-17 after visual transition correction'
+          git push origin HEAD:fix/current-preview-readiness-gate
