@@ -1,0 +1,210 @@
+{
+  "semanticPayloadVersion": "1.0.0",
+  "episodeDate": "2026-08-17",
+  "intent": {
+    "beats": [
+      {
+        "visualBeatId": "scene-01-beat-001",
+        "purpose": "NASDAQ、AMAT株価、決算評価を同じ座標に置き、冒頭の矛盾を一目で固定する。",
+        "audienceBeliefBefore": "NASDAQが下げ、半導体も全体に弱かったという大まかな印象がある。",
+        "audienceBeliefAfter": "AMATはbeat-and-raiseなのに約5%下落し、数字と株価の矛盾が主役だと分かる。",
+        "visualInformationGain": "指数・個別株・決算評価を同時比較し、矛盾を記憶せず理解できる。",
+        "preferredEvidenceModes": ["comparison-set", "gap", "text-only"],
+        "realityAnchorPreference": "neutral",
+        "editorialReason": "冒頭は情報量より方向と矛盾の即時理解を優先する。"
+      },
+      {
+        "visualBeatId": "scene-01-beat-002",
+        "purpose": "半導体全面安という単純説明をpeer divergenceで弱める。",
+        "audienceBeliefBefore": "AMAT急落から半導体全体が弱かった可能性が残る。",
+        "audienceBeliefAfter": "AMDは大幅高、SOXX ETFはほぼ横ばいで、全面安ではないと分かる。",
+        "visualInformationGain": "同業とセクターを横並びで比べ、反対材料を即確認できる。",
+        "preferredEvidenceModes": ["comparison-set", "verification"],
+        "realityAnchorPreference": "neutral",
+        "editorialReason": "Scene 1の問いを反対材料で一段進める。"
+      },
+      {
+        "visualBeatId": "scene-02-beat-001",
+        "purpose": "AMATの会社直接材料を一次情報として固定する。",
+        "audienceBeliefBefore": "株価下落は決算数字の弱さが原因かもしれない。",
+        "audienceBeliefAfter": "Q3売上とQ4ガイドは強く、発表数字の弱さだけでは説明できないと分かる。",
+        "visualInformationGain": "会社発表をReality Anchorにして、価格反応と発表内容を分離できる。",
+        "preferredEvidenceModes": ["source-document", "text-only"],
+        "realityAnchorPreference": "required",
+        "editorialReason": "会社直接材料は伝聞ではなく一次情報へ接地する。"
+      },
+      {
+        "visualBeatId": "scene-02-beat-002",
+        "purpose": "好材料と価格反応の不一致を二項比較で示す。",
+        "audienceBeliefBefore": "数字が強いことは分かったが、価格反応とのズレは整理されていない。",
+        "audienceBeliefAfter": "予想超えと5%超下落が同時に起きた矛盾を確認できる。",
+        "visualInformationGain": "好材料と下落を左右に固定し、ズレを比較しやすくする。",
+        "preferredEvidenceModes": ["comparison-set", "gap"],
+        "realityAnchorPreference": "neutral",
+        "editorialReason": "『数字が悪い』ではなく『数字と反応が一致しない』を画面の主機能にする。"
+      },
+      {
+        "visualBeatId": "scene-03-beat-001",
+        "purpose": "半導体内の銘柄選別を見せる。",
+        "audienceBeliefBefore": "AMATの反応をセクター全体へ拡大してよいか未検証。",
+        "audienceBeliefAfter": "AMAT・AVGO下落に対しAMDは上昇し、銘柄ごとの分裂があると分かる。",
+        "visualInformationGain": "複数銘柄を同じ方向軸に置き、peer divergenceを一目で比較できる。",
+        "preferredEvidenceModes": ["comparison-set"],
+        "realityAnchorPreference": "neutral",
+        "editorialReason": "一社の材料をNASDAQ全体へ拡大しないための境界を作る。"
+      },
+      {
+        "visualBeatId": "scene-03-beat-002",
+        "purpose": "SOXX ETFの値と名称を検証し、全面安説と指標取り違えを同時に防ぐ。",
+        "audienceBeliefBefore": "個別株は割れていてもセクター全体が崩れた可能性は残る。",
+        "audienceBeliefAfter": "SOXX ETFは-0.06%とほぼ横ばいで、PHLX SOX指数ではないことも分かる。",
+        "visualInformationGain": "数値とデータ名称を検証表で確認できる。",
+        "preferredEvidenceModes": ["verification", "comparison-set"],
+        "realityAnchorPreference": "required",
+        "editorialReason": "反証だけでなくデータ名称の訂正があるため検証機能を優先する。"
+      },
+      {
+        "visualBeatId": "scene-04-beat-001",
+        "purpose": "Formal Expected / Actual / Gapを同一尺度で見せる。",
+        "audienceBeliefBefore": "好決算という表現だけでは正式な期待をどれだけ超えたか分からない。",
+        "audienceBeliefAfter": "Q3売上、Q4売上、Q4 EPSが正式コンセンサスを上回ったと確認できる。",
+        "visualInformationGain": "Expected→Actualを項目ごとに並べ、Gapを後付けせず比較できる。",
+        "preferredEvidenceModes": ["gap", "comparison-set"],
+        "realityAnchorPreference": "preferred",
+        "editorialReason": "番組のExpected / Actual / Gapを最も直接的に画面化する。"
+      },
+      {
+        "visualBeatId": "scene-04-beat-002",
+        "purpose": "『高い期待』の根拠と推論境界を見せる。",
+        "audienceBeliefBefore": "正式予想を上回ったのに、なぜ売られたかという疑問が残る。",
+        "audienceBeliefAfter": "高期待はReutersの市場解釈であり、独自の数値期待を作っていないと分かる。",
+        "visualInformationGain": "報道された解釈と確認済み数値の境界を視覚的に確認できる。",
+        "preferredEvidenceModes": ["source-document", "verification"],
+        "realityAnchorPreference": "required",
+        "editorialReason": "見えない期待値を創作せず、解釈の出所を明示する。"
+      },
+      {
+        "visualBeatId": "scene-05-beat-001",
+        "purpose": "会社直接要因とNASDAQ-wide要因を二つの因果レーンとして分離する。",
+        "audienceBeliefBefore": "AMAT個別の期待値問題だけでNASDAQ全体も説明できるように見える。",
+        "audienceBeliefAfter": "高期待値の選別とマクロoverlayは別経路でNASDAQへ重なったと分かる。",
+        "visualInformationGain": "二つの経路を別レーンのまま同じ結果へ接続し、原因の過剰拡大を防ぐ。",
+        "preferredEvidenceModes": ["causal-graph", "comparison-set"],
+        "realityAnchorPreference": "neutral",
+        "editorialReason": "この回の中心仮説を会社直接と指数全体に分けたまま説明する。"
+      },
+      {
+        "visualBeatId": "scene-05-beat-002",
+        "purpose": "弱い小売から出る逆向き二経路を示す。",
+        "audienceBeliefBefore": "弱い小売は株価に一方向の悪材料だと解釈しやすい。",
+        "audienceBeliefAfter": "成長不安は逆風だが、利上げ観測後退は相殺要因になり得ると分かる。",
+        "visualInformationGain": "一つのニュースから逆方向の経路が出ることを並列で理解できる。",
+        "preferredEvidenceModes": ["causal-graph", "comparison-set"],
+        "realityAnchorPreference": "neutral",
+        "editorialReason": "重要な相殺要因を隠さず、単純因果を避ける。"
+      },
+      {
+        "visualBeatId": "scene-06-beat-001",
+        "purpose": "AMAT反応と翌朝マクロ材料の二つの時計を分ける。",
+        "audienceBeliefBefore": "AMAT下落と翌朝の小売・NASDAQ反応が一続きに見える可能性がある。",
+        "audienceBeliefAfter": "AMAT反応は8/13引け後、小売は8/14 08:30、寄りは09:30で別の時計だと分かる。",
+        "visualInformationGain": "発表と価格反応を時間軸に置き、先後関係を記憶せず確認できる。",
+        "preferredEvidenceModes": ["time-series", "verification"],
+        "realityAnchorPreference": "preferred",
+        "editorialReason": "後半は仮説を時系列でテストする段階なので時間軸を主役にする。"
+      },
+      {
+        "visualBeatId": "scene-06-beat-002",
+        "purpose": "小売だけの即時一直線説明を実際の値動きで検証する。",
+        "audienceBeliefBefore": "弱い小売発表後、NASDAQがすぐ一方向に売られた可能性が残る。",
+        "audienceBeliefAfter": "09:30寄りは前日終値を上回り、引けで下落したため単純な即時反応ではないと分かる。",
+        "visualInformationGain": "前日終値・寄り・引けを同じ時間軸で比較し、単一材料説を値動きで試せる。",
+        "preferredEvidenceModes": ["time-series", "verification", "comparison-set"],
+        "realityAnchorPreference": "preferred",
+        "editorialReason": "見出しではなく実際の値動き順序で因果を検証する重要Beat。"
+      },
+      {
+        "visualBeatId": "scene-07-beat-001",
+        "purpose": "AI需要崩壊・半導体全面安説を価格の反対材料で反証する。",
+        "audienceBeliefBefore": "AI需要崩壊がAMAT下落の説明としてまだ残っている。",
+        "audienceBeliefAfter": "AMD +6.50%とSOXX ETF -0.06%が全面需要崩壊説への強い反対材料だと分かる。",
+        "visualInformationGain": "反対方向の価格を並べ、代替仮説を視覚的にテストできる。",
+        "preferredEvidenceModes": ["comparison-set", "verification"],
+        "realityAnchorPreference": "neutral",
+        "editorialReason": "序盤のpeer divergenceを、終盤では仮説検証として再利用する。"
+      },
+      {
+        "visualBeatId": "scene-07-beat-002",
+        "purpose": "AMAT会社側の需要見通しを直接材料として確認する。",
+        "audienceBeliefBefore": "価格は割れていても、会社側の需要見通しが弱かった可能性は残る。",
+        "audienceBeliefAfter": "advanced packaging成長見通しと2030年までの顧客対話が示され、会社説明は需要崩壊ではないと分かる。",
+        "visualInformationGain": "会社側の直接発言を確認し、価格反応と需要説明を分離できる。",
+        "preferredEvidenceModes": ["source-document", "verification"],
+        "realityAnchorPreference": "required",
+        "editorialReason": "将来保証にはせず、会社直接材料として接地する。"
+      },
+      {
+        "visualBeatId": "scene-08-beat-001",
+        "purpose": "代替仮説を証拠に照らして比較し、何が残ったかを示す。",
+        "audienceBeliefBefore": "複数の説明候補があり、どれがどの証拠で弱まったか整理しにくい。",
+        "audienceBeliefAfter": "決算ミス・AI需要崩壊・小売だけは弱まり、二エンジンが最も残ると分かる。",
+        "visualInformationGain": "仮説ごとの支持・反証をマトリクス化し、結論の根拠を比較できる。",
+        "preferredEvidenceModes": ["verification", "comparison-set", "causal-graph"],
+        "realityAnchorPreference": "neutral",
+        "editorialReason": "終盤は結論カードではなく、代替仮説を明示的にテストして理解を進める。"
+      },
+      {
+        "visualBeatId": "scene-08-beat-002",
+        "purpose": "AMAT直接要因とNASDAQ-wide要因の因果スコープを最後に分離する。",
+        "audienceBeliefBefore": "二エンジン仮説は分かっても、一社材料と指数全体の要因が混ざる危険がある。",
+        "audienceBeliefAfter": "AMAT直接は高期待値の再評価、NASDAQ-wideはマクロoverlayで、確信度は中だと分かる。",
+        "visualInformationGain": "Company-directとNASDAQ-wideを別レーンに固定し、因果の射程と確信度を同時に確認できる。",
+        "preferredEvidenceModes": ["causal-graph", "comparison-set", "verification"],
+        "realityAnchorPreference": "neutral",
+        "editorialReason": "一社の直接材料をNASDAQ全体の原因へ拡大しない境界を最後まで残す。"
+      },
+      {
+        "visualBeatId": "scene-09-beat-001",
+        "purpose": "新情報を足さず、主役の矛盾と番組終了を安定して回収する。",
+        "audienceBeliefBefore": "分析は完了し、新しい証拠を追加する必要はない。",
+        "audienceBeliefAfter": "結論が閉じ、番組が終了することが分かる。",
+        "visualInformationGain": "情報量を減らし、結論の余韻と番組識別を保つ。",
+        "preferredEvidenceModes": ["text-only"],
+        "realityAnchorPreference": "avoid",
+        "editorialReason": "固定クロージングでは視覚的新奇さより理解を壊さない安定性を優先する。"
+      },
+      {
+        "visualBeatId": "scene-09-beat-002",
+        "purpose": "追加の市場主張をせず、次の朝への余韻だけを残す。",
+        "audienceBeliefBefore": "締めの挨拶に入り、分析内容はすでに閉じている。",
+        "audienceBeliefAfter": "新しい因果を追加せず自然に終了する。",
+        "visualInformationGain": "画面情報を減らし、終了を明確にする。",
+        "preferredEvidenceModes": ["text-only"],
+        "realityAnchorPreference": "avoid",
+        "editorialReason": "最後は説明機能を増やさず狐の固定クロージングを支える。"
+      }
+    ]
+  },
+  "provisionalDirection": {
+    "requirements": [
+      {"visualBeatId": "scene-01-beat-001", "requiredModes": ["comparison-set"], "imageRequirement": "not-required", "reason": "方向・株価・決算評価の対比が中心。"},
+      {"visualBeatId": "scene-01-beat-002", "requiredModes": ["comparison-set"], "imageRequirement": "not-required", "reason": "peer divergenceの価格比較が中心。"},
+      {"visualBeatId": "scene-02-beat-001", "requiredModes": ["source-document"], "imageRequirement": "not-required", "reason": "会社直接材料の一次情報確認が中心。"},
+      {"visualBeatId": "scene-02-beat-002", "requiredModes": ["gap"], "imageRequirement": "not-required", "reason": "好材料と価格反応の不一致を見せる。"},
+      {"visualBeatId": "scene-03-beat-001", "requiredModes": ["comparison-set"], "imageRequirement": "not-required", "reason": "複数銘柄の分裂を同一尺度で比較する。"},
+      {"visualBeatId": "scene-03-beat-002", "requiredModes": ["verification"], "imageRequirement": "not-required", "reason": "SOXX ETFの値と名称を検証する。"},
+      {"visualBeatId": "scene-04-beat-001", "requiredModes": ["gap"], "imageRequirement": "not-required", "reason": "Formal Expected / Actual / Gapを可視化する。"},
+      {"visualBeatId": "scene-04-beat-002", "requiredModes": ["source-document"], "imageRequirement": "not-required", "reason": "市場解釈の出所と推論境界を示す。"},
+      {"visualBeatId": "scene-05-beat-001", "requiredModes": ["causal-graph"], "imageRequirement": "not-required", "reason": "個別とマクロの二経路を分離する。"},
+      {"visualBeatId": "scene-05-beat-002", "requiredModes": ["causal-graph"], "imageRequirement": "not-required", "reason": "弱い小売の逆向き二経路を示す。"},
+      {"visualBeatId": "scene-06-beat-001", "requiredModes": ["time-series"], "imageRequirement": "not-required", "reason": "AMAT反応と翌朝材料を時系列で分ける。"},
+      {"visualBeatId": "scene-06-beat-002", "requiredModes": ["time-series"], "imageRequirement": "not-required", "reason": "前日終値・寄り・引けで単一材料説を検証する。"},
+      {"visualBeatId": "scene-07-beat-001", "requiredModes": ["comparison-set"], "imageRequirement": "not-required", "reason": "AMDとSOXX ETFを反対材料として比較する。"},
+      {"visualBeatId": "scene-07-beat-002", "requiredModes": ["source-document"], "imageRequirement": "not-required", "reason": "会社側の需要見通しを直接確認する。"},
+      {"visualBeatId": "scene-08-beat-001", "requiredModes": ["verification"], "imageRequirement": "not-required", "reason": "代替仮説を支持・反証で比較する。"},
+      {"visualBeatId": "scene-08-beat-002", "requiredModes": ["causal-graph"], "imageRequirement": "not-required", "reason": "Company-directとNASDAQ-wideの射程を分離する。"},
+      {"visualBeatId": "scene-09-beat-001", "requiredModes": ["text-only"], "imageRequirement": "not-required", "reason": "固定クロージングは新情報を足さない。"},
+      {"visualBeatId": "scene-09-beat-002", "requiredModes": ["text-only"], "imageRequirement": "not-required", "reason": "余韻だけを残し追加の市場主張をしない。"}
+    ]
+  }
+}
