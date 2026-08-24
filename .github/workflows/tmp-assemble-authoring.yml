@@ -9,17 +9,16 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   assemble:
     runs-on: ubuntu-24.04
     steps:
-      - name: Checkout PR head
+      - name: Checkout repair branch
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: false
+          ref: fix/current-preview-readiness-gate
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -30,9 +29,15 @@ jobs:
         run: python3 scripts/assemble_chatgpt_daily_authoring_parts.py --date 2026-08-17 --repo-root .
       - name: Validate assembled visual feasibility
         run: python3 scripts/validate_chatgpt_visual_feasibility.py --authoring daily-authoring/2026-08-17.json
-      - name: Upload canonical authoring
-        uses: actions/upload-artifact@v4
-        with:
-          name: assembled-authoring-2026-08-17
-          path: daily-authoring/2026-08-17.json
-          if-no-files-found: error
+      - name: Commit exact assembler output
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add daily-authoring/2026-08-17.json
+          if git diff --cached --quiet; then
+            echo 'canonical authoring already matches assembler output'
+          else
+            git commit -m 'build: assemble visual-feasible 2026-08-17 authoring [skip ci]'
+            git push origin HEAD:fix/current-preview-readiness-gate
+          fi
