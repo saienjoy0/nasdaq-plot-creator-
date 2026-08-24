@@ -50,6 +50,27 @@ VISUAL_MODE_MAP = {
     "expectation-gap": "expected-actual-gap",
 }
 
+# Producer `comparison` is intentionally generic. Renderer 2.4 assigns the concrete
+# visualMode by Visual Template, so this compatibility layer must preserve that
+# distinction instead of collapsing every comparison into one Renderer mode.
+COMPARISON_MODE_BY_TEMPLATE = {
+    "event-reaction-timeline": "timeline",
+    "verification-matrix": "verification-points",
+    "split-comparison": "stock-comparison",
+    "focus-matrix": "stock-comparison",
+    "index-return-bars": "stock-comparison",
+    "diverging-stock-bars": "stock-comparison",
+    "dual-asset-split": "stock-comparison",
+    "metric-comparison-board": "number-comparison",
+    "market-pulse-grid": "number-comparison",
+}
+
+
+def normalize_visual_mode(value: Any, visual_template: Any = None) -> Any:
+    if value == "comparison" and isinstance(visual_template, str):
+        return COMPARISON_MODE_BY_TEMPLATE.get(visual_template, value)
+    return VISUAL_MODE_MAP.get(value, value)
+
 
 def sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -84,9 +105,6 @@ def strict_renderer_projection(
     for scene_index, scene in enumerate(source_scenes):
         projected_scene = {key: scene[key] for key in SCENE_ALLOWED if key in scene}
         projected_scene["sceneRole"] = _fixed_scene_role(scene_index)
-        projected_scene["visualMode"] = VISUAL_MODE_MAP.get(
-            projected_scene.get("visualMode"), projected_scene.get("visualMode")
-        )
         projected_beats: list[dict[str, Any]] = []
         for beat in scene.get("visualBeats", []):
             grammar = beat.get("visualGrammar")
@@ -101,8 +119,8 @@ def strict_renderer_projection(
                 raise StrictRendererProjectionError(
                     f"{scene.get('sceneId')}/{beat.get('beatId')}: Visual Grammar metadata missing"
                 )
-            projected["visualMode"] = VISUAL_MODE_MAP.get(
-                projected.get("visualMode"), projected.get("visualMode")
+            projected["visualMode"] = normalize_visual_mode(
+                projected.get("visualMode"), projected.get("visualTemplate")
             )
             config = projected.get("templateConfig")
             if not isinstance(config, dict):
@@ -115,6 +133,11 @@ def strict_renderer_projection(
             projected_beats.append(projected)
             beat_count += 1
         projected_scene["visualBeats"] = projected_beats
+        source_scene_mode = projected_scene.get("visualMode")
+        if source_scene_mode == "comparison" and projected_beats:
+            projected_scene["visualMode"] = projected_beats[0].get("visualMode")
+        else:
+            projected_scene["visualMode"] = normalize_visual_mode(source_scene_mode)
         scenes.append(projected_scene)
     result["scenes"] = scenes
     result["visualGrammarContract"] = {
