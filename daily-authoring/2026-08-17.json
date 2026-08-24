@@ -774,7 +774,7 @@
             "primaryFunction": "Explain",
             "screenQuestion": "金曜朝から一直線に弱かった？",
             "screenState": "Data",
-            "transitionRole": "major-shift",
+            "transitionRole": "continuation",
             "viewerTexts": [
               "前日終値 26,803.025",
               "09:30 open 26,851.148",

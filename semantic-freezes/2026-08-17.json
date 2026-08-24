@@ -6,8 +6,8 @@
   },
   "canonicalAuthoring": {
     "path": "daily-authoring/2026-08-17.json",
-    "semanticSha256": "12f8638d8269de93f6c8af151f2dd6d70175ca75ba51983b525fb41ef9dd63d4",
-    "sha256": "8ede4c9d613cd29518fdffa4bec063c9ff4791fe9ef55644bd69bd40e054956e"
+    "semanticSha256": "a6d209b4fd7088d303f56d49cd054c4d729945d8d9689b36840ae7982d7bcba3",
+    "sha256": "310a270a49236174f8bea392aae81f8f044557dd725f02c285f4a0d7e414daad"
   },
   "causalDossier": {
     "path": "research/2026-08-17/causal_research_dossier_2026-08-17.json",
@@ -26,8 +26,8 @@
   },
   "editorialSemanticAcceptance": {
     "path": "verification/2026-08-17/editorial_semantic_acceptance.json",
-    "semanticSha256": "734fe26dd570b9c8065c7f1e0ea24879fa382d6980f625b0b15a5762ee06952f",
-    "sha256": "c4b2929c11dd8c337b3723ff6c600646ddb769fdd0f45f5022ecf9a37fea1857"
+    "semanticSha256": "e720e97908d4a26e47fe6e0296592380a2f2762fa19320814c795e7e61f11e90",
+    "sha256": "a46ae0fba2a2db41f06fdeacd391c99c78b7121ae1b677b62fb229c076a281e5"
   },
   "episodeDate": "2026-08-17",
   "parts": [
@@ -63,9 +63,9 @@
     },
     {
       "path": "daily-authoring-parts/2026-08-17/19_visual_feasibility_return.json",
-      "semanticSha256": "464bafe7d857e682f5f536c8aa19f30dbcd05decb9d04f0dac370f56768d6e88",
-      "sha256": "9246c419ae5c6dcc99aaa9c0c9b457bca1295485c39427961b3939f61e6bde0f"
+      "semanticSha256": "10deb336939190c81435d83298ef030e191c1e122c22f1cd3daeae18df21d793",
+      "sha256": "1907542b1819fb1462f4336c55c385d3c7705a667513cf2ee67256a470cf175f"
     }
   ],
-  "sourceSetDigestSha256": "3572cfef9cd3e85622517abf60dcd296a218e8826f85d75d2c70bcb69ac237cb"
+  "sourceSetDigestSha256": "3ac0302edbd7358c2d6ba47bc9d89747b9de8110f5aea0c9ea6eede43ab72581"
 }

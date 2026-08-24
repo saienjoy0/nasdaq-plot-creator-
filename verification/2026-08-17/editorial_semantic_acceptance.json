@@ -1,8 +1,8 @@
 {
   "authoring": {
     "path": "daily-authoring/2026-08-17.json",
-    "semanticSha256": "12f8638d8269de93f6c8af151f2dd6d70175ca75ba51983b525fb41ef9dd63d4",
-    "sha256": "8ede4c9d613cd29518fdffa4bec063c9ff4791fe9ef55644bd69bd40e054956e"
+    "semanticSha256": "a6d209b4fd7088d303f56d49cd054c4d729945d8d9689b36840ae7982d7bcba3",
+    "sha256": "310a270a49236174f8bea392aae81f8f044557dd725f02c285f4a0d7e414daad"
   },
   "canonManifest": {
     "path": "source-of-truth/canon_manifest.json",
