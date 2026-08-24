@@ -671,6 +671,11 @@ def _materialize_current_v2(root: Path, date: str, raw_authoring: dict[str, Any]
     story = work / "story-engine"
     episodes = root / "episodes" / date
     render_dir = root / "render-specs" / date
+    dump(work / "terminal_assembly_bindings.json", {
+        "contractVersion":"1.0.0","episodeDate":date,"finalSceneId":"scene-09",
+        "sourceTextPaths":["$.scenes[0].headline","$.scenes[4].supportingTexts[0]","$.scenes[7].supportingTexts[0]"],
+        "lines":[a["scenes"][0]["headline"],a["scenes"][4]["supportingTexts"][0],a["scenes"][7]["supportingTexts"][0]],
+    })
     dump(work / "financial_visual_bindings.json", {"contractVersion":"1.0.0","episodeDate":date,"bindings":projected.get("financialBindings",[])})
     visual_source_checkpoint_v12.materialize(
         work=work,
