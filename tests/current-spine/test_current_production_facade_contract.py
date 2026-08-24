@@ -42,6 +42,8 @@ def main() -> int:
         raise AssertionError("PR validation does not resolve the canonical Renderer binding")
     if "RENDERER_COMMIT: fc1aa384011549e93bd0698e0bb4790c58dfa153" in validation:
         raise AssertionError("PR validation still hard-codes a stale Renderer commit")
+    if "git diff --diff-filter=ACMR --name-only" not in validation:
+        raise AssertionError("PR validation can mistake a deleted Preview request for a live request")
     if "scripts/current_production_facade_v12.py" not in readiness:
         raise AssertionError("Preview readiness does not reuse the sole Current facade")
     forbidden_readiness_calls = (
