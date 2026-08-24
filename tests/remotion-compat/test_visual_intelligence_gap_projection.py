@@ -28,7 +28,7 @@ def main() -> int:
         first = s4["visualBeats"][0]
         second = s4["visualBeats"][1]
         first.update({
-            "visualMode": "expected-actual-gap",
+            "visualMode": "expectation-gap",
             "visualTemplate": "expected-actual-gap-flow",
             "visualGrammar": {
                 "contractVersion": "1.0.0",
@@ -110,7 +110,7 @@ def main() -> int:
         projected_first = projected_scene["visualBeats"][0]
         roles = [card.get("role") for card in projected_scene["cards"][:3]]
         if roles != ["expected", "actual", "gap"]:
-            raise AssertionError(f"gap roles not materialized: {roles}")
+            raise AssertionError(f"gap roles not materialized from authored expectation-gap alias: {roles}")
         if projected_first["objectIds"] != [
             "scene-04-card-expected", "scene-04-card-actual", "scene-04-card-gap"
         ]:
