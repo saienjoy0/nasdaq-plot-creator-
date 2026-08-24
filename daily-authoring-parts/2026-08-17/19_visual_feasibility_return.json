@@ -56,6 +56,13 @@
       }
     },
     {
+      "sceneNumber": 3,
+      "beatNumber": 2,
+      "set": {
+        "laneLabels": ["観測", "仮説判定"]
+      }
+    },
+    {
       "sceneNumber": 4,
       "beatNumber": 1,
       "set": {
@@ -199,6 +206,13 @@
           {"action": "show", "targetId": "scene-07-number-01-01", "timing": "chunk-start", "offsetMs": 0},
           {"action": "show", "targetId": "scene-07-number-01-02", "timing": "chunk-start", "offsetMs": 220}
         ]
+      }
+    },
+    {
+      "sceneNumber": 8,
+      "beatNumber": 1,
+      "set": {
+        "laneLabels": ["弱まった仮説", "残った仮説"]
       }
     },
     {
