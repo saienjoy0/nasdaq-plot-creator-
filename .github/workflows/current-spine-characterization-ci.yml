@@ -62,6 +62,7 @@ jobs:
             tests/current-spine/test_sealed_freeze_compatibility_boundary.py \
             tests/current-spine/test_current_preview_request_readiness.py \
             tests/current-spine/test_renderer_template_visual_modes.py \
+            tests/current-spine/test_current_renderer_compatibility_projection.py \
             tests/remotion-compat/test_visual_intelligence_renderer_projection.py
 
       - name: Freeze observable current boundaries
@@ -79,6 +80,11 @@ jobs:
         env:
           PYTHONPATH: scripts
         run: python3 tests/current-spine/test_renderer_template_visual_modes.py
+
+      - name: Reproduce Current-v2 Renderer metadata compatibility gap
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/current-spine/test_current_renderer_compatibility_projection.py
 
       - name: Verify sealed Freeze versus Current compatibility split
         env:
