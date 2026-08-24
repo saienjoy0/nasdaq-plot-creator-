@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Regression contract for Current Preview semantic readiness.
 
-This test is intentionally written before the readiness coordinator. It freezes the
-r8 failure mode: a PREVIEW request with Visual Requirements present but no Director
-semantic must stay in a non-publishing authoring checkpoint instead of reaching the
-compile-only main Production lane.
+This test freezes both the r8 premature-compile failure and the later real-day
+candidate-coverage failure. Semantic/human checkpoints must remain non-publishing
+PREPARED states, while genuine machine failures remain failures.
 """
 from __future__ import annotations
 
@@ -16,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import current_preview_request_readiness_v12 as readiness
+import run_daily_renderer_closure_v12 as closure
 
 
 def test_phase_selection() -> None:
@@ -46,6 +46,53 @@ def test_prepared_is_actionable_not_ready() -> None:
         "requiredAction": "AUTHOR_VISUAL_INTELLIGENCE_DECISION",
         "reason": "Candidate Catalog ready",
         "exitCode": 3,
+    }
+
+
+def test_candidate_coverage_unavailable_returns_to_story() -> None:
+    result = closure.classify_prepare_visual_intelligence_pause(
+        {
+            "status": "DECISION_REQUIRED",
+            "errors": [
+                "E_VISUAL_CANDIDATE_COVERAGE_UNAVAILABLE:"
+                "scene-02-beat-002,scene-04-beat-001"
+            ],
+            "candidateCoverage": (
+                "working/2026-08-17/visual-intelligence/"
+                "visual_candidate_coverage.json"
+            ),
+        }
+    )
+    assert result == {
+        "requiredAction": "RETURN_TO_STORY_FOR_VISUAL_FEASIBILITY",
+        "includeCandidateCatalog": False,
+        "candidateCoverage": (
+            "working/2026-08-17/visual-intelligence/"
+            "visual_candidate_coverage.json"
+        ),
+        "reason": (
+            "E_VISUAL_CANDIDATE_COVERAGE_UNAVAILABLE:"
+            "scene-02-beat-002,scene-04-beat-001"
+        ),
+    }
+
+
+def test_normal_prepare_pause_still_requests_director() -> None:
+    result = closure.classify_prepare_visual_intelligence_pause(
+        {
+            "status": "DECISION_REQUIRED",
+            "errors": [
+                "E_VISUAL_INTELLIGENCE_DECISION_REQUIRED: Candidate Catalog is ready"
+            ],
+        }
+    )
+    assert result == {
+        "requiredAction": "AUTHOR_VISUAL_INTELLIGENCE_DECISION",
+        "includeCandidateCatalog": True,
+        "candidateCoverage": None,
+        "reason": (
+            "E_VISUAL_INTELLIGENCE_DECISION_REQUIRED: Candidate Catalog is ready"
+        ),
     }
 
 
@@ -92,6 +139,8 @@ def test_machine_failure_stays_failure() -> None:
 def main() -> int:
     test_phase_selection()
     test_prepared_is_actionable_not_ready()
+    test_candidate_coverage_unavailable_returns_to_story()
+    test_normal_prepare_pause_still_requests_director()
     test_review_required_is_critic_checkpoint()
     test_pass_is_merge_ready()
     test_machine_failure_stays_failure()
