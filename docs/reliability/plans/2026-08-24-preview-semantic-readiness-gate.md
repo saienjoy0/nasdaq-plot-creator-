@@ -1,221 +1,356 @@
 # Current Preview Semantic Readiness Gate Implementation Plan
 
-**Root cause:** A `daily-production-requests/*.json` PREVIEW request can be merged before the Current Visual Intelligence semantic authoring loop is complete. Main production is intentionally compile-only, so an unresolved request reaches `run_daily_renderer_closure_v12.py --phase compile` and fails on the missing Director semantic artifact. The lower-level compile contract is behaving correctly; the missing control is a pre-merge semantic-readiness gate.
+> **For agentic workers:** implement task-by-task with test-first changes, review after each task, and fresh verification before claiming completion.
 
-**First broken boundary:** `VISUAL_INTELLIGENCE` before Director decision; observed real run 32700865747.
+**Goal:** Prevent a formal PREVIEW request from reaching the compile-only main production lane until the Current Visual Intelligence semantic authoring loop has reached PASS.
 
-**Evidence:**
-- `.github/workflows/chatgpt-daily-preview-production.yml` always calls the canonical facade with `--phase compile`.
-- `docs/DAILY_PRODUCTION_RUNBOOK.md` defines formal production entry as compile-only after ChatGPT semantic work is complete.
-- `scripts/run_daily_renderer_closure_v12.py` intentionally requires `visual_director_decision.semantic.json` in compile mode.
-- `.github/workflows/visual-intelligence-real-day-canary.yml` already has the correct authoring lifecycle: `prepare` produces Candidate Catalog; `compile` consumes AI-B decisions.
-- `Validate Daily Production Package` currently treats Current-v2 as owned and skips exact-day Current closure; it also does not treat `daily-production-requests/**` as an episode-date source. Therefore PR #166 could pass generic PR checks while its main production request was not compile-ready.
+**Architecture:** Keep `scripts/current_production_facade_v12.py` as the only public Current entrypoint. Add one PR-only, non-publishing readiness coordinator that mechanically chooses `prepare` when Director semantics are absent and `compile` once they exist, converts facade pauses into actionable PR-blocking receipts, and never creates handoff/publication output. Main production remains compile-only and fail-closed.
 
-**Why existing tests missed it:** Current spine tests prove that workflows route through the facade, but they do not prove that a changed PREVIEW request is semantically ready for the compile-only production lane. The existing validation workflow skips exact-day Current closure when Current-v2 owns the episode, which is precisely the case that required the readiness check.
+**Tech Stack:** Python 3.12, pytest, GitHub Actions YAML, existing Current facade, Visual Intelligence bridge 1.2.0, pinned Remotion renderer 2.4.0.
 
-**Goal:** Make a PREVIEW request PR itself run the existing Current facade as a non-publishing readiness check. The PR remains blocked while AI-B Director/Critic work is incomplete, but the check produces the Candidate Catalog / compiled visual evidence needed for ChatGPT to author the next semantic file. Only a PASS request can merge; main production remains compile-only and mechanical.
+**Spec:** `docs/reliability/investigations/2026-08-24-preview-readiness-systematic-debugging.md`
 
-**Protected invariants:**
+## Global Constraints
+
 - Do not change episode facts, narration, Scene order, Visual Beat meaning, Expected/Actual/Gap, or 04 conclusions.
-- Do not make GitHub Actions choose Visual Candidates or author Director/Critic semantics.
-- Do not weaken compile fail-closed behavior in formal main production.
-- Do not add a second Current facade or state machine.
-- Do not auto-render Preview or Final in the PR readiness lane.
-- Do not auto-request Final.
-- Continue using exact pinned Renderer binding.
-- Preserve Semantic Freeze identity.
+- GitHub Actions must not choose Visual Candidates or author Director/Critic semantics.
+- Do not weaken formal compile fail-closed behavior.
+- Do not create a second Current facade or state machine.
+- Do not publish Renderer requests or build handoff in the PR readiness lane.
+- Do not auto-render Preview or Final from PR validation.
+- Keep the exact pinned Renderer binding and Semantic Freeze identity.
+- Keep `.github/workflows/chatgpt-daily-preview-production.yml` compile-only.
 
-## Current code path
+---
 
-```text
-PR with daily-production-requests/<date>*.json
-→ Validate Daily Production Package
-   → Current-v2 detected
-   → RUN_EXACT_DAY=false
-   → generic regressions only
-→ PR can merge
-→ main ChatGPT Daily Preview Production
-→ current_production_facade_v12.py --phase compile
-→ run_semantic_frozen_renderer_closure_v12.py
-→ run_daily_renderer_closure_v12.py --phase compile
-→ Visual Requirements / assets pass
-→ missing visual_director_decision.semantic.json
-→ FAIL
-```
+## Evidence baseline
 
-## Working analogue
-
-`.github/workflows/visual-intelligence-real-day-canary.yml` already expresses the legal semantic lifecycle:
+Real production run `32700865747` failed at the first Visual Intelligence Director boundary with:
 
 ```text
-prepare
-→ Candidate Catalog
-→ DECISION_REQUIRED
-→ AI-B Director semantic
-→ compile
-→ REVIEW_REQUIRED
-→ AI-B Critic semantic
-→ compile
-→ PASS
+compile phase requires AI-B visual_director_decision.semantic.json
 ```
 
-The repair must reuse this lifecycle through `scripts/current_production_facade_v12.py`; it must not invoke the lower-level closure directly.
+PR #166 had `visual_requirements.semantic.json` and a formal PREVIEW request, but no Director semantic artifact. Its PR checks passed because Current-v2 exact-day closure was explicitly skipped and only generic regressions ran; the Daily Renderer Closure Gate log reported `RUN_EXACT_DAY=false` and `79 passed`.
 
-## Repair hypothesis
+The working analogue already exists in `.github/workflows/visual-intelligence-real-day-canary.yml`:
 
-I think the root cause is the absence of a pre-merge Current semantic-readiness lane for production request PRs, because Current-v2 validation deliberately skips exact-day closure while main production is compile-only; adding a non-publishing facade-based readiness runner that selects `prepare` only when Director semantics are absent and otherwise runs `compile` should block premature merges and expose the next required AI-B action without changing production semantics.
+```text
+prepare → Candidate Catalog → DECISION_REQUIRED
+→ Director semantic
+→ compile → REVIEW_REQUIRED
+→ Critic semantic
+→ compile → PASS
+```
 
-## File map
+---
 
-| File | Action | Responsibility | Why this file owns the change |
-|---|---|---|---|
-| `scripts/current_preview_request_readiness_v12.py` | Create | PR-only readiness coordinator; parses one PREVIEW request, selects legal authoring phase, invokes canonical facade without handoff, writes actionable receipt | Keeps orchestration testable while reusing the only Current public entrypoint |
-| `.github/workflows/validate-daily-production-package.yml` | Modify | Detect changed production request, run readiness coordinator on Current-v2 PRs, upload VI evidence on non-ready outcomes | This is an existing PR validation gate that already has Renderer checkout/dependencies and is expected to protect merge |
-| `tests/current-spine/test_current_preview_request_readiness.py` | Create | RED/GREEN regression for request with Requirements present but Director absent; status mapping for Director/Critic pauses and PASS | Reproduces the r8 control-flow hole without depending on 2026-08-17 forever |
-| `tests/current-spine/test_current_production_facade_contract.py` | Modify | Static guard that PR validation includes request paths and routes readiness only through canonical facade | Prevents future bypass/regression |
-| `skills/nasdaq-cafe-daily-production/SKILL.md` | Modify | Operational rule: do not merge/create formal Preview request as ready until PR readiness reaches PASS; use Candidate/Review evidence to author semantics | Prevents agents from repeating r7/r8 request churn |
-| `docs/DAILY_PRODUCTION_RUNBOOK.md` | Modify | Explicitly document pre-merge prepare/compile authoring loop and compile-only main entry | Aligns operator documentation with existing architecture |
+## File structure
 
-## Task 1: Regression reproduction first
+| File | Action | Responsibility |
+|---|---|---|
+| `scripts/current_preview_request_readiness_v12.py` | Create | Pure PR-readiness coordinator around the canonical facade |
+| `tests/current-spine/test_current_preview_request_readiness.py` | Create | TDD regression for r8-like request readiness states |
+| `.github/workflows/validate-daily-production-package.yml` | Modify | Trigger and execute readiness for changed PREVIEW requests |
+| `tests/current-spine/test_current_production_facade_contract.py` | Modify | Static architecture guard preventing bypass/publishing drift |
+| `skills/nasdaq-cafe-daily-production/SKILL.md` | Modify | Operational contract for semantic readiness before merge |
+| `docs/DAILY_PRODUCTION_RUNBOOK.md` | Modify | Human/operator sequence matching the implementation |
+
+---
+
+### Task 1: Create the failing readiness regression
 
 **Files:**
-- Create `tests/current-spine/test_current_preview_request_readiness.py`
+- Create: `tests/current-spine/test_current_preview_request_readiness.py`
 
 **Interfaces:**
-- Consumes a synthetic PREVIEW request and semantic-file presence matrix.
-- Exercises pure/readiness selection functions from the new coordinator.
-- Produces expected phase + readiness state + required action.
+- Consumes: `choose_phase(root: Path, date: str) -> str`
+- Consumes: `classify_facade_outcome(outcome: dict) -> tuple[str, str | None]`
+- Produces: executable RED tests defining the desired coordinator behavior.
 
-### RED cases
+- [ ] **Step 1: Write the RED tests**
 
-1. Requirements present, Director absent:
-   - expected selected phase: `prepare`
-   - facade result: `PREPARED`
-   - readiness result: `NOT_READY`
-   - required action: `AUTHOR_VISUAL_INTELLIGENCE_DECISION`
+Use these exact behaviors:
 
-2. Director present, Critic absent:
-   - selected phase: `compile`
-   - facade result: `REVIEW_REQUIRED`
-   - readiness result: `NOT_READY`
-   - required action: `AUTHOR_VISUAL_CRITIC_REVIEW`
+```python
+from pathlib import Path
 
-3. Director + Critic present and facade PASS:
-   - selected phase: `compile`
-   - readiness result: `PASS`
+import current_preview_request_readiness_v12 as readiness
 
-4. Machine failure:
-   - facade FAIL or non-zero unexpected exit
-   - readiness result: `FAIL`, not a human-pause classification.
 
-Run before implementation:
+def test_choose_prepare_when_director_semantic_missing(tmp_path: Path):
+    vi = tmp_path / "working/2026-08-17/visual-intelligence"
+    vi.mkdir(parents=True)
+    assert readiness.choose_phase(tmp_path, "2026-08-17") == "prepare"
+
+
+def test_choose_compile_when_director_semantic_exists(tmp_path: Path):
+    vi = tmp_path / "working/2026-08-17/visual-intelligence"
+    vi.mkdir(parents=True)
+    (vi / "visual_director_decision.semantic.json").write_text("{}\n", encoding="utf-8")
+    assert readiness.choose_phase(tmp_path, "2026-08-17") == "compile"
+
+
+def test_prepared_is_not_ready_and_preserves_required_action():
+    state, action = readiness.classify_facade_outcome({
+        "status": "PREPARED",
+        "requiredAction": "AUTHOR_VISUAL_INTELLIGENCE_DECISION",
+    })
+    assert state == "NOT_READY"
+    assert action == "AUTHOR_VISUAL_INTELLIGENCE_DECISION"
+
+
+def test_review_required_maps_to_critic_action():
+    state, action = readiness.classify_facade_outcome({"status": "REVIEW_REQUIRED"})
+    assert state == "NOT_READY"
+    assert action == "AUTHOR_VISUAL_CRITIC_REVIEW"
+
+
+def test_pass_is_ready():
+    state, action = readiness.classify_facade_outcome({"status": "PASS"})
+    assert state == "PASS"
+    assert action is None
+```
+
+- [ ] **Step 2: Run RED and verify the failure is correct**
+
+Run:
 
 ```bash
-python -m pytest -q tests/current-spine/test_current_preview_request_readiness.py
+PYTHONPATH=scripts python -m pytest -q tests/current-spine/test_current_preview_request_readiness.py
 ```
 
-Expected before implementation: FAIL because coordinator module/functions do not exist.
+Expected: collection/import failure because `current_preview_request_readiness_v12.py` does not exist. Do not proceed unless the failure is caused by the missing production module rather than a typo in the test.
 
-## Task 2: Add PR-only readiness coordinator
-
-**Files:**
-- Create `scripts/current_preview_request_readiness_v12.py`
-
-**Required behavior:**
-
-1. Inputs:
-   - `--workspace`
-   - `--renderer-root`
-   - `--request`
-   - optional `--output`
-2. Parse request and validate:
-   - `confirmation == PREVIEW`
-   - episode date valid
-   - Semantic Freeze path/date/SHA match exact bytes
-3. Determine semantic phase mechanically:
-   - if `working/<date>/visual-intelligence/visual_director_decision.semantic.json` is absent → `prepare`
-   - otherwise → `compile`
-4. Invoke only:
-
-```text
-scripts/current_production_facade_v12.py
-```
-
-No direct call to semantic wrapper, daily closure, state machine, handoff builder, or Renderer workflow.
-5. Never pass `--build-handoff-on-pass`.
-6. Interpret outcome:
-   - `PASS` → readiness `PASS`, exit 0
-   - `PREPARED` → readiness `NOT_READY`, preserve facade `requiredAction`, exit non-zero dedicated readiness code
-   - `REVIEW_REQUIRED` → readiness `NOT_READY`, required action `AUTHOR_VISUAL_CRITIC_REVIEW`, exit non-zero dedicated readiness code
-   - `FAIL` / missing outcome → readiness `FAIL`, exit 2
-7. Write `verification/<date>/current_preview_request_readiness.json` with request path/SHA, selected phase, facade outcome path/status, required action, reason, Renderer commit, and no publication/handoff fields.
-
-**Important:** `prepare` is used only in the PR readiness lane to materialize Candidate Catalog. Formal main production stays compile-only.
-
-Run GREEN:
+- [ ] **Step 3: Commit the RED test only**
 
 ```bash
-python -m pytest -q tests/current-spine/test_current_preview_request_readiness.py
+git add tests/current-spine/test_current_preview_request_readiness.py
+git commit -m "test: reproduce current preview readiness gap"
 ```
 
-Expected: PASS.
+---
 
-## Task 3: Wire readiness into the existing required PR validation lane
+### Task 2: Implement the minimal PR-only readiness coordinator
 
 **Files:**
-- Modify `.github/workflows/validate-daily-production-package.yml`
+- Create: `scripts/current_preview_request_readiness_v12.py`
 
-**Changes:**
+**Interfaces:**
+- Produces: `choose_phase(root: Path, date: str) -> str`
+- Produces: `classify_facade_outcome(outcome: dict) -> tuple[str, str | None]`
+- CLI consumes: `--workspace`, `--renderer-root`, `--request`, optional `--output`.
+- CLI writes: `verification/<date>/current_preview_request_readiness.json`.
 
-1. Add PR path trigger:
+- [ ] **Step 1: Implement only the functions needed by the RED tests**
 
-```text
-daily-production-requests/**
+```python
+def choose_phase(root: Path, date: str) -> str:
+    director = (
+        root / "working" / date / "visual-intelligence" /
+        "visual_director_decision.semantic.json"
+    )
+    return "compile" if director.is_file() else "prepare"
+
+
+def classify_facade_outcome(outcome: dict) -> tuple[str, str | None]:
+    status = outcome.get("status")
+    if status == "PASS":
+        return "PASS", None
+    if status == "PREPARED":
+        return "NOT_READY", outcome.get("requiredAction") or "AUTHOR_VISUAL_INTELLIGENCE_DECISION"
+    if status == "REVIEW_REQUIRED":
+        return "NOT_READY", "AUTHOR_VISUAL_CRITIC_REVIEW"
+    return "FAIL", None
 ```
 
-2. Include production-request filenames in exact episode-date detection.
-3. Detect at most one changed production request for the episode and export:
+- [ ] **Step 2: Run GREEN**
+
+```bash
+PYTHONPATH=scripts python -m pytest -q tests/current-spine/test_current_preview_request_readiness.py
+```
+
+Expected: all tests PASS.
+
+- [ ] **Step 3: Add request validation and canonical-facade invocation**
+
+The coordinator must validate:
 
 ```text
-CURRENT_PREVIEW_REQUEST_PATH
+confirmation == PREVIEW
+episodeDate is YYYY-MM-DD
+semanticFreeze.path == semantic-freezes/<date>.json
+semanticFreeze.sha256 matches the exact file bytes
+```
+
+Invoke only:
+
+```bash
+python scripts/current_production_facade_v12.py \
+  --workspace <root> \
+  --renderer-root <renderer> \
+  closure \
+  --episode-date <date> \
+  --phase <prepare|compile> \
+  --semantic-freeze <freeze>
+```
+
+Do **not** pass `--build-handoff-on-pass`.
+
+- [ ] **Step 4: Write the readiness receipt**
+
+Required shape:
+
+```json
+{
+  "contractVersion": "1.0.0",
+  "episodeDate": "YYYY-MM-DD",
+  "requestPath": "daily-production-requests/...json",
+  "requestSha256": "64-hex",
+  "selectedPhase": "prepare|compile",
+  "state": "PASS|NOT_READY|FAIL",
+  "facadeStatus": "PASS|PREPARED|REVIEW_REQUIRED|FAIL",
+  "requiredAction": null,
+  "reason": null,
+  "previewHandoffReady": false,
+  "previewPublicationReady": false
+}
+```
+
+`NOT_READY` exits with a dedicated non-zero readiness code; machine failure exits 2; PASS exits 0.
+
+- [ ] **Step 5: Run the new test and compile-check**
+
+```bash
+PYTHONPATH=scripts python -m pytest -q tests/current-spine/test_current_preview_request_readiness.py
+python -m py_compile scripts/current_preview_request_readiness_v12.py
+```
+
+Expected: PASS / exit 0.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add scripts/current_preview_request_readiness_v12.py tests/current-spine/test_current_preview_request_readiness.py
+git commit -m "feat: add current preview semantic readiness coordinator"
+```
+
+---
+
+### Task 3: Wire readiness into PR validation without adding a second production lane
+
+**Files:**
+- Modify: `.github/workflows/validate-daily-production-package.yml`
+
+**Interfaces:**
+- Consumes changed `daily-production-requests/*.json`.
+- Invokes `scripts/current_preview_request_readiness_v12.py` after renderer checkout and regressions.
+- Produces uploaded readiness/VI evidence only; no handoff/publication.
+
+- [ ] **Step 1: Extend PR path triggers**
+
+Add:
+
+```yaml
+- "daily-production-requests/**"
+- "scripts/current_preview_request_readiness_v12.py"
+- "tests/current-spine/test_current_preview_request_readiness.py"
+```
+
+- [ ] **Step 2: Extend date detection**
+
+Add this regex to the existing date-pattern tuple:
+
+```python
+r"^daily-production-requests/(\d{4}-\d{2}-\d{2})[^/]*\.json$",
+```
+
+- [ ] **Step 3: Resolve one changed PREVIEW request**
+
+Export:
+
+```text
+CURRENT_PREVIEW_REQUEST_PATH=<path or empty>
 RUN_CURRENT_PREVIEW_READINESS=true|false
 ```
 
-4. After Renderer checkout/dependencies and generic regressions, add a Current-v2-only readiness step:
+Reject more than one changed production request in the same PR.
 
-```bash
-python scripts/current_preview_request_readiness_v12.py \
-  --workspace . \
-  --renderer-root .renderer \
-  --request "$CURRENT_PREVIEW_REQUEST_PATH"
+- [ ] **Step 4: Run the coordinator**
+
+Add after dependency install + generic regressions:
+
+```yaml
+- name: Verify Current Preview semantic readiness
+  if: env.RUN_CURRENT_PREVIEW_READINESS == 'true'
+  run: |
+    PYTHONPATH=scripts python scripts/current_preview_request_readiness_v12.py \
+      --workspace . \
+      --renderer-root .renderer \
+      --request "$CURRENT_PREVIEW_REQUEST_PATH"
 ```
 
-5. On NOT_READY, the check must block merge while still uploading:
-   - `working/<date>/visual-intelligence/`
-   - `verification/<date>/`
-   - `render-specs/<date>/render_spec.json`
+Do not call the semantic wrapper, lower-level closure, state machine, handoff builder, or publication builder directly from this step.
 
-This gives ChatGPT the legal Candidate Catalog or compiled visual/warnings needed for the next semantic authoring action.
-6. Do not build handoff or publish Renderer requests in this PR lane.
+- [ ] **Step 5: Upload evidence even when readiness is NOT_READY**
 
-## Task 4: Strengthen current-spine contract tests
+Add an `if: always()` artifact step containing:
+
+```text
+working/<date>/visual-intelligence/
+verification/<date>/
+render-specs/<date>/render_spec.json
+```
+
+This is evidence for ChatGPT to author the next semantic artifact; it is not a production handoff.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add .github/workflows/validate-daily-production-package.yml
+git commit -m "ci: block preview requests until current semantics are ready"
+```
+
+---
+
+### Task 4: Add static architecture guards
 
 **Files:**
-- Modify `tests/current-spine/test_current_production_facade_contract.py`
+- Modify: `tests/current-spine/test_current_production_facade_contract.py`
 
-**Assertions:**
+**Interfaces:**
+- Verifies PR validation uses the readiness coordinator.
+- Verifies the coordinator uses only the canonical facade.
+- Verifies main remains compile-only/publishing owner.
 
-- validation workflow includes `daily-production-requests/**`;
-- validation workflow invokes `scripts/current_preview_request_readiness_v12.py`;
-- readiness coordinator invokes `scripts/current_production_facade_v12.py`;
-- readiness coordinator does not contain direct calls to:
-  - `run_semantic_frozen_renderer_closure_v12.py`
-  - `run_daily_renderer_closure_v12.py`
-  - `run_daily_production_v12.py`
-  - handoff/publication builders;
-- main `chatgpt-daily-preview-production.yml` remains `--phase compile` and remains the only publishing path.
+- [ ] **Step 1: Add assertions**
 
-Run:
+Required assertions:
+
+```python
+readiness = read("scripts/current_preview_request_readiness_v12.py")
+
+if 'daily-production-requests/**' not in production_validation:
+    raise AssertionError("PR validation does not watch production requests")
+if 'scripts/current_preview_request_readiness_v12.py' not in production_validation:
+    raise AssertionError("PR validation does not run Current readiness")
+if 'scripts/current_production_facade_v12.py' not in readiness:
+    raise AssertionError("readiness bypasses canonical facade")
+for forbidden in (
+    "run_semantic_frozen_renderer_closure_v12.py",
+    "run_daily_renderer_closure_v12.py",
+    "run_daily_production_v12.py",
+    "build_current_preview_publication.py",
+):
+    if forbidden in readiness:
+        raise AssertionError(f"readiness contains forbidden lower-level owner: {forbidden}")
+if "--phase compile" not in production:
+    raise AssertionError("main production is no longer compile-only")
+```
+
+Adapt variable names to the existing test file; do not restructure unrelated assertions.
+
+- [ ] **Step 2: Run architecture guards**
 
 ```bash
 python tests/current-spine/test_current_production_facade_contract.py
@@ -224,13 +359,26 @@ python tests/current-spine/test_current_spine_characterization.py
 
 Expected: PASS.
 
-## Task 5: Update operator/agent contract
+- [ ] **Step 3: Commit**
+
+```bash
+git add tests/current-spine/test_current_production_facade_contract.py
+git commit -m "test: guard current preview readiness architecture"
+```
+
+---
+
+### Task 5: Align agent and operator contracts
 
 **Files:**
-- Modify `skills/nasdaq-cafe-daily-production/SKILL.md`
-- Modify `docs/DAILY_PRODUCTION_RUNBOOK.md`
+- Modify: `skills/nasdaq-cafe-daily-production/SKILL.md`
+- Modify: `docs/DAILY_PRODUCTION_RUNBOOK.md`
 
-**Required documented sequence:**
+**Interfaces:**
+- Documents the same legal lifecycle as the code.
+- Prevents agents from generating rN+1 production requests merely because a semantic checkpoint was reached.
+
+- [ ] **Step 1: Document this exact sequence**
 
 ```text
 Visual Requirements semantic
@@ -241,29 +389,52 @@ Visual Requirements semantic
 → REVIEW_REQUIRED + compiled visual/warnings
 → ChatGPT Critic semantic
 → PR readiness compile PASS
-→ merge one formal PREVIEW request
+→ merge the same formal PREVIEW request
 → main production compile-only
 → immutable handoff/publication
 → Renderer Preview
 ```
 
-Explicitly state that PREPARED / REVIEW_REQUIRED are authoring checkpoints and must not cause creation of a new rN production request. Update the same PR with the required semantic artifact and let the readiness check rerun.
+- [ ] **Step 2: Add the no-request-churn rule**
 
-## Task 6: Affected-suite and exact-path verification
+Document explicitly:
 
-Run fresh:
+```text
+PREPARED and REVIEW_REQUIRED are semantic authoring checkpoints, not failed production attempts.
+Do not create a new rN production request for these checkpoints; update the same PR with the required semantic artifact and rerun readiness.
+```
+
+- [ ] **Step 3: Commit**
 
 ```bash
-python -m pytest -q tests/current-spine/test_current_preview_request_readiness.py
+git add skills/nasdaq-cafe-daily-production/SKILL.md docs/DAILY_PRODUCTION_RUNBOOK.md
+git commit -m "docs: define pre-merge current semantic readiness loop"
+```
+
+---
+
+### Task 6: Verify the exact incident path before completion
+
+**Files:**
+- No new production files required.
+- Uses the changed tests/workflow and a test PR state.
+
+**Interfaces:**
+- Proves the former r8 state cannot merge into the formal compile-only lane.
+
+- [ ] **Step 1: Run fresh local/CI regression commands**
+
+```bash
+PYTHONPATH=scripts python -m pytest -q tests/current-spine/test_current_preview_request_readiness.py
 python tests/current-spine/test_current_production_facade_contract.py
 python tests/current-spine/test_current_spine_characterization.py
 ```
 
-Then run the relevant Current cross-repo E2E / validation workflow on the branch.
+Expected: all PASS.
 
-### Real incident proof
+- [ ] **Step 2: Recreate the r8 semantic state on a test PR**
 
-Recreate the r8 semantic state on a test branch/request:
+State:
 
 ```text
 Requirements semantic present
@@ -271,42 +442,84 @@ Director semantic absent
 PREVIEW request present
 ```
 
-Expected after repair:
+Expected readiness receipt:
 
 ```text
-PR validation: NOT_READY
-selected phase: prepare
-requiredAction: AUTHOR_VISUAL_INTELLIGENCE_DECISION
-Candidate Catalog artifact: present
-main production: not run because PR cannot merge
+state=NOT_READY
+selectedPhase=prepare
+requiredAction=AUTHOR_VISUAL_INTELLIGENCE_DECISION
+Candidate Catalog exists
+no handoff
+no publication
 ```
 
-Then add Director semantic to the same PR.
+The PR must remain blocked.
+
+- [ ] **Step 3: Add Director semantic to the same PR**
 
 Expected:
 
 ```text
-PR validation reruns
-selected phase: compile
-status: REVIEW_REQUIRED if Critic semantic absent
-compiled visual + warning report artifacts: present
-requiredAction: AUTHOR_VISUAL_CRITIC_REVIEW
+selectedPhase=compile
+state=NOT_READY
+facadeStatus=REVIEW_REQUIRED
+requiredAction=AUTHOR_VISUAL_CRITIC_REVIEW
+compiled visual exists
+warning report exists
 ```
 
-Then add Critic semantic to the same PR.
+- [ ] **Step 4: Add Critic semantic to the same PR**
 
 Expected:
 
 ```text
-PR validation: PASS
+state=PASS
+facadeStatus=PASS
 ```
 
-Only then merge. Main production should execute compile-only and proceed beyond the former r8 boundary.
+Only now may the PREVIEW request merge.
 
-## Review / rollback
+- [ ] **Step 5: Verify formal main production**
 
-**Review focus:** no semantic authority moved into Actions; no second Current entrypoint; no publishing in PR readiness; main remains compile-only.
+After merge, main must still execute:
 
-**Rollback:** remove readiness step/coordinator and documentation changes. No persisted production semantics, state schema, Renderer contract, or daily artifacts need migration.
+```text
+current_production_facade_v12.py --phase compile
+```
 
-**Do not implement:** changing formal compile mode to silently behave like prepare. That would blur the existing two-phase contract and hide premature production requests instead of preventing them.
+and must proceed beyond the former Director-missing boundary into immutable handoff/publication. Continue verification to Preview; if a new first broken boundary appears, return to systematic debugging instead of claiming the pipeline fixed.
+
+- [ ] **Step 6: Review before merge**
+
+Review specifically for:
+
+```text
+no AI choice in Actions
+no second Current entrypoint
+no lower-level bypass
+no handoff/publication in PR readiness
+main remains compile-only
+same-PR semantic progression
+```
+
+- [ ] **Step 7: Completion evidence**
+
+Do not claim fixed until fresh evidence shows:
+
+```text
+new regression PASS
+affected Current-spine tests PASS
+r8-like PR blocked before merge
+Director/Critic semantic progression works on same PR
+readiness PASS permits merge
+main compile passes former boundary
+Preview reached or next first broken boundary identified
+```
+
+## Rollback
+
+Remove the readiness coordinator, its PR-validation step, contract-test assertions, and documentation changes. No episode semantic artifacts, production state schema, Renderer contract, or Formal Preview/Final identity require migration.
+
+## Explicit non-solution
+
+Do **not** change `run_daily_renderer_closure_v12.py --phase compile` to silently act like `prepare` when Director semantic is missing. That would hide a premature formal production request and blur the established semantic ownership boundary instead of preventing the invalid request from merging.
