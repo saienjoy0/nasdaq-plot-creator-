@@ -67,7 +67,10 @@ def _materialize_current_v2(
 ) -> int:
     if semantic_freeze is None:
         raise SystemExit("Daily Authoring v2 Story projection requires --semantic-freeze")
-    freeze_module = load_module("chatgpt_semantic_freeze_story_v2", root / "scripts/chatgpt_semantic_freeze.py")
+    freeze_module = load_module(
+        "sealed_semantic_freeze_story_v2",
+        root / "scripts/verify_sealed_semantic_freeze_v12.py",
+    )
     freeze_module.verify_manifest(root, date, semantic_freeze)
     authoring = load(authoring_path)
     if authoring.get("contractVersion") != "2.0.0":

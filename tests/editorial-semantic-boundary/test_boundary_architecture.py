@@ -131,12 +131,13 @@ def test_ws4_contains_v2_identity_branch_and_legacy_fallback():
     assert "retainedCounterevidenceIds" in text
 
 
-def test_preview_workflow_installs_semantic_dependencies_before_freeze_verify():
+def test_preview_workflow_delegates_semantic_authority_to_facade():
     text = _text(".github/workflows/chatgpt-daily-preview-production.yml")
-    dependency = text.index("Install semantic verification dependencies")
-    freeze = text.index("Verify committed ChatGPT semantic freeze")
-    acceptance = text.index("Verify current Editorial Semantic Acceptance")
-    renderer = text.index("Resolve canonical Renderer binding")
-    assert dependency < freeze < acceptance < renderer
-    assert "jsonschema referencing" in text
     assert "actions/setup-python@v5" in text
+    assert "Resolve canonical Renderer binding" in text
+    assert "scripts/current_production_facade_v12.py" in text
+    assert "Verify committed ChatGPT semantic freeze" not in text
+    assert "Verify current Editorial Semantic Acceptance" not in text
+    assert "scripts/chatgpt_semantic_freeze.py" not in text
+    assert "scripts/validate_editorial_semantic_boundary.py" not in text
+    assert "scripts/verify_sealed_semantic_freeze_v12.py" not in text

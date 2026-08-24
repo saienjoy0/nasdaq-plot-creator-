@@ -15,6 +15,7 @@ from typing import Any
 import build_final_production_package_v12 as final_v12
 import current_daily_mechanisms_v12 as current_mechanisms
 import renderer_binding
+import verify_sealed_semantic_freeze_v12
 
 ROOT = Path(__file__).resolve().parents[1]
 VI_STATES = [
@@ -430,20 +431,17 @@ def _validate_vi_transition(
         if len(freeze_candidates) != 1:
             raise module.DailyProductionError(module.ERROR_CODES["stale"], "editorial_snapshot_valid requires exactly one Semantic Freeze")
         freeze_path = freeze_candidates[0]
-        acceptance_module = current_mechanisms.load_external_module(
-            "editorial_semantic_acceptance_v12_gate", ROOT / "scripts/validate_editorial_semantic_boundary.py"
-        )
-        freeze_module = current_mechanisms.load_external_module(
-            "chatgpt_semantic_freeze_v12_state_gate", ROOT / "scripts/chatgpt_semantic_freeze.py"
-        )
         try:
-            accepted = acceptance_module.verify_acceptance(workspace, date, acceptance)
-            freeze = freeze_module.verify_manifest(workspace, date, freeze_path)
+            freeze = verify_sealed_semantic_freeze_v12.verify_manifest(workspace, date, freeze_path)
         except Exception as exc:
-            raise module.DailyProductionError(module.ERROR_CODES["stale"], f"editorial semantic lineage failed: {exc}") from exc
+            raise module.DailyProductionError(module.ERROR_CODES["stale"], f"sealed editorial semantic lineage failed: {exc}") from exc
         if freeze.get("contractVersion") != "1.2.0":
             raise module.DailyProductionError(module.ERROR_CODES["stale"], "current-v1.2 production requires Semantic Freeze 1.2.0")
-        if freeze.get("editorialSemanticAcceptance", {}).get("sha256") != module.sha256_file(acceptance):
+        acceptance_binding = freeze.get("editorialSemanticAcceptance", {})
+        if (
+            acceptance_binding.get("path") != acceptance.relative_to(workspace.resolve()).as_posix()
+            or acceptance_binding.get("sha256") != module.sha256_file(acceptance)
+        ):
             raise module.DailyProductionError(module.ERROR_CODES["stale"], "Semantic Freeze binds a different Editorial Semantic Acceptance")
         report = module.load_json(projection, "Story projection report")
         if report.get("status") != "pass" or report.get("episode_date") != date:
