@@ -5,6 +5,10 @@ This wrapper is intentionally production-only. Historical/synthetic Visual Intel
 canaries may continue to call run_daily_renderer_closure_v12.py directly. The canonical
 Preview workflow must call this wrapper and therefore cannot silently accept changed
 ChatGPT semantic sources or AI-B artifacts authored against a different freeze.
+
+The wrapper verifies only the sealed editorial identity here. Current Authoring/Renderer
+compatibility is intentionally checked by run_daily_renderer_closure_v12.py after this
+boundary, so later contract evolution does not retroactively invalidate a frozen episode.
 """
 from __future__ import annotations
 
@@ -16,8 +20,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
-import chatgpt_semantic_freeze
 import renderer_binding
+import verify_sealed_semantic_freeze_v12
 
 
 class SemanticFrozenClosureError(RuntimeError):
@@ -108,9 +112,9 @@ def semantic_binding_pause(
 
 def verify_freeze(root: Path, date: str, manifest: Path) -> str:
     try:
-        chatgpt_semantic_freeze.verify_manifest(root, date, manifest)
-        return chatgpt_semantic_freeze.manifest_sha256(root, manifest)
-    except chatgpt_semantic_freeze.SemanticFreezeError as exc:
+        verify_sealed_semantic_freeze_v12.verify_manifest(root, date, manifest)
+        return verify_sealed_semantic_freeze_v12.manifest_sha256(root, manifest)
+    except verify_sealed_semantic_freeze_v12.SealedSemanticFreezeError as exc:
         raise SemanticFrozenClosureError(str(exc)) from exc
 
 
@@ -156,8 +160,7 @@ def main() -> int:
         print("+", " ".join(command), flush=True)
         completed = subprocess.run(command, cwd=root, env=production_env, check=False)
 
-        # The underlying closure may generate many derived files, but it is never
-        # allowed to mutate the committed ChatGPT semantic authority inputs.
+        # Derived Current artifacts may change, but the sealed editorial authority may not.
         freeze_sha_after = verify_freeze(root, args.date, manifest)
         if freeze_sha_after != freeze_sha:
             raise SemanticFrozenClosureError(

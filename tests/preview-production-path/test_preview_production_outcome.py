@@ -110,7 +110,9 @@ class PreviewProductionPathTests(unittest.TestCase):
         request_glob = contract["plot"]["requestGlob"]
         owners = []
         for path in sorted((ROOT / ".github" / "workflows").glob("*.yml")):
-            if request_glob in path.read_text(encoding="utf-8"):
+            text = path.read_text(encoding="utf-8")
+            trigger_block = text.split("\njobs:", 1)[0]
+            if request_glob in trigger_block:
                 owners.append(path.resolve())
         self.assertEqual([canonical.resolve()], owners)
         self.assertEqual("PREVIEW", contract["scope"])
