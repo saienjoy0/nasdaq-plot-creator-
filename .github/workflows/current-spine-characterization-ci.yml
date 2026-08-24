@@ -11,12 +11,14 @@ on:
       - "scripts/verify_sealed_semantic_freeze_v12.py"
       - "scripts/run_daily_renderer_closure_v12.py"
       - "scripts/visual_intelligence_read_set_v12.py"
+      - "scripts/renderer_strict_projection.py"
       - "scripts/build_final_production_package_structured_v12.py"
       - "scripts/current_compatibility_adapter_v12.py"
       - "scripts/current_preview_request_readiness_v12.py"
       - ".github/workflows/chatgpt-daily-preview-production.yml"
       - ".github/workflows/validate-daily-production-package.yml"
       - "tests/current-spine/**"
+      - "tests/remotion-compat/test_visual_intelligence_renderer_projection.py"
       - "docs/current-spine/**"
       - ".github/workflows/current-spine-characterization-ci.yml"
   workflow_dispatch:
@@ -48,6 +50,7 @@ jobs:
             scripts/run_semantic_frozen_renderer_closure_v12.py \
             scripts/verify_sealed_semantic_freeze_v12.py \
             scripts/visual_intelligence_read_set_v12.py \
+            scripts/renderer_strict_projection.py \
             scripts/build_final_production_package_structured_v12.py \
             scripts/current_compatibility_adapter_v12.py \
             scripts/current_preview_request_readiness_v12.py \
@@ -57,13 +60,19 @@ jobs:
             tests/current-spine/test_visual_intelligence_read_set_v12.py \
             tests/current-spine/test_structured_machine_authority_v12.py \
             tests/current-spine/test_sealed_freeze_compatibility_boundary.py \
-            tests/current-spine/test_current_preview_request_readiness.py
+            tests/current-spine/test_current_preview_request_readiness.py \
+            tests/remotion-compat/test_visual_intelligence_renderer_projection.py
 
       - name: Freeze observable current boundaries
         run: python3 tests/current-spine/test_current_spine_characterization.py
 
       - name: Verify canonical Current facade and Preview readiness routing
         run: python3 tests/current-spine/test_current_production_facade_contract.py
+
+      - name: Verify producer to Renderer visual mode aliases
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/remotion-compat/test_visual_intelligence_renderer_projection.py
 
       - name: Verify sealed Freeze versus Current compatibility split
         env:
