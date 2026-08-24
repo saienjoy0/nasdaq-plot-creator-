@@ -46,6 +46,12 @@ def normalize_scene_headings(text: str) -> str:
             f"## Scene {scene_number}",
             text,
         )
+    legacy_inquisition = "## 04による興味深さ・わかりやすさ審問結果"
+    canonical_inquisition = "## H. 04 興味深さ・わかりやすさ審問結果"
+    if legacy_inquisition in text:
+        text = text.replace(legacy_inquisition, canonical_inquisition, 1)
+    elif canonical_inquisition not in text:
+        raise SystemExit("integrated 04 inquisition heading is missing")
     return text
 
 
