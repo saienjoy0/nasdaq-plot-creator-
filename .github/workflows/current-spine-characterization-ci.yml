@@ -15,6 +15,7 @@ on:
       - "scripts/current_compatibility_adapter_v12.py"
       - "scripts/current_preview_request_readiness_v12.py"
       - ".github/workflows/chatgpt-daily-preview-production.yml"
+      - ".github/workflows/validate-daily-production-package.yml"
       - "tests/current-spine/**"
       - "docs/current-spine/**"
       - ".github/workflows/current-spine-characterization-ci.yml"
@@ -49,7 +50,9 @@ jobs:
             scripts/visual_intelligence_read_set_v12.py \
             scripts/build_final_production_package_structured_v12.py \
             scripts/current_compatibility_adapter_v12.py \
+            scripts/current_preview_request_readiness_v12.py \
             tests/current-spine/test_current_spine_characterization.py \
+            tests/current-spine/test_current_production_facade_contract.py \
             tests/current-spine/test_current_request_immutability.py \
             tests/current-spine/test_visual_intelligence_read_set_v12.py \
             tests/current-spine/test_structured_machine_authority_v12.py \
@@ -58,6 +61,9 @@ jobs:
 
       - name: Freeze observable current boundaries
         run: python3 tests/current-spine/test_current_spine_characterization.py
+
+      - name: Verify canonical Current facade and Preview readiness routing
+        run: python3 tests/current-spine/test_current_production_facade_contract.py
 
       - name: Verify sealed Freeze versus Current compatibility split
         env:
@@ -69,7 +75,7 @@ jobs:
           PYTHONPATH: scripts
         run: python3 tests/current-spine/test_current_request_immutability.py
 
-      - name: Reproduce Current Preview semantic readiness gate
+      - name: Verify Current Preview semantic readiness gate
         env:
           PYTHONPATH: scripts
         run: python3 tests/current-spine/test_current_preview_request_readiness.py
