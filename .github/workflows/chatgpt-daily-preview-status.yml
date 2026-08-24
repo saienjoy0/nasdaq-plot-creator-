@@ -1,0 +1,179 @@
+name: ChatGPT Daily Preview Status
+
+on:
+  workflow_run:
+    workflows:
+      - ChatGPT Daily Preview Production
+    types:
+      - completed
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+
+jobs:
+  publish-status:
+    name: Publish Plot Preview terminal receipt
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout terminal workflow identity
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Resolve production request identity
+        id: identity
+        shell: bash
+        env:
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          mapfile -t REQUESTS < <(
+            git diff --name-only "$HEAD_SHA^" "$HEAD_SHA" -- 'daily-production-requests/*.json'
+          )
+
+          REQUEST_PATH="none"
+          EPISODE_DATE="unknown"
+          if [[ ${#REQUESTS[@]} -eq 1 ]]; then
+            REQUEST_PATH="${REQUESTS[0]}"
+            if [[ -f "$REQUEST_PATH" ]]; then
+              EPISODE_DATE="$(python3 - "$REQUEST_PATH" <<'PY'
+          import json, pathlib, sys
+          value=json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
+          print(value.get('episodeDate') or 'unknown')
+          PY
+              )"
+            fi
+          fi
+
+          echo "request_path=$REQUEST_PATH" >> "$GITHUB_OUTPUT"
+          echo "episode_date=$EPISODE_DATE" >> "$GITHUB_OUTPUT"
+
+      - name: Download canonical Preview outcome when available
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          EPISODE_DATE: ${{ steps.identity.outputs.episode_date }}
+        run: |
+          set -euo pipefail
+          DEST="$RUNNER_TEMP/plot-preview-outcome"
+          mkdir -p "$DEST"
+          if [[ "$EPISODE_DATE" != "unknown" ]]; then
+            gh run download "$RUN_ID" \
+              --repo "$GITHUB_REPOSITORY" \
+              --name "nasdaq-cafe-preview-outcome-$EPISODE_DATE" \
+              --dir "$DEST" >/dev/null 2>&1 || true
+          fi
+          echo "OUTCOME_DIR=$DEST" >> "$GITHUB_ENV"
+
+      - name: Build terminal status receipt
+        shell: bash
+        env:
+          EPISODE_DATE: ${{ steps.identity.outputs.episode_date }}
+          REQUEST_PATH: ${{ steps.identity.outputs.request_path }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          RUN_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          outcome_dir=Path(os.environ['OUTCOME_DIR'])
+          matches=list(outcome_dir.rglob('preview_production_outcome.json'))
+          value={}
+          if len(matches) == 1:
+              try:
+                  value=json.loads(matches[0].read_text(encoding='utf-8'))
+              except Exception as exc:
+                  value={
+                      'state':'OUTCOME_UNREADABLE',
+                      'requiredAction':'INSPECT_PLOT_RUN',
+                      'reason':f'Canonical Preview outcome could not be parsed: {exc}',
+                  }
+          elif len(matches) > 1:
+              value={
+                  'state':'OUTCOME_AMBIGUOUS',
+                  'requiredAction':'INSPECT_PLOT_RUN',
+                  'reason':f'Multiple canonical Preview outcomes were found: {len(matches)}',
+              }
+          else:
+              value={
+                  'state':'FAILED_BEFORE_OUTCOME',
+                  'requiredAction':'INSPECT_PLOT_RUN',
+                  'reason':(
+                      'Canonical Preview outcome artifact was not published; '
+                      f"workflow conclusion={os.environ['RUN_CONCLUSION']}."
+                  ),
+              }
+
+          def text(key, default='none'):
+              raw=value.get(key)
+              if raw is None or raw == '':
+                  return default
+              return str(raw)
+
+          episode=os.environ['EPISODE_DATE']
+          run_id=os.environ['RUN_ID']
+          state=text('state', 'UNKNOWN')
+          title=f'NASDAQ CAFE PLOT PREVIEW STATUS {episode} PLOT RUN {run_id}'
+          body='\n'.join([
+              '<!-- nasdaq-cafe-plot-preview-status -->',
+              '',
+              'Plot Preview workflow terminal receipt for deterministic monitoring.',
+              '',
+              f"- Episode date: `{episode}`",
+              f"- Terminal state: `{state}`",
+              f"- Workflow: `{os.environ['WORKFLOW_NAME']}`",
+              f"- Workflow run ID: `{run_id}`",
+              f"- Conclusion: `{os.environ['RUN_CONCLUSION']}`",
+              f"- Head SHA: `{os.environ['HEAD_SHA']}`",
+              f"- Production request: `{os.environ['REQUEST_PATH']}`",
+              f"- Required action: `{text('requiredAction')}`",
+              f"- Reason: {text('reason')}",
+              f"- Preview handoff ready: `{text('previewHandoffReady', 'false').lower()}`",
+              f"- Preview publication ready: `{text('previewPublicationReady', 'false').lower()}`",
+              f"- Renderer request path: `{text('rendererRequestPath')}`",
+              f"- Publication receipt: `{text('requestPublicationReceipt')}`",
+              f"- Run URL: {os.environ['RUN_URL']}",
+              '',
+              'This observer is read-only. It does not alter episode semantics, create Renderer requests, or authorize Final.',
+              '',
+          ])
+
+          Path(os.environ['RUNNER_TEMP'], 'plot-preview-status-title.txt').write_text(title, encoding='utf-8')
+          Path(os.environ['RUNNER_TEMP'], 'plot-preview-status.md').write_text(body, encoding='utf-8')
+          PY
+
+      - name: Upsert Plot Preview status issue
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TITLE="$(cat "$RUNNER_TEMP/plot-preview-status-title.txt")"
+          BODY="$RUNNER_TEMP/plot-preview-status.md"
+          ISSUE_NUMBER="$(gh issue list \
+            --repo "$GITHUB_REPOSITORY" \
+            --state all \
+            --search "$TITLE in:title" \
+            --json number,title \
+            --jq ".[] | select(.title == \"$TITLE\") | .number" | \
+            head -n 1)"
+
+          if [[ -n "$ISSUE_NUMBER" ]]; then
+            gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$BODY"
+            gh issue reopen "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || true
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body-file "$BODY"
+          fi
