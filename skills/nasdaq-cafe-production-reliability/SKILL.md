@@ -1,14 +1,14 @@
 ---
 name: nasdaq-cafe-production-reliability
-version: 1.0.0
-description: Diagnose, repair, and verify 朝のNASDAQカフェ Current production failures from the first broken boundary through Preview, without creating a second production engine.
+version: 1.1.0
+description: Diagnose, design durable repairs for, implement, and verify 朝のNASDAQカフェ Current production failures from the first broken boundary through Preview, without creating a second production engine.
 ---
 
 # Nasdaq Cafe Production Reliability
 
 ## Purpose
 
-This skill is the single reliability layer for stuck, failing, looping, or repeatedly patched Current production. It adapts the strongest mechanics from investigation-mode, verification, and observability to the Nasdaq Cafe production architecture.
+This skill is the single reliability layer for stuck, failing, looping, or repeatedly patched Current production. It adapts evidence-first investigation, systematic debugging, implementation planning, test-first repair, code review, verification, and observability to the Nasdaq Cafe production architecture.
 
 It does not create editorial meaning, rewrite narration, select market causality, choose Visual Candidates, or replace the Current production state machine.
 
@@ -18,8 +18,11 @@ The goal is not "fix one error". The goal is:
 find the first broken boundary with evidence
 → identify the root cause
 → explain why existing tests/gates missed it
-→ apply the smallest durable repair
-→ add a regression that would have caught it
+→ inspect the owning code path and working analogues
+→ design the smallest durable repair before touching production code
+→ prove the repair with a failing regression first
+→ apply the repair
+→ review the diff against protected invariants
 → re-run the real Current path
 → prove Preview readiness or report the next first broken boundary
 ```
@@ -45,6 +48,8 @@ Use this skill when the user says or implies:
 - why did the previous fix not solve it;
 - make the pipeline stable;
 - diagnose and fix the Current production path;
+- inspect the code and design how to repair it;
+- decide which exact files/functions/tests should change;
 - verify the entire production flow after a repair;
 - repeated real-day requests fail at successive boundaries.
 
@@ -62,34 +67,65 @@ Do not guess. Inspect the real Current production evidence in this order:
 6. Read that job's decoded logs.
 7. Inspect the input artifact(s), state evidence, SHAs, and output artifact(s) for that boundary.
 8. Classify the failure boundary.
-9. Stop root-cause search when a high-confidence specific cause is found.
-10. If two consecutive checks provide no signal, classify this as an observability gap and add evidence before further guessing.
+9. Trace the bad state/value/control flow backward to its origin when the visible error is downstream.
+10. Stop root-cause search when one high-confidence specific cause is found.
+11. If two consecutive checks provide no signal, classify this as an observability gap and add evidence before further guessing.
 
 Do not continue downstream after the first confirmed broken boundary. Downstream failures are not primary evidence until the earlier boundary passes.
 
+### REPAIR_DESIGN
+
+This mode is mandatory between DIAGNOSE and REPAIR for any non-trivial production failure, orchestration defect, contract mismatch, repeated failure, or code change spanning more than one file.
+
+Read:
+
+```text
+skills/nasdaq-cafe-production-reliability/references/REPAIR_DESIGN_PROTOCOL.md
+```
+
+Before touching production code:
+
+1. Map the real production code path from public entrypoint/workflow to the owning function and downstream consumer.
+2. Find and read the closest working analogue in the same repository.
+3. List material differences between the working and failing paths.
+4. State one repair hypothesis and the evidence supporting it.
+5. Define protected invariants that must not change.
+6. Produce an exact file/function responsibility map.
+7. Design the regression test first, preferably through the same public entrypoint as production.
+8. Specify RED, GREEN, affected-suite, and Current-E2E verification commands/results.
+9. Evaluate ownership, duplicate-control, staleness, test-parity, human-boundary, and loop risks.
+10. Save consequential plans under `docs/reliability/plans/YYYY-MM-DD-<incident-or-boundary>.md`.
+
+No production code edit is allowed before a concrete repair design exists for the confirmed root cause.
+
 ### REPAIR
 
-After a high-confidence root cause:
+After a high-confidence root cause and completed REPAIR_DESIGN:
 
 1. State the root cause in one sentence.
 2. Identify why the existing test/gate did not catch it.
-3. Apply the smallest repair at the owning layer.
-4. Do not modify editorial meaning to satisfy machine contracts.
-5. Add or strengthen a regression test reproducing the real failure mode.
-6. Prefer fixing ownership, entrypoint, lineage, path stability, contract drift, or missing observability over adding another bypass.
+3. Add the failing regression reproduction first and verify that it fails for the expected reason.
+4. Apply the smallest repair at the owning layer.
+5. Do not modify editorial meaning to satisfy machine contracts.
+6. Do not bundle unrelated refactoring or "while here" cleanup.
+7. Prefer fixing ownership, entrypoint, lineage, path stability, contract drift, intentional-pause classification, or missing observability over adding another bypass.
+8. Re-run the new regression and the affected suite.
+9. Review the actual diff against the repair design and protected invariants before merge.
 
 ### VERIFY
 
-A repair is not complete because a unit test passes.
+A repair is not complete because a unit test passes or an agent says it is fixed.
 
 Verify in this order:
 
-1. New regression test.
+1. New regression test with fresh evidence.
 2. Existing affected test suite.
 3. Current-entrypoint characterization / contract E2E relevant to the changed boundary.
 4. The real-day canary or exact previously failing request.
 5. GitHub Actions through the next production boundary.
 6. Continue until Preview is produced or a new first broken boundary is found.
+
+Before any success claim, identify and run the exact command/evidence that proves the claim and inspect its current output.
 
 If a new first broken boundary appears, return to DIAGNOSE for that boundary. Do not call the whole production path fixed yet.
 
@@ -143,7 +179,13 @@ Then perform pipeline-boundary analysis before another patch:
 - Did a workflow duplicate a gate already owned by the facade?
 - Is the real-day canary materially different from synthetic fixtures?
 
-A cascade is evidence that the missing test or ownership boundary matters as much as the latest local bug.
+If three or more attempted fixes on the same problem family fail or simply reveal new coupling elsewhere, stop local patching and mark:
+
+```text
+ARCHITECTURE_REVIEW_REQUIRED
+```
+
+Question the ownership/orchestration pattern before proposing fix #4.
 
 ## Investigation reporting contract
 
@@ -173,6 +215,7 @@ finish
 duration
 status
 stable error_code
+required_action when intentionally paused
 ```
 
 At async/external boundaries, log entry and exit. The last successful boundary plus the first missing/failed boundary must be determinable without reading speculative code paths.
@@ -197,11 +240,19 @@ Diagnosis stops when:
 - a specific high-confidence root cause is supported by evidence; or
 - two consecutive evidence layers produce no useful signal, in which case report `OBSERVABILITY_GAP` and fix measurement first.
 
+Repair-design stops when:
+
+- the real code path and owning layer are mapped;
+- one repair hypothesis is selected;
+- exact file/function/test changes are specified;
+- protected invariants and risks are explicit;
+- a red-first regression and E2E verification path are defined.
+
 Repair verification stops when:
 
 - the real Current path reaches Preview; or
 - a new first broken boundary is identified with evidence; or
-- the production is intentionally waiting for human input such as Visual Source selection or Preview approval.
+- the production is intentionally waiting for ChatGPT/human input such as Visual Director decision, Visual Source selection, or Preview approval.
 
 Never re-run the same unchanged failing check more than twice.
 
@@ -212,9 +263,11 @@ Do not say "fixed" unless all are true:
 - root cause identified;
 - ownership boundary identified;
 - why-old-tests-missed-it recorded;
+- repair design completed before implementation;
 - durable minimal repair applied;
-- regression added or an explicit reason why not possible;
+- regression demonstrated RED before repair and GREEN after repair, or an explicit reason why impossible;
 - affected tests pass;
+- actual diff reviewed against plan/invariants;
 - exact Current entrypoint is exercised;
 - previously failing real-day request passes that boundary;
 - no unresolved hidden fallback/bypass was added;
@@ -231,6 +284,7 @@ first_failed_boundary
 error_signature
 root_cause
 why_tests_missed_it
+repair_plan
 fix_commit
 regression_test
 e2e_result
