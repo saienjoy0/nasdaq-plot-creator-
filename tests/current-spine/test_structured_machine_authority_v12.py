@@ -11,6 +11,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import build_final_production_package_structured_v12 as structured  # noqa: E402
 import current_compatibility_adapter_v12 as compatibility  # noqa: E402
+import materialize_daily_episode as daily_episode  # noqa: E402
 
 DATE = "2099-06-01"
 
@@ -63,6 +64,27 @@ def test_markdown_format_is_not_machine_source() -> None:
     )
     if "parse_source_annex" in source:
         raise AssertionError("current structured builder still parses Markdown technical annex")
+
+
+def test_current_v2_human_package_normalizes_inquisition_heading() -> None:
+    legacy_heading = "## 04による興味深さ・わかりやすさ審問結果"
+    canonical_heading = "## H. 04 興味深さ・わかりやすさ審問結果"
+    body = "審問本文は変更しない。"
+    source = (
+        "## B1. Scene 1｜導入\n"
+        "Scene body\n\n"
+        f"{legacy_heading}\n"
+        f"{body}\n"
+    )
+    projected = daily_episode.normalize_scene_headings(source)
+    if "## B1. Scene 1" in projected or "## Scene 1｜導入" not in projected:
+        raise AssertionError("existing Scene heading normalization regressed")
+    if projected.count(canonical_heading) != 1:
+        raise AssertionError("current-v2 final package did not canonicalize the integrated 04 heading")
+    if legacy_heading in projected:
+        raise AssertionError("legacy 04 heading remained after current-v2 projection")
+    if body not in projected:
+        raise AssertionError("04 review body changed during mechanical heading normalization")
 
 
 def test_compatibility_adapter_is_mechanical() -> None:
@@ -132,6 +154,7 @@ def test_current_final_uses_separated_authority() -> None:
 
 def main() -> int:
     test_markdown_format_is_not_machine_source()
+    test_current_v2_human_package_normalizes_inquisition_heading()
     test_compatibility_adapter_is_mechanical()
     test_current_final_uses_separated_authority()
     print("structured current machine authority PASS")
