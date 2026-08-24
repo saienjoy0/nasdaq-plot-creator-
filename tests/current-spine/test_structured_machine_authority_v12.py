@@ -17,15 +17,21 @@ import current_compatibility_adapter_v12 as compatibility  # noqa: E402
 DATE = "2099-06-01"
 
 
-def _load_materializer_heading_normalizer():
+def _materializer_function(name: str) -> ast.FunctionDef:
     source_path = ROOT / "scripts/materialize_daily_episode.py"
     tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
     function = next(
-        (node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "normalize_scene_headings"),
+        (node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == name),
         None,
     )
     if function is None:
-        raise AssertionError("materializer normalize_scene_headings helper is missing")
+        raise AssertionError(f"materializer function is missing: {name}")
+    return function
+
+
+def _load_materializer_heading_normalizer():
+    source_path = ROOT / "scripts/materialize_daily_episode.py"
+    function = _materializer_function("normalize_scene_headings")
     module = ast.Module(body=[function], type_ignores=[])
     ast.fix_missing_locations(module)
     namespace = {"re": re}
@@ -105,6 +111,31 @@ def test_current_v2_human_package_normalizes_inquisition_heading() -> None:
         raise AssertionError("04 review body changed during mechanical heading normalization")
 
 
+def test_current_v2_persists_structured_machine_authority() -> None:
+    function = _materializer_function("_run_current_v2")
+    string_constants = {
+        node.value
+        for node in ast.walk(function)
+        if isinstance(node, ast.Constant) and isinstance(node.value, str)
+    }
+    if "current_final_production_source.json" not in string_constants:
+        raise AssertionError("current-v2 materializer does not persist current structured production authority")
+
+    writes_production_annex = False
+    for node in ast.walk(function):
+        if not isinstance(node, ast.Call):
+            continue
+        if not isinstance(node.func, ast.Attribute) or node.func.attr != "write_text":
+            continue
+        if not node.args:
+            continue
+        if any(isinstance(inner, ast.Name) and inner.id == "production_annex" for inner in ast.walk(node.args[0])):
+            writes_production_annex = True
+            break
+    if not writes_production_annex:
+        raise AssertionError("current-v2 structured sidecar is not written from production_annex")
+
+
 def test_compatibility_adapter_is_mechanical() -> None:
     review = {
         "verdict": "pass",
@@ -173,6 +204,7 @@ def test_current_final_uses_separated_authority() -> None:
 def main() -> int:
     test_markdown_format_is_not_machine_source()
     test_current_v2_human_package_normalizes_inquisition_heading()
+    test_current_v2_persists_structured_machine_authority()
     test_compatibility_adapter_is_mechanical()
     test_current_final_uses_separated_authority()
     print("structured current machine authority PASS")
