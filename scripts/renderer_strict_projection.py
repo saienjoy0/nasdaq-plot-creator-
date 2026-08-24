@@ -47,6 +47,7 @@ VISUAL_MODE_MAP = {
     "closing-recap": "conclusion-card",
     "causal-chain": "causal-diagram",
     "intraday-comparison": "number-comparison",
+    "expectation-gap": "expected-actual-gap",
 }
 
 
