@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import ast
 import json
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -11,9 +13,24 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import build_final_production_package_structured_v12 as structured  # noqa: E402
 import current_compatibility_adapter_v12 as compatibility  # noqa: E402
-import materialize_daily_episode as daily_episode  # noqa: E402
 
 DATE = "2099-06-01"
+
+
+def _load_materializer_heading_normalizer():
+    source_path = ROOT / "scripts/materialize_daily_episode.py"
+    tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
+    function = next(
+        (node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "normalize_scene_headings"),
+        None,
+    )
+    if function is None:
+        raise AssertionError("materializer normalize_scene_headings helper is missing")
+    module = ast.Module(body=[function], type_ignores=[])
+    ast.fix_missing_locations(module)
+    namespace = {"re": re}
+    exec(compile(module, str(source_path), "exec"), namespace)
+    return namespace["normalize_scene_headings"]
 
 
 def test_markdown_format_is_not_machine_source() -> None:
@@ -67,6 +84,7 @@ def test_markdown_format_is_not_machine_source() -> None:
 
 
 def test_current_v2_human_package_normalizes_inquisition_heading() -> None:
+    normalize = _load_materializer_heading_normalizer()
     legacy_heading = "## 04による興味深さ・わかりやすさ審問結果"
     canonical_heading = "## H. 04 興味深さ・わかりやすさ審問結果"
     body = "審問本文は変更しない。"
@@ -76,7 +94,7 @@ def test_current_v2_human_package_normalizes_inquisition_heading() -> None:
         f"{legacy_heading}\n"
         f"{body}\n"
     )
-    projected = daily_episode.normalize_scene_headings(source)
+    projected = normalize(source)
     if "## B1. Scene 1" in projected or "## Scene 1｜導入" not in projected:
         raise AssertionError("existing Scene heading normalization regressed")
     if projected.count(canonical_heading) != 1:
