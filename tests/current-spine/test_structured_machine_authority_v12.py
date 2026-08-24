@@ -17,16 +17,20 @@ import current_compatibility_adapter_v12 as compatibility  # noqa: E402
 DATE = "2099-06-01"
 
 
-def _materializer_function(name: str) -> ast.FunctionDef:
-    source_path = ROOT / "scripts/materialize_daily_episode.py"
+def _function_from_script(script: str, name: str) -> ast.FunctionDef:
+    source_path = ROOT / "scripts" / script
     tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
     function = next(
         (node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == name),
         None,
     )
     if function is None:
-        raise AssertionError(f"materializer function is missing: {name}")
+        raise AssertionError(f"function is missing: {script}::{name}")
     return function
+
+
+def _materializer_function(name: str) -> ast.FunctionDef:
+    return _function_from_script("materialize_daily_episode.py", name)
 
 
 def _load_materializer_heading_normalizer():
@@ -136,6 +140,19 @@ def test_current_v2_persists_structured_machine_authority() -> None:
         raise AssertionError("current-v2 structured sidecar is not written from production_annex")
 
 
+def test_current_v2_persists_terminal_assembly_bindings() -> None:
+    function = _function_from_script("materialize_chatgpt_daily_authoring.py", "_materialize_current_v2")
+    string_constants = {
+        node.value
+        for node in ast.walk(function)
+        if isinstance(node, ast.Constant) and isinstance(node.value, str)
+    }
+    if "terminal_assembly_bindings.json" not in string_constants:
+        raise AssertionError("current-v2 materializer does not persist terminal assembly bindings")
+    if "scene-09" not in string_constants:
+        raise AssertionError("current-v2 terminal assembly binding does not identify scene-09")
+
+
 def test_compatibility_adapter_is_mechanical() -> None:
     review = {
         "verdict": "pass",
@@ -205,6 +222,7 @@ def main() -> int:
     test_markdown_format_is_not_machine_source()
     test_current_v2_human_package_normalizes_inquisition_heading()
     test_current_v2_persists_structured_machine_authority()
+    test_current_v2_persists_terminal_assembly_bindings()
     test_compatibility_adapter_is_mechanical()
     test_current_final_uses_separated_authority()
     print("structured current machine authority PASS")
