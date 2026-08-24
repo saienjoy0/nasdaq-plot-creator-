@@ -73,13 +73,13 @@
         "purpose": "SOXX ETFの値と名称を検証し、全面安説と指標取り違えを同時に防ぐ。",
         "audienceBeliefBefore": "個別株は割れていてもセクター全体が崩れた可能性は残る。",
         "audienceBeliefAfter": "SOXX ETFは-0.06%とほぼ横ばいで、PHLX SOX指数ではないことも分かる。",
-        "visualInformationGain": "SOXX ETFの値と名称を一次資料のSource Receiptで確認し、全面安説と指標取り違えを同時に防ぐ。",
+        "visualInformationGain": "SOXX ETFの値と名称を検証表で確認し、全面安説と指標取り違えを同時に防ぐ。",
         "preferredEvidenceModes": [
-          "source-document",
-          "verification"
+          "verification",
+          "source-document"
         ],
-        "realityAnchorPreference": "required",
-        "editorialReason": "値と名称の訂正を伴うため、検証表より一次資料へのReality Anchorを優先する。"
+        "realityAnchorPreference": "preferred",
+        "editorialReason": "値と名称の検証を優先し、source IDを保持したverification表示で確認する。"
       },
       {
         "visualBeatId": "scene-04-beat-001",
@@ -285,10 +285,10 @@
       {
         "visualBeatId": "scene-03-beat-002",
         "requiredModes": [
-          "source-document"
+          "verification"
         ],
         "imageRequirement": "not-required",
-        "reason": "SOXX ETFの値と名称を一次資料へ接地して検証する。"
+        "reason": "SOXX ETFの値と名称を検証する。"
       },
       {
         "visualBeatId": "scene-04-beat-001",
