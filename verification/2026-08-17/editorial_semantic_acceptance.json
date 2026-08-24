@@ -1,8 +1,8 @@
 {
   "authoring": {
     "path": "daily-authoring/2026-08-17.json",
-    "semanticSha256": "4992542c13437d7b55ecc019abe37640601377c96ad5783f1864989c3ce945cc",
-    "sha256": "138c482bf452382fa7905b246aa5cf56693cacc4d1503594c99e6c847a65170c"
+    "semanticSha256": "12f8638d8269de93f6c8af151f2dd6d70175ca75ba51983b525fb41ef9dd63d4",
+    "sha256": "8ede4c9d613cd29518fdffa4bec063c9ff4791fe9ef55644bd69bd40e054956e"
   },
   "canonManifest": {
     "path": "source-of-truth/canon_manifest.json",
@@ -20,7 +20,7 @@
     {
       "path": "contracts/chatgpt_daily_authoring_v2.schema.json",
       "role": "daily-authoring-schema",
-      "sha256": "d0044a80cbc6f4a6eeb466340ff5d5da4af02e4e4056400a348ec018645d77a6"
+      "sha256": "5f47240ab61a7bc99c2478d86aae6f858047ab2da58a439343317aaee2ed6c7e"
     },
     {
       "path": "contracts/editorial_semantic_acceptance.schema.json",
