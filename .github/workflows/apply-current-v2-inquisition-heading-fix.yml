@@ -1,0 +1,69 @@
+name: Apply current-v2 inquisition heading fix
+
+on:
+  push:
+    branches:
+      - fix/current-preview-readiness-gate
+    paths:
+      - .github/workflows/apply-current-v2-inquisition-heading-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-fix:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/current-preview-readiness-gate
+          fetch-depth: 0
+      - name: Apply exact owning-layer patch
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("scripts/materialize_daily_episode.py")
+          text = path.read_text(encoding="utf-8")
+          old = '''def normalize_scene_headings(text: str) -> str:
+              for scene_number in range(1, 10):
+                  text = re.sub(
+                      rf"(?m)^##\\s+B{scene_number}\\.\\s+Scene\\s+{scene_number}(?=｜|\\|)",
+                      f"## Scene {scene_number}",
+                      text,
+                  )
+              return text
+          '''
+          new = '''def normalize_scene_headings(text: str) -> str:
+              for scene_number in range(1, 10):
+                  text = re.sub(
+                      rf"(?m)^##\\s+B{scene_number}\\.\\s+Scene\\s+{scene_number}(?=｜|\\|)",
+                      f"## Scene {scene_number}",
+                      text,
+                  )
+              legacy_inquisition = "## 04による興味深さ・わかりやすさ審問結果"
+              canonical_inquisition = "## H. 04 興味深さ・わかりやすさ審問結果"
+              if legacy_inquisition in text:
+                  text = text.replace(legacy_inquisition, canonical_inquisition, 1)
+              elif canonical_inquisition not in text:
+                  raise SystemExit("integrated 04 inquisition heading is missing")
+              return text
+          '''
+          if text.count(old) != 1:
+              raise SystemExit(f"expected exactly one owning function block; found={text.count(old)}")
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          workflow = Path(".github/workflows/apply-current-v2-inquisition-heading-fix.yml")
+          workflow.unlink()
+      - name: Verify exact diff and commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          git diff -- scripts/materialize_daily_episode.py
+          test ! -e .github/workflows/apply-current-v2-inquisition-heading-fix.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/materialize_daily_episode.py .github/workflows/apply-current-v2-inquisition-heading-fix.yml
+          git commit -m "Fix current-v2 04 heading projection"
+          git push origin HEAD:fix/current-preview-readiness-gate
