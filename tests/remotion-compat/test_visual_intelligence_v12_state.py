@@ -212,31 +212,21 @@ def main() -> int:
         )
         acceptance_sha = module.sha256_file(acceptance)
 
-        class AcceptanceModule:
-            @staticmethod
-            def verify_acceptance(*args, **kwargs):
-                return {"status": "PASS", "episodeDate": date}
-
         class FreezeModule:
             @staticmethod
             def verify_manifest(*args, **kwargs):
                 return {
                     "contractVersion": "1.2.0",
                     "episodeDate": date,
-                    "editorialSemanticAcceptance": {"sha256": acceptance_sha},
+                    "editorialSemanticAcceptance": {
+                        "path": acceptance.relative_to(root).as_posix(),
+                        "sha256": acceptance_sha,
+                    },
                     "canonicalAuthoring": {"sha256": authoring_sha},
                 }
 
-        original_loader = v12.current_mechanisms.load_external_module
-
-        def semantic_loader(name, path):
-            if path.name == "validate_editorial_semantic_boundary.py":
-                return AcceptanceModule
-            if path.name == "chatgpt_semantic_freeze.py":
-                return FreezeModule
-            return original_loader(name, path)
-
-        v12.current_mechanisms.load_external_module = semantic_loader
+        original_verify = v12.verify_sealed_semantic_freeze_v12.verify_manifest
+        v12.verify_sealed_semantic_freeze_v12.verify_manifest = FreezeModule.verify_manifest
         try:
             v12._validate_vi_transition(
                 module=module,
@@ -246,7 +236,7 @@ def main() -> int:
                 evidence_paths=[snapshot, acceptance, projection, freeze_path],
             )
         finally:
-            v12.current_mechanisms.load_external_module = original_loader
+            v12.verify_sealed_semantic_freeze_v12.verify_manifest = original_verify
 
         requirements = write(
             vi / "visual_requirements.json",
