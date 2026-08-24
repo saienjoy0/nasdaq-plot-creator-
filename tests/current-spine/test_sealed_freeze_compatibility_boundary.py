@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -20,6 +22,33 @@ class SealedFreezeCompatibilityBoundaryTests(unittest.TestCase):
         manifest = sealed_freeze.verify_manifest(REPO_ROOT, "2026-08-17", self._real_manifest())
         self.assertEqual(manifest["contractVersion"], "1.2.0")
         self.assertEqual(manifest["episodeDate"], "2026-08-17")
+
+    def test_sealed_verifier_is_path_stable_when_loaded_from_story_engine_context(self) -> None:
+        code = f"""
+import importlib.util
+import sys
+from pathlib import Path
+root = Path({str(REPO_ROOT)!r})
+path = root / 'scripts/verify_sealed_semantic_freeze_v12.py'
+spec = importlib.util.spec_from_file_location('sealed_freeze_dynamic_context', path)
+assert spec and spec.loader
+module = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = module
+spec.loader.exec_module(module)
+manifest = module.verify_manifest(root, '2026-08-17', root / 'semantic-freezes/2026-08-17.json')
+assert manifest['episodeDate'] == '2026-08-17'
+"""
+        env = os.environ.copy()
+        env.pop("PYTHONPATH", None)
+        result = subprocess.run(
+            [sys.executable, "-c", code],
+            cwd=REPO_ROOT / "scripts/story-engine",
+            env=env,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
 
     def test_current_contract_byte_change_does_not_retroactively_invalidate_seal(self) -> None:
         schema = REPO_ROOT / "contracts/chatgpt_daily_authoring_v2.schema.json"
