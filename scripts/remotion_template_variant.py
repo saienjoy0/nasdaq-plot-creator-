@@ -30,6 +30,25 @@ EXPLICIT_VARIANTS_BY_TEMPLATE = {
 }
 
 
+def validate_authored_variant(template: Any, variant: Any, *, path: str) -> None:
+    """Validate author-owned variant fields without choosing semantic meaning."""
+    required_variant = SINGLE_VARIANT_BY_TEMPLATE.get(template)
+    if required_variant is not None:
+        if variant is not None and variant != required_variant:
+            raise TemplateVariantError(
+                f"{path}: {template} accepts only deterministic variant {required_variant!r}"
+            )
+        return
+
+    allowed_variants = EXPLICIT_VARIANTS_BY_TEMPLATE.get(template)
+    if allowed_variants is None:
+        return
+    if variant not in allowed_variants:
+        raise TemplateVariantError(
+            f"{path}: {template} requires explicit variant from {sorted(allowed_variants)}"
+        )
+
+
 def normalize_single_variant_templates(render_spec: dict[str, Any]) -> None:
     scenes = render_spec.get("scenes")
     if not isinstance(scenes, list):
@@ -54,10 +73,11 @@ def normalize_single_variant_templates(render_spec: dict[str, Any]) -> None:
                 continue
             config_variant = config.get("variant")
             beat_variant = beat.get("templateVariant")
-            if config_variant not in allowed_variants:
-                raise TemplateVariantError(
-                    f"{scene.get('sceneId')}/{beat.get('beatId')}: {template} requires explicit templateConfig.variant from {sorted(allowed_variants)}"
-                )
+            validate_authored_variant(
+                template,
+                config_variant,
+                path=f"{scene.get('sceneId')}/{beat.get('beatId')}",
+            )
             if beat_variant is not None and beat_variant != config_variant:
                 raise TemplateVariantError(
                     f"{scene.get('sceneId')}/{beat.get('beatId')}: templateVariant must match templateConfig.variant"
