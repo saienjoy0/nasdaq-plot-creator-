@@ -50,10 +50,37 @@ def test_matching_optional_template_variant_is_accepted(variant: str) -> None:
         ("default", "default"),
     ],
 )
-def test_verification_matrix_never_infers_variant_from_content(beat_variant, config_variant) -> None:
+def test_final_verification_matrix_never_infers_variant_from_content(beat_variant, config_variant) -> None:
     value = spec_for("verification-matrix", beat_variant=beat_variant, config_variant=config_variant)
     with pytest.raises(variants.TemplateVariantError):
         variants.normalize_single_variant_templates(value)
+
+
+@pytest.mark.parametrize("variant", [None, "default"])
+def test_pre_vi_verification_matrix_allows_unresolved_director_choice(variant) -> None:
+    variants.validate_pre_visual_intelligence_variant(
+        "verification-matrix",
+        variant,
+        path="scene-08-beat-001",
+    )
+
+
+@pytest.mark.parametrize("variant", ["strengthen-vs-weaken", "reported-sequence"])
+def test_pre_vi_verification_matrix_accepts_registered_explicit_choice(variant: str) -> None:
+    variants.validate_pre_visual_intelligence_variant(
+        "verification-matrix",
+        variant,
+        path="scene-08-beat-001",
+    )
+
+
+def test_pre_vi_verification_matrix_rejects_unknown_explicit_choice() -> None:
+    with pytest.raises(variants.TemplateVariantError, match="verification-matrix"):
+        variants.validate_pre_visual_intelligence_variant(
+            "verification-matrix",
+            "made-up-variant",
+            path="scene-08-beat-001",
+        )
 
 
 def test_single_variant_templates_still_normalize_deterministically() -> None:
