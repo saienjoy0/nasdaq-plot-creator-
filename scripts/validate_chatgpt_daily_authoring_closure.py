@@ -328,6 +328,7 @@ def validate_authoring(authoring: dict[str, Any], registry: dict[str, Any]) -> l
 
     by_beat: dict[str, dict[str, Any]] = {}
     binding_ids: set[str] = set()
+    intent_ids: set[str] = set()
     for index, binding in enumerate(bindings):
         path = f"$.financialBindings[{index}]"
         if not isinstance(binding, dict):
@@ -335,75 +336,96 @@ def validate_authoring(authoring: dict[str, Any], registry: dict[str, Any]) -> l
             continue
         binding_id = binding.get("bindingId")
         intent_id = binding.get("intentId")
-        source_beat = binding.get("sourceBeatId")
+        source_beat_id = binding.get("sourceBeatId")
         scene_id = binding.get("sceneId")
-        template_id = binding.get("selectedVisualTemplateId")
+        selected_template = binding.get("selectedVisualTemplateId")
         if not isinstance(binding_id, str) or not binding_id:
-            errors.append(f"{path}.bindingId: non-empty string required")
+            errors.append(f"{path}.bindingId: required")
         elif binding_id in binding_ids:
             errors.append(f"{path}.bindingId: duplicate {binding_id}")
         else:
             binding_ids.add(binding_id)
         if not isinstance(intent_id, str) or not intent_id:
-            errors.append(f"{path}.intentId: non-empty string required")
-        if not isinstance(source_beat, str) or not source_beat:
-            errors.append(f"{path}.sourceBeatId: non-empty string required")
-            continue
-        if source_beat in by_beat:
-            errors.append(f"{path}.sourceBeatId: duplicate binding for {source_beat}")
+            errors.append(f"{path}.intentId: required")
+        elif intent_id in intent_ids:
+            errors.append(f"{path}.intentId: duplicate {intent_id}")
         else:
-            by_beat[source_beat] = binding
-        mapped = beat_map.get(source_beat)
-        if mapped is None:
-            errors.append(f"{path}.sourceBeatId: unknown authored Beat {source_beat}")
+            intent_ids.add(intent_id)
+        if not isinstance(source_beat_id, str) or not source_beat_id:
+            errors.append(f"{path}.sourceBeatId: required")
             continue
-        expected_scene_index, beat = mapped
-        expected_scene = f"scene-{expected_scene_index:02d}"
-        if scene_id != expected_scene:
-            errors.append(f"{path}.sceneId: expected {expected_scene} for {source_beat}")
-        expected_template = beat.get("visualTemplate")
-        if template_id != expected_template:
+        if source_beat_id in by_beat:
+            errors.append(f"{path}.sourceBeatId: duplicate binding target {source_beat_id}")
+            continue
+        by_beat[source_beat_id] = binding
+        target = beat_map.get(source_beat_id)
+        if target is None:
+            errors.append(f"{path}.sourceBeatId: unknown authored Beat {source_beat_id}")
+            continue
+        scene_index, beat = target
+        expected_scene_id = f"scene-{scene_index:02d}"
+        if scene_id != expected_scene_id:
             errors.append(
-                f"{path}.selectedVisualTemplateId: expected {expected_template!r} for {source_beat}"
+                f"{path}.sceneId: {scene_id!r} does not match target {expected_scene_id!r}"
             )
-        if expected_template not in financial_templates and expected_template not in DUAL_USE_VISUAL_TEMPLATE_IDS:
+        authored_template = beat.get("visualTemplate")
+        if selected_template != authored_template:
             errors.append(
-                f"{path}.sourceBeatId: {source_beat} template {expected_template!r} is not financial-capable"
+                f"{path}.selectedVisualTemplateId: {selected_template!r} does not match "
+                f"authored template {authored_template!r} at {source_beat_id}"
             )
 
     for beat_id, (_, beat) in beat_map.items():
         template = beat.get("visualTemplate")
         if template in financial_templates and beat_id not in by_beat:
             errors.append(
-                f"{beat_id}: financial-only template {template!r} requires one explicit financialBinding"
+                f"{beat_id}: Financial-only Visual Template {template!r} requires an explicit "
+                "financialBindings entry; author a binding or explicitly choose its approved non-financial fallback"
             )
 
     return errors
 
 
-def main() -> int:
+def validate_or_raise(authoring: dict[str, Any], registry: dict[str, Any]) -> None:
+    errors = validate_authoring(authoring, registry)
+    if errors:
+        raise AuthoringClosureError("\n".join(errors))
+
+
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--authoring", type=Path, required=True)
-    parser.add_argument("--registry", type=Path, required=True)
+    parser.add_argument(
+        "--registry", type=Path, default=Path("contracts/financial_recipe_registry.json")
+    )
     parser.add_argument("--json-output", type=Path)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     try:
         authoring = load_json(args.authoring, "daily authoring")
         registry = load_json(args.registry, "financial recipe registry")
         errors = validate_authoring(authoring, registry)
-        result = {
-            "contractVersion": "1.0.0",
+        report = {
+            "contractVersion": "1.1.0",
             "status": "PASS" if not errors else "FAIL",
             "errorCount": len(errors),
             "errors": errors,
         }
-        if args.json_output:
-            args.json_output.parent.mkdir(parents=True, exist_ok=True)
-            args.json_output.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        print(json.dumps(result, ensure_ascii=False, indent=2))
-        return 0 if not errors else 2
-    except (AuthoringClosureError, OSError, json.JSONDecodeError) as exc:
-        raise SystemExit(str(exc)) from exc
+        code = 0 if not errors else 2
+    except AuthoringClosureError as exc:
+        report = {
+            "contractVersion": "1.1.0",
+            "status": "FAIL",
+            "errorCount": 1,
+            "errors": [str(exc)],
+        }
+        code = 2
+    if args.json_output:
+        args.json_output.parent.mkdir(parents=True, exist_ok=True)
+        args.json_output.write_text(
+            json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return code
 
 
 if __name__ == "__main__":
