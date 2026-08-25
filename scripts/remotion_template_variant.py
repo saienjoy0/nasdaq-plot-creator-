@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Normalize registered Remotion 2.4 template variants without inferring meaning."""
+"""Validate and normalize registered Remotion 2.4 template variants.
+
+Pre-Visual-Intelligence authoring may defer a semantic multi-variant choice to the
+Visual Director. Final Renderer normalization remains strict and never infers that
+choice from content.
+"""
 
 from __future__ import annotations
 
@@ -31,7 +36,7 @@ EXPLICIT_VARIANTS_BY_TEMPLATE = {
 
 
 def validate_authored_variant(template: Any, variant: Any, *, path: str) -> None:
-    """Validate author-owned variant fields without choosing semantic meaning."""
+    """Strict final validation: semantic multi-variant choices must be resolved."""
     required_variant = SINGLE_VARIANT_BY_TEMPLATE.get(template)
     if required_variant is not None:
         if variant is not None and variant != required_variant:
@@ -46,6 +51,37 @@ def validate_authored_variant(template: Any, variant: Any, *, path: str) -> None
     if variant not in allowed_variants:
         raise TemplateVariantError(
             f"{path}: {template} requires explicit variant from {sorted(allowed_variants)}"
+        )
+
+
+def validate_pre_visual_intelligence_variant(
+    template: Any,
+    variant: Any,
+    *,
+    path: str,
+) -> None:
+    """Validate pre-VI authoring without stealing the Visual Director's choice.
+
+    Single-variant templates remain deterministic. Multi-variant templates may be
+    unresolved (missing or the materializer placeholder ``default``) until Candidate
+    Catalog + Director selection. An explicitly authored value must still be registered.
+    """
+    required_variant = SINGLE_VARIANT_BY_TEMPLATE.get(template)
+    if required_variant is not None:
+        if variant is not None and variant != required_variant:
+            raise TemplateVariantError(
+                f"{path}: {template} accepts only deterministic variant {required_variant!r}"
+            )
+        return
+
+    allowed_variants = EXPLICIT_VARIANTS_BY_TEMPLATE.get(template)
+    if allowed_variants is None:
+        return
+    if variant is None or variant == "default":
+        return
+    if variant not in allowed_variants:
+        raise TemplateVariantError(
+            f"{path}: {template} accepts unresolved pre-VI variant or one of {sorted(allowed_variants)}"
         )
 
 
