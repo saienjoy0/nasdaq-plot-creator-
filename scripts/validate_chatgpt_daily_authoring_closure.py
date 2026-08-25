@@ -15,6 +15,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+import remotion_template_variant
+
 
 class AuthoringClosureError(ValueError):
     pass
@@ -90,7 +92,6 @@ def validate_renderer_source_registry(surface: dict[str, Any]) -> list[str]:
         source_type = source.get("sourceType")
         source_id = source.get("sourceId")
 
-        # Historical memory may remain in Authoring but is intentionally not delivered to Renderer.
         if source_type == "historical-memory":
             continue
 
@@ -302,6 +303,14 @@ def validate_authoring(authoring: dict[str, Any], registry: dict[str, Any]) -> l
             if not isinstance(beat, dict):
                 errors.append(f"{beat_id}: beat must be an object")
                 continue
+            try:
+                remotion_template_variant.validate_authored_variant(
+                    beat.get("visualTemplate"),
+                    beat.get("variant"),
+                    path=beat_id,
+                )
+            except remotion_template_variant.TemplateVariantError as exc:
+                errors.append(str(exc))
             errors.extend(validate_authored_presentation(scene_index, beat_index, beat))
             beat_map[beat_id] = (scene_index, beat)
     if total_beats != 18:
