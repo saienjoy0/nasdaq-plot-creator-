@@ -42,13 +42,40 @@ BEAT_ALLOWED = {
 
 # Reviewed producer vocabulary aliases only. Unknown values are intentionally left
 # untouched here so the strict Renderer schema remains the final fail-closed authority.
+# `comparison` is admitted only for the coarse Visual Intelligence vocabulary check;
+# strict projection below resolves it by the already-authored visualTemplate and
+# rejects any unreviewed template instead of guessing a semantic mode.
 VISUAL_MODE_MAP = {
     "verification": "verification-points",
     "closing-recap": "conclusion-card",
     "causal-chain": "causal-diagram",
     "intraday-comparison": "number-comparison",
     "expectation-gap": "expected-actual-gap",
+    "comparison": "timeline",
 }
+
+COMPARISON_MODE_BY_TEMPLATE = {
+    "event-reaction-timeline": "timeline",
+    "verification-matrix": "verification-points",
+}
+
+
+def normalize_visual_mode(value: Any, *, visual_template: Any = None) -> Any:
+    """Normalize reviewed producer vocabulary without inventing template semantics."""
+    if value == "comparison":
+        return COMPARISON_MODE_BY_TEMPLATE.get(visual_template, value)
+    return VISUAL_MODE_MAP.get(value, value)
+
+
+def _normalize_visual_mode_or_raise(
+    value: Any, *, visual_template: Any, path: str
+) -> Any:
+    normalized = normalize_visual_mode(value, visual_template=visual_template)
+    if value == "comparison" and normalized == "comparison":
+        raise StrictRendererProjectionError(
+            f"{path}: comparison visualMode requires reviewed visualTemplate"
+        )
+    return normalized
 
 
 def sha256_file(path: Path) -> str:
@@ -84,11 +111,19 @@ def strict_renderer_projection(
     for scene_index, scene in enumerate(source_scenes):
         projected_scene = {key: scene[key] for key in SCENE_ALLOWED if key in scene}
         projected_scene["sceneRole"] = _fixed_scene_role(scene_index)
-        projected_scene["visualMode"] = VISUAL_MODE_MAP.get(
-            projected_scene.get("visualMode"), projected_scene.get("visualMode")
+        source_beats = scene.get("visualBeats", [])
+        first_template = (
+            source_beats[0].get("visualTemplate")
+            if source_beats and isinstance(source_beats[0], dict)
+            else None
+        )
+        projected_scene["visualMode"] = _normalize_visual_mode_or_raise(
+            projected_scene.get("visualMode"),
+            visual_template=first_template,
+            path=f"{scene.get('sceneId')}:scene visualMode",
         )
         projected_beats: list[dict[str, Any]] = []
-        for beat in scene.get("visualBeats", []):
+        for beat in source_beats:
             grammar = beat.get("visualGrammar")
             projected = {key: beat[key] for key in BEAT_ALLOWED if key in beat}
             if isinstance(grammar, dict):
@@ -101,8 +136,10 @@ def strict_renderer_projection(
                 raise StrictRendererProjectionError(
                     f"{scene.get('sceneId')}/{beat.get('beatId')}: Visual Grammar metadata missing"
                 )
-            projected["visualMode"] = VISUAL_MODE_MAP.get(
-                projected.get("visualMode"), projected.get("visualMode")
+            projected["visualMode"] = _normalize_visual_mode_or_raise(
+                projected.get("visualMode"),
+                visual_template=projected.get("visualTemplate"),
+                path=f"{scene.get('sceneId')}/{beat.get('beatId')}:visualMode",
             )
             config = projected.get("templateConfig")
             if not isinstance(config, dict):
