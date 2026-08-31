@@ -11,7 +11,9 @@ def read(path: str) -> str:
 
 def main() -> int:
     facade = read("scripts/current_production_facade_v12.py")
+    readiness = read("scripts/current_preview_request_readiness_v12.py")
     production = read(".github/workflows/chatgpt-daily-preview-production.yml")
+    production_validation = read(".github/workflows/validate-daily-production-package.yml")
     canary = read(".github/workflows/visual-intelligence-real-day-canary.yml")
     exact = read(".github/workflows/current-spine-exact-cross-repo-e2e.yml")
     qualification = read(".github/workflows/current-renderer-runtime-qualification-handoff.yml")
@@ -29,6 +31,23 @@ def main() -> int:
         raise AssertionError("Canary still bypasses canonical current facade")
     if "test_current_production_facade_contract.py" not in exact:
         raise AssertionError("Exact E2E does not assert canonical facade routing")
+
+    if 'daily-production-requests/**' not in production_validation:
+        raise AssertionError("PR validation does not watch production requests")
+    if 'scripts/current_preview_request_readiness_v12.py' not in production_validation:
+        raise AssertionError("PR validation does not run Current readiness")
+    if 'scripts/current_production_facade_v12.py' not in readiness:
+        raise AssertionError("readiness bypasses canonical facade")
+    for forbidden in (
+        "run_semantic_frozen_renderer_closure_v12.py",
+        "run_daily_renderer_closure_v12.py",
+        "run_daily_production_v12.py",
+        "build_current_preview_publication.py",
+    ):
+        if forbidden in readiness:
+            raise AssertionError(f"readiness contains forbidden lower-level owner: {forbidden}")
+    if "--phase compile" not in production:
+        raise AssertionError("main production is no longer compile-only")
 
     duplicate_fixture = ROOT / "tests/current-spine/build_renderer_runtime_qualification_handoff.py"
     if duplicate_fixture.exists():
