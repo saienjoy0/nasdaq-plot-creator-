@@ -52,6 +52,41 @@ python scripts/run_daily_renderer_closure_v12.py --phase compile ...
 
 Do not use `scripts/run_daily_production.py` directly for production. The base script remains the deterministic legacy state-machine implementation and unit-test target.
 
+## Current Preview semantic readiness before merge
+
+A formal Current-v2 `PREVIEW` request must not merge into the compile-only main production lane before the Visual Intelligence semantic authoring loop reaches `PASS`.
+
+PR validation uses `scripts/current_preview_request_readiness_v12.py` only as a non-publishing coordinator around the canonical `scripts/current_production_facade_v12.py`. It mechanically chooses `prepare` when the Director semantic artifact is absent and `compile` once it exists. It does not own a second state machine and does not make semantic choices.
+
+The legal same-PR sequence is:
+
+```text
+Visual Requirements semantic
+→ PR readiness prepare
+→ Candidate Catalog
+→ ChatGPT Director semantic
+→ PR readiness compile
+→ REVIEW_REQUIRED + compiled visual/warnings
+→ ChatGPT Critic semantic
+→ PR readiness compile PASS
+→ merge the same formal PREVIEW request
+→ main production compile-only
+→ immutable handoff/publication
+→ Renderer Preview
+```
+
+`PREPARED` and `REVIEW_REQUIRED` are semantic authoring checkpoints, not failed production attempts. Do not create a new rN production request for either checkpoint. Add the required Director or Critic semantic artifact to the same PR and rerun readiness against the same formal PREVIEW request.
+
+The PR readiness lane must never:
+
+- choose a Visual Candidate;
+- author Director or Critic semantics;
+- call `run_semantic_frozen_renderer_closure_v12.py`, `run_daily_renderer_closure_v12.py`, or `run_daily_production_v12.py` directly;
+- build immutable handoff or publication output;
+- render Preview or Final.
+
+`NOT_READY` is a merge-blocking semantic pause with an explicit `requiredAction`. Only `PASS` permits the same formal PREVIEW request to merge. Main production remains `current_production_facade_v12.py --phase compile` and fail-closed; never make formal compile silently behave as prepare.
+
 ## Visual Intelligence responsibility boundary
 
 Before authoring `visual_requirements.json` or `visual_intelligence_decision.json`, read:
