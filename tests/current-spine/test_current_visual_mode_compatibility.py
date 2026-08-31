@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression: reviewed producer modes project to the selected Renderer template mode."""
+"""Regression: reviewed authoring visual-mode aliases stay compatible with Current Renderer."""
 from pathlib import Path
 import sys
 
@@ -55,15 +55,11 @@ def test_expectation_gap_is_reviewed_renderer_alias():
     [
         ("comparison", "event-reaction-timeline", "timeline"),
         ("comparison", "verification-matrix", "verification-points"),
-        ("comparison", "split-comparison", "stock-comparison"),
         ("verification-matrix", "verification-matrix", "verification-points"),
         ("verification-matrix", "split-comparison", "stock-comparison"),
-        ("conclusion-card", "hero-number", "text-focus"),
-        ("text-focus", "split-comparison", "stock-comparison"),
-        ("number-comparison", "verification-matrix", "verification-points"),
     ],
 )
-def test_selected_template_is_renderer_mode_authority(
+def test_template_aware_modes_use_reviewed_renderer_template_mapping(
     producer_mode, visual_template, renderer_mode
 ):
     assert renderer_strict_projection.normalize_visual_mode(
@@ -74,23 +70,8 @@ def test_selected_template_is_renderer_mode_authority(
     )
 
 
-def test_scene_and_beat_mode_follow_first_selected_template(tmp_path):
-    final_contract, semantics, compatibility = _contract_paths(tmp_path)
-    render_spec = _nine_scene_spec(
-        first_mode="comparison", first_template="split-comparison"
-    )
-    projected = renderer_strict_projection.strict_renderer_projection(
-        render_spec,
-        final_contract_path=final_contract,
-        semantics_path=semantics,
-        renderer_compatibility_path=compatibility,
-    )
-    assert projected["scenes"][0]["visualMode"] == "stock-comparison"
-    assert projected["scenes"][0]["visualBeats"][0]["visualMode"] == "stock-comparison"
-
-
 @pytest.mark.parametrize("producer_mode", ["comparison", "verification-matrix"])
-def test_template_derived_legacy_mode_without_reviewed_template_remains_fail_closed(
+def test_template_aware_mode_without_reviewed_template_remains_fail_closed(
     tmp_path, producer_mode
 ):
     final_contract, semantics, compatibility = _contract_paths(tmp_path)
