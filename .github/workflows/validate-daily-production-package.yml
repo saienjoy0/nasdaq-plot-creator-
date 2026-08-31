@@ -51,13 +51,36 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      RENDERER_COMMIT: fc1aa384011549e93bd0698e0bb4790c58dfa153
-      RENDERER_CONTRACT_VERSION: 2.4.0
       NASDAQ_CAFE_RENDERER_ROOT: ${{ github.workspace }}/.renderer
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Resolve canonical Renderer binding
+        id: renderer_binding
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          value = json.loads(Path("contracts/renderer_binding.json").read_text(encoding="utf-8"))
+          renderer = value["renderer"]
+          outputs = {
+              "repository": renderer["repository"],
+              "commit": renderer["commit"],
+              "contract": renderer["contractVersion"],
+          }
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
+              for key, item in outputs.items():
+                  print(f"{key}={item}", file=handle)
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as handle:
+              print(f"RENDERER_COMMIT={renderer['commit']}", file=handle)
+              print(f"RENDERER_CONTRACT_VERSION={renderer['contractVersion']}", file=handle)
+          PY
 
       - name: Resolve exact validation episode date
         shell: bash
@@ -200,8 +223,8 @@ jobs:
       - name: Checkout pinned Remotion renderer
         uses: actions/checkout@v4
         with:
-          repository: saienjoy0/saienjoy0-nasdaq-cafe-remotion
-          ref: ${{ env.RENDERER_COMMIT }}
+          repository: ${{ steps.renderer_binding.outputs.repository }}
+          ref: ${{ steps.renderer_binding.outputs.commit }}
           path: .renderer
           persist-credentials: false
 
