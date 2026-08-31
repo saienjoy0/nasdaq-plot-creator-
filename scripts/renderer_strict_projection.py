@@ -47,6 +47,7 @@ VISUAL_MODE_MAP = {
     "closing-recap": "conclusion-card",
     "causal-chain": "causal-diagram",
     "intraday-comparison": "number-comparison",
+    "expectation-gap": "expected-actual-gap",
 }
 
 
@@ -98,29 +99,29 @@ def strict_renderer_projection(
                 and isinstance(projected.get("transitionRole"), str)
             ):
                 raise StrictRendererProjectionError(
-                    f"{scene.get('sceneId')}/{beat.get('beatId')}: Visual Grammar metadata missing"
+                    f"scene {scene_index + 1} beat missing flattened visual grammar"
                 )
             projected["visualMode"] = VISUAL_MODE_MAP.get(
                 projected.get("visualMode"), projected.get("visualMode")
-            )
-            config = projected.get("templateConfig")
-            if not isinstance(config, dict):
-                raise StrictRendererProjectionError(
-                    f"{scene.get('sceneId')}/{beat.get('beatId')}: templateConfig missing"
-                )
-            projected["templateVariant"] = projected.get(
-                "templateVariant", config.get("variant")
             )
             projected_beats.append(projected)
             beat_count += 1
         projected_scene["visualBeats"] = projected_beats
         scenes.append(projected_scene)
     result["scenes"] = scenes
-    result["visualGrammarContract"] = {
-        "contractVersion": "1.0.0",
-        "semanticsSha256": sha256_file(semantics_path),
-        "rendererCompatibilitySha256": sha256_file(renderer_compatibility_path),
-        "finalEpisodeContractSha256": sha256_file(final_contract_path),
-        "beatCount": beat_count,
+    result["rendererCompatibility"] = {
+        "finalContract": {
+            "path": final_contract_path.as_posix(),
+            "sha256": sha256_file(final_contract_path),
+        },
+        "semantics": {
+            "path": semantics_path.as_posix(),
+            "sha256": sha256_file(semantics_path),
+        },
+        "rendererCompatibility": {
+            "path": renderer_compatibility_path.as_posix(),
+            "sha256": sha256_file(renderer_compatibility_path),
+        },
+        "projectedBeatCount": beat_count,
     }
     return result
