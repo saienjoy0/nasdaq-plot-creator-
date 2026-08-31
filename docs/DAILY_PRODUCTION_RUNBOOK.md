@@ -65,6 +65,42 @@ working/YYYY-MM-DD/production_state.json
 
 同一入力での再実行はno-opです。資料やrequestが変わった状態をそのまま再利用しません。
 
+### 2.1 PREVIEW requestのmerge前semantic readiness
+
+Current-v2の正式PREVIEW requestは、Visual Intelligenceのsemantic authoring loopがPASSする前にmainへmergeしてはいけません。PR validationは`current_production_facade_v12.py`だけを公開Current入口として再利用し、handoff/publicationを作らないreadiness確認を行います。
+
+合法な同一PR内の進行は次です。
+
+```text
+Visual Requirements semantic
+→ PR readiness prepare
+→ Candidate Catalog
+→ ChatGPT Director semantic
+→ PR readiness compile
+→ REVIEW_REQUIRED + compiled visual/warnings
+→ ChatGPT Critic semantic
+→ PR readiness compile PASS
+→ merge the same formal PREVIEW request
+→ main production compile-only
+→ immutable handoff/publication
+→ Renderer Preview
+```
+
+`PREPARED`と`REVIEW_REQUIRED`はsemantic authoring checkpointであり、production失敗ではありません。このcheckpointに到達しただけで新しいrN+1 production requestを作ってはいけません。同じPRへ要求されたDirector/Critic semantic artifactを追加し、同じformal PREVIEW requestのままreadinessを再実行します。
+
+PR readinessは次をしてはいけません。
+
+```text
+Visual Candidateの選択
+Director/Critic semanticの作成
+下位closure/state machineの直接呼び出し
+immutable handoffの作成
+publicationの作成
+Preview/Final renderの起動
+```
+
+readinessの`NOT_READY`はmergeを止め、`requiredAction`をChatGPTへ返す正常なsemantic pauseです。`PASS`した同じrequestだけがformal main productionへ進めます。main側は従来どおり`current_production_facade_v12.py --phase compile`のままfail-closedであり、Director欠落時にcompileをprepareへ自動変換しません。
+
 ## 3. 状態確認
 
 ```bash
