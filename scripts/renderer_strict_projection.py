@@ -40,9 +40,10 @@ BEAT_ALLOWED = {
     "pictureBook", "shots",
 }
 
-# Reviewed producer vocabulary aliases used by the coarse Visual Intelligence
-# vocabulary check. Strict projection derives the final visualMode from the already-
-# authored visualTemplate, matching the pinned Renderer Registry's authority rule.
+# Reviewed producer vocabulary aliases only. Unknown values are intentionally left
+# untouched here so the strict Renderer schema remains the final fail-closed authority.
+# Template-aware legacy values are admitted for the coarse Visual Intelligence
+# vocabulary check, then resolved below from the already-authored visualTemplate.
 VISUAL_MODE_MAP = {
     "verification": "verification-points",
     "closing-recap": "conclusion-card",
@@ -53,76 +54,33 @@ VISUAL_MODE_MAP = {
     "verification-matrix": "verification-points",
 }
 
-# Mechanical copy of VISUAL_MODE_BY_TEMPLATE from the Renderer commit pinned by
-# contracts/renderer_binding.json. Template selection is already a semantic decision;
-# this table only projects that selected Template into Renderer-native vocabulary.
-RENDERER_VISUAL_MODE_BY_TEMPLATE = {
-    "opening-contradiction": "conclusion-card",
-    "market-pulse-grid": "number-comparison",
-    "earnings-surprise": "expected-actual-gap",
-    "dual-asset-split": "stock-comparison",
-    "macro-pressure": "causal-diagram",
-    "source-receipt": "text-focus",
-    "hero-number": "text-focus",
-    "closing-recap": "conclusion-card",
-    "final-assembly": "conclusion-card",
-    "conclusion-card": "conclusion-card",
-    "expected-actual-bullet": "expected-actual-gap",
-    "expected-actual-gap-flow": "expected-actual-gap",
-    "metric-comparison-board": "number-comparison",
-    "index-return-bars": "stock-comparison",
-    "diverging-stock-bars": "stock-comparison",
-    "split-comparison": "stock-comparison",
-    "focus-matrix": "stock-comparison",
-    "causal-lane": "causal-diagram",
-    "tailwind-headwind": "causal-diagram",
-    "evidence-boundary": "verification-points",
-    "verification-checklist": "verification-points",
-    "verification-matrix": "verification-points",
-    "analogy-steps": "causal-diagram",
-    "entity-card-full": "text-focus",
-    "news-media": "news-media",
-    "event-reaction-timeline": "timeline",
-    "text-focus": "text-focus",
+TEMPLATE_AWARE_VISUAL_MODE_MAP = {
+    ("comparison", "event-reaction-timeline"): "timeline",
+    ("comparison", "verification-matrix"): "verification-points",
+    ("verification-matrix", "verification-matrix"): "verification-points",
+    ("verification-matrix", "split-comparison"): "stock-comparison",
 }
-
-RENDERER_NATIVE_VISUAL_MODES = {
-    "conclusion-card",
-    "number-comparison",
-    "expected-actual-gap",
-    "timeline",
-    "chart",
-    "causal-diagram",
-    "stock-comparison",
-    "news-media",
-    "verification-points",
-    "text-focus",
+TEMPLATE_AWARE_VISUAL_MODES = {
+    producer_mode for producer_mode, _ in TEMPLATE_AWARE_VISUAL_MODE_MAP
 }
-REVIEWED_PRODUCER_VISUAL_MODES = RENDERER_NATIVE_VISUAL_MODES | set(VISUAL_MODE_MAP)
-TEMPLATE_REQUIRED_LEGACY_MODES = {"comparison", "verification-matrix"}
 
 
 def normalize_visual_mode(value: Any, *, visual_template: Any = None) -> Any:
-    """Project reviewed producer mode vocabulary from the selected Renderer template."""
-    if (
-        value in REVIEWED_PRODUCER_VISUAL_MODES
-        and visual_template in RENDERER_VISUAL_MODE_BY_TEMPLATE
-    ):
-        return RENDERER_VISUAL_MODE_BY_TEMPLATE[visual_template]
+    """Normalize reviewed producer vocabulary without inventing template semantics."""
+    if value in TEMPLATE_AWARE_VISUAL_MODES:
+        return TEMPLATE_AWARE_VISUAL_MODE_MAP.get((value, visual_template), value)
     return VISUAL_MODE_MAP.get(value, value)
 
 
 def _normalize_visual_mode_or_raise(
     value: Any, *, visual_template: Any, path: str
 ) -> Any:
-    if (
-        value in TEMPLATE_REQUIRED_LEGACY_MODES
-        and visual_template not in RENDERER_VISUAL_MODE_BY_TEMPLATE
-    ):
+    normalized = normalize_visual_mode(value, visual_template=visual_template)
+    if value in TEMPLATE_AWARE_VISUAL_MODES and normalized == value:
         raise StrictRendererProjectionError(
             f"{path}: {value} visualMode requires reviewed visualTemplate"
         )
-    return normalize_visual_mode(value, visual_template=visual_template)
+    return normalized
 
 
 def sha256_file(path: Path) -> str:
