@@ -50,29 +50,37 @@ def test_expectation_gap_is_reviewed_renderer_alias():
     )
 
 
-def test_comparison_is_normalized_only_by_reviewed_template():
+@pytest.mark.parametrize(
+    ("producer_mode", "visual_template", "renderer_mode"),
+    [
+        ("comparison", "event-reaction-timeline", "timeline"),
+        ("comparison", "verification-matrix", "verification-points"),
+        ("verification-matrix", "verification-matrix", "verification-points"),
+        ("verification-matrix", "split-comparison", "stock-comparison"),
+    ],
+)
+def test_template_aware_modes_use_reviewed_renderer_template_mapping(
+    producer_mode, visual_template, renderer_mode
+):
     assert renderer_strict_projection.normalize_visual_mode(
-        "comparison", visual_template="event-reaction-timeline"
-    ) == "timeline"
-    assert renderer_strict_projection.normalize_visual_mode(
-        "comparison", visual_template="verification-matrix"
-    ) == "verification-points"
-    # Visual Intelligence may admit the legacy producer vocabulary at its coarse
-    # vocabulary check, but the strict projection below owns the template-specific
-    # canonicalization and still fails closed when the template is not reviewed.
+        producer_mode, visual_template=visual_template
+    ) == renderer_mode
     visual_intelligence_renderer_projection._require_known_mode(
-        "comparison", path="$.scenes[5].visualMode"
+        producer_mode, path="$.scenes[5].visualMode"
     )
 
 
-def test_comparison_without_reviewed_template_remains_fail_closed(tmp_path):
+@pytest.mark.parametrize("producer_mode", ["comparison", "verification-matrix"])
+def test_template_aware_mode_without_reviewed_template_remains_fail_closed(
+    tmp_path, producer_mode
+):
     final_contract, semantics, compatibility = _contract_paths(tmp_path)
     render_spec = _nine_scene_spec(
-        first_mode="comparison", first_template="future-unreviewed-template"
+        first_mode=producer_mode, first_template="future-unreviewed-template"
     )
     with pytest.raises(
         renderer_strict_projection.StrictRendererProjectionError,
-        match="comparison visualMode requires reviewed visualTemplate",
+        match="requires reviewed visualTemplate",
     ):
         renderer_strict_projection.strict_renderer_projection(
             render_spec,
