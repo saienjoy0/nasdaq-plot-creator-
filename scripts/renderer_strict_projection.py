@@ -42,9 +42,8 @@ BEAT_ALLOWED = {
 
 # Reviewed producer vocabulary aliases only. Unknown values are intentionally left
 # untouched here so the strict Renderer schema remains the final fail-closed authority.
-# `comparison` is admitted only for the coarse Visual Intelligence vocabulary check;
-# strict projection below resolves it by the already-authored visualTemplate and
-# rejects any unreviewed template instead of guessing a semantic mode.
+# Template-aware legacy values are admitted for the coarse Visual Intelligence
+# vocabulary check, then resolved below from the already-authored visualTemplate.
 VISUAL_MODE_MAP = {
     "verification": "verification-points",
     "closing-recap": "conclusion-card",
@@ -52,18 +51,24 @@ VISUAL_MODE_MAP = {
     "intraday-comparison": "number-comparison",
     "expectation-gap": "expected-actual-gap",
     "comparison": "timeline",
+    "verification-matrix": "verification-points",
 }
 
-COMPARISON_MODE_BY_TEMPLATE = {
-    "event-reaction-timeline": "timeline",
-    "verification-matrix": "verification-points",
+TEMPLATE_AWARE_VISUAL_MODE_MAP = {
+    ("comparison", "event-reaction-timeline"): "timeline",
+    ("comparison", "verification-matrix"): "verification-points",
+    ("verification-matrix", "verification-matrix"): "verification-points",
+    ("verification-matrix", "split-comparison"): "stock-comparison",
+}
+TEMPLATE_AWARE_VISUAL_MODES = {
+    producer_mode for producer_mode, _ in TEMPLATE_AWARE_VISUAL_MODE_MAP
 }
 
 
 def normalize_visual_mode(value: Any, *, visual_template: Any = None) -> Any:
     """Normalize reviewed producer vocabulary without inventing template semantics."""
-    if value == "comparison":
-        return COMPARISON_MODE_BY_TEMPLATE.get(visual_template, value)
+    if value in TEMPLATE_AWARE_VISUAL_MODES:
+        return TEMPLATE_AWARE_VISUAL_MODE_MAP.get((value, visual_template), value)
     return VISUAL_MODE_MAP.get(value, value)
 
 
@@ -71,9 +76,9 @@ def _normalize_visual_mode_or_raise(
     value: Any, *, visual_template: Any, path: str
 ) -> Any:
     normalized = normalize_visual_mode(value, visual_template=visual_template)
-    if value == "comparison" and normalized == "comparison":
+    if value in TEMPLATE_AWARE_VISUAL_MODES and normalized == value:
         raise StrictRendererProjectionError(
-            f"{path}: comparison visualMode requires reviewed visualTemplate"
+            f"{path}: {value} visualMode requires reviewed visualTemplate"
         )
     return normalized
 
