@@ -36,6 +36,12 @@ def main() -> int:
         raise AssertionError("PR validation does not watch production requests")
     if 'scripts/current_preview_request_readiness_v12.py' not in production_validation:
         raise AssertionError("PR validation does not run Current readiness")
+    if "contracts/renderer_binding.json" not in production_validation:
+        raise AssertionError("PR readiness does not consume canonical Renderer binding")
+    if "id: renderer_binding" not in production_validation:
+        raise AssertionError("PR readiness does not expose canonical Renderer binding outputs")
+    if "steps.renderer_binding.outputs.commit" not in production_validation:
+        raise AssertionError("PR readiness checkout is not pinned by canonical Renderer binding")
     if 'scripts/current_production_facade_v12.py' not in readiness:
         raise AssertionError("readiness bypasses canonical facade")
     for forbidden in (
