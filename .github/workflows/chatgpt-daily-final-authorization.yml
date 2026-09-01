@@ -1,0 +1,157 @@
+name: ChatGPT Daily Final Authorization
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "final-authorization-requests-v1/*.json"
+  push:
+    branches: [main]
+    paths:
+      - "final-authorization-requests-v1/*.json"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  authorize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require exactly one append-only explicit Final authorization request
+        id: request
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          PUSH_HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            BASE_SHA="$PR_BASE_SHA"
+            HEAD_SHA="$PR_HEAD_SHA"
+          else
+            BASE_SHA="$PUSH_BEFORE_SHA"
+            HEAD_SHA="$PUSH_HEAD_SHA"
+          fi
+          git fetch --no-tags origin "$BASE_SHA" "$HEAD_SHA" --depth=1
+          mapfile -t CHANGES < <(git diff --name-status "$BASE_SHA" "$HEAD_SHA")
+          [[ ${#CHANGES[@]} -eq 1 ]] || { echo "::error::Final authorization commit must change exactly one request file"; exit 1; }
+          STATUS="$(awk '{print $1}' <<<"${CHANGES[0]}")"
+          PATH_VALUE="$(awk '{print $2}' <<<"${CHANGES[0]}")"
+          [[ "$STATUS" == "A" ]] || { echo "::error::Final authorization requests are append-only"; exit 1; }
+          [[ "$PATH_VALUE" == final-authorization-requests-v1/*.json ]] || { echo "::error::Unexpected Final authorization request path: $PATH_VALUE"; exit 1; }
+          echo "path=$PATH_VALUE" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build exact Plot Final authorization bundle and Renderer Final request
+        id: publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/current-final-authorization"
+          python3 scripts/publish_current_final_authorization_v1.py \
+            --request "${{ steps.request.outputs.path }}" \
+            --plot-authorization-run-id "${{ github.run_id }}" \
+            --output-root "$OUT"
+          python3 - "$OUT" <<'PY' >> "$GITHUB_OUTPUT"
+          import json, pathlib, sys
+          root=pathlib.Path(sys.argv[1])
+          receipt=json.loads((root/'current_final_authorization_publication.json').read_text(encoding='utf-8'))
+          request=json.loads((root/'current_final_request_v2.json').read_text(encoding='utf-8'))
+          print(f"output_root={root}")
+          print(f"artifact_name={receipt['artifactName']}")
+          print(f"episode_date={receipt['episodeDate']}")
+          print(f"target_path={receipt['renderer']['targetPath']}")
+          print(f"request_sha256={receipt['request']['sha256']}")
+          print(f"final_fingerprint={request['finalFingerprint']}")
+          print(f"renderer_commit={request['rendererCommit']}")
+          PY
+
+      - name: Checkout exact approved Renderer implementation for request validation
+        uses: actions/checkout@v6
+        with:
+          repository: saienjoy0/saienjoy0-nasdaq-cafe-remotion
+          ref: ${{ steps.publish.outputs.renderer_commit }}
+          path: .renderer-final-validator
+          persist-credentials: false
+          clean: true
+
+      - name: Validate generated Renderer Final request
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .renderer-final-validator/scripts/validate-current-request.py final \
+            "${{ steps.publish.outputs.output_root }}/current_final_request_v2.json"
+
+      - name: Upload immutable Plot Final authorization Artifact
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.publish.outputs.artifact_name }}
+          path: ${{ steps.publish.outputs.output_root }}/authorization-bundle/
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
+
+      - name: Upload immutable Final request publication input
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nasdaq-cafe-current-final-publication-${{ steps.publish.outputs.episode_date }}-${{ github.run_id }}
+          path: |
+            ${{ steps.publish.outputs.output_root }}/current_final_request_v2.json
+            ${{ steps.publish.outputs.output_root }}/current_final_authorization_publication.json
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
+
+      - name: Publish FINAL REQUEST PUBLICATION READY receipt
+        if: github.event_name == 'push'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OUT: ${{ steps.publish.outputs.output_root }}
+          EPISODE_DATE: ${{ steps.publish.outputs.episode_date }}
+        run: |
+          set -euo pipefail
+          TITLE="NASDAQ CAFE FINAL REQUEST PUBLICATION READY $EPISODE_DATE PLOT AUTH RUN ${{ github.run_id }}"
+          BODY="$RUNNER_TEMP/current-final-publication.md"
+          python3 - "$OUT" "$BODY" <<'PY'
+          import json, pathlib, sys
+          root=pathlib.Path(sys.argv[1]); output=pathlib.Path(sys.argv[2])
+          receipt=json.loads((root/'current_final_authorization_publication.json').read_text(encoding='utf-8'))
+          request=json.loads((root/'current_final_request_v2.json').read_text(encoding='utf-8'))
+          output.write_text(
+              "<!-- nasdaq-cafe-current-final-publication -->\n\n"
+              f"status: {receipt['state']}\n"
+              f"episode_date: {receipt['episodeDate']}\n"
+              f"preview_run_id: {receipt['previewRunId']}\n"
+              f"plot_authorization_run_id: {receipt['plotAuthorizationRunId']}\n"
+              f"artifact_name: {receipt['artifactName']}\n"
+              f"request_sha256: {receipt['request']['sha256']}\n"
+              f"final_fingerprint: {receipt['request']['finalFingerprint']}\n"
+              f"renderer_target_path: {receipt['renderer']['targetPath']}\n\n"
+              "```json\n" + json.dumps(request, ensure_ascii=False, indent=2, sort_keys=True) + "\n```\n",
+              encoding='utf-8',
+          )
+          PY
+          ISSUE_NUMBER="$(gh issue list --repo "$GITHUB_REPOSITORY" --state all --search "$TITLE in:title" --json number,title --jq ".[] | select(.title == \"$TITLE\") | .number" | head -n 1)"
+          if [[ -n "$ISSUE_NUMBER" ]]; then
+            gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$BODY"
+            gh issue reopen "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || true
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body-file "$BODY"
+          fi
