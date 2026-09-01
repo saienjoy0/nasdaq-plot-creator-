@@ -4,7 +4,7 @@
 This module is the single compatibility source for removing producer-only fields,
 flattening Visual Grammar metadata, normalizing reviewed schema aliases, and
 projecting the fixed nine-scene structural roles required by Renderer. It has no
-Financial/Story runtime imports.
+Financial/Story runtime imports and may not invent editorial meaning.
 """
 from __future__ import annotations
 
@@ -64,6 +64,38 @@ TEMPLATE_AWARE_VISUAL_MODES = {
     producer_mode for producer_mode, _ in TEMPLATE_AWARE_VISUAL_MODE_MAP
 }
 
+EXPECTED_BASIS_MAP = {
+    "official_consensus": "official-consensus",
+    "company_prior_guidance": "company-prior-guidance",
+    "major_reporting": "major-reporting",
+    "analyst_view": "analyst-view",
+    "price_inference": "price-inference",
+    "unconfirmed": "unconfirmed",
+    "not_applicable": None,
+    "not-applicable": None,
+}
+CAUSAL_SCOPE_MAP = {
+    "company": "lead-stock",
+    "company_direct": "lead-stock",
+    "lead-stock": "lead-stock",
+    "sector": "sector",
+    "sector_support": "sector",
+    "nasdaq": "nasdaq",
+    "nasdaq_support": "nasdaq",
+    "nasdaq_wide": "nasdaq",
+    "multiple": "multiple",
+}
+SCREEN_STATE_MAP = {"Source": "News"}
+PRODUCER_REVIEW_SCORE_MAP = {
+    "opening": "openingHook",
+    "progression": "storyProgression",
+    "discovery": "discovery",
+    "clarity": "clarity",
+    "fox_voice": "foxCharacter",
+    "late_payoff": "reasonToFinish",
+}
+RENDERER_REVIEW_SCORE_KEYS = set(PRODUCER_REVIEW_SCORE_MAP.values())
+
 
 def normalize_visual_mode(value: Any, *, visual_template: Any = None) -> Any:
     """Normalize reviewed producer vocabulary without inventing template semantics."""
@@ -81,6 +113,93 @@ def _normalize_visual_mode_or_raise(
             f"{path}: {value} visualMode requires reviewed visualTemplate"
         )
     return normalized
+
+
+def _normalize_expected_basis_type(value: Any) -> Any:
+    if value is None:
+        return None
+    return EXPECTED_BASIS_MAP.get(value, value)
+
+
+def _project_editorial_shell(value: Any) -> Any:
+    """Complete only Renderer-required mechanical shell fields.
+
+    Existing strict fields always win. Empty arrays/nulls represent the absence of an
+    authored compatibility value; they do not assert new market meaning. The program's
+    fixed final lens supplies the minimum target index when the older Current producer
+    predates the Renderer-required targetIndices field.
+    """
+    if not isinstance(value, dict):
+        return value
+    result = copy.deepcopy(value)
+    result.setdefault("leadTheme", None)
+    result.setdefault("targetIndices", ["Nasdaq Composite"])
+    result.setdefault("directMaterial", [])
+    result.setdefault("nasdaqDrivers", [])
+    result.setdefault("amplifiers", [])
+    result.setdefault("offsettingFactors", [])
+    result.setdefault("expectedSourceIds", [])
+    result.setdefault("timelineBasis", None)
+    result.setdefault("verificationPoints", [])
+    if "expectedBasisType" in result:
+        result["expectedBasisType"] = _normalize_expected_basis_type(
+            result.get("expectedBasisType")
+        )
+    return result
+
+
+def _first_non_empty(values: Any) -> str | None:
+    if not isinstance(values, list):
+        return None
+    for value in values:
+        if isinstance(value, str) and value.strip():
+            return value
+    return None
+
+
+def _project_publishing_shell(value: Any) -> Any:
+    if not isinstance(value, dict):
+        return value
+    result = copy.deepcopy(value)
+    if "recommendedTitle" not in result:
+        chosen = _first_non_empty(result.get("titleCandidates"))
+        if chosen is not None:
+            result["recommendedTitle"] = chosen
+    if "recommendedThumbnailText" not in result:
+        chosen = _first_non_empty(result.get("thumbnailTextCandidates"))
+        if chosen is not None:
+            result["recommendedThumbnailText"] = chosen
+    return result
+
+
+def _project_review_shell(value: Any) -> Any:
+    if not isinstance(value, dict):
+        return value
+    result = copy.deepcopy(value)
+    scores = result.get("scores")
+    if isinstance(scores, dict) and set(scores) != RENDERER_REVIEW_SCORE_KEYS:
+        if set(PRODUCER_REVIEW_SCORE_MAP).issubset(scores):
+            result["scores"] = {
+                renderer_key: scores[producer_key]
+                for producer_key, renderer_key in PRODUCER_REVIEW_SCORE_MAP.items()
+            }
+    if result.get("largestDropoffRisk") == "":
+        result["largestDropoffRisk"] = "none-identified"
+    if (
+        "titleThumbnailConsistency" not in result
+        and result.get("verdict") == "approved"
+        and result.get("approvedForCodex") is True
+    ):
+        result["titleThumbnailConsistency"] = "consistent"
+    return result
+
+
+def _normalize_causal_scope(value: Any) -> Any:
+    return CAUSAL_SCOPE_MAP.get(value, value)
+
+
+def _normalize_screen_state(value: Any) -> Any:
+    return SCREEN_STATE_MAP.get(value, value)
 
 
 def sha256_file(path: Path) -> str:
@@ -103,6 +222,13 @@ def strict_renderer_projection(
     renderer_compatibility_path: Path,
 ) -> dict[str, Any]:
     source = copy.deepcopy(render_spec)
+    if "editorial" in source:
+        source["editorial"] = _project_editorial_shell(source["editorial"])
+    if "publishing" in source:
+        source["publishing"] = _project_publishing_shell(source["publishing"])
+    if "review" in source:
+        source["review"] = _project_review_shell(source["review"])
+
     result = {key: source[key] for key in ROOT_ALLOWED if key in source}
     if source.get("schemaVersion") != "2.4.0":
         raise StrictRendererProjectionError(
@@ -116,6 +242,14 @@ def strict_renderer_projection(
     for scene_index, scene in enumerate(source_scenes):
         projected_scene = {key: scene[key] for key in SCENE_ALLOWED if key in scene}
         projected_scene["sceneRole"] = _fixed_scene_role(scene_index)
+        if "causalScope" in projected_scene:
+            projected_scene["causalScope"] = _normalize_causal_scope(
+                projected_scene.get("causalScope")
+            )
+        if "expectedBasisType" in projected_scene:
+            projected_scene["expectedBasisType"] = _normalize_expected_basis_type(
+                projected_scene.get("expectedBasisType")
+            )
         source_beats = scene.get("visualBeats", [])
         first_template = (
             source_beats[0].get("visualTemplate")
@@ -140,6 +274,14 @@ def strict_renderer_projection(
             ):
                 raise StrictRendererProjectionError(
                     f"{scene.get('sceneId')}/{beat.get('beatId')}: Visual Grammar metadata missing"
+                )
+            if "screenState" in projected:
+                projected["screenState"] = _normalize_screen_state(
+                    projected.get("screenState")
+                )
+            if "returnScreenState" in projected:
+                projected["returnScreenState"] = _normalize_screen_state(
+                    projected.get("returnScreenState")
                 )
             projected["visualMode"] = _normalize_visual_mode_or_raise(
                 projected.get("visualMode"),
