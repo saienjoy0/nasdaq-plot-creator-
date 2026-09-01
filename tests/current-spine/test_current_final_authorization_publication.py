@@ -68,6 +68,9 @@ def main()->int:
     )
     for needle in required:
         if needle not in text: raise AssertionError(f'Final authorization workflow missing {needle}')
+    isolated_pr_trigger='''  pull_request:\n    branches: [main]\n    paths:\n      - "final-authorization-requests-v1/*.json"\n  push:'''
+    if isolated_pr_trigger not in text:
+        raise AssertionError('Final authorization workflow PR trigger must be request-only; implementation changes belong to builder CI')
     if 'final-render-requests-v2/' in text and 'targetPath' not in text:
         raise AssertionError('Plot authorization workflow must publish request metadata, not write Renderer Final requests')
     print('current Final authorization publication PASS'); return 0
