@@ -16,6 +16,10 @@ from pathlib import Path
 
 import visual_source_checkpoint_v12
 import current_compatibility_adapter_v12
+from fox_expression_projection import (
+    ensure_fox_expression_placements,
+    load_renderer_expression_asset_map,
+)
 from typing import Any
 
 from viewer_surface_projection import (
@@ -158,6 +162,7 @@ def build_scene(
     scene_number: int,
     event_serial: list[int],
     caption_conversions: list[dict[str, Any]],
+    expression_asset_map: dict[str, str],
 ) -> dict[str, Any]:
     sid = f"scene-{scene_number:02d}"
     chunks = scene["chunks"]
@@ -319,7 +324,7 @@ def build_scene(
                 "easingPreset": "smooth-out",
             })
 
-    return {
+    projected_scene = {
         "sceneId": sid,
         "sceneNumber": scene_number,
         "sceneRole": scene.get("sceneRole", "editorial-body"),
@@ -354,19 +359,11 @@ def build_scene(
                 "startChunkId": None,
                 "endChunkId": None,
             },
-            {
-                "placementId": f"{sid}-placement-foxAnalysis",
-                "assetId": "foxAnalysis",
-                "role": "fox-expression",
-                "region": "fox-left",
-                "fit": "contain",
-                "opacity": 1,
-                "startChunkId": None,
-                "endChunkId": None,
-            },
         ],
         "transition": {"type": "fade", "durationMs": 220},
     }
+    ensure_fox_expression_placements(projected_scene, expression_asset_map)
+    return projected_scene
 
 
 def build_story_plan(a: dict[str, Any]) -> dict[str, Any]:
@@ -671,6 +668,11 @@ def _materialize_current_v2(root: Path, date: str, raw_authoring: dict[str, Any]
     story = work / "story-engine"
     episodes = root / "episodes" / date
     render_dir = root / "render-specs" / date
+    dump(work / "terminal_assembly_bindings.json", {
+        "contractVersion":"1.0.0","episodeDate":date,"finalSceneId":"scene-09",
+        "sourceTextPaths":["$.scenes[0].headline","$.scenes[4].supportingTexts[0]","$.scenes[7].supportingTexts[0]"],
+        "lines":[a["scenes"][0]["headline"],a["scenes"][4]["supportingTexts"][0],a["scenes"][7]["supportingTexts"][0]],
+    })
     dump(work / "financial_visual_bindings.json", {"contractVersion":"1.0.0","episodeDate":date,"bindings":projected.get("financialBindings",[])})
     visual_source_checkpoint_v12.materialize(
         work=work,
@@ -683,7 +685,11 @@ def _materialize_current_v2(root: Path, date: str, raw_authoring: dict[str, Any]
 
     event_serial = [0]
     caption_conversions: list[dict[str, Any]] = []
-    scenes = [build_scene(scene, i, event_serial, caption_conversions) for i, scene in enumerate(projected["scenes"], 1)]
+    expression_asset_map = load_renderer_expression_asset_map()
+    scenes = [
+        build_scene(scene, i, event_serial, caption_conversions, expression_asset_map)
+        for i, scene in enumerate(projected["scenes"], 1)
+    ]
     viewer_report["conversions"].extend(caption_conversions)
     viewer_report["conversionCount"] = len(viewer_report["conversions"])
     write_projection_report(work / "viewer_surface_projection_report.json", viewer_report)
@@ -773,8 +779,9 @@ def main() -> int:
 
     event_serial = [0]
     caption_conversions: list[dict[str, Any]] = []
+    expression_asset_map = load_renderer_expression_asset_map()
     scenes = [
-        build_scene(scene, i, event_serial, caption_conversions)
+        build_scene(scene, i, event_serial, caption_conversions, expression_asset_map)
         for i, scene in enumerate(a["scenes"], 1)
     ]
     viewer_report["conversions"].extend(caption_conversions)

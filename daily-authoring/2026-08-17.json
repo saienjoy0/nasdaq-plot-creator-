@@ -312,7 +312,7 @@
         ],
         "expectedBasisType": "major-reporting",
         "formalName": "寝ている間に何が起きた？",
-        "headline": "NASDAQ -0.28% / AMAT -5.12%",
+        "headline": "NASDAQ -0.28%／AMAT -5.12%",
         "initialExpression": "軽い驚き",
         "performanceIntent": "好決算なのに売られた違和感を主役にし、NASDAQ全体へ拡大しすぎない",
         "purpose": "NASDAQの方向、AMATの矛盾、半導体全面安ではない反対材料を30秒以内に置く",
@@ -351,22 +351,23 @@
           },
           {
             "changeCue": "next",
-            "contentType": "text",
+            "contentType": "expected-actual-gap-flow",
             "evidenceSourceIds": [
               "source-004"
             ],
-            "grammarId": "comparison",
+            "grammarId": "gap",
             "primaryElement": "beat-and-raise vs selloff",
             "primaryFunction": "Explain",
             "screenQuestion": "数字と株価は一致した？",
             "screenState": "Data",
             "transitionRole": "major-shift",
             "viewerTexts": [
-              "数字：予想超え",
-              "株価：引け後から5%超下落"
+              "Expected｜数字：予想超え",
+              "Actual｜株価：引け後から5%超下落",
+              "Gap｜好材料と価格反応が逆方向"
             ],
-            "visualMode": "text-focus",
-            "visualTemplate": "split-comparison"
+            "visualMode": "expected-actual-gap",
+            "visualTemplate": "expected-actual-gap-flow"
           }
         ],
         "causalScope": "company_direct",
@@ -387,7 +388,7 @@
         ],
         "expectedBasisType": "major-reporting",
         "formalName": "主役ニュース",
-        "headline": "AMAT：beat-and-raise、それでも売られた",
+        "headline": "AMAT：決算も見通しも予想超え、それでも下落",
         "initialExpression": "分析",
         "performanceIntent": "良い数字を強気材料として煽らず、価格反応との矛盾だけを示す",
         "purpose": "AMATの発表内容と引け後反応を会社直接材料として固定する",
@@ -421,7 +422,56 @@
               "AMD +6.50%"
             ],
             "visualMode": "number-comparison",
-            "visualTemplate": "split-comparison"
+            "visualTemplate": "split-comparison",
+            "metrics": [
+              {
+                "label": "AMAT",
+                "value": "-5.12%",
+                "numericValue": -5.12,
+                "precision": 2,
+                "unit": "%",
+                "tone": "negative",
+                "comparison": "2026-08-14 US regular session close"
+              },
+              {
+                "label": "AVGO",
+                "value": "-5.94%",
+                "numericValue": -5.94,
+                "precision": 2,
+                "unit": "%",
+                "tone": "negative",
+                "comparison": "2026-08-14 US regular session close"
+              },
+              {
+                "label": "AMD",
+                "value": "+6.50%",
+                "numericValue": 6.5,
+                "precision": 2,
+                "unit": "%",
+                "tone": "positive",
+                "comparison": "2026-08-14 US regular session close"
+              }
+            ],
+            "visualEvents": [
+              {
+                "action": "show",
+                "targetId": "scene-03-number-01-01",
+                "timing": "chunk-start",
+                "offsetMs": 0
+              },
+              {
+                "action": "show",
+                "targetId": "scene-03-number-01-02",
+                "timing": "chunk-start",
+                "offsetMs": 180
+              },
+              {
+                "action": "show",
+                "targetId": "scene-03-number-01-03",
+                "timing": "chunk-start",
+                "offsetMs": 360
+              }
+            ]
           },
           {
             "changeCue": "next",
@@ -436,12 +486,16 @@
             "screenState": "Data",
             "transitionRole": "major-shift",
             "viewerTexts": [
-              "SOXX ETF：ほぼ横ばい",
-              "全面安説：弱い",
-              "※PHLX SOX指数ではない"
+              "観測｜SOXX ETF：ほぼ横ばい",
+              "仮説判定｜全面安説：弱い",
+              "観測｜※PHLX SOX指数ではない"
             ],
             "visualMode": "number-comparison",
-            "visualTemplate": "verification-matrix"
+            "visualTemplate": "verification-matrix",
+            "laneLabels": [
+              "観測",
+              "仮説判定"
+            ]
           }
         ],
         "causalScope": "sector_support",
@@ -493,7 +547,7 @@
               "Q4売上：$9.54B → $10.25B",
               "Q4 EPS：$3.69 → $4.02"
             ],
-            "visualMode": "expectation-gap",
+            "visualMode": "expected-actual-gap",
             "visualTemplate": "expected-actual-gap-flow"
           },
           {
@@ -586,12 +640,16 @@
             "screenState": "Data",
             "transitionRole": "major-shift",
             "viewerTexts": [
-              "成長：弱い → 株の重し",
-              "金利期待：利上げ観測後退 → 相殺",
+              "逆風｜成長：弱い → 株の重し",
+              "相殺｜金利期待：利上げ観測後退",
               "単一方向ではない"
             ],
             "visualMode": "causal-chain",
-            "visualTemplate": "tailwind-headwind"
+            "visualTemplate": "tailwind-headwind",
+            "laneLabels": [
+              "逆風",
+              "相殺"
+            ]
           }
         ],
         "causalScope": "multiple",
@@ -648,29 +706,139 @@
               "8/14 08:30：小売発表",
               "09:30：NASDAQは前日終値より上"
             ],
-            "visualMode": "comparison",
-            "visualTemplate": "event-reaction-timeline"
+            "visualMode": "timeline",
+            "visualTemplate": "event-reaction-timeline",
+            "variant": "official-time-plus-close",
+            "metrics": [
+              {
+                "label": "8/13 引け後",
+                "value": "AMAT反応開始",
+                "unit": "",
+                "tone": "negative"
+              },
+              {
+                "label": "8/14 08:30",
+                "value": "小売売上 -0.6%",
+                "numericValue": -0.6,
+                "precision": 1,
+                "unit": "%",
+                "tone": "negative"
+              },
+              {
+                "label": "09:30",
+                "value": "NASDAQ 26,851.148",
+                "numericValue": 26851.148,
+                "precision": 3,
+                "unit": "",
+                "tone": "positive"
+              }
+            ],
+            "reactionTimeline": {
+              "precision": "official-time-plus-close",
+              "eventOrderIds": [
+                "scene-06-number-01-01",
+                "scene-06-number-01-02",
+                "scene-06-number-01-03"
+              ],
+              "seriesObjectIds": []
+            },
+            "visualEvents": [
+              {
+                "action": "show",
+                "targetId": "scene-06-number-01-01",
+                "timing": "chunk-start",
+                "offsetMs": 0
+              },
+              {
+                "action": "show",
+                "targetId": "scene-06-number-01-02",
+                "timing": "chunk-start",
+                "offsetMs": 220
+              },
+              {
+                "action": "show",
+                "targetId": "scene-06-number-01-03",
+                "timing": "chunk-start",
+                "offsetMs": 440
+              }
+            ]
           },
           {
             "changeCue": "next",
-            "contentType": "text",
+            "contentType": "event-reaction-timeline",
             "evidenceSourceIds": [
               "source-001"
             ],
-            "grammarId": "verification",
+            "grammarId": "reaction",
             "primaryElement": "NASDAQ 09:30 open > prior close",
             "primaryFunction": "Explain",
             "screenQuestion": "金曜朝から一直線に弱かった？",
             "screenState": "Data",
-            "transitionRole": "major-shift",
+            "transitionRole": "continuation",
             "viewerTexts": [
               "前日終値 26,803.025",
               "09:30 open 26,851.148",
               "引け 26,729.164",
               "一日を単一材料で説明しない"
             ],
-            "visualMode": "comparison",
-            "visualTemplate": "verification-matrix"
+            "visualMode": "timeline",
+            "visualTemplate": "event-reaction-timeline",
+            "variant": "official-time-plus-close",
+            "metrics": [
+              {
+                "label": "前日終値",
+                "value": "26,803.025",
+                "numericValue": 26803.025,
+                "precision": 3,
+                "unit": "",
+                "tone": "neutral"
+              },
+              {
+                "label": "09:30 open",
+                "value": "26,851.148",
+                "numericValue": 26851.148,
+                "precision": 3,
+                "unit": "",
+                "tone": "positive"
+              },
+              {
+                "label": "引け",
+                "value": "26,729.164",
+                "numericValue": 26729.164,
+                "precision": 3,
+                "unit": "",
+                "tone": "negative"
+              }
+            ],
+            "reactionTimeline": {
+              "precision": "official-time-plus-close",
+              "eventOrderIds": [
+                "scene-06-number-02-01",
+                "scene-06-number-02-02",
+                "scene-06-number-02-03"
+              ],
+              "seriesObjectIds": []
+            },
+            "visualEvents": [
+              {
+                "action": "show",
+                "targetId": "scene-06-number-02-01",
+                "timing": "chunk-start",
+                "offsetMs": 0
+              },
+              {
+                "action": "show",
+                "targetId": "scene-06-number-02-02",
+                "timing": "chunk-start",
+                "offsetMs": 220
+              },
+              {
+                "action": "show",
+                "targetId": "scene-06-number-02-03",
+                "timing": "chunk-start",
+                "offsetMs": 440
+              }
+            ]
           }
         ],
         "causalScope": "multiple",
@@ -726,7 +894,41 @@
               "全面需要崩壊ではない"
             ],
             "visualMode": "comparison",
-            "visualTemplate": "split-comparison"
+            "visualTemplate": "split-comparison",
+            "metrics": [
+              {
+                "label": "AMD",
+                "value": "+6.50%",
+                "numericValue": 6.5,
+                "precision": 2,
+                "unit": "%",
+                "tone": "positive",
+                "comparison": "2026-08-14 US regular session close"
+              },
+              {
+                "label": "SOXX ETF",
+                "value": "-0.06%",
+                "numericValue": -0.06,
+                "precision": 2,
+                "unit": "%",
+                "tone": "negative",
+                "comparison": "2026-08-14 US regular session close"
+              }
+            ],
+            "visualEvents": [
+              {
+                "action": "show",
+                "targetId": "scene-07-number-01-01",
+                "timing": "chunk-start",
+                "offsetMs": 0
+              },
+              {
+                "action": "show",
+                "targetId": "scene-07-number-01-02",
+                "timing": "chunk-start",
+                "offsetMs": 220
+              }
+            ]
           },
           {
             "changeCue": "next",
@@ -800,35 +1002,39 @@
             "screenState": "Data",
             "transitionRole": "major-shift",
             "viewerTexts": [
-              "決算ミス：棄却",
-              "AI需要崩壊：弱い",
-              "小売だけ：弱い",
-              "二エンジン：最有力"
+              "弱まった仮説｜決算ミス：棄却",
+              "弱まった仮説｜AI需要崩壊：弱い",
+              "弱まった仮説｜小売だけ：弱い",
+              "残った仮説｜二エンジン：最有力"
             ],
             "visualMode": "verification-matrix",
-            "visualTemplate": "verification-matrix"
+            "visualTemplate": "verification-matrix",
+            "laneLabels": [
+              "弱まった仮説",
+              "残った仮説"
+            ]
           },
           {
             "changeCue": "next",
-            "contentType": "text",
+            "contentType": "evidence-boundary",
             "evidenceSourceIds": [
               "source-004",
               "source-005",
               "source-008"
             ],
-            "grammarId": "comparison",
-            "primaryElement": "Company-direct vs NASDAQ-wide",
+            "grammarId": "evidence",
+            "primaryElement": "Company-direct vs\nNASDAQ-wide",
             "primaryFunction": "Explain",
             "screenQuestion": "会社とNASDAQをどう分ける？",
             "screenState": "Data",
             "transitionRole": "major-shift",
             "viewerTexts": [
-              "AMAT直接：高期待値の再評価",
-              "NASDAQ-wide：マクロoverlay",
-              "確信度：中"
+              "AMAT直接｜高期待値の再評価",
+              "NASDAQ-wide｜マクロoverlay",
+              "確信度｜中"
             ],
-            "visualMode": "verification-matrix",
-            "visualTemplate": "split-comparison"
+            "visualMode": "verification",
+            "visualTemplate": "evidence-boundary"
           }
         ],
         "causalScope": "multiple",

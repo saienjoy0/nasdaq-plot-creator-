@@ -65,6 +65,44 @@ working/YYYY-MM-DD/production_state.json
 
 同一入力での再実行はno-opです。資料やrequestが変わった状態をそのまま再利用しません。
 
+### 2.1 PREVIEW requestをmergeする前の意味準備
+
+Current-v2の正式main Productionは意図的に`compile`専用です。したがって、
+`daily-production-requests/*.json`を追加したPRは、merge前に既存facadeを使う
+PR-only readiness gateを通過しなければなりません。
+
+```bash
+python scripts/current_preview_request_readiness_v12.py \
+  --workspace . \
+  --renderer-root .renderer \
+  --request daily-production-requests/YYYY-MM-DD-....json
+```
+
+このgateはhandoffもRenderer requestも公開しません。意味判断も行いません。
+Director semanticが無い場合だけ`prepare`を選び、既存のCandidate Catalogを生成します。
+Director semanticが存在する場合は`compile`を選びます。
+
+正式な準備順は次です。
+
+```text
+Visual Requirements semantic
+→ PR readiness prepare
+→ Candidate Catalog
+→ ChatGPT Director semantic
+→ 同じPRで readiness compile
+→ REVIEW_REQUIRED + compiled visual / warnings
+→ ChatGPT Critic semantic
+→ 同じPRで readiness compile PASS
+→ その1件の正式PREVIEW requestをmerge
+→ main Production compile-only
+→ immutable handoff / publication
+→ Renderer Preview
+```
+
+`PREPARED`と`REVIEW_REQUIRED`は障害ではなくChatGPTの意味作業待ちです。この状態で
+新しいrN Production requestを作り直してはいけません。同じPRへ必要なsemantic artifactを
+追加し、readiness checkを再実行します。機械FAILだけを技術障害として扱います。
+
 ## 3. 状態確認
 
 ```bash

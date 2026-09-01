@@ -12,8 +12,15 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+import remotion_template_variant
 
 
 class AuthoringClosureError(ValueError):
@@ -90,7 +97,6 @@ def validate_renderer_source_registry(surface: dict[str, Any]) -> list[str]:
         source_type = source.get("sourceType")
         source_id = source.get("sourceId")
 
-        # Historical memory may remain in Authoring but is intentionally not delivered to Renderer.
         if source_type == "historical-memory":
             continue
 
@@ -302,6 +308,14 @@ def validate_authoring(authoring: dict[str, Any], registry: dict[str, Any]) -> l
             if not isinstance(beat, dict):
                 errors.append(f"{beat_id}: beat must be an object")
                 continue
+            try:
+                remotion_template_variant.validate_pre_visual_intelligence_variant(
+                    beat.get("visualTemplate"),
+                    beat.get("variant"),
+                    path=beat_id,
+                )
+            except remotion_template_variant.TemplateVariantError as exc:
+                errors.append(str(exc))
             errors.extend(validate_authored_presentation(scene_index, beat_index, beat))
             beat_map[beat_id] = (scene_index, beat)
     if total_beats != 18:

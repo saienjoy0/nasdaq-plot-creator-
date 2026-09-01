@@ -1,0 +1,70 @@
+name: Current Visual Feasibility CI
+
+on:
+  pull_request:
+    paths:
+      - "daily-authoring/**"
+      - "daily-authoring-parts/**"
+      - "scripts/validate_chatgpt_visual_feasibility.py"
+      - "tests/remotion-compat/test_chatgpt_visual_feasibility.py"
+      - ".github/workflows/current-visual-feasibility-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  visual-feasibility:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Plot candidate head
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependency
+        run: python -m pip install --disable-pip-version-check pytest
+
+      - name: Run visual feasibility contract regressions
+        run: |
+          python3 -m py_compile scripts/validate_chatgpt_visual_feasibility.py
+          pytest -q tests/remotion-compat/test_chatgpt_visual_feasibility.py
+
+      - name: Validate every episode date touched by authoring changes
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          git diff --name-only "$BASE_SHA" "$HEAD_SHA" > /tmp/changed-authoring.txt
+          python3 - <<'PY'
+          import re
+          import subprocess
+          from pathlib import Path
+
+          dates = set()
+          for path in Path('/tmp/changed-authoring.txt').read_text(encoding='utf-8').splitlines():
+              for pattern in (
+                  r'^daily-authoring/(\d{4}-\d{2}-\d{2})\.json$',
+                  r'^daily-authoring-parts/(\d{4}-\d{2}-\d{2})/',
+              ):
+                  match = re.match(pattern, path)
+                  if match:
+                      dates.add(match.group(1))
+          for date in sorted(dates):
+              authoring = Path('daily-authoring') / f'{date}.json'
+              if not authoring.is_file():
+                  raise SystemExit(f'authoring parts changed without canonical authoring: {authoring}')
+              subprocess.run(
+                  ['python3', 'scripts/validate_chatgpt_visual_feasibility.py', '--authoring', str(authoring)],
+                  check=True,
+              )
+          PY

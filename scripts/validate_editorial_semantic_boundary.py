@@ -26,6 +26,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 import materialize_causal_research
+import remotion_template_variant
 
 
 class EditorialSemanticBoundaryError(ValueError):
@@ -219,6 +220,7 @@ def validate_production_alignment(authoring: dict[str, Any], dossier: dict[str, 
             if narration != script_scene.get("narration"):
                 errors.append(f"{scene_id}: production narration differs from canonical Story Script")
         for beat_index, beat in enumerate(prod_scene.get("beats", []), 1):
+            beat_path = f"{scene_id}-beat-{beat_index:03d}"
             if not isinstance(beat, dict):
                 errors.append(f"{scene_id} beat {beat_index}: invalid Beat object")
                 continue
@@ -229,6 +231,14 @@ def validate_production_alignment(authoring: dict[str, Any], dossier: dict[str, 
             ):
                 if required not in beat:
                     errors.append(f"{scene_id} beat {beat_index}: explicit {required} is required")
+            try:
+                remotion_template_variant.validate_pre_visual_intelligence_variant(
+                    beat.get("visualTemplate"),
+                    beat.get("variant"),
+                    path=beat_path,
+                )
+            except remotion_template_variant.TemplateVariantError as exc:
+                errors.append(str(exc))
             for evidence_id in beat.get("evidenceSourceIds", []):
                 if evidence_id.startswith("E-") and evidence_id not in evidence_ids:
                     errors.append(f"{scene_id} beat {beat_index}: unknown evidence {evidence_id}")
@@ -281,6 +291,7 @@ def contract_bindings(root: Path, dossier: dict[str, Any]) -> list[dict[str, str
         ("story-script-schema", "skills/nasdaq-cafe-story-authoring/contracts/story_script.schema.json"),
         ("story-bundle-validator", "scripts/story-engine/validate_story_engine_bundle.py"),
         ("creative-review-schema", "skills/nasdaq-cafe-entertainment-critic/contracts/creative_review.schema.json"),
+        ("template-variant-policy", "scripts/remotion_template_variant.py"),
         ("semantic-boundary-validator", "scripts/validate_editorial_semantic_boundary.py"),
     ]
     return [_contract_binding(root, role, path) for role, path in pairs]
@@ -462,7 +473,6 @@ def main() -> int:
                 "status": "FAIL",
                 "error": str(exc),
             }
-            # Replacing the path with a FAIL object ensures an old PASS is never reused.
             atomic_write_json(output, failure)
         payload = {"status": "FAIL", "episodeDate": args.date, "error": str(exc)}
         code = 2

@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -38,7 +39,16 @@ def registry() -> dict:
     return json.loads((ROOT / "contracts/financial_recipe_registry.json").read_text(encoding="utf-8"))
 
 
-def run_materializer(root: Path, date: str) -> subprocess.CompletedProcess[str]:
+def run_materializer(
+    root: Path,
+    date: str,
+    *,
+    renderer_root: Path | None = None,
+) -> subprocess.CompletedProcess[str]:
+    if renderer_root is None:
+        renderer_root = install_renderer_expression_contract(root)
+    env = os.environ.copy()
+    env["NASDAQ_CAFE_RENDERER_ROOT"] = str(renderer_root)
     return subprocess.run(
         [
             sys.executable,
@@ -49,6 +59,7 @@ def run_materializer(root: Path, date: str) -> subprocess.CompletedProcess[str]:
             str(root),
         ],
         cwd=ROOT,
+        env=env,
         text=True,
         capture_output=True,
     )
@@ -62,6 +73,30 @@ def write_authoring(root: Path, fx, authoring: dict) -> Path:
 
 def semantic_validator(root: Path, name: str):
     return load_module(name, root / "scripts/validate_editorial_semantic_boundary.py")
+
+
+def write_json(path: Path, value: object) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def install_renderer_expression_contract(root: Path) -> Path:
+    renderer = root / "renderer"
+    write_json(renderer / "config" / "fox-expression-map.json", {
+        "expressions": {
+            "通常": {"assetId": "foxNormal", "fallback": False},
+            "分析": {"assetId": "foxAnalysis", "fallback": False},
+            "軽い驚き": {"assetId": "foxSlightSurprise", "fallback": False},
+        }
+    })
+    write_json(renderer / "config" / "asset-manifest.json", {
+        "assets": {
+            "foxNormal": {"path": "assets/fox-normal.png"},
+            "foxAnalysis": {"path": "assets/fox-analysis.png"},
+            "foxSlightSurprise": {"path": "assets/fox-surprise.png"},
+        }
+    })
+    return renderer
 
 
 def test_current_runtime_fixture_schema_closure_materializer_and_source_projection_agree(tmp_path: Path):
@@ -84,6 +119,34 @@ def test_current_runtime_fixture_schema_closure_materializer_and_source_projecti
     assert sum(len(scene["visualBeats"]) for scene in render["scenes"]) == 18
     normalized, _ = renderer_sources.normalize_render_base(render)
     assert [source["sourceId"] for source in normalized["sources"]] == ["source-001"]
+
+
+def test_current_materializer_projects_all_authored_fox_expression_assets(tmp_path: Path):
+    root, fx, authoring = fixture.build_workspace(tmp_path)
+    scene = authoring["production"]["scenes"][0]
+    scene["initialExpression"] = "軽い驚き"
+    for chunk in scene["chunks"]:
+        chunk["expression"] = "分析"
+    write_authoring(root, fx, authoring)
+    renderer = install_renderer_expression_contract(root)
+
+    completed = run_materializer(root, fx.DATE, renderer_root=renderer)
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    render = json.loads(
+        (root / "render-specs" / fx.DATE / "render_spec.json").read_text(encoding="utf-8")
+    )
+    placements = [
+        row
+        for row in render["scenes"][0]["assetPlacements"]
+        if row.get("role") == "fox-expression"
+    ]
+    assert {row["assetId"] for row in placements} == {"foxAnalysis", "foxSlightSurprise"}
+    for placement in placements:
+        assert placement["region"] == "fox-left"
+        assert placement["fit"] == "contain"
+        assert placement["opacity"] == 1
+        assert placement["startChunkId"] is None
+        assert placement["endChunkId"] is None
 
 
 def test_empty_source_registry_fails_schema_closure_and_renderer_projection(tmp_path: Path):

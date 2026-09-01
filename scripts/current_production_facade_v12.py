@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 import renderer_binding
+import current_production_resume_v12
 
 FACADE_VERSION = "1.0.0"
 NORMAL_PAUSE = {"PREPARED", "REVIEW_REQUIRED"}
@@ -92,27 +93,28 @@ def run_closure(
     if status not in {"PASS", *NORMAL_PAUSE}:
         raise CurrentProductionFacadeError(f"unexpected current closure status: {status!r}")
 
-    handoff_ready = False
+    handoff_ready = current_production_resume_v12.has_reached(root, date, "handoff_ready")
     if status == "PASS" and build_handoff_on_pass:
         if not plot_commit:
             raise CurrentProductionFacadeError("--plot-commit is required when building handoff")
-        invoke(
-            [
-                sys.executable,
-                "scripts/run_daily_production_v12.py",
-                "--workspace",
-                str(root),
-                "build-handoff",
-                "--episode-date",
-                date,
-                "--bundle-root",
-                str(bundle_root),
-                "--plot-commit",
-                plot_commit,
-            ],
-            cwd=root,
-            runner=runner,
-        )
+        if not handoff_ready:
+            invoke(
+                [
+                    sys.executable,
+                    "scripts/run_daily_production_v12.py",
+                    "--workspace",
+                    str(root),
+                    "build-handoff",
+                    "--episode-date",
+                    date,
+                    "--bundle-root",
+                    str(bundle_root),
+                    "--plot-commit",
+                    plot_commit,
+                ],
+                cwd=root,
+                runner=runner,
+            )
         handoff_ready = True
 
     outcome = {
@@ -168,6 +170,7 @@ def main() -> int:
         OSError,
         CurrentProductionFacadeError,
         renderer_binding.RendererBindingError,
+        current_production_resume_v12.CurrentProductionResumeError,
     ) as exc:
         result = {
             "facadeVersion": FACADE_VERSION,

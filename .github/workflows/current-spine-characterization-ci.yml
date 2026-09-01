@@ -11,10 +11,15 @@ on:
       - "scripts/verify_sealed_semantic_freeze_v12.py"
       - "scripts/run_daily_renderer_closure_v12.py"
       - "scripts/visual_intelligence_read_set_v12.py"
+      - "scripts/visual_intelligence_pipeline_v12.py"
+      - "scripts/renderer_strict_projection.py"
       - "scripts/build_final_production_package_structured_v12.py"
       - "scripts/current_compatibility_adapter_v12.py"
+      - "scripts/current_preview_request_readiness_v12.py"
       - ".github/workflows/chatgpt-daily-preview-production.yml"
+      - ".github/workflows/validate-daily-production-package.yml"
       - "tests/current-spine/**"
+      - "tests/remotion-compat/test_visual_intelligence_renderer_projection.py"
       - "docs/current-spine/**"
       - ".github/workflows/current-spine-characterization-ci.yml"
   workflow_dispatch:
@@ -36,7 +41,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install current validation dependencies
-        run: python -m pip install --disable-pip-version-check jsonschema referencing
+        run: python -m pip install --disable-pip-version-check jsonschema referencing pytest
 
       - name: Syntax gate
         run: |
@@ -46,16 +51,48 @@ jobs:
             scripts/run_semantic_frozen_renderer_closure_v12.py \
             scripts/verify_sealed_semantic_freeze_v12.py \
             scripts/visual_intelligence_read_set_v12.py \
+            scripts/visual_intelligence_pipeline_v12.py \
+            scripts/renderer_strict_projection.py \
             scripts/build_final_production_package_structured_v12.py \
             scripts/current_compatibility_adapter_v12.py \
+            scripts/current_preview_request_readiness_v12.py \
             tests/current-spine/test_current_spine_characterization.py \
+            tests/current-spine/test_current_production_facade_contract.py \
             tests/current-spine/test_current_request_immutability.py \
             tests/current-spine/test_visual_intelligence_read_set_v12.py \
             tests/current-spine/test_structured_machine_authority_v12.py \
-            tests/current-spine/test_sealed_freeze_compatibility_boundary.py
+            tests/current-spine/test_sealed_freeze_compatibility_boundary.py \
+            tests/current-spine/test_current_preview_request_readiness.py \
+            tests/current-spine/test_renderer_template_visual_modes.py \
+            tests/current-spine/test_current_renderer_compatibility_projection.py \
+            tests/current-spine/test_visual_candidate_requirements_authority.py \
+            tests/remotion-compat/test_visual_intelligence_renderer_projection.py
 
       - name: Freeze observable current boundaries
         run: python3 tests/current-spine/test_current_spine_characterization.py
+
+      - name: Verify canonical Current facade and Preview readiness routing
+        run: python3 tests/current-spine/test_current_production_facade_contract.py
+
+      - name: Verify producer to Renderer visual mode aliases
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/remotion-compat/test_visual_intelligence_renderer_projection.py
+
+      - name: Reproduce template-dependent generic comparison projection
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/current-spine/test_renderer_template_visual_modes.py
+
+      - name: Reproduce Current-v2 Renderer metadata compatibility gap
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/current-spine/test_current_renderer_compatibility_projection.py
+
+      - name: Verify Renderer-owned candidate requirements authority
+        env:
+          PYTHONPATH: scripts
+        run: python3 -m pytest -q tests/current-spine/test_visual_candidate_requirements_authority.py
 
       - name: Verify sealed Freeze versus Current compatibility split
         env:
@@ -66,6 +103,11 @@ jobs:
         env:
           PYTHONPATH: scripts
         run: python3 tests/current-spine/test_current_request_immutability.py
+
+      - name: Verify Current Preview semantic readiness gate
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/current-spine/test_current_preview_request_readiness.py
 
       - name: Verify exact direct read-set stale invalidation A-D
         env:

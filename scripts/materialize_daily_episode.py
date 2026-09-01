@@ -46,6 +46,12 @@ def normalize_scene_headings(text: str) -> str:
             f"## Scene {scene_number}",
             text,
         )
+    legacy_inquisition = "## 04による興味深さ・わかりやすさ審問結果"
+    canonical_inquisition = "## H. 04 興味深さ・わかりやすさ審問結果"
+    if legacy_inquisition in text:
+        text = text.replace(legacy_inquisition, canonical_inquisition, 1)
+    elif canonical_inquisition not in text:
+        raise SystemExit("integrated 04 inquisition heading is missing")
     return text
 
 
@@ -182,6 +188,8 @@ def _run_current_v2(root: Path, args: argparse.Namespace, authoring: dict) -> in
         "renderer_contract":{"repository":"saienjoy0/saienjoy0-nasdaq-cafe-remotion","schema_version":render["schemaVersion"]},
         "asset_catalog":asset_catalog, "render_spec":render,
     }
+    structured_source = work / "current_final_production_source.json"
+    structured_source.write_text(dump(production_annex) + "\n", encoding="utf-8")
     public = normalize_scene_headings(contract_package.read_text(encoding="utf-8").rstrip())
     final = (public + "\n\n" + STORY_BEGIN + "\n```json\n" + dump(story_annex) + "\n```\n" + STORY_END
              + "\n\n" + MEM_BEGIN + "\n```json\n" + dump(memory_annex) + "\n```\n" + MEM_END

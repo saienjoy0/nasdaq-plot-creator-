@@ -1,0 +1,132 @@
+{
+  "semanticPayloadVersion": "1.0.0",
+  "episodeDate": "2026-08-17",
+  "selections": [
+    {
+      "visualBeatId": "scene-01-beat-001",
+      "selectedCandidateId": "vc-scene-01-beat-001-02",
+      "strongestAlternativeCandidateId": "vc-scene-01-beat-001-01",
+      "whySelected": "冒頭の主役は数字単体ではなく、beat-and-raiseと株価下落の矛盾そのもの。opening-contradictionが問いを最短で固定する。",
+      "whyNotAlternative": "hero-numberは一つの数字を強調するには強いが、NASDAQ・AMAT・決算評価の矛盾を同時に見せる目的には弱い。"
+    },
+    {
+      "visualBeatId": "scene-01-beat-002",
+      "selectedCandidateId": "vc-scene-01-beat-002-01",
+      "strongestAlternativeCandidateId": "vc-scene-01-beat-002-03",
+      "whySelected": "全面安という単純説明を弱める役割なので、confirmed/unconfirmedの境界を二レーンで見せるevidence-boundaryを選ぶ。",
+      "whyNotAlternative": "source-receiptはReality Anchorとして強いが、ここでは一次資料の提示よりpeer divergenceという反対材料の整理が主目的。"
+    },
+    {
+      "visualBeatId": "scene-02-beat-001",
+      "selectedCandidateId": "vc-scene-02-beat-001-02",
+      "strongestAlternativeCandidateId": "vc-scene-02-beat-001-01",
+      "whySelected": "AMAT会社直接材料は伝聞ではなく一次情報へ接地する必要があるためsource-receiptを選ぶ。",
+      "whyNotAlternative": "hero-numberは数字の強調には向くが、会社発表そのものをReality Anchorとして固定できない。"
+    },
+    {
+      "visualBeatId": "scene-02-beat-002",
+      "selectedCandidateId": "vc-scene-02-beat-002-01",
+      "strongestAlternativeCandidateId": null,
+      "whySelected": "好材料と5%超下落の不一致をExpected/Actual/Gapの流れで一画面に固定できる唯一の合法候補。",
+      "whyNotAlternative": ""
+    },
+    {
+      "visualBeatId": "scene-03-beat-001",
+      "selectedCandidateId": "vc-scene-03-beat-001-01",
+      "strongestAlternativeCandidateId": "vc-scene-03-beat-001-02",
+      "whySelected": "AMAT・AVGOの下落とAMD上昇をゼロ基準の方向差として即読でき、銘柄選別を一目で示せる。",
+      "whyNotAlternative": "focus-matrixは比較できるが、上昇と下落の方向差はdiverging barsの方が視覚的に速い。"
+    },
+    {
+      "visualBeatId": "scene-03-beat-002",
+      "selectedCandidateId": "vc-scene-03-beat-002-02",
+      "strongestAlternativeCandidateId": "vc-scene-03-beat-002-01",
+      "whySelected": "SOXX ETFの値・名称と全面安説の判定を『観測／仮説判定』の二レーンで同時確認できる。",
+      "whyNotAlternative": "checklistでも検証はできるが、値の観測と仮説判定を分離するmatrixの方が指標取り違え防止に明確。"
+    },
+    {
+      "visualBeatId": "scene-04-beat-001",
+      "selectedCandidateId": "vc-scene-04-beat-001-01",
+      "strongestAlternativeCandidateId": null,
+      "whySelected": "Formal Expected / Actual / Gapを同じ尺度で順番に見せる唯一の合法候補。",
+      "whyNotAlternative": ""
+    },
+    {
+      "visualBeatId": "scene-04-beat-002",
+      "selectedCandidateId": "vc-scene-04-beat-002-02",
+      "strongestAlternativeCandidateId": "vc-scene-04-beat-002-01",
+      "whySelected": "『高い期待』は報道された市場解釈であり、独自期待を作らないためReuters等の出所へsource-receiptで接地する。",
+      "whyNotAlternative": "evidence-boundaryも推論境界は示せるが、ここはReality Anchor必須なので一次資料候補を優先する。"
+    },
+    {
+      "visualBeatId": "scene-05-beat-001",
+      "selectedCandidateId": "vc-scene-05-beat-001-01",
+      "strongestAlternativeCandidateId": null,
+      "whySelected": "会社直接の高期待値再評価とNASDAQ-wideのマクロoverlayを別レーンの因果経路として保てる唯一の合法候補。",
+      "whyNotAlternative": ""
+    },
+    {
+      "visualBeatId": "scene-05-beat-002",
+      "selectedCandidateId": "vc-scene-05-beat-002-01",
+      "strongestAlternativeCandidateId": null,
+      "whySelected": "弱い小売から『逆風』と『相殺』の反対方向が出ることをtailwind/headwindの二レーンで最も自然に表現できる。",
+      "whyNotAlternative": ""
+    },
+    {
+      "visualBeatId": "scene-06-beat-001",
+      "selectedCandidateId": "vc-scene-06-beat-001-01",
+      "strongestAlternativeCandidateId": null,
+      "whySelected": "8/13引け後、8/14 08:30、09:30という別の時計を順序のまま見せ、AMAT反応と翌朝マクロを混同させない。",
+      "whyNotAlternative": ""
+    },
+    {
+      "visualBeatId": "scene-06-beat-002",
+      "selectedCandidateId": "vc-scene-06-beat-002-01",
+      "strongestAlternativeCandidateId": null,
+      "whySelected": "前日終値→寄り→引けの順序を同一timelineに置き、小売だけの即時一直線説明を実値動きで検証できる。",
+      "whyNotAlternative": ""
+    },
+    {
+      "visualBeatId": "scene-07-beat-001",
+      "selectedCandidateId": "vc-scene-07-beat-001-01",
+      "strongestAlternativeCandidateId": "vc-scene-07-beat-001-02",
+      "whySelected": "AMD上昇とSOXXほぼ横ばいという反対方向の価格材料をゼロ基準で並べ、AI需要崩壊・全面安説を素早く反証できる。",
+      "whyNotAlternative": "focus-matrixは整理向きだが、価格方向の反証はdiverging barsの方が直感的。"
+    },
+    {
+      "visualBeatId": "scene-07-beat-002",
+      "selectedCandidateId": "vc-scene-07-beat-002-02",
+      "strongestAlternativeCandidateId": "vc-scene-07-beat-002-01",
+      "whySelected": "AMAT会社側の需要見通しは直接発言へ接地する必要があるためsource-receiptを選ぶ。",
+      "whyNotAlternative": "evidence-boundaryでも確認はできるが、Reality Anchor必須の会社直接材料なので一次資料表示を優先する。"
+    },
+    {
+      "visualBeatId": "scene-08-beat-001",
+      "selectedCandidateId": "vc-scene-08-beat-001-02",
+      "strongestAlternativeCandidateId": "vc-scene-08-beat-001-01",
+      "whySelected": "『弱まった仮説／残った仮説』を二レーンで比較し、決算ミス・AI需要崩壊・小売だけが弱まり二エンジンが残る過程を見せられる。",
+      "whyNotAlternative": "checklistは個別検証には向くが、終盤では複数仮説の比較と残存仮説を同時に見せるmatrixが適切。"
+    },
+    {
+      "visualBeatId": "scene-08-beat-002",
+      "selectedCandidateId": "vc-scene-08-beat-002-01",
+      "strongestAlternativeCandidateId": "vc-scene-08-beat-002-02",
+      "whySelected": "AMAT直接とNASDAQ-wideを別因果スコープのまま二レーンに固定し、個別材料を指数原因へ拡大しない。",
+      "whyNotAlternative": "verification版も境界は示せるが、このBeatの主機能は最終因果スコープの再確認なのでcausal-graphを優先する。"
+    },
+    {
+      "visualBeatId": "scene-09-beat-001",
+      "selectedCandidateId": "vc-scene-09-beat-001-03",
+      "strongestAlternativeCandidateId": "vc-scene-09-beat-001-01",
+      "whySelected": "新情報を足さず、矛盾・反対材料・二エンジンを既出要素から最終結論へ組み立てるBeatなので、Scene 9のproduction closureを担うfinal-assemblyを選ぶ。",
+      "whyNotAlternative": "closing-recapは既出要素の再掲には使えるが、新規productionでは最終組み立ての所有権を満たさない互換候補であり、このBeatの結論統合には弱い。"
+    },
+    {
+      "visualBeatId": "scene-09-beat-002",
+      "selectedCandidateId": "vc-scene-09-beat-002-02",
+      "strongestAlternativeCandidateId": "vc-scene-09-beat-002-01",
+      "whySelected": "結論・中確信度・次の検証点を静かなtext bridgeで固定し、新しい因果や煽りを足さずに閉じる。",
+      "whyNotAlternative": "closing-recapを連続するとScene 9内で画面役割が重なるため、最後はconclusion-cardで着地を明確にする。"
+    }
+  ]
+}

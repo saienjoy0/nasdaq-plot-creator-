@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import ast
 import json
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -13,6 +15,32 @@ import build_final_production_package_structured_v12 as structured  # noqa: E402
 import current_compatibility_adapter_v12 as compatibility  # noqa: E402
 
 DATE = "2099-06-01"
+
+
+def _function_from_script(script: str, name: str) -> ast.FunctionDef:
+    source_path = ROOT / "scripts" / script
+    tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
+    function = next(
+        (node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == name),
+        None,
+    )
+    if function is None:
+        raise AssertionError(f"function is missing: {script}::{name}")
+    return function
+
+
+def _materializer_function(name: str) -> ast.FunctionDef:
+    return _function_from_script("materialize_daily_episode.py", name)
+
+
+def _load_materializer_heading_normalizer():
+    source_path = ROOT / "scripts/materialize_daily_episode.py"
+    function = _materializer_function("normalize_scene_headings")
+    module = ast.Module(body=[function], type_ignores=[])
+    ast.fix_missing_locations(module)
+    namespace = {"re": re}
+    exec(compile(module, str(source_path), "exec"), namespace)
+    return namespace["normalize_scene_headings"]
 
 
 def test_markdown_format_is_not_machine_source() -> None:
@@ -65,19 +93,118 @@ def test_markdown_format_is_not_machine_source() -> None:
         raise AssertionError("current structured builder still parses Markdown technical annex")
 
 
+def test_current_v2_human_package_normalizes_inquisition_heading() -> None:
+    normalize = _load_materializer_heading_normalizer()
+    legacy_heading = "## 04による興味深さ・わかりやすさ審問結果"
+    canonical_heading = "## H. 04 興味深さ・わかりやすさ審問結果"
+    body = "審問本文は変更しない。"
+    source = (
+        "## B1. Scene 1｜導入\n"
+        "Scene body\n\n"
+        f"{legacy_heading}\n"
+        f"{body}\n"
+    )
+    projected = normalize(source)
+    if "## B1. Scene 1" in projected or "## Scene 1｜導入" not in projected:
+        raise AssertionError("existing Scene heading normalization regressed")
+    if projected.count(canonical_heading) != 1:
+        raise AssertionError("current-v2 final package did not canonicalize the integrated 04 heading")
+    if legacy_heading in projected:
+        raise AssertionError("legacy 04 heading remained after current-v2 projection")
+    if body not in projected:
+        raise AssertionError("04 review body changed during mechanical heading normalization")
+
+
+def test_current_v2_persists_structured_machine_authority() -> None:
+    function = _materializer_function("_run_current_v2")
+    string_constants = {
+        node.value
+        for node in ast.walk(function)
+        if isinstance(node, ast.Constant) and isinstance(node.value, str)
+    }
+    if "current_final_production_source.json" not in string_constants:
+        raise AssertionError("current-v2 materializer does not persist current structured production authority")
+
+    writes_production_annex = False
+    for node in ast.walk(function):
+        if not isinstance(node, ast.Call):
+            continue
+        if not isinstance(node.func, ast.Attribute) or node.func.attr != "write_text":
+            continue
+        if not node.args:
+            continue
+        if any(isinstance(inner, ast.Name) and inner.id == "production_annex" for inner in ast.walk(node.args[0])):
+            writes_production_annex = True
+            break
+    if not writes_production_annex:
+        raise AssertionError("current-v2 structured sidecar is not written from production_annex")
+
+
+def test_current_v2_persists_terminal_assembly_bindings() -> None:
+    function = _function_from_script("materialize_chatgpt_daily_authoring.py", "_materialize_current_v2")
+    string_constants = {
+        node.value
+        for node in ast.walk(function)
+        if isinstance(node, ast.Constant) and isinstance(node.value, str)
+    }
+    if "terminal_assembly_bindings.json" not in string_constants:
+        raise AssertionError("current-v2 materializer does not persist terminal assembly bindings")
+    if "scene-09" not in string_constants:
+        raise AssertionError("current-v2 terminal assembly binding does not identify scene-09")
+
+
 def test_compatibility_adapter_is_mechanical() -> None:
     review = {
         "verdict": "pass",
-        "scores": {"hook": 5},
-        "total_score": 5,
+        "scores": {
+            "opening": 5,
+            "progression": 4,
+            "discovery": 5,
+            "clarity": 5,
+            "fox_voice": 4,
+            "late_payoff": 5,
+        },
+        "total_score": 28,
         "findings": [],
     }
     projected = compatibility.project_creative_review(review)
     if projected.get("approvedForCodex") is not True or projected.get("verdict") != "approved":
-        raise AssertionError("PASS did not deterministically project legacy approval")
-    failed = {**review, "verdict": "revise"}
-    if compatibility.project_creative_review(failed).get("approvedForCodex") is not False:
-        raise AssertionError("non-PASS incorrectly projected legacy approval")
+        raise AssertionError("PASS did not deterministically project Renderer approval")
+    if projected.get("scores") != {
+        "openingHook": 5,
+        "storyProgression": 4,
+        "discovery": 5,
+        "clarity": 5,
+        "foxCharacter": 4,
+        "reasonToFinish": 5,
+    }:
+        raise AssertionError("Creative Review score aliases were not projected mechanically")
+    if projected.get("totalScore") != 28:
+        raise AssertionError("Creative Review total was not preserved")
+    if projected.get("titleThumbnailConsistency") != "consistent":
+        raise AssertionError("PASS did not deterministically project consistency receipt")
+    if not str(projected.get("largestDropoffRisk", "")).strip():
+        raise AssertionError("Renderer-required no-unresolved-risk receipt is missing")
+
+    failed = {**review, "verdict": "conditional"}
+    failed_projection = compatibility.project_creative_review(failed)
+    if failed_projection.get("approvedForCodex") is not False:
+        raise AssertionError("non-PASS incorrectly projected Renderer approval")
+    if failed_projection.get("verdict") != "approved-with-changes":
+        raise AssertionError("conditional verdict compatibility drifted")
+
+    stale = dict(projected)
+    stale["scores"] = dict(stale["scores"])
+    stale["scores"]["openingHook"] = 4
+    try:
+        compatibility.assert_compatibility_review_matches(
+            current_review=review,
+            compatibility_review=stale,
+        )
+    except compatibility.CurrentCompatibilityError:
+        pass
+    else:
+        raise AssertionError("drifted compatibility review was accepted")
 
 
 def test_current_final_uses_separated_authority() -> None:
@@ -93,6 +220,9 @@ def test_current_final_uses_separated_authority() -> None:
 
 def main() -> int:
     test_markdown_format_is_not_machine_source()
+    test_current_v2_human_package_normalizes_inquisition_heading()
+    test_current_v2_persists_structured_machine_authority()
+    test_current_v2_persists_terminal_assembly_bindings()
     test_compatibility_adapter_is_mechanical()
     test_current_final_uses_separated_authority()
     print("structured current machine authority PASS")

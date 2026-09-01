@@ -117,12 +117,14 @@ def main() -> int:
         "intraday-comparison",
         "verification",
         "closing-recap",
+        "expectation-gap",
     ]
     expected_aliases = {
         "causal-chain": "causal-diagram",
         "intraday-comparison": "number-comparison",
         "verification": "verification-points",
         "closing-recap": "conclusion-card",
+        "expectation-gap": "expected-actual-gap",
     }
     with tempfile.TemporaryDirectory(prefix="nasdaq-v12-projection-") as temp:
         root = Path(temp)
@@ -142,9 +144,6 @@ def main() -> int:
             "expectedConfirmed": True,
             "visualGrammarContractVersion": "legacy-producer-only",
         }
-        # This card is deliberately not Beat-owned at authoring time. Visual Intelligence
-        # may later select an object like this from Renderer-native inventory. It must be
-        # display-safe before Candidate Builder/Critic, not only after it becomes visible.
         render["scenes"][0]["cards"].append({
             "cardId": "metric.synthetic.third-party-funding",
             "role": None,
@@ -198,6 +197,11 @@ def main() -> int:
             if projected_beat["transitionRole"] != source_beat["visualGrammar"]["transitionRole"]:
                 raise AssertionError("transitionRole projection failed")
         for source_scene, projected_scene in zip(render["scenes"], strict["scenes"], strict=True):
+            expected_scene_mode = expected_aliases[source_scene["visualMode"]]
+            if projected_scene["visualMode"] != expected_scene_mode:
+                raise AssertionError(
+                    f"scene mode alias drifted: {source_scene['visualMode']} -> {projected_scene['visualMode']}"
+                )
             if projected_scene["narrationChunks"] != source_scene["narrationChunks"]:
                 raise AssertionError("narration changed")
 
@@ -211,7 +215,6 @@ def main() -> int:
         if render["scenes"][0]["cards"][0]["lines"][0]["value"] != "AIインフラ向け第三者資本5000億ドル超の動員を目指す":
             raise AssertionError("producer selectable inventory was mutated")
 
-        # Simulate the real-day intermediate renaming every Beat to canonical vb-*.
         intermediate = copy.deepcopy(render)
         for scene_index, item in enumerate(intermediate["scenes"], start=1):
             for beat_index, item_beat in enumerate(item["visualBeats"], start=1):

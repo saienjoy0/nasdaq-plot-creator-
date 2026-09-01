@@ -3,6 +3,7 @@ name: Validate Daily Production Package
 on:
   pull_request:
     paths:
+      - "daily-production-requests/**"
       - "daily-authoring-parts/**"
       - "daily-authoring/**"
       - "daily-inputs/**"
@@ -25,6 +26,7 @@ on:
       - "scripts/remotion_*.py"
       - "scripts/visual_director_bridge.py"
       - "scripts/run_daily_production_hardened.py"
+      - "scripts/current_preview_request_readiness_v12.py"
       - "scripts/story-engine/**"
       - "tests/daily-production-hardening/**"
       - "tests/story-engine-integration/**"
@@ -32,6 +34,7 @@ on:
       - "tests/viewer-surface/**"
       - "tests/visual-source-baseline/**"
       - "tests/visual-source/**"
+      - "tests/current-spine/test_current_preview_request_readiness.py"
       - ".github/workflows/validate-daily-production-package.yml"
   workflow_dispatch:
     inputs:
@@ -48,8 +51,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      RENDERER_COMMIT: fc1aa384011549e93bd0698e0bb4790c58dfa153
-      RENDERER_CONTRACT_VERSION: 2.4.0
       NASDAQ_CAFE_RENDERER_ROOT: ${{ github.workspace }}/.renderer
     steps:
       - uses: actions/checkout@v4
@@ -60,6 +61,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          CURRENT_PREVIEW_REQUEST_PATH=""
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             EPISODE_DATE="${{ inputs.episode_date }}"
           else
@@ -70,6 +72,7 @@ jobs:
 
           dates = set()
           patterns = (
+              r"^daily-production-requests/(\d{4}-\d{2}-\d{2})[^/]*\.json$",
               r"^daily-authoring-parts/(\d{4}-\d{2}-\d{2})/",
               r"^daily-authoring/(\d{4}-\d{2}-\d{2})\.json$",
               r"^daily-inputs/(\d{4}-\d{2}-\d{2})/",
@@ -90,6 +93,15 @@ jobs:
               print(next(iter(dates)))
           PY
           )"
+            mapfile -t PREVIEW_REQUESTS < <(grep -E '^daily-production-requests/[0-9]{4}-[0-9]{2}-[0-9]{2}[^/]*\.json$' /tmp/changed-files.txt || true)
+            if [[ "${#PREVIEW_REQUESTS[@]}" -gt 1 ]]; then
+              echo "::error::validation PR may change at most one formal PREVIEW request"
+              printf 'changed=%s\n' "${PREVIEW_REQUESTS[*]}"
+              exit 1
+            fi
+            if [[ "${#PREVIEW_REQUESTS[@]}" -eq 1 ]]; then
+              CURRENT_PREVIEW_REQUEST_PATH="${PREVIEW_REQUESTS[0]}"
+            fi
           fi
 
           if [[ -n "$EPISODE_DATE" ]]; then
@@ -152,19 +164,41 @@ jobs:
             if [[ "$CURRENT_V2_OWNED" == "true" ]]; then
               echo "RUN_EXACT_DAY=false" >> "$GITHUB_ENV"
               echo "Legacy exact-day package build skipped: $EPISODE_DATE is owned by the current-v2 semantic/Visual Intelligence path. Regression checks still run."
+              if [[ -n "$CURRENT_PREVIEW_REQUEST_PATH" ]]; then
+                echo "RUN_CURRENT_PREVIEW_READINESS=true" >> "$GITHUB_ENV"
+                echo "CURRENT_PREVIEW_REQUEST_PATH=$CURRENT_PREVIEW_REQUEST_PATH" >> "$GITHUB_ENV"
+              else
+                echo "RUN_CURRENT_PREVIEW_READINESS=false" >> "$GITHUB_ENV"
+              fi
             else
               echo "RUN_EXACT_DAY=true" >> "$GITHUB_ENV"
+              echo "RUN_CURRENT_PREVIEW_READINESS=false" >> "$GITHUB_ENV"
               echo "Legacy package validation target: $EPISODE_DATE"
             fi
           else
             echo "RUN_EXACT_DAY=false" >> "$GITHUB_ENV"
+            echo "RUN_CURRENT_PREVIEW_READINESS=false" >> "$GITHUB_ENV"
             echo "No daily episode artifact changed; running current contract/regression checks only."
           fi
+
+      - name: Resolve canonical Renderer binding
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' >> "$GITHUB_ENV"
+          import json
+          from pathlib import Path
+          value = json.loads(Path('contracts/renderer_binding.json').read_text(encoding='utf-8'))
+          renderer = value['renderer']
+          print('RENDERER_REPOSITORY=' + renderer['repository'])
+          print('RENDERER_COMMIT=' + renderer['commit'])
+          print('RENDERER_CONTRACT_VERSION=' + renderer['contractVersion'])
+          PY
 
       - name: Checkout pinned Remotion renderer
         uses: actions/checkout@v4
         with:
-          repository: saienjoy0/saienjoy0-nasdaq-cafe-remotion
+          repository: ${{ env.RENDERER_REPOSITORY }}
           ref: ${{ env.RENDERER_COMMIT }}
           path: .renderer
           persist-credentials: false
@@ -202,6 +236,42 @@ jobs:
             tests/remotion-compat/test_remotion_template_variant.py \
             tests/viewer-surface/test_viewer_surface_projection.py
 
+      - name: Run Current Preview semantic readiness
+        if: env.RUN_CURRENT_PREVIEW_READINESS == 'true'
+        shell: bash
+        run: |
+          set +e
+          python scripts/current_preview_request_readiness_v12.py \
+            --workspace . \
+            --renderer-root .renderer \
+            --request "$CURRENT_PREVIEW_REQUEST_PATH"
+          code=$?
+          echo "CURRENT_PREVIEW_READINESS_EXIT_CODE=$code" >> "$GITHUB_ENV"
+          exit 0
+
+      - name: Upload Current Preview readiness evidence
+        if: always() && env.RUN_CURRENT_PREVIEW_READINESS == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nasdaq-cafe-preview-readiness-${{ env.EPISODE_DATE }}-${{ github.run_id }}
+          path: |
+            working/${{ env.EPISODE_DATE }}/visual-intelligence/
+            verification/${{ env.EPISODE_DATE }}/
+            render-specs/${{ env.EPISODE_DATE }}/render_spec.json
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 0
+
+      - name: Enforce Current Preview semantic readiness
+        if: env.RUN_CURRENT_PREVIEW_READINESS == 'true'
+        shell: bash
+        run: |
+          code="${CURRENT_PREVIEW_READINESS_EXIT_CODE:-2}"
+          if [[ "$code" -ne 0 ]]; then
+            echo "::error::Current PREVIEW request is not compile-ready; inspect readiness artifact for requiredAction"
+            exit "$code"
+          fi
+
       - name: Run exact-day Renderer 2.4 production closure
         if: env.RUN_EXACT_DAY == 'true'
         run: |
@@ -232,7 +302,7 @@ jobs:
           compression-level: 0
 
       - name: Upload validation outputs
-        if: always() && env.RUN_EXACT_DAY == 'true'
+        if: always() && (env.RUN_EXACT_DAY == 'true' || env.RUN_CURRENT_PREVIEW_READINESS == 'true')
         uses: actions/upload-artifact@v4
         with:
           name: nasdaq-cafe-production-${{ env.EPISODE_DATE }}

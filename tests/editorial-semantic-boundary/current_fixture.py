@@ -76,6 +76,7 @@ def install_runtime(source_root: Path, root: Path) -> None:
         "scripts/story-engine/validate_story_engine_bundle.py",
         "scripts/canon_manifest.py",
         "scripts/materialize_causal_research.py",
+        "scripts/remotion_template_variant.py",
         "scripts/validate_editorial_semantic_boundary.py",
         "scripts/chatgpt_semantic_freeze.py",
     ]
