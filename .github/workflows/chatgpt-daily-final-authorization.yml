@@ -5,10 +5,6 @@ on:
     branches: [main]
     paths:
       - "final-authorization-requests-v1/*.json"
-      - "scripts/build_current_final_authorization_bundle_v1.py"
-      - "scripts/build_current_final_request_v2.py"
-      - "scripts/publish_current_final_authorization_v1.py"
-      - ".github/workflows/chatgpt-daily-final-authorization.yml"
   push:
     branches: [main]
     paths:
