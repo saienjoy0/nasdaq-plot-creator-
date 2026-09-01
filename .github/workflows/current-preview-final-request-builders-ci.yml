@@ -5,6 +5,7 @@ on:
     paths:
       - "scripts/build_current_preview_request_v4.py"
       - "scripts/build_current_preview_publication.py"
+      - "scripts/build_current_final_authorization_bundle_v1.py"
       - "scripts/build_current_final_request_v2.py"
       - "tests/current-spine/test_current_preview_final_request_builders.py"
       - "tests/current-spine/test_current_preview_publication.py"
@@ -33,5 +34,5 @@ jobs:
         run: python3 tests/current-spine/test_current_preview_publication.py
       - name: Syntax and diff hygiene
         run: |
-          python3 -m py_compile scripts/build_current_preview_request_v4.py scripts/build_current_preview_publication.py scripts/build_current_final_request_v2.py tests/current-spine/test_current_preview_final_request_builders.py tests/current-spine/test_current_preview_publication.py
+          python3 -m py_compile scripts/build_current_preview_request_v4.py scripts/build_current_preview_publication.py scripts/build_current_final_authorization_bundle_v1.py scripts/build_current_final_request_v2.py tests/current-spine/test_current_preview_final_request_builders.py tests/current-spine/test_current_preview_publication.py
           git diff --check
