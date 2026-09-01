@@ -55,6 +55,7 @@ def test_expectation_gap_is_reviewed_renderer_alias():
     [
         ("comparison", "event-reaction-timeline", "timeline"),
         ("comparison", "verification-matrix", "verification-points"),
+        ("comparison", "split-comparison", "stock-comparison"),
         ("verification-matrix", "verification-matrix", "verification-points"),
         ("verification-matrix", "split-comparison", "stock-comparison"),
     ],
