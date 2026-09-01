@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression: reviewed authoring visual-mode aliases stay compatible with Current Renderer."""
+"""Regression: reviewed authoring compatibility stays compatible with Current Renderer."""
 from pathlib import Path
 import sys
 
@@ -116,6 +116,142 @@ def test_strict_projection_contract_shape_stays_unchanged(tmp_path):
             semantics_path=semantics,
             renderer_compatibility_path=compatibility,
         )
+
+
+def test_current_producer_shell_is_mechanically_projected_for_renderer_24(tmp_path):
+    render_spec = _nine_scene_spec(first_mode="expectation-gap", first_template="expected-actual-gap-flow")
+    render_spec.update(
+        {
+            "editorial": {
+                "leadNews": "lead",
+                "storySpine": "spine",
+                "centralHypothesis": "hypothesis",
+                "confidence": "medium",
+                "expected": "expected",
+                "actual": "actual",
+                "gap": "gap",
+                "expectedBasisType": "major_reporting",
+                "expectedBasisDetails": "details",
+                "counterEvidence": ["counter"],
+            },
+            "publishing": {
+                "titleCandidates": ["title-1", "title-2", "title-3"],
+                "thumbnailTextCandidates": ["thumb-1", "thumb-2", "thumb-3"],
+                "description": "description",
+            },
+            "review": {
+                "verdict": "approved",
+                "approvedForCodex": True,
+                "scores": {
+                    "clarity": 5,
+                    "discovery": 5,
+                    "fox_voice": 4,
+                    "late_payoff": 5,
+                    "opening": 5,
+                    "progression": 4,
+                },
+                "totalScore": 28,
+                "largestDropoffRisk": "",
+                "requiredChanges": [],
+                "changesApplied": [],
+            },
+        }
+    )
+    render_spec["scenes"][0]["causalScope"] = "company_direct"
+    render_spec["scenes"][0]["expectedBasisType"] = "major-reporting"
+    render_spec["scenes"][0]["visualBeats"][0]["screenState"] = "Source"
+
+    final_contract, semantics, compatibility = _contract_paths(tmp_path)
+    projected = renderer_strict_projection.strict_renderer_projection(
+        render_spec,
+        final_contract_path=final_contract,
+        semantics_path=semantics,
+        renderer_compatibility_path=compatibility,
+    )
+
+    assert projected["editorial"]["leadTheme"] is None
+    assert projected["editorial"]["targetIndices"] == ["Nasdaq Composite"]
+    assert projected["editorial"]["directMaterial"] == []
+    assert projected["editorial"]["nasdaqDrivers"] == []
+    assert projected["editorial"]["amplifiers"] == []
+    assert projected["editorial"]["offsettingFactors"] == []
+    assert projected["editorial"]["expectedBasisType"] == "major-reporting"
+    assert projected["editorial"]["expectedSourceIds"] == []
+    assert projected["editorial"]["timelineBasis"] is None
+    assert projected["editorial"]["verificationPoints"] == []
+    assert projected["publishing"]["recommendedTitle"] == "title-1"
+    assert projected["publishing"]["recommendedThumbnailText"] == "thumb-1"
+    assert projected["review"]["scores"] == {
+        "openingHook": 5,
+        "storyProgression": 4,
+        "discovery": 5,
+        "clarity": 5,
+        "foxCharacter": 4,
+        "reasonToFinish": 5,
+    }
+    assert projected["review"]["largestDropoffRisk"] == "none-identified"
+    assert projected["review"]["titleThumbnailConsistency"] == "consistent"
+    assert projected["scenes"][0]["causalScope"] == "lead-stock"
+    assert projected["scenes"][0]["visualBeats"][0]["screenState"] == "News"
+
+
+def test_current_shell_projection_preserves_explicit_renderer_fields(tmp_path):
+    render_spec = _nine_scene_spec()
+    render_spec["editorial"] = {
+        "leadNews": "lead",
+        "leadTheme": "theme",
+        "targetIndices": ["Nasdaq Composite", "SOXX"],
+        "storySpine": "spine",
+        "centralHypothesis": "hypothesis",
+        "confidence": "medium",
+        "directMaterial": ["direct"],
+        "nasdaqDrivers": ["driver"],
+        "amplifiers": ["amp"],
+        "offsettingFactors": ["offset"],
+        "expected": None,
+        "actual": None,
+        "gap": None,
+        "expectedBasisType": None,
+        "expectedBasisDetails": None,
+        "expectedSourceIds": ["source-001"],
+        "timelineBasis": "timeline",
+        "counterEvidence": ["counter"],
+        "verificationPoints": ["verify"],
+    }
+    render_spec["publishing"] = {
+        "recommendedTitle": "chosen-title",
+        "titleCandidates": ["chosen-title", "title-2", "title-3"],
+        "recommendedThumbnailText": "chosen-thumb",
+        "thumbnailTextCandidates": ["chosen-thumb", "thumb-2", "thumb-3"],
+        "description": "description",
+    }
+    render_spec["review"] = {
+        "verdict": "approved",
+        "scores": {
+            "openingHook": 5,
+            "storyProgression": 4,
+            "discovery": 5,
+            "clarity": 5,
+            "foxCharacter": 4,
+            "reasonToFinish": 5,
+        },
+        "totalScore": 28,
+        "largestDropoffRisk": "explicit-risk",
+        "requiredChanges": [],
+        "changesApplied": [],
+        "titleThumbnailConsistency": "needs-revision",
+        "approvedForCodex": True,
+    }
+    final_contract, semantics, compatibility = _contract_paths(tmp_path)
+    projected = renderer_strict_projection.strict_renderer_projection(
+        render_spec,
+        final_contract_path=final_contract,
+        semantics_path=semantics,
+        renderer_compatibility_path=compatibility,
+    )
+    assert projected["editorial"] == render_spec["editorial"]
+    assert projected["publishing"] == render_spec["publishing"]
+    assert projected["review"] == render_spec["review"]
 
 
 def test_unknown_mode_remains_fail_closed():
