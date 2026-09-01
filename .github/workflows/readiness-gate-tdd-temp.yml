@@ -3,6 +3,8 @@ name: Readiness Gate TDD Temp
 on:
   pull_request:
     paths:
+      - "daily-production-requests/2026-08-17-readiness-regression-temp.json"
+      - "contracts/renderer_binding.json"
       - "tests/current-spine/test_current_preview_request_readiness.py"
       - "tests/current-spine/test_current_visual_mode_compatibility.py"
       - "scripts/current_preview_request_readiness_v12.py"
@@ -15,17 +17,87 @@ permissions:
 jobs:
   tdd:
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout Plot PR
+        uses: actions/checkout@v6
+
+      - name: Checkout exact pinned Renderer
+        uses: actions/checkout@v6
+        with:
+          repository: saienjoy0/saienjoy0-nasdaq-cafe-remotion
+          ref: cfd3a7a45664bbca345c43e7b1915b8a68bcf2d9
+          path: renderer
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install test dependency
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: renderer/package-lock.json
+
+      - name: Install Plot test dependency
         run: python -m pip install --disable-pip-version-check pytest
+
+      - name: Install exact Renderer dependencies
+        working-directory: renderer
+        run: npm ci
+
       - name: Run readiness and Current visual-mode regressions
         env:
           PYTHONPATH: scripts
         run: |
           python -m pytest -q tests/current-spine/test_current_preview_request_readiness.py
           python -m pytest -q tests/current-spine/test_current_visual_mode_compatibility.py
+
+      - name: Run exact 2026-08-17 r8 semantic-readiness regression
+        shell: bash
+        env:
+          PYTHONPATH: scripts
+        run: |
+          set +e
+          python scripts/current_preview_request_readiness_v12.py \
+            --workspace . \
+            --renderer-root renderer \
+            --request daily-production-requests/2026-08-17-readiness-regression-temp.json \
+            --output build/r8-readiness.json
+          status=$?
+          set -e
+          if [[ "$status" -ne 3 ]]; then
+            echo "::error::Expected NOT_READY exit 3 for r8 semantic state, got $status"
+            cat build/r8-readiness.json 2>/dev/null || true
+            exit 1
+          fi
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          receipt = json.loads(Path("build/r8-readiness.json").read_text(encoding="utf-8"))
+          expected = {
+              "state": "NOT_READY",
+              "facadeStatus": "PREPARED",
+              "selectedPhase": "prepare",
+              "requiredAction": "AUTHOR_VISUAL_INTELLIGENCE_DECISION",
+              "previewHandoffReady": False,
+              "previewPublicationReady": False,
+          }
+          for key, value in expected.items():
+              actual = receipt.get(key)
+              if actual != value:
+                  raise SystemExit(f"{key}: expected {value!r}, got {actual!r}")
+          print("PASS: exact r8 stops at authored Visual Intelligence decision without handoff/publication")
+          PY
+
+      - name: Upload exact r8 readiness evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: exact-r8-readiness-${{ github.run_id }}
+          path: |
+            build/r8-readiness.json
+            verification/2026-08-17/current_production_facade_outcome.json
+          if-no-files-found: warn
+          retention-days: 7
