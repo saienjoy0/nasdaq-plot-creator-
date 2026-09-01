@@ -9,7 +9,7 @@
   },
   "renderer": {
     "repository": "saienjoy0/saienjoy0-nasdaq-cafe-remotion",
-    "renderSpecVersion": "2.3.0",
+    "renderSpecVersion": "2.4.0",
     "financialTemplateRegistryVersion": "1.0.0",
     "financialVisualTraceVersion": "1.0.0"
   }

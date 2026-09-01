@@ -598,7 +598,8 @@ def build_production(
             workspace=workspace, date=date, episode_package=episode_package
         )
     current = status(module=module, workspace=workspace, date=date)
-    if current["current_state"] != "memory_usage_valid":
+    current_state = current["current_state"]
+    if VI_STATES.index(current_state) < VI_STATES.index("memory_usage_valid"):
         raise module.DailyProductionError(
             module.ERROR_CODES["package"],
             "Visual Intelligence build-production requires memory_usage_valid",
@@ -614,13 +615,24 @@ def build_production(
         )
     except Exception as exc:
         raise module.DailyProductionError(module.ERROR_CODES["package"], str(exc)) from exc
-    add_transition(
-        module=module,
-        workspace=workspace,
-        date=date,
-        new_state="production_package_valid",
-        evidence_paths=[Path(path) for path in built["paths"].values()],
-    )
+    if current_state == "memory_usage_valid":
+        add_transition(
+            module=module,
+            workspace=workspace,
+            date=date,
+            new_state="production_package_valid",
+            evidence_paths=[Path(path) for path in built["paths"].values()],
+        )
+    else:
+        rebuilt = status(module=module, workspace=workspace, date=date)
+        validation = rebuilt.get("validation")
+        if not isinstance(validation, dict) or validation.get("status") != "pass":
+            errors = validation.get("errors") if isinstance(validation, dict) else None
+            detail = "; ".join(str(item) for item in errors) if isinstance(errors, list) else "unknown validation failure"
+            raise module.DailyProductionError(
+                module.ERROR_CODES["package"],
+                f"idempotent build-production changed sealed evidence: {detail}",
+            )
     return built
 
 

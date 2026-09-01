@@ -232,7 +232,7 @@ def validate_production_alignment(authoring: dict[str, Any], dossier: dict[str, 
                 if required not in beat:
                     errors.append(f"{scene_id} beat {beat_index}: explicit {required} is required")
             try:
-                remotion_template_variant.validate_authored_variant(
+                remotion_template_variant.validate_pre_visual_intelligence_variant(
                     beat.get("visualTemplate"),
                     beat.get("variant"),
                     path=beat_path,

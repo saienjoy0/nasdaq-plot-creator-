@@ -24,6 +24,7 @@ from pathlib import Path
 
 import renderer_binding
 import renderer_contract_sync_v12
+import current_production_resume_v12
 from current_renderer_closure_mechanisms_v12 import (
     CurrentRendererClosureMechanismError,
     ensure_renderer,
@@ -59,9 +60,12 @@ def advance(
     state: str,
     evidence: list[str],
     env: dict[str, str],
+    completed_state: str,
 ) -> None:
     if not evidence:
         raise VisualIntelligenceClosureError(f"{state} has no evidence")
+    if current_production_resume_v12.state_has_reached(completed_state, state):
+        return
     run(
         root,
         "python3",
@@ -86,7 +90,7 @@ def prepare_common(
     date: str,
     env: dict[str, str],
     binding: dict,
-) -> None:
+) -> str:
     daily_source = root / "daily-inputs" / date / f"daily_source_package_{date}.md"
     authoring = root / "daily-authoring" / f"{date}.json"
     dossier = root / "research" / date / f"causal_research_dossier_{date}.json"
@@ -114,10 +118,13 @@ def prepare_common(
         "--semantic-freeze-sha256", env.get("NASDAQ_CAFE_SEMANTIC_FREEZE_SHA256", ""),
         env=env,
     )
+    completed_state = current_production_resume_v12.validated_current_state(root, date)
     advance(root, date=date, state="research_inputs_bound",
-            evidence=[f"research/{date}/research_input_manifest.json"], env=env)
+            evidence=[f"research/{date}/research_input_manifest.json"], env=env,
+            completed_state=completed_state)
     advance(root, date=date, state="causal_dossier_valid",
-            evidence=[f"research/{date}/causal_research_dossier_{date}.json", f"research/{date}/causal_dossier_validation.json"], env=env)
+            evidence=[f"research/{date}/causal_research_dossier_{date}.json", f"research/{date}/causal_dossier_validation.json"], env=env,
+            completed_state=completed_state)
 
     run(root, "python3", "scripts/validate_chatgpt_daily_authoring_closure.py",
         "--authoring", f"daily-authoring/{date}.json", "--registry", "contracts/financial_recipe_registry.json",
@@ -148,7 +155,7 @@ def prepare_common(
         f"verification/{date}/editorial_semantic_acceptance.json",
         str(freeze.relative_to(root)),
         f"working/{date}/story-engine/story_projection_report.json",
-    ], env=env)
+    ], env=env, completed_state=completed_state)
 
     vi = root / "working" / date / "visual-intelligence"
     requirements_semantic = vi / "visual_requirements.semantic.json"
@@ -193,14 +200,16 @@ def prepare_common(
         f"working/{date}/visual-intelligence/visual_requirements.json",
         f"working/{date}/visual-intelligence/visual_requirements_validation.json",
         f"working/{date}/visual-intelligence/visual_asset_plan_validation.json",
-    ], env=env)
+    ], env=env, completed_state=completed_state)
     asset_evidence = evidence_if_exists(root, [
         f"working/{date}/visual_source_intents.json",
         f"working/{date}/visual-intelligence/visual_asset_plan_validation.json",
         f"verification/{date}/asset_resolution_log.json",
         f"verification/{date}/image_generation_log.json",
     ])
-    advance(root, date=date, state="assets_resolved", evidence=asset_evidence, env=env)
+    advance(root, date=date, state="assets_resolved", evidence=asset_evidence, env=env,
+            completed_state=completed_state)
+    return completed_state
 
 
 def classify_prepare_visual_intelligence_pause(report: dict) -> dict:
@@ -282,7 +291,7 @@ def main() -> int:
     env["NASDAQ_CAFE_RENDERER_ROOT"] = str(renderer_root)
 
     try:
-        prepare_common(
+        completed_state = prepare_common(
             root=root,
             renderer_root=renderer_root,
             date=date,
@@ -411,6 +420,7 @@ def main() -> int:
                 f"verification/{date}/visual_intelligence_validation.json",
             ],
             env=env,
+            completed_state=completed_state,
         )
         story = f"working/{date}/story-engine"
         advance(
@@ -424,6 +434,7 @@ def main() -> int:
                 f"verification/{date}/pre_tts_visual_gate.json",
             ],
             env=env,
+            completed_state=completed_state,
         )
         advance(
             root,
@@ -431,6 +442,7 @@ def main() -> int:
             state="memory_usage_valid",
             evidence=[f"research/{date}/causal_dossier_validation.json"],
             env=env,
+            completed_state=completed_state,
         )
         shutil.copyfile(
             root / "contracts/financial_visual_compatibility_2_4.json",
@@ -471,7 +483,11 @@ def main() -> int:
             include_candidate_catalog=exc.include_candidate_catalog,
         )
         return 0
-    except (VisualIntelligenceClosureError, CurrentRendererClosureMechanismError) as exc:
+    except (
+        VisualIntelligenceClosureError,
+        CurrentRendererClosureMechanismError,
+        current_production_resume_v12.CurrentProductionResumeError,
+    ) as exc:
         result = {
             "contractVersion": "1.0.0",
             "bridgeContractVersion": binding["bridgeContractVersion"],

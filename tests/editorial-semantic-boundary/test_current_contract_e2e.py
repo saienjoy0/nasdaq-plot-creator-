@@ -216,6 +216,42 @@ def test_implicit_expression_is_rejected(tmp_path: Path):
         semantic.validate_boundary(root, fx.DATE, path)
 
 
+def test_renderer_unsafe_public_headline_is_rejected_before_freeze(tmp_path: Path):
+    root, authoring = build_workspace(tmp_path)
+    path = root / "daily-authoring" / f"{fx.DATE}.json"
+    semantic = load_module("fixture_semantic_headline_budget", root / "scripts/validate_editorial_semantic_boundary.py")
+
+    authoring["production"]["scenes"][0]["headline"] = "H" * 26
+    fx.write_json(path, authoring)
+    semantic.validate_boundary(root, fx.DATE, path)
+
+    authoring["production"]["scenes"][0]["headline"] = "H" * 27
+    fx.write_json(path, authoring)
+    with pytest.raises(
+        Exception,
+        match=r"daily-authoring\.production\.scenes\.0\.headline.*too long",
+    ):
+        semantic.validate_boundary(root, fx.DATE, path)
+
+
+def test_semantic_boundary_preserves_pre_vi_variant_ownership(tmp_path: Path):
+    root, authoring = build_workspace(tmp_path)
+    path = root / "daily-authoring" / f"{fx.DATE}.json"
+    semantic = load_module("fixture_semantic_pre_vi_variant", root / "scripts/validate_editorial_semantic_boundary.py")
+    beat = authoring["production"]["scenes"][0]["beats"][0]
+    beat["visualMode"] = "verification-matrix"
+    beat["visualTemplate"] = "verification-matrix"
+    beat["variant"] = None
+
+    fx.write_json(path, authoring)
+    semantic.validate_boundary(root, fx.DATE, path)
+
+    beat["variant"] = "unregistered-variant"
+    fx.write_json(path, authoring)
+    with pytest.raises(Exception, match="accepts unresolved pre-VI variant"):
+        semantic.validate_boundary(root, fx.DATE, path)
+
+
 def test_stale_acceptance_after_validator_change_fails(tmp_path: Path):
     root, _ = build_workspace(tmp_path)
     semantic = load_module("fixture_semantic_acceptance", root / "scripts/validate_editorial_semantic_boundary.py")

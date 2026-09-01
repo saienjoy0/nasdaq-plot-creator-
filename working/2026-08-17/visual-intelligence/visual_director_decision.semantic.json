@@ -116,10 +116,10 @@
     },
     {
       "visualBeatId": "scene-09-beat-001",
-      "selectedCandidateId": "vc-scene-09-beat-001-01",
-      "strongestAlternativeCandidateId": "vc-scene-09-beat-001-03",
-      "whySelected": "新情報を足さず、矛盾・反対材料・二エンジンを既出要素のrecapとして一枚へ戻す。",
-      "whyNotAlternative": "final-assemblyでも組み立てられるが、ここは結論直前の再確認なのでclosing-recapの方が役割が明確。"
+      "selectedCandidateId": "vc-scene-09-beat-001-03",
+      "strongestAlternativeCandidateId": "vc-scene-09-beat-001-01",
+      "whySelected": "新情報を足さず、矛盾・反対材料・二エンジンを既出要素から最終結論へ組み立てるBeatなので、Scene 9のproduction closureを担うfinal-assemblyを選ぶ。",
+      "whyNotAlternative": "closing-recapは既出要素の再掲には使えるが、新規productionでは最終組み立ての所有権を満たさない互換候補であり、このBeatの結論統合には弱い。"
     },
     {
       "visualBeatId": "scene-09-beat-002",

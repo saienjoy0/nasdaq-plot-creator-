@@ -14,7 +14,7 @@
     },
     "story_script": {
       "path": "working/2026-08-17/story-engine/story_script.json",
-      "sha256": "149a3a6c1883c0fca3a0108103abb45d071f11189c9ec726057d3023a02a57d5"
+      "sha256": "2ca9dabe1999d33935eb505484ef7a09b1a2f888dd113e02333a90be2836f49a"
     }
   },
   "contract_version": "1.1.0",

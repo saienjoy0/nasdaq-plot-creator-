@@ -222,7 +222,7 @@ def _validate_with_pinned_renderer(
             f"renderer checkout SHA mismatch: expected={expected_commit} actual={actual_commit}"
         )
     command = [
-        "npx", "--no-install", "tsx", "scripts/spec-cli.ts",
+        "node", "--import", "tsx", "scripts/spec-cli.ts",
         "validate", str(render_spec_path.resolve()),
     ]
     env = os.environ.copy()

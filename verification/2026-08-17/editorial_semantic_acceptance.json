@@ -1,8 +1,8 @@
 {
   "authoring": {
     "path": "daily-authoring/2026-08-17.json",
-    "semanticSha256": "a6d209b4fd7088d303f56d49cd054c4d729945d8d9689b36840ae7982d7bcba3",
-    "sha256": "310a270a49236174f8bea392aae81f8f044557dd725f02c285f4a0d7e414daad"
+    "semanticSha256": "82c645447ca7c16786f220addbd4fa0cec6dd04817111ac9ef743fa6a27cfbee",
+    "sha256": "65d398cbb754f450decad989dff2c6e23e27f7097a721ec7e18d3ff65540ad35"
   },
   "canonManifest": {
     "path": "source-of-truth/canon_manifest.json",
@@ -20,7 +20,7 @@
     {
       "path": "contracts/chatgpt_daily_authoring_v2.schema.json",
       "role": "daily-authoring-schema",
-      "sha256": "5f47240ab61a7bc99c2478d86aae6f858047ab2da58a439343317aaee2ed6c7e"
+      "sha256": "edaeef3afc91cdda10b803d9dc612a6a843f57ba2e2d28b23f31a0a7db5162fc"
     },
     {
       "path": "contracts/editorial_semantic_acceptance.schema.json",
@@ -83,9 +83,14 @@
       "sha256": "464f2e96df5e68d8b058db0f92212bc0f7c11194923fbb767ee3adefe77347a5"
     },
     {
+      "path": "scripts/remotion_template_variant.py",
+      "role": "template-variant-policy",
+      "sha256": "d4e9dee06bdf5674b914e102e13b8547d3737897bf99960ec356205efa428689"
+    },
+    {
       "path": "scripts/validate_editorial_semantic_boundary.py",
       "role": "semantic-boundary-validator",
-      "sha256": "97294649b60c2b5b9aa2a3ba143325c1a1888629a8cc86e301ec1bea0374d617"
+      "sha256": "7e4bba9887d01d4a08cb9b8a40263e05e31b15d03aeba1c56d09b452c1025780"
     }
   ],
   "contractVersion": "1.0.0",
