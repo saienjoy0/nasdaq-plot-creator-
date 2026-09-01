@@ -57,6 +57,7 @@ VISUAL_MODE_MAP = {
 TEMPLATE_AWARE_VISUAL_MODE_MAP = {
     ("comparison", "event-reaction-timeline"): "timeline",
     ("comparison", "verification-matrix"): "verification-points",
+    ("comparison", "split-comparison"): "stock-comparison",
     ("verification-matrix", "verification-matrix"): "verification-points",
     ("verification-matrix", "split-comparison"): "stock-comparison",
 }
