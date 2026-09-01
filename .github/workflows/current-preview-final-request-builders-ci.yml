@@ -7,8 +7,11 @@ on:
       - "scripts/build_current_preview_publication.py"
       - "scripts/build_current_final_authorization_bundle_v1.py"
       - "scripts/build_current_final_request_v2.py"
+      - "scripts/publish_current_final_authorization_v1.py"
       - "tests/current-spine/test_current_preview_final_request_builders.py"
       - "tests/current-spine/test_current_preview_publication.py"
+      - "tests/current-spine/test_current_final_authorization_publication.py"
+      - ".github/workflows/chatgpt-daily-final-authorization.yml"
       - ".github/workflows/current-preview-final-request-builders-ci.yml"
   workflow_dispatch:
 
@@ -28,11 +31,15 @@ jobs:
         env:
           PYTHONPATH: scripts
         run: python3 tests/current-spine/test_current_preview_final_request_builders.py
+      - name: Validate Current Final authorization publication
+        env:
+          PYTHONPATH: scripts
+        run: python3 tests/current-spine/test_current_final_authorization_publication.py
       - name: Validate idempotent Current Preview publication identity
         env:
           PYTHONPATH: scripts
         run: python3 tests/current-spine/test_current_preview_publication.py
       - name: Syntax and diff hygiene
         run: |
-          python3 -m py_compile scripts/build_current_preview_request_v4.py scripts/build_current_preview_publication.py scripts/build_current_final_authorization_bundle_v1.py scripts/build_current_final_request_v2.py tests/current-spine/test_current_preview_final_request_builders.py tests/current-spine/test_current_preview_publication.py
+          python3 -m py_compile scripts/build_current_preview_request_v4.py scripts/build_current_preview_publication.py scripts/build_current_final_authorization_bundle_v1.py scripts/build_current_final_request_v2.py scripts/publish_current_final_authorization_v1.py tests/current-spine/test_current_preview_final_request_builders.py tests/current-spine/test_current_final_authorization_publication.py tests/current-spine/test_current_preview_publication.py
           git diff --check
