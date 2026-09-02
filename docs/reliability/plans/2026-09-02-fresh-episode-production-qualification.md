@@ -30,26 +30,29 @@
 
 **Why existing tests cannot close this alone:** unit/contract/E2E tests do not exercise a new day's Collector evidence, newly authored semantic artifacts, actual GitHub Artifact transport, external TTS, sleeping/available Codespace lifecycle, and a new immutable Final fingerprint in one continuous real production lineage.
 
-## Episode selection rule
+## Episode selection rule and execution inputs
 
-At execution time define `QUALIFICATION_EPISODE_DATE` as the earliest real episode date produced after both reliability repair PRs are merged for which a complete non-empty daily source package exists and no prior Current production request for that date has entered Preview production.
+At execution time choose the earliest real episode date produced after both reliability repair PRs are merged for which a complete non-empty daily source package exists and no prior Current production request for that date has entered Preview production.
 
 If the first candidate already has a production request, choose the next real episode; do not delete/reuse an old request to manufacture freshness.
 
-After selecting the episode, export two exact variables:
+Before Task 2 begins, the executor must have two concrete values from the actual current episode context:
 
-```bash
-export QUALIFICATION_EPISODE_DATE="$(date-value-selected-by-the-rule-above)"
-export DAILY_SOURCE_PATH="$(exact-path-of-the-selected-real-source-package)"
+```text
+QUALIFICATION_EPISODE_DATE = exact selected YYYY-MM-DD date
+DAILY_SOURCE_PATH = exact filesystem/repository path to that selected real source package
 ```
 
-The values are resolved from the actual episode/source package at execution; they are not copied from an older episode. Immediately validate them:
+Export those concrete values in the execution shell, then immediately validate them:
 
 ```bash
 [[ "$QUALIFICATION_EPISODE_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
 [[ -s "$DAILY_SOURCE_PATH" ]]
 [[ "$(basename "$DAILY_SOURCE_PATH")" == *"$QUALIFICATION_EPISODE_DATE"* ]]
+export QUALIFICATION_REPORT="docs/reliability/qualifications/${QUALIFICATION_EPISODE_DATE}-current-production.md"
 ```
+
+The plan does not prescribe fictional sample values. If either value is unresolved, qualification has not started.
 
 ## Expected no-retry lineage
 
@@ -77,13 +80,7 @@ real daily source
 
 ## Evidence record
 
-After `QUALIFICATION_EPISODE_DATE` is resolved, the report path is:
-
-```bash
-export QUALIFICATION_REPORT="docs/reliability/qualifications/${QUALIFICATION_EPISODE_DATE}-current-production.md"
-```
-
-The record must contain:
+The qualification report at `$QUALIFICATION_REPORT` must contain:
 
 ```text
 episode date
@@ -148,13 +145,16 @@ If any precondition fails, qualification does not start.
 
 **Files:** normal episode input/authoring files only, as produced by the existing daily process.
 
-- [ ] **Step 1: Resolve and export `QUALIFICATION_EPISODE_DATE` and `DAILY_SOURCE_PATH` using the selection rule**
+- [ ] **Step 1: Set `QUALIFICATION_EPISODE_DATE` and `DAILY_SOURCE_PATH` from the actual selected episode and source package**
+
+Do not copy values from 2026-08-17 or another historical attempt.
 
 - [ ] **Step 2: Confirm the source package is real and non-empty**
 
 Run:
 
 ```bash
+[[ "$QUALIFICATION_EPISODE_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
 [[ -s "$DAILY_SOURCE_PATH" ]]
 [[ "$(basename "$DAILY_SOURCE_PATH")" == *"$QUALIFICATION_EPISODE_DATE"* ]]
 ```
@@ -167,7 +167,7 @@ The contents must be the day's actual Collector/source package, not copied fixtu
 sha256sum "$DAILY_SOURCE_PATH"
 ```
 
-Record the exact path and SHA in `QUALIFICATION_REPORT`.
+Record the exact path and SHA in `$QUALIFICATION_REPORT`.
 
 ## Task 3: Complete semantic authoring through Visual Intelligence PASS without request churn
 
@@ -389,7 +389,7 @@ exactly one deterministic Final outcome published
 ## Task 7: Write the qualification report and make the pass/fail decision
 
 **Files:**
-- Create at execution: the exact path stored in `QUALIFICATION_REPORT`
+- Create at execution: the exact file path stored in `$QUALIFICATION_REPORT`
 
 - [ ] **Step 1: Fill every Evidence record field from actual runs/artifacts**
 
