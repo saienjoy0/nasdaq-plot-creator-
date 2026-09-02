@@ -1,0 +1,77 @@
+name: Required Merge Gate Control Plane
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: read
+  actions: read
+  statuses: write
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  required-merge-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    steps:
+      - name: Publish pending required status
+        shell: bash
+        run: |
+          set -euo pipefail
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${HEAD_SHA}" \
+            -f state=pending \
+            -f context='Nasdaq Cafe Required Merge Gate' \
+            -f description='Waiting for required exact-head workflows' \
+            -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+      - name: Checkout trusted base control plane
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          clean: true
+
+      - name: Run trusted exact-head checker
+        id: checker
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 scripts/required_merge_gate.py \
+            --policy contracts/required_merge_gate_policy.json \
+            --repository "$GITHUB_REPOSITORY" \
+            --pr-number "${{ github.event.pull_request.number }}" \
+            --head-sha "${{ github.event.pull_request.head.sha }}" \
+            2>&1 | tee /tmp/required-merge-gate.log
+
+      - name: Publish final required status
+        if: always()
+        shell: bash
+        env:
+          CHECKER_OUTCOME: ${{ steps.checker.outcome }}
+        run: |
+          set -euo pipefail
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          if [[ "$CHECKER_OUTCOME" == "success" ]]; then
+            STATE=success
+            DESCRIPTION='All required exact-head workflows succeeded'
+          else
+            STATE=failure
+            DESCRIPTION='Required exact-head workflow policy failed'
+          fi
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${HEAD_SHA}" \
+            -f state="$STATE" \
+            -f context='Nasdaq Cafe Required Merge Gate' \
+            -f description="$DESCRIPTION" \
+            -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          if [[ "$STATE" != success ]]; then
+            cat /tmp/required-merge-gate.log 2>/dev/null || true
+            exit 1
+          fi
