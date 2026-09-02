@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Plan 1 (Final V2 runner readiness) and Plan 2 (Required Main Merge Gates) must be complete before this qualification starts.
-- Use a real new `daily_source_package_YYYY-MM-DD.md`; do not copy 2026-08-17 inputs or promote a historical artifact into a current fixture.
+- Use a real new daily source package whose filename contains the exact episode date; do not copy 2026-08-17 inputs or promote a historical artifact into a current fixture.
 - ChatGPT owns research/editorial/Visual Intelligence semantics; GitHub Actions remains mechanical.
 - `prepare` intentional pauses for Visual Source selection, Director, Critic, or human Preview review are PASS-like human/semantic boundaries, not machine failures.
 - Do not create new production request revisions merely because `prepare`/`compile` is waiting for a semantic decision.
@@ -32,11 +32,24 @@
 
 ## Episode selection rule
 
-At execution time define `QUALIFICATION_EPISODE_DATE` as:
-
-> the earliest real episode date produced after both reliability repair PRs are merged for which a complete non-empty `daily_source_package_<date>.md` exists and no prior Current production request for that date has entered Preview production.
+At execution time define `QUALIFICATION_EPISODE_DATE` as the earliest real episode date produced after both reliability repair PRs are merged for which a complete non-empty daily source package exists and no prior Current production request for that date has entered Preview production.
 
 If the first candidate already has a production request, choose the next real episode; do not delete/reuse an old request to manufacture freshness.
+
+After selecting the episode, export two exact variables:
+
+```bash
+export QUALIFICATION_EPISODE_DATE="$(date-value-selected-by-the-rule-above)"
+export DAILY_SOURCE_PATH="$(exact-path-of-the-selected-real-source-package)"
+```
+
+The values are resolved from the actual episode/source package at execution; they are not copied from an older episode. Immediately validate them:
+
+```bash
+[[ "$QUALIFICATION_EPISODE_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
+[[ -s "$DAILY_SOURCE_PATH" ]]
+[[ "$(basename "$DAILY_SOURCE_PATH")" == *"$QUALIFICATION_EPISODE_DATE"* ]]
+```
 
 ## Expected no-retry lineage
 
@@ -64,10 +77,10 @@ real daily source
 
 ## Evidence record
 
-Create after the run:
+After `QUALIFICATION_EPISODE_DATE` is resolved, the report path is:
 
-```text
-docs/reliability/qualifications/<QUALIFICATION_EPISODE_DATE>-current-production.md
+```bash
+export QUALIFICATION_REPORT="docs/reliability/qualifications/${QUALIFICATION_EPISODE_DATE}-current-production.md"
 ```
 
 The record must contain:
@@ -135,19 +148,26 @@ If any precondition fails, qualification does not start.
 
 **Files:** normal episode input/authoring files only, as produced by the existing daily process.
 
-- [ ] **Step 1: Resolve `QUALIFICATION_EPISODE_DATE` using the selection rule**
+- [ ] **Step 1: Resolve and export `QUALIFICATION_EPISODE_DATE` and `DAILY_SOURCE_PATH` using the selection rule**
 
 - [ ] **Step 2: Confirm the source package is real and non-empty**
 
-The file name must contain the exact episode date and its contents must be the day's actual Collector/source package, not copied fixture data.
+Run:
+
+```bash
+[[ -s "$DAILY_SOURCE_PATH" ]]
+[[ "$(basename "$DAILY_SOURCE_PATH")" == *"$QUALIFICATION_EPISODE_DATE"* ]]
+```
+
+The contents must be the day's actual Collector/source package, not copied fixture data.
 
 - [ ] **Step 3: Record the source-package SHA before authoring**
 
 ```bash
-sha256sum daily_source_package_${QUALIFICATION_EPISODE_DATE}.md
+sha256sum "$DAILY_SOURCE_PATH"
 ```
 
-Use the actual repository path if the package is stored under a dated input directory; record that exact path/SHA in the qualification report.
+Record the exact path and SHA in `QUALIFICATION_REPORT`.
 
 ## Task 3: Complete semantic authoring through Visual Intelligence PASS without request churn
 
@@ -161,10 +181,43 @@ Use current project authority ordering. Produce evidence-grounded Expected / Act
 
 Production later verifies the committed Freeze; GitHub Actions must not create it.
 
-- [ ] **Step 3: Run the existing fresh real-day Visual Intelligence prepare phase**
+- [ ] **Step 3: Resolve and checkout the exact Renderer binding once**
+
+From Plot repository root:
 
 ```bash
-python scripts/run_daily_renderer_closure_v12.py --phase prepare --date "$QUALIFICATION_EPISODE_DATE" --repo-root . --renderer-root <exact-pinned-renderer-checkout>
+export RENDERER_REPOSITORY="$(python3 - <<'PY'
+import json
+from pathlib import Path
+v=json.loads(Path('contracts/renderer_binding.json').read_text(encoding='utf-8'))
+print(v['renderer']['repository'])
+PY
+)"
+export RENDERER_COMMIT="$(python3 - <<'PY'
+import json
+from pathlib import Path
+v=json.loads(Path('contracts/renderer_binding.json').read_text(encoding='utf-8'))
+print(v['renderer']['commit'])
+PY
+)"
+export RENDERER_ROOT="$PWD/.renderer-qualification"
+rm -rf "$RENDERER_ROOT"
+git clone --no-checkout "https://github.com/${RENDERER_REPOSITORY}.git" "$RENDERER_ROOT"
+git -C "$RENDERER_ROOT" fetch --no-tags origin "$RENDERER_COMMIT" --depth=1
+git -C "$RENDERER_ROOT" checkout --detach "$RENDERER_COMMIT"
+[[ "$(git -C "$RENDERER_ROOT" rev-parse HEAD)" == "$RENDERER_COMMIT" ]]
+```
+
+Keep this same exact checkout for every prepare/compile call in this qualification attempt.
+
+- [ ] **Step 4: Run the existing fresh real-day Visual Intelligence prepare phase**
+
+```bash
+python scripts/run_daily_renderer_closure_v12.py \
+  --phase prepare \
+  --date "$QUALIFICATION_EPISODE_DATE" \
+  --repo-root . \
+  --renderer-root "$RENDERER_ROOT"
 ```
 
 Expected intentional result when Director selection is missing:
@@ -175,14 +228,18 @@ DECISION_REQUIRED / AUTHOR_VISUAL_INTELLIGENCE_DECISION
 
 This is not a production failure.
 
-- [ ] **Step 4: ChatGPT authors the Director decision from the exact emitted Candidate Catalog**
+- [ ] **Step 5: ChatGPT authors the Director decision from the exact emitted Candidate Catalog**
 
 No machine ranking/selection.
 
-- [ ] **Step 5: Run compile**
+- [ ] **Step 6: Run compile**
 
 ```bash
-python scripts/run_daily_renderer_closure_v12.py --phase compile --date "$QUALIFICATION_EPISODE_DATE" --repo-root . --renderer-root <same-exact-pinned-renderer-checkout>
+python scripts/run_daily_renderer_closure_v12.py \
+  --phase compile \
+  --date "$QUALIFICATION_EPISODE_DATE" \
+  --repo-root . \
+  --renderer-root "$RENDERER_ROOT"
 ```
 
 Expected intentional intermediate result:
@@ -191,9 +248,9 @@ Expected intentional intermediate result:
 REVIEW_REQUIRED
 ```
 
-- [ ] **Step 6: ChatGPT performs Critic review and writes the exact Critic decision**
+- [ ] **Step 7: ChatGPT performs Critic review and writes the exact Critic decision**
 
-- [ ] **Step 7: Re-run compile and require Visual Intelligence PASS**
+- [ ] **Step 8: Re-run the same compile command and require Visual Intelligence PASS**
 
 Do not create/merge a formal PREVIEW request before this PASS.
 
@@ -332,11 +389,11 @@ exactly one deterministic Final outcome published
 ## Task 7: Write the qualification report and make the pass/fail decision
 
 **Files:**
-- Create: `docs/reliability/qualifications/<resolved-date>-current-production.md`
+- Create at execution: the exact path stored in `QUALIFICATION_REPORT`
 
 - [ ] **Step 1: Fill every Evidence record field from actual runs/artifacts**
 
-Do not write `TBD` or infer SHAs from filenames.
+Do not write `TBD`, `TODO`, or infer SHAs from filenames.
 
 - [ ] **Step 2: Count manual infrastructure interventions**
 
@@ -357,11 +414,9 @@ The Final receipt must preserve the exact approved Preview identity, Renderer co
 
 - [ ] **Step 4: Commit only the evidence report after Final verification**
 
-Suggested commit:
-
 ```bash
-git add docs/reliability/qualifications/${QUALIFICATION_EPISODE_DATE}-current-production.md
-git commit -m "docs: record Current production real-day qualification"
+git add "$QUALIFICATION_REPORT"
+git commit -m "docs: record Current production real-day qualification ${QUALIFICATION_EPISODE_DATE}"
 ```
 
 ## Qualification decision
