@@ -1,49 +1,49 @@
 # Fresh Episode Current Production Qualification Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use `nasdaq-cafe-production-reliability` to coordinate verification. Use the existing `nasdaq-cafe-daily-production`, causal research, editorial, Visual Intelligence, and entertainment-critic authorities for episode semantics. Do not create a qualification-only production engine.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use `nasdaq-cafe-production-reliability` to coordinate verification. Use existing `nasdaq-cafe-daily-production`, causal research, editorial, Visual Intelligence, and entertainment-critic authorities for episode semantics. Do not create a qualification-only production engine.
 
-**Goal:** Prove on one genuinely fresh episode that the repaired Current architecture can travel from the real daily source package through Plot, Renderer Preview, explicit human approval, automatic runner readiness, and Final exactly once without infrastructure retry requests or 2026-08-17 special handling.
+**Goal:** Prove on one genuinely fresh episode that the repaired Current architecture can travel from real daily source through Plot, Renderer Preview, explicit human approval, automatic Final runner readiness, and Final exactly once without infrastructure retries or 2026-08-17 special handling.
 
-**Architecture:** Qualification uses the existing production path verbatim. It adds no production workflow. The selected episode is the first legitimate episode produced after Plans 1 and 2 are merged and protected; the reliability coordinator records evidence at every existing boundary and stops immediately on the first machine failure. Final remains prohibited until the user explicitly approves the actual Preview.
+**Architecture:** Use the existing Current production path verbatim. Add no production workflow. Record evidence at every existing boundary and stop immediately on the first new machine failure. Final remains prohibited until the user explicitly approves the actual Preview.
 
-**Tech Stack:** existing Nasdaq Cafe Current v1.2 CLI/workflows, GitHub Actions, Plot/Renderer immutable Artifacts, existing skills.
+**Required merge status:** `Nasdaq Cafe Required Merge Gate`
 
 **Spec:** `docs/reliability/plans/2026-09-02-current-production-reliability-closure-design.md`
 
-## Global Constraints
+## Preconditions and protected invariants
 
-- Plan 1 (Final V2 runner readiness) and Plan 2 (Required Main Merge Gates) must be complete before this qualification starts.
-- Use a real new daily source package whose filename contains the exact episode date; do not copy 2026-08-17 inputs or promote a historical artifact into a current fixture.
+- Plan 1 runner-readiness integration is merged and GREEN.
+- Plan 2 trusted merge status + active rulesets are installed in both repositories.
+- Use a real new daily source package; never copy 2026-08-17 or promote a historical real-day Artifact into the current fixture.
 - ChatGPT owns research/editorial/Visual Intelligence semantics; GitHub Actions remains mechanical.
-- `prepare` intentional pauses for Visual Source selection, Director, Critic, or human Preview review are PASS-like human/semantic boundaries, not machine failures.
-- Do not create new production request revisions merely because `prepare`/`compile` is waiting for a semantic decision.
-- Formal Preview request is merged only after Current Preview semantic readiness PASS.
-- Final request is created only after the user explicitly approves the actual Preview.
-- Qualification fails if normal Final requires a separate `codespace-wake-requests/*` change, any infrastructure `retry-*` Final request, or manual modification of immutable request/artifact bytes.
-- On any new first broken machine boundary, stop and return to `DIAGNOSE`; do not patch forward during the same qualification attempt.
+- `DECISION_REQUIRED`, `REVIEW_REQUIRED`, Visual Source selection, and human Preview review are intentional semantic/human pauses, not machine failures.
+- Do not create a new formal production request merely because one of those intentional pauses occurred.
+- Formal Preview request is merged only after semantic readiness PASS.
+- Final authorization/request is created only after explicit user approval of the actual Preview.
+- A normal Final that needs a separate `codespace-wake-requests/*`, manual Codespace start, or infrastructure `retry-*` Final request fails qualification.
+- On a new first broken machine boundary, stop and return to `DIAGNOSE`; do not patch forward and still call the same qualification PASS.
 
----
+## Verification gap
 
-**Verification gap:** Synthetic Exact Cross-Repo E2E intentionally proves contract behavior without making a historical real-day artifact the current fixture. The repaired architecture has one full real-day proof (2026-08-17), so date/content independence is not yet demonstrated.
+Synthetic Exact Cross-Repo E2E intentionally proves contract behavior without turning a historical real-day artifact into a current fixture. After the repairs, the only complete real-day Preview→Final proof is still 2026-08-17. This plan supplies the missing different-date/content proof.
 
-**Qualification boundary:** end-to-end Current production environment parity.
+## Episode selection inputs
 
-**Why existing tests cannot close this alone:** unit/contract/E2E tests do not exercise a new day's Collector evidence, newly authored semantic artifacts, actual GitHub Artifact transport, external TTS, sleeping/available Codespace lifecycle, and a new immutable Final fingerprint in one continuous real production lineage.
-
-## Episode selection rule and execution inputs
-
-At execution time choose the earliest real episode date produced after both reliability repair PRs are merged for which a complete non-empty daily source package exists and no prior Current production request for that date has entered Preview production.
-
-If the first candidate already has a production request, choose the next real episode; do not delete/reuse an old request to manufacture freshness.
-
-Before Task 2 begins, the executor must have two concrete values from the actual current episode context:
+At execution, choose the earliest legitimate real episode after Plans 1 and 2 are complete for which:
 
 ```text
-QUALIFICATION_EPISODE_DATE = exact selected YYYY-MM-DD date
-DAILY_SOURCE_PATH = exact filesystem/repository path to that selected real source package
+actual non-empty daily source package exists
+no formal Current Preview production request for that date has already entered production
 ```
 
-Export those concrete values in the execution shell, then immediately validate them:
+The executor must provide two concrete values from the actual current episode context:
+
+```text
+QUALIFICATION_EPISODE_DATE = selected YYYY-MM-DD
+DAILY_SOURCE_PATH = exact path to that real source package
+```
+
+Export the resolved values and validate:
 
 ```bash
 [[ "$QUALIFICATION_EPISODE_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
@@ -52,38 +52,39 @@ Export those concrete values in the execution shell, then immediately validate t
 export QUALIFICATION_REPORT="docs/reliability/qualifications/${QUALIFICATION_EPISODE_DATE}-current-production.md"
 ```
 
-The plan does not prescribe fictional sample values. If either value is unresolved, qualification has not started.
+If either value is unresolved, qualification has not started.
 
-## Expected no-retry lineage
+## Required no-retry lineage
 
 ```text
-real daily source
+real source package
 → Current semantic authoring
 → committed Semantic Freeze
 → PR-only prepare
 → Candidate Catalog
 → ChatGPT Director
-→ PR-only compile / REVIEW_REQUIRED
+→ compile / REVIEW_REQUIRED
 → ChatGPT Critic
-→ PR-only compile PASS
-→ ONE Plot PREVIEW request merge
+→ compile PASS
+→ ONE Plot PREVIEW request
 → ONE immutable Plot handoff/publication
-→ ONE Renderer Preview request merge
+→ ONE Renderer Preview request
 → ONE successful Preview
 → explicit user approval
-→ ONE Plot Final authorization request merge
-→ ONE Renderer Final request merge
+→ ONE Plot Final authorization request
+→ ONE Renderer Final request
 → Final V2 preflight
-→ automatic Codespace readiness inside Final V2
+→ Final V2 automatic Codespace readiness
 → ONE successful Final outcome
 ```
 
-## Evidence record
+## Evidence report contract
 
-The qualification report at `$QUALIFICATION_REPORT` must contain:
+`$QUALIFICATION_REPORT` must contain actual values for:
 
 ```text
 episode date
+source package path + SHA
 Plot PREVIEW request path + SHA
 Plot production run ID
 Plot handoff Artifact name/id/digest
@@ -91,6 +92,12 @@ Renderer Preview request path + SHA
 Renderer Preview run ID
 Preview MP4 SHA
 preview_identity.json SHA
+RenderSpec SHA
+TTS input SHA
+Scenes 1-4 audio SHA
+Scenes 5-9 audio SHA
+Renderer commit
+Registry SHA
 human approval reference
 Plot Final authorization request path + SHA
 Plot Final authorization run ID/artifact name
@@ -102,88 +109,41 @@ Final outcome Artifact id/digest
 manual wake request count
 Preview retry request count
 Final retry request count
-first broken machine boundary (must be none for PASS)
+first broken machine boundary
 intentional semantic/human pauses encountered
 qualification status PASS/FAIL
 ```
 
-No secrets or token values.
+No `TBD`, inferred SHA, secret, or token value.
 
-## Task 1: Preconditions — prove repaired architecture and repository policy are live
+## Task 1: Verify architecture preconditions
 
-**Files:** no production file changes.
+- [ ] Renderer `main` contains `scripts/wake_repository_codespace.py`.
+- [ ] Renderer Final V2 contains `wake-codespace` after preflight and Final depends on successful wake.
+- [ ] Standalone Wake uses the same shared helper.
+- [ ] Plot and Renderer each have active `current-production-main-v1` ruleset targeting `main`.
+- [ ] Both rulesets require commit-status context `Nasdaq Cafe Required Merge Gate`.
+- [ ] Current main heads have no unresolved known contract failure.
 
-- [ ] **Step 1: Verify Renderer Final V2 runner-readiness source is on `main`**
+Verify rulesets through GitHub API before starting real production. If any precondition fails, stop.
 
-Inspect Renderer `main` and require:
+## Task 2: Bind the fresh real source
 
-```text
-scripts/wake-repository-codespace.py exists
-.github/workflows/nasdaq-cafe-final-v2.yml contains wake-codespace
-Final job needs [preflight, wake-codespace]
-standalone Wake also calls the shared helper
-```
-
-- [ ] **Step 2: Verify both `main` rulesets are active**
-
-Read:
-
-```text
-GET /repos/saienjoy0/nasdaq-plot-creator-/rulesets
-GET /repos/saienjoy0/saienjoy0-nasdaq-cafe-remotion/rulesets
-```
-
-Require active `current-production-main-v1` in both repositories and the exact observed Required Merge Gate check context.
-
-- [ ] **Step 3: Verify baseline CI on both current main heads**
-
-Renderer relevant CI and Plot relevant CI must have no known failing current contract before the new episode starts. A stale historical failure is not blocking if a newer exact-head run is green.
-
-If any precondition fails, qualification does not start.
-
-## Task 2: Select and bind the genuinely fresh source package
-
-**Files:** normal episode input/authoring files only, as produced by the existing daily process.
-
-- [ ] **Step 1: Set `QUALIFICATION_EPISODE_DATE` and `DAILY_SOURCE_PATH` from the actual selected episode and source package**
-
-Do not copy values from 2026-08-17 or another historical attempt.
-
-- [ ] **Step 2: Confirm the source package is real and non-empty**
-
-Run:
-
-```bash
-[[ "$QUALIFICATION_EPISODE_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
-[[ -s "$DAILY_SOURCE_PATH" ]]
-[[ "$(basename "$DAILY_SOURCE_PATH")" == *"$QUALIFICATION_EPISODE_DATE"* ]]
-```
-
-The contents must be the day's actual Collector/source package, not copied fixture data.
-
-- [ ] **Step 3: Record the source-package SHA before authoring**
+- [ ] Resolve/export `QUALIFICATION_EPISODE_DATE` and `DAILY_SOURCE_PATH` using the selection rule.
+- [ ] Verify source is non-empty and date-bound.
+- [ ] Record:
 
 ```bash
 sha256sum "$DAILY_SOURCE_PATH"
 ```
 
-Record the exact path and SHA in `$QUALIFICATION_REPORT`.
+in `$QUALIFICATION_REPORT` before semantic authoring.
 
-## Task 3: Complete semantic authoring through Visual Intelligence PASS without request churn
+## Task 3: Complete Current semantics and Visual Intelligence PASS without request churn
 
-**Files:** the normal daily Current artifacts defined by `nasdaq-cafe-daily-production` and project instructions.
-
-- [ ] **Step 1: Complete causal research and canonical authoring**
-
-Use current project authority ordering. Produce evidence-grounded Expected / Actual / Gap, timing, causal spine, 9 Scenes, fox narration, counterevidence, 04 review, and final episode package without changing machine contracts for convenience.
-
-- [ ] **Step 2: Create/verify Current Semantic Freeze before production**
-
-Production later verifies the committed Freeze; GitHub Actions must not create it.
-
-- [ ] **Step 3: Resolve and checkout the exact Renderer binding once**
-
-From Plot repository root:
+- [ ] Complete causal research and canonical authoring under current project authority: Expected / Actual / Gap, timing, causal spine, counterevidence, 9 Scenes, fox narration, 04 review, final episode package.
+- [ ] Create/verify the committed Current Semantic Freeze before formal production.
+- [ ] Resolve exact Renderer binding once:
 
 ```bash
 export RENDERER_REPOSITORY="$(python3 - <<'PY'
@@ -208,9 +168,9 @@ git -C "$RENDERER_ROOT" checkout --detach "$RENDERER_COMMIT"
 [[ "$(git -C "$RENDERER_ROOT" rev-parse HEAD)" == "$RENDERER_COMMIT" ]]
 ```
 
-Keep this same exact checkout for every prepare/compile call in this qualification attempt.
+Keep this same checkout through prepare/compile.
 
-- [ ] **Step 4: Run the existing fresh real-day Visual Intelligence prepare phase**
+- [ ] Run prepare:
 
 ```bash
 python scripts/run_daily_renderer_closure_v12.py \
@@ -220,184 +180,78 @@ python scripts/run_daily_renderer_closure_v12.py \
   --renderer-root "$RENDERER_ROOT"
 ```
 
-Expected intentional result when Director selection is missing:
+If Director is absent, expected pause is `DECISION_REQUIRED / AUTHOR_VISUAL_INTELLIGENCE_DECISION`.
+
+- [ ] ChatGPT writes Director decision from the exact emitted Candidate Catalog.
+- [ ] Run compile using the same date/root/Renderer. Expected intermediate pause is `REVIEW_REQUIRED`.
+- [ ] ChatGPT performs Critic review and writes the exact Critic decision.
+- [ ] Re-run compile and require Visual Intelligence PASS.
+
+Do not create formal PREVIEW request before this PASS.
+
+## Task 4: Prove one Plot Preview request and immutable handoff
+
+- [ ] Open one formal Plot PREVIEW PR after readiness PASS only.
+- [ ] Require PR-head commit status `Nasdaq Cafe Required Merge Gate = success` before merge.
+- [ ] Merge exactly one formal request; record path/SHA.
+- [ ] Require main production:
 
 ```text
-DECISION_REQUIRED / AUTHOR_VISUAL_INTELLIGENCE_DECISION
-```
-
-This is not a production failure.
-
-- [ ] **Step 5: ChatGPT authors the Director decision from the exact emitted Candidate Catalog**
-
-No machine ranking/selection.
-
-- [ ] **Step 6: Run compile**
-
-```bash
-python scripts/run_daily_renderer_closure_v12.py \
-  --phase compile \
-  --date "$QUALIFICATION_EPISODE_DATE" \
-  --repo-root . \
-  --renderer-root "$RENDERER_ROOT"
-```
-
-Expected intentional intermediate result:
-
-```text
-REVIEW_REQUIRED
-```
-
-- [ ] **Step 7: ChatGPT performs Critic review and writes the exact Critic decision**
-
-- [ ] **Step 8: Re-run the same compile command and require Visual Intelligence PASS**
-
-Do not create/merge a formal PREVIEW request before this PASS.
-
-## Task 4: Produce exactly one formal Plot Preview request and handoff
-
-**Files:** exactly the normal Current formal Preview request plus already-approved semantic artifacts.
-
-- [ ] **Step 1: Open the formal Plot PREVIEW PR only after readiness PASS**
-
-The PR must not create a new semantic decision. It references the exact committed Semantic Freeze and current approved state.
-
-- [ ] **Step 2: Require Plot `Required Merge Gate` success before merge**
-
-The gate must in turn observe all workflows required by the Plot policy for the changed paths, including `Validate Daily Production Package` and semantic readiness where applicable.
-
-- [ ] **Step 3: Merge exactly one formal request**
-
-Record request path and SHA. If a second request revision is needed because a machine failure appears, qualification becomes FAIL and returns to Reliability DIAGNOSE; do not continue counting retries until Final eventually works.
-
-- [ ] **Step 4: Verify Plot main production**
-
-Require:
-
-```text
-canonical Current facade used
-compile-only production PASS
+canonical Current facade
+compile-only PASS
 one immutable handoff Artifact
-Preview request publication receipt PASS
-handoff manifest binds exact Renderer commit/contract/Registry
+Preview publication receipt PASS
+handoff binds exact Renderer commit/contract/Registry
 ```
 
-Record Plot run ID, Artifact ID/name/digest and request SHA.
+Record Plot run/artifact identities.
 
-## Task 5: Produce exactly one Renderer Preview and stop for human review
+If infrastructure failure requires a second formal Preview request, qualification is FAIL and returns to Reliability DIAGNOSE.
 
-- [ ] **Step 1: Transfer the exact Plot-published Renderer Preview request bytes**
+## Task 5: Prove one Renderer Preview and stop for human review
 
-Create a Renderer request-only PR containing exactly one new file at the target path emitted by Plot. Do not reconstruct fields manually.
+- [ ] Transfer Plot-published Renderer Preview request bytes exactly; do not reconstruct fields.
+- [ ] Open one request-only Renderer PR.
+- [ ] Require `Nasdaq Cafe Required Merge Gate = success`; for request-only classification the trusted gate must wait for `Current Request Publication Gate` and not unrelated CI.
+- [ ] Merge and require official Current Preview success through request identity, exact Renderer checkout, exact Plot handoff restore, media/tooling, TTS, Remotion, identity capture, Artifact upload, and terminal outcome.
+- [ ] Download/inspect Preview Artifact and record exact Preview MP4/identity/RenderSpec/TTS/Renderer/Registry SHAs.
+- [ ] **STOP for actual user visual review.** Do not authorize Final automatically.
 
-- [ ] **Step 2: Require Renderer `Required Merge Gate` success**
+If the user rejects Preview for semantic/visual reasons, return through the owning semantic process; do not label that as machine reliability success.
 
-For request-only PR it must require `Current Request Publication Gate` and nothing unrelated.
+## Task 6: After explicit approval, prove one self-starting Final
 
-- [ ] **Step 3: Merge and require Preview success**
-
-Require the official Current Preview workflow to pass:
-
-```text
-request identity
-exact Renderer checkout
-exact Plot handoff restore
-media/tooling
-TTS
-Remotion Preview
-Preview identity capture
-Preview Artifact upload
-terminal Preview outcome
-```
-
-- [ ] **Step 4: Verify Preview Artifact bytes**
-
-Record:
-
-```text
-Preview MP4 SHA-256
-preview_identity.json SHA-256
-RenderSpec SHA-256
-TTS input SHA-256
-Scenes 1-4 audio SHA-256
-Scenes 5-9 audio SHA-256
-Renderer commit
-Registry SHA-256
-```
-
-- [ ] **Step 5: STOP for actual user visual review**
-
-Do not authorize or request Final automatically.
-
-If the user rejects Preview for editorial/visual reasons, that is not a reliability PASS; fix semantics through their owning process and restart qualification with the resulting legitimate production lineage.
-
-## Task 6: After explicit approval, prove Final is single-request and self-starting
-
-- [ ] **Step 1: Record the user's explicit approval against the exact Preview identity**
-
-Use existing human Preview review/Final authorization builders. Do not fabricate approval.
-
-- [ ] **Step 2: Create exactly one Plot `final-authorization-requests-v1/*.json` request**
-
-Require Plot `Required Merge Gate` + `ChatGPT Daily Final Authorization` success, then merge.
-
-- [ ] **Step 3: Transfer the exact published Renderer Final request bytes**
-
-Create exactly one Renderer `final-render-requests-v2/*.json` PR. File name must NOT contain `retry-`.
-
-- [ ] **Step 4: Require Renderer `Required Merge Gate` + request publication validation, then merge**
-
-- [ ] **Step 5: Observe Final V2 runner readiness**
-
-Normal success must show:
+- [ ] Record user approval against the exact Preview identity using existing human-review/Final authorization builders.
+- [ ] Create exactly one Plot `final-authorization-requests-v1/*.json` PR.
+- [ ] Require `Nasdaq Cafe Required Merge Gate = success`; trusted gate must wait for `ChatGPT Daily Final Authorization`.
+- [ ] Merge and take the exact published Renderer Final request bytes.
+- [ ] Create exactly one Renderer `final-render-requests-v2/*.json` PR; filename must not contain `retry-`.
+- [ ] Require `Nasdaq Cafe Required Merge Gate = success`; merge once.
+- [ ] Observe Final V2:
 
 ```text
 preflight PASS
 new Final required
 wake-codespace PASS inside Current Final V2
 Codespace state Available
-self-hosted Final job starts without a separate wake request commit
+self-hosted Final starts without separate Wake request commit
 ```
 
-The following immediately fail qualification:
+Immediate qualification failures:
 
 ```text
-creation of codespace-wake-requests/* for normal Final
+codespace-wake-requests/* created for normal Final
 manual Codespace start outside Final V2
-creation of a retry-* Final request for infrastructure/control-plane reasons
-editing approved Preview/Final request bytes
+retry-* Final request created for infrastructure/control-plane failure
+approved Preview/Final request bytes manually edited
 ```
 
-- [ ] **Step 6: Require complete Final success**
+- [ ] Require Final success through Preview SHA verification, Plot authorization verification, exact approved Renderer checkout, approved-byte restore, runtime-asset materialization, TTS cache re-verification with zero misses, render, full MP4 inspection/decode, immutable receipt, production Artifact, and exactly one deterministic Final outcome.
 
-Require:
+## Task 7: Finalize qualification evidence
 
-```text
-approved Preview SHA verified
-Plot Final authorization bundle verified
-exact approved Renderer checkout verified
-approved production bytes restored
-runtime assets materialized
-cached TTS bytes reverified with 0 misses
-approved Renderer Current Final procedure success
-Final MP4 inspected/decoded
-immutable receipt written
-Final production Artifact uploaded
-exactly one deterministic Final outcome published
-```
-
-## Task 7: Write the qualification report and make the pass/fail decision
-
-**Files:**
-- Create at execution: the exact file path stored in `$QUALIFICATION_REPORT`
-
-- [ ] **Step 1: Fill every Evidence record field from actual runs/artifacts**
-
-Do not write `TBD`, `TODO`, or infer SHAs from filenames.
-
-- [ ] **Step 2: Count manual infrastructure interventions**
-
-PASS requires:
+- [ ] Fill every evidence field in `$QUALIFICATION_REPORT` from actual GitHub runs/artifacts/files.
+- [ ] Count interventions. PASS requires:
 
 ```text
 manual wake request count = 0
@@ -406,13 +260,10 @@ Final retry request count = 0
 first broken machine boundary = none
 ```
 
-Intentional semantic/human pauses may be non-zero and must be listed separately.
+Intentional semantic/human pauses are listed separately and may be non-zero.
 
-- [ ] **Step 3: Verify lineage consistency**
-
-The Final receipt must preserve the exact approved Preview identity, Renderer commit, RenderSpec SHA, TTS SHAs, and Plot Final authorization SHA recorded earlier.
-
-- [ ] **Step 4: Commit only the evidence report after Final verification**
+- [ ] Verify Final receipt preserves exact approved Preview identity, Renderer commit, RenderSpec SHA, TTS SHAs, and Plot Final authorization SHA.
+- [ ] Commit the evidence report only after Final verification:
 
 ```bash
 git add "$QUALIFICATION_REPORT"
@@ -423,11 +274,11 @@ git commit -m "docs: record Current production real-day qualification ${QUALIFIC
 
 ### PASS
 
-Call the architecture “daily-production qualified” only if Tasks 1–7 complete with no machine-boundary retry and all protected invariants preserved.
+Call the architecture `daily-production qualified` only if Tasks 1–7 complete with zero machine-boundary retries and all protected invariants preserved.
 
 ### FAIL
 
-If any new first broken machine boundary appears:
+On any new first broken machine boundary:
 
 ```text
 status = FAIL
@@ -436,4 +287,4 @@ return to nasdaq-cafe-production-reliability DIAGNOSE
 stop downstream qualification
 ```
 
-Do not patch and continue the same run until the report says PASS; a repair creates a new qualification attempt on the next legitimate fresh episode unless the failure can be re-run on the exact unchanged request without creating a new immutable production identity.
+A repair produces a new qualification attempt on the next legitimate fresh episode, unless the failure can be re-run on the exact unchanged immutable request without creating a new production identity.
