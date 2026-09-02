@@ -2,6 +2,7 @@
   "contractVersion": "1.0.0",
   "protectedBranch": "main",
   "statusContext": "Nasdaq Cafe Required Merge Gate",
+  "selfVerificationMarker": "DISPOSABLE_2026-09-02",
   "docsOnlyPatterns": [
     "docs/**",
     "README.md",
