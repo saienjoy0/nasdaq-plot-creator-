@@ -12,30 +12,15 @@ on:
       - "episodes/**"
       - "render-specs/**"
       - "daily-assets/**"
+      - "semantic-freezes/**"
+      - "verification/**"
+      - "production-bundles/**"
       - "contracts/**"
-      - "scripts/assemble_chatgpt_daily_authoring_parts.py"
-      - "scripts/materialize_chatgpt_daily_authoring.py"
-      - "scripts/viewer_surface_projection.py"
-      - "scripts/fixup_chatgpt_daily_materialization.py"
-      - "scripts/validate_chatgpt_daily_authoring_closure.py"
-      - "scripts/run_daily_renderer_closure.py"
-      - "scripts/materialize_daily_episode.py"
-      - "scripts/materialize_renderer_sources.py"
-      - "scripts/materialize_financial_contract_1_0.py"
-      - "scripts/finalize_renderer_package*.py"
-      - "scripts/remotion_*.py"
-      - "scripts/visual_director_bridge.py"
-      - "scripts/run_daily_production_hardened.py"
-      - "scripts/current_preview_request_readiness_v12.py"
-      - "scripts/story-engine/**"
-      - "tests/daily-production-hardening/**"
-      - "tests/story-engine-integration/**"
-      - "tests/remotion-compat/**"
-      - "tests/viewer-surface/**"
-      - "tests/visual-source-baseline/**"
-      - "tests/visual-source/**"
-      - "tests/current-spine/test_current_preview_request_readiness.py"
-      - ".github/workflows/validate-daily-production-package.yml"
+      - "scripts/**"
+      - "tests/**"
+      - ".github/workflows/**"
+      - "skills/**"
+      - "AGENTS.md"
   workflow_dispatch:
     inputs:
       episode_date:
@@ -226,6 +211,7 @@ jobs:
         run: |
           python tests/remotion-compat/test_remotion_compat.py
           python tests/daily-production-hardening/test_daily_production_hardening.py
+          python tests/current-spine/test_required_merge_gate.py
           python -m pytest -q \
             tests/story-engine-integration \
             tests/visual-source-baseline \

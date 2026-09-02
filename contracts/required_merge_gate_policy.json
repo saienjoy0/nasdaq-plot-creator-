@@ -1,0 +1,124 @@
+{
+  "contractVersion": "1.0.0",
+  "protectedBranch": "main",
+  "statusContext": "Nasdaq Cafe Required Merge Gate",
+  "docsOnlyPatterns": [
+    "docs/**",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "requestOnlyGroups": [
+    {
+      "name": "final-authorization",
+      "patterns": [
+        "final-authorization-requests-v1/*.json"
+      ],
+      "workflows": [
+        "ChatGPT Daily Final Authorization"
+      ]
+    }
+  ],
+  "workflowGroups": [
+    {
+      "name": "daily-production-baseline",
+      "patterns": [
+        "daily-production-requests/**",
+        "daily-authoring-parts/**",
+        "daily-authoring/**",
+        "daily-inputs/**",
+        "working/**",
+        "research/**",
+        "episodes/**",
+        "render-specs/**",
+        "daily-assets/**",
+        "semantic-freezes/**",
+        "verification/**",
+        "production-bundles/**",
+        "scripts/**",
+        "tests/**",
+        "contracts/**",
+        ".github/workflows/**",
+        "skills/**",
+        "AGENTS.md"
+      ],
+      "workflows": [
+        "Validate Daily Production Package"
+      ]
+    },
+    {
+      "name": "renderer-binding",
+      "patterns": [
+        "contracts/renderer_binding.json"
+      ],
+      "workflows": [
+        "Current Spine Exact Cross-Repo E2E",
+        "Current Renderer Runtime Qualification Handoff",
+        "Visual Intelligence v1.2"
+      ]
+    },
+    {
+      "name": "current-cross-repo",
+      "patterns": [
+        "scripts/run_daily_production_v12.py",
+        "scripts/run_daily_renderer_closure_v12.py",
+        "scripts/run_semantic_frozen_renderer_closure_v12.py",
+        "scripts/current_production_facade_v12.py",
+        "tests/current-spine/**",
+        "tests/editorial-semantic-boundary/**",
+        "tests/remotion-compat/run_visual_intelligence_v12_cross_repo.py",
+        ".github/workflows/current-spine-exact-cross-repo-e2e.yml"
+      ],
+      "workflows": [
+        "Current Spine Exact Cross-Repo E2E"
+      ]
+    },
+    {
+      "name": "runtime-qualification",
+      "patterns": [
+        "contracts/renderer_binding.json",
+        "contracts/visual_grammar_renderer_compatibility.json",
+        "contracts/chatgpt_daily_authoring_v2.schema.json",
+        "tests/current-spine/current_authoring_runtime_fixture.py",
+        "tests/current-spine/test_current_authoring_materializer_parity.py",
+        "tests/current-spine/run_exact_cross_repo_current_e2e.py",
+        "tests/current-spine/test_current_preview_final_request_builders.py",
+        "tests/current-spine/test_current_production_facade_contract.py",
+        "tests/remotion-compat/run_visual_intelligence_v12_cross_repo.py",
+        "tests/remotion-compat/test_visual_director_handoff.py",
+        "scripts/build_current_preview_request_v4.py",
+        "scripts/build_current_final_request_v2.py",
+        ".github/workflows/current-renderer-runtime-qualification-handoff.yml"
+      ],
+      "workflows": [
+        "Current Renderer Runtime Qualification Handoff"
+      ]
+    },
+    {
+      "name": "preview-final-builders",
+      "patterns": [
+        "scripts/build_current_preview_request_v4.py",
+        "scripts/build_current_final_request_v2.py",
+        "tests/current-spine/test_current_preview_final_request_builders.py",
+        ".github/workflows/current-preview-final-request-builders-ci.yml"
+      ],
+      "workflows": [
+        "Current Preview Final Request Builders CI"
+      ]
+    },
+    {
+      "name": "visual-intelligence",
+      "patterns": [
+        "scripts/visual_intelligence_v12.py",
+        "scripts/visual-intelligence/**",
+        "tests/visual-intelligence/**",
+        "tests/remotion-compat/run_visual_intelligence_v12_cross_repo.py",
+        "working/*/visual-intelligence/**",
+        ".github/workflows/visual-intelligence-v1-2.yml"
+      ],
+      "workflows": [
+        "Visual Intelligence v1.2"
+      ]
+    }
+  ],
+  "unclassifiedNonDocs": "FAIL"
+}
