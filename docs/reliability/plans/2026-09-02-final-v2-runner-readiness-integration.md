@@ -361,8 +361,8 @@ Do not change any Final render/restore/TTS/receipt steps.
 
 ```bash
 python3 scripts/test_final_v2_runner_readiness.py
-python3 scripts/test_current_preview_final_identity_contract.py
-python3 scripts/test_final_control_plane_renderer_boundary.py
+python3 scripts/test-current-preview-final-identity-contract.py
+python3 scripts/test-final-control-plane-renderer-boundary.py
 python3 scripts/test_wake_repository_codespace.py
 python3 scripts/test_codespace_wake_gateway.py
 npm ci
