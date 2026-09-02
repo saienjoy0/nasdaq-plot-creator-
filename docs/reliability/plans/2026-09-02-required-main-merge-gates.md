@@ -4,7 +4,7 @@
 
 **Goal:** Make Plot and Renderer `main` fail closed at repository level so request-only PRs, implementation PRs, and docs-only PRs cannot bypass the CI evidence appropriate to their change class, while avoiding GitHub path-filter required-check deadlocks.
 
-**Architecture:** Add one always-on `Required Merge Gate` workflow to each repository. A repository-specific policy JSON maps changed paths to existing authoritative workflow names; the gate polls GitHub Actions runs for the PR head SHA and requires all expected workflows to finish successfully. Unclassified non-document changes fail closed. After the gate has proven a stable check context, install an active repository ruleset on `main` requiring PRs and only that always-on gate; keep existing path-filtered workflows as the actual test owners.
+**Architecture:** Add one always-on `Required Merge Gate` workflow to each repository. A repository-specific policy JSON maps changed paths to existing authoritative workflow names; the gate polls GitHub Actions runs for the PR head SHA and requires all expected workflows to finish successfully. Unclassified non-document changes fail closed. After the gate has proven a stable check context, install an active repository ruleset on `main` requiring PRs plus only that always-on gate; existing path-filtered workflows remain the actual test owners.
 
 **Tech Stack:** GitHub Actions, Python 3.12 stdlib, GitHub Actions REST API, GitHub repository rulesets.
 
@@ -14,17 +14,17 @@
 
 - Do not make any path-filtered workflow itself a required repository status check.
 - Existing workflows remain the owners of their tests; the new gate observes their result and must not reimplement production validation logic.
-- Docs-only PRs may pass with gate-local syntax/diff hygiene only.
+- Docs-only PRs may pass with gate-local diff hygiene only.
 - Request-only PRs must still prove exactly-one append-only request through the existing request workflow.
 - Any non-doc change that matches no policy group must fail `UNCLASSIFIED_CHANGE`, not silently pass.
 - Direct pushes, force pushes, and branch deletion on `main` must be blocked after rollout.
 - No ruleset bypass actors are configured for routine use.
-- Required approving review count stays `0` so the single-owner repository can continue using PRs without requiring an artificial second reviewer; PR + required status check remains mandatory.
-- Repository protection configuration is applied only after the gate succeeds on a test PR in each repository.
+- Required approving review count stays `0`; PR + required status check remains mandatory.
+- Repository protection is applied only after the gate succeeds on a real test PR in each repository.
 
 ---
 
-**Root cause:** Source-level PR gates are not repository-enforced because both `main` branches currently have no active branch protection/ruleset, so direct updates or a merge that ignores failed optional checks can bypass the intended reliability contract.
+**Root cause:** Source-level PR gates are not repository-enforced because both `main` branches currently have no active protection/ruleset, so direct updates or a merge that ignores failed optional checks can bypass the intended reliability contract.
 
 **First broken boundary:** repository merge control / `GITHUB_ACTIONS` policy boundary.
 
@@ -34,7 +34,7 @@
 
 ## GitHub behavior that constrains the design
 
-GitHub documents that when a workflow is skipped by `paths`, `branches`, or commit-message filtering, a required check can remain Pending and block merging. Therefore the current path-filtered workflows MUST NOT be required directly. The required check must come from a workflow that runs on every PR to `main`.
+GitHub documents that when a workflow is skipped by `paths`, `branches`, or commit-message filtering, a required check can remain Pending and block merging. Therefore current path-filtered workflows MUST NOT be required directly. The required check must come from a workflow that runs on every PR to `main`.
 
 ## Current authoritative workflows to preserve
 
@@ -68,12 +68,13 @@ I think the merge-control gap is caused by repository policy having no stable al
 
 | File | Action | Responsibility |
 |---|---|---|
-| `contracts/required_merge_gate_policy.json` | create | change-class → expected workflow names; docs/request/core mappings |
+| `contracts/required_merge_gate_policy.json` | create | change-class → expected workflow names |
 | `scripts/required_merge_gate.py` | create | classify changed files, poll Actions runs for exact head SHA, fail closed |
 | `scripts/test_required_merge_gate.py` | create | pure regression tests for classification and workflow-result evaluation |
 | `.github/workflows/required-merge-gate.yml` | create | always-on PR workflow that invokes policy checker |
-| `.github/workflows/visual-story-engine-ci.yml` | modify only if needed | broaden baseline path coverage so every non-doc/non-request Renderer code change has at least one authoritative workflow |
-| `.github/workflows/current-preview-final-identity-ci.yml` | modify | include gate-policy source in identity regression when Final/Preview control-plane mapping changes |
+| `.github/workflows/visual-story-engine-ci.yml` | modify | broaden baseline trigger to all Renderer source/control-plane changes |
+| `.github/workflows/visual-story-media-ci.yml` | modify | explicitly cover all media-sensitive paths named in policy |
+| `.github/workflows/current-preview-final-identity-ci.yml` | modify | include Required Merge Gate policy/checker changes in Current control-plane CI |
 
 ### Plot repository
 
@@ -83,12 +84,12 @@ I think the merge-control gap is caused by repository policy having no stable al
 | `scripts/required_merge_gate.py` | create | same interface as Renderer, Plot-specific policy data |
 | `tests/current-spine/test_required_merge_gate.py` | create | Plot policy/classification regression |
 | `.github/workflows/required-merge-gate.yml` | create | always-on PR workflow |
-| `.github/workflows/validate-daily-production-package.yml` | modify | broaden baseline code-path trigger to cover previously unclassified `scripts/**`, `tests/**`, `contracts/**`, `.github/workflows/**`, `skills/**` changes |
+| `.github/workflows/validate-daily-production-package.yml` | modify | make baseline validation trigger on every Plot source/test/contract/workflow/skill change |
 | `docs/reliability/repository-protection-policy.md` | create | exact ruleset names/check contexts/verification evidence after rollout |
 
 ## Shared policy contract
 
-Both repositories use the same JSON schema shape, with repository-specific patterns:
+Both repositories use the same JSON shape, with repository-specific patterns:
 
 ```json
 {
@@ -102,7 +103,7 @@ Both repositories use the same JSON schema shape, with repository-specific patte
 }
 ```
 
-Each `requestOnlyGroups[]` object contains:
+A request-only group has this exact shape:
 
 ```json
 {
@@ -113,7 +114,7 @@ Each `requestOnlyGroups[]` object contains:
 }
 ```
 
-Each `workflowGroups[]` object contains:
+A normal workflow group has this exact shape:
 
 ```json
 {
@@ -125,17 +126,13 @@ Each `workflowGroups[]` object contains:
 
 A changed path may match multiple workflow groups; expected workflow names are the set union.
 
-## Task 1: RED — prove unprotected/path-filtered CI cannot be used directly as the required contract
+## Task 1: RED — define classification and exact-head workflow-result behavior
 
 **Files:**
 - Create Renderer `scripts/test_required_merge_gate.py`
 - Create Plot `tests/current-spine/test_required_merge_gate.py`
 
-**Interfaces:** tests initially expect missing `contracts/required_merge_gate_policy.json` and `scripts/required_merge_gate.py`.
-
-- [ ] **Step 1: Add pure policy test fixtures**
-
-Each repository test creates temporary changed-file sets and asserts these behaviors through functions that will later be implemented:
+**Interfaces:**
 
 ```python
 classify_changes(policy, [("A", "path")]) -> {
@@ -146,32 +143,42 @@ classify_changes(policy, [("A", "path")]) -> {
 evaluate_workflow_runs(expected, runs, head_sha) -> None
 ```
 
+- [ ] **Step 1: Write Renderer test cases**
+
 Required cases:
 
 ```text
-Renderer one Preview request added -> REQUEST_ONLY + Current Request Publication Gate
-Renderer one Final request added -> REQUEST_ONLY + Current Request Publication Gate
-Renderer request + any second file -> FAIL mixed-request PR
-Renderer Final control-plane file -> CODE + Current Preview Final Identity CI
-Renderer src/media file -> CODE + Visual Story Engine CI and Visual Story Media CI
-Renderer unknown non-doc file -> UNCLASSIFIED_CHANGE
-Renderer docs-only -> DOCS_ONLY + no external workflow
-
-Plot one final-authorization request added -> REQUEST_ONLY + ChatGPT Daily Final Authorization
-Plot daily-production request -> CODE/REQUEST class + Validate Daily Production Package
-Plot renderer_binding.json -> Validate Daily Production Package + Current Spine Exact Cross-Repo E2E + Current Renderer Runtime Qualification Handoff + Visual Intelligence v1.2
-Plot Final builder script -> Validate Daily Production Package + Current Preview Final Request Builders CI + Current Renderer Runtime Qualification Handoff
-Plot unknown non-doc file -> UNCLASSIFIED_CHANGE
-Plot docs-only -> DOCS_ONLY
-
-workflow run for wrong head SHA -> ignored
-expected workflow missing -> fail
-expected workflow queued/in_progress -> wait/not-success state
-expected workflow conclusion failure/cancelled/timed_out -> fail
-all expected workflow runs for exact head SHA success -> pass
+one handoff-preview-requests-v4 file added -> REQUEST_ONLY + Current Request Publication Gate
+one final-render-requests-v2 file added -> REQUEST_ONLY + Current Request Publication Gate
+request file + any second file -> MIXED_REQUEST_PR
+Final/Preview control-plane path -> CODE + Current Preview Final Identity CI + Visual Story Engine CI
+src/** -> CODE + Visual Story Engine CI + Visual Story Media CI
+public/** or assets/** -> CODE + Visual Story Media CI
+unknown non-doc path -> UNCLASSIFIED_CHANGE
+docs-only -> DOCS_ONLY + no external workflow
+wrong head SHA run -> ignored
+missing expected workflow -> failure
+queued/in_progress expected workflow -> waiting state
+failure/cancelled/timed_out expected workflow -> failure
+all expected exact-head runs success -> pass
 ```
 
-- [ ] **Step 2: Run RED**
+- [ ] **Step 2: Write Plot test cases**
+
+Required cases:
+
+```text
+one final-authorization-requests-v1 file added -> REQUEST_ONLY + ChatGPT Daily Final Authorization
+daily-production-requests/** -> CODE + Validate Daily Production Package
+contracts/renderer_binding.json -> Validate Daily Production Package + Current Spine Exact Cross-Repo E2E + Current Renderer Runtime Qualification Handoff + Visual Intelligence v1.2
+scripts/build_current_final_request_v2.py -> Validate Daily Production Package + Current Preview Final Request Builders CI + Current Renderer Runtime Qualification Handoff
+scripts/publish_current_final_authorization_v1.py -> Validate Daily Production Package + Current Preview Final Request Builders CI
+Visual Intelligence script/test path -> Validate Daily Production Package + Visual Intelligence v1.2
+unknown non-doc path -> UNCLASSIFIED_CHANGE
+docs-only -> DOCS_ONLY
+```
+
+- [ ] **Step 3: Run RED**
 
 Renderer:
 
@@ -185,9 +192,9 @@ Plot:
 PYTHONPATH=scripts python3 tests/current-spine/test_required_merge_gate.py
 ```
 
-Expected: import/file-not-found failure because the gate/policy do not exist.
+Expected: import/file-not-found failure because policy/checker do not exist.
 
-## Task 2: Implement the policy-driven checker in Renderer
+## Task 2: Implement the shared checker contract in Renderer
 
 **Files:**
 - Create Renderer `contracts/required_merge_gate_policy.json`
@@ -204,64 +211,98 @@ evaluate_workflow_runs(expected: set[str], runs: list[dict], head_sha: str) -> d
 poll_expected_workflows(repo: str, head_sha: str, expected: set[str], token: str, timeout_seconds=2700, poll_seconds=10) -> dict
 ```
 
-CLI:
+CLI consumes these required arguments:
 
 ```text
-python3 scripts/required_merge_gate.py \
-  --policy contracts/required_merge_gate_policy.json \
-  --base-sha <base> \
-  --head-sha <head> \
-  --repository <owner/repo>
+--policy
+--base-sha
+--head-sha
+--repository
 ```
 
-The CLI obtains changed paths with `git diff --name-status BASE HEAD`, reads `GITHUB_TOKEN`, polls:
+The workflow supplies them from `github.event.pull_request.base.sha`, `github.event.pull_request.head.sha`, and `GITHUB_REPOSITORY`; no literal sample SHAs are embedded in source.
+
+The checker obtains changes with:
+
+```bash
+git diff --name-status "$BASE_SHA" "$HEAD_SHA"
+```
+
+and polls:
 
 ```text
 GET /repos/{repository}/actions/runs?head_sha={head_sha}&event=pull_request&per_page=100
 ```
 
-and matches exact workflow `name` + exact `head_sha`.
+matching exact workflow `name` and exact `head_sha`.
 
-- [ ] **Step 1: Create Renderer policy**
+- [ ] **Step 1: Create Renderer policy with exact groups**
 
-At minimum map:
+Request-only groups:
 
 ```text
-request-only:
-  handoff-preview-requests-v4/*.json -> Current Request Publication Gate
-  final-render-requests-v2/*.json -> Current Request Publication Gate
-
-current Final/Preview control-plane:
-  current request/preview/final workflows
-  validate-current-request.py
-  verify-final-authorization-bundle.py
-  capture/restore/render-approved/wake helper + their tests
-  -> Current Preview Final Identity CI
-
-Renderer core:
-  src/**
-  scripts/**
-  contracts/**
-  package.json
-  package-lock.json
-  tsconfig*.json
-  .github/workflows/**
-  -> Visual Story Engine CI
-
-media-sensitive:
-  src/**
-  public/**
-  assets/**
-  scripts/*media*
-  visual/media test files
-  -> Visual Story Media CI
+handoff-preview-requests-v4/*.json -> Current Request Publication Gate
+final-render-requests-v2/*.json -> Current Request Publication Gate
 ```
 
-Explicitly exclude request directories from the broad `.json`/core matching by applying request-only classification before workflow groups.
+Current identity/control-plane group must include:
 
-- [ ] **Step 2: Implement checker with fail-closed states**
+```text
+.github/workflows/current-request-publication-gate.yml
+.github/workflows/nasdaq-cafe-handoff-preview-request-v4.yml
+.github/workflows/nasdaq-cafe-preview-handoff-v2.yml
+.github/workflows/nasdaq-cafe-preview-status.yml
+.github/workflows/nasdaq-cafe-final-request-v2.yml
+.github/workflows/nasdaq-cafe-final-v2.yml
+.github/workflows/nasdaq-cafe-codespace-wake.yml
+.github/workflows/required-merge-gate.yml
+contracts/required_merge_gate_policy.json
+scripts/required_merge_gate.py
+scripts/validate-current-request.py
+scripts/verify-final-authorization-bundle.py
+scripts/render-approved-current-final.ts
+scripts/capture-preview-current-spine-identity.py
+scripts/restore-approved-preview-for-final.py
+scripts/wake-repository-codespace.py
+scripts/test-current-*.py
+scripts/test-final-*.py
+scripts/test_codespace_wake_gateway.py
+scripts/test_required_merge_gate.py
+```
 
-Stable error codes printed to stderr:
+Expected workflow: `Current Preview Final Identity CI`.
+
+Renderer baseline group:
+
+```text
+src/**
+scripts/**
+contracts/**
+package.json
+package-lock.json
+tsconfig*.json
+.github/workflows/**
+```
+
+Expected workflow: `Visual Story Engine CI`.
+
+Renderer media-sensitive group:
+
+```text
+src/**
+public/**
+assets/**
+scripts/*media*
+scripts/test-*media*
+```
+
+Expected workflow: `Visual Story Media CI`.
+
+Request-only classification is evaluated before broad workflow groups, so request JSON files are not converted into implementation PRs.
+
+- [ ] **Step 2: Implement fail-closed errors**
+
+Stable stderr codes:
 
 ```text
 MIXED_REQUEST_PR
@@ -271,7 +312,7 @@ EXPECTED_WORKFLOW_FAILED
 EXPECTED_WORKFLOW_TIMEOUT
 ```
 
-Never treat `skipped`, `neutral`, `cancelled`, `timed_out`, `action_required`, or `stale` as success for an expected workflow. Only `conclusion == "success"` passes.
+Only `conclusion == "success"` passes an expected workflow. `skipped`, `neutral`, `cancelled`, `timed_out`, `action_required`, and `stale` do not pass.
 
 - [ ] **Step 3: Run GREEN**
 
@@ -280,12 +321,65 @@ python3 scripts/test_required_merge_gate.py
 python3 -m py_compile scripts/required_merge_gate.py scripts/test_required_merge_gate.py
 ```
 
-## Task 3: Create Renderer always-on Required Merge Gate
+## Task 3: Guarantee Renderer authoritative workflows trigger for every policy-mapped code path
+
+**Files:**
+- Modify Renderer `.github/workflows/visual-story-engine-ci.yml`
+- Modify Renderer `.github/workflows/visual-story-media-ci.yml`
+- Modify Renderer `.github/workflows/current-preview-final-identity-ci.yml`
+
+- [ ] **Step 1: Broaden Visual Story Engine CI `pull_request.paths` to include exactly**
+
+```yaml
+      - "src/**"
+      - "scripts/**"
+      - "contracts/**"
+      - "package.json"
+      - "package-lock.json"
+      - "tsconfig*.json"
+      - ".github/workflows/**"
+```
+
+Keep existing narrower patterns too if they cover files outside this baseline; remove exact duplicates only.
+
+- [ ] **Step 2: Ensure Visual Story Media CI covers the media-sensitive policy**
+
+Its `pull_request.paths` must include:
+
+```yaml
+      - "src/**"
+      - "public/**"
+      - "assets/**"
+      - "scripts/*media*"
+      - "scripts/test-*media*"
+```
+
+- [ ] **Step 3: Add new gate-policy/checker files to Current Preview Final Identity CI paths and py_compile**
+
+Include:
+
+```text
+.github/workflows/required-merge-gate.yml
+contracts/required_merge_gate_policy.json
+scripts/required_merge_gate.py
+scripts/test_required_merge_gate.py
+```
+
+- [ ] **Step 4: Re-run Renderer tests**
+
+```bash
+python3 scripts/test_required_merge_gate.py
+python3 scripts/test-current-preview-final-identity-contract.py
+npm ci
+npm run typecheck
+```
+
+## Task 4: Create Renderer always-on Required Merge Gate
 
 **Files:**
 - Create Renderer `.github/workflows/required-merge-gate.yml`
 
-- [ ] **Step 1: Add an unconditional PR trigger**
+- [ ] **Step 1: Add unconditional PR trigger**
 
 ```yaml
 name: Required Merge Gate
@@ -305,9 +399,9 @@ jobs:
     timeout-minutes: 50
 ```
 
-Do not add `paths`, `paths-ignore`, or a workflow-level skip condition.
+No `paths`, `paths-ignore`, or workflow-level skip condition.
 
-- [ ] **Step 2: Checkout full enough history and invoke checker**
+- [ ] **Step 2: Invoke checker using exact PR event values**
 
 ```yaml
 - uses: actions/checkout@v6
@@ -330,19 +424,19 @@ Do not add `paths`, `paths-ignore`, or a workflow-level skip condition.
   run: git diff --check "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}"
 ```
 
-- [ ] **Step 3: Test three real PR shapes before any ruleset is enabled**
+- [ ] **Step 3: Before ruleset activation, prove docs/request/code PR classes**
 
-Create/observe temporary PRs for:
+Use three disposable PRs:
 
 ```text
-docs-only -> gate success without waiting for path-specific CI
-request-only -> gate waits for Current Request Publication Gate and succeeds
-implementation -> gate waits for mapped Engine/Media/Identity workflows and succeeds
+docs-only -> Required Merge Gate succeeds without expected external workflows
+valid one-file request -> waits for Current Request Publication Gate then succeeds
+implementation -> waits for policy-mapped Engine/Media/Identity workflows then succeeds
 ```
 
-A deliberate failing implementation test must prove the gate fails when one expected workflow fails.
+A fourth disposable implementation PR must intentionally make one mapped workflow fail; Required Merge Gate must fail too. Close all disposable negative PRs without merge.
 
-## Task 4: Implement the same gate contract in Plot
+## Task 5: Implement Plot policy/checker and baseline trigger
 
 **Files:**
 - Create Plot `contracts/required_merge_gate_policy.json`
@@ -351,41 +445,123 @@ A deliberate failing implementation test must prove the gate fails when one expe
 - Create Plot `.github/workflows/required-merge-gate.yml`
 - Modify Plot `.github/workflows/validate-daily-production-package.yml`
 
-- [ ] **Step 1: Use the same Python public interface and stable errors as Renderer**
+- [ ] **Step 1: Use the exact same Python public interface/error codes as Renderer**
 
-Do not create a different state model. Repository-specific behavior belongs only in the policy JSON.
+Repository-specific path/workflow mapping belongs only in Plot policy JSON.
 
-- [ ] **Step 2: Create Plot policy groups**
+- [ ] **Step 2: Define exact Plot policy groups**
 
-At minimum:
+Request-only:
 
 ```text
-final-authorization-requests-v1/*.json
-  -> ChatGPT Daily Final Authorization
-
-daily-production-requests/**, daily-authoring/**, daily-inputs/**, working/**,
-research/**, episodes/**, render-specs/**, daily-assets/**
-  -> Validate Daily Production Package
-
-scripts/**, tests/**, contracts/**, .github/workflows/**, skills/**
-  -> Validate Daily Production Package (baseline)
-
-contracts/renderer_binding.json + Current Spine/cross-repo entrypoints
-  -> Current Spine Exact Cross-Repo E2E
-  -> Current Renderer Runtime Qualification Handoff
-  -> Visual Intelligence v1.2
-
-Preview/Final request/authorization builder files and their tests
-  -> Current Preview Final Request Builders CI
-  -> Current Renderer Runtime Qualification Handoff where already owned
-
-Visual Intelligence contract/scripts/tests
-  -> Visual Intelligence v1.2
+final-authorization-requests-v1/*.json -> ChatGPT Daily Final Authorization
 ```
 
-- [ ] **Step 3: Broaden only the baseline validation trigger**
+Daily package/data baseline:
 
-In `validate-daily-production-package.yml`, add broad code/reliability patterns if they are not already covered:
+```text
+daily-production-requests/**
+daily-authoring-parts/**
+daily-authoring/**
+daily-inputs/**
+working/**
+research/**
+episodes/**
+render-specs/**
+daily-assets/**
+```
+
+Expected: `Validate Daily Production Package`.
+
+Source/reliability baseline:
+
+```text
+scripts/**
+tests/**
+contracts/**
+.github/workflows/**
+skills/**
+```
+
+Expected: `Validate Daily Production Package`.
+
+Exact Current cross-repo group:
+
+```text
+contracts/renderer_binding.json
+tests/current-spine/**
+tests/editorial-semantic-boundary/**
+tests/remotion-compat/run_visual_intelligence_v12_cross_repo.py
+scripts/run_daily_production_v12.py
+scripts/run_daily_renderer_closure_v12.py
+scripts/run_semantic_frozen_renderer_closure_v12.py
+scripts/current_production_facade_v12.py
+```
+
+Expected: `Current Spine Exact Cross-Repo E2E`.
+
+Runtime qualification group:
+
+```text
+contracts/renderer_binding.json
+contracts/visual_grammar_renderer_compatibility.json
+contracts/chatgpt_daily_authoring_v2.schema.json
+tests/current-spine/current_authoring_runtime_fixture.py
+tests/current-spine/test_current_authoring_materializer_parity.py
+tests/current-spine/run_exact_cross_repo_current_e2e.py
+tests/current-spine/test_current_preview_final_request_builders.py
+tests/current-spine/test_current_production_facade_contract.py
+tests/remotion-compat/run_visual_intelligence_v12_cross_repo.py
+tests/remotion-compat/test_visual_director_handoff.py
+scripts/build_current_preview_request_v4.py
+scripts/build_current_final_request_v2.py
+```
+
+Expected: `Current Renderer Runtime Qualification Handoff`.
+
+Visual Intelligence group:
+
+```text
+contracts/renderer_binding.json
+contracts/human_preview_review.schema.json
+contracts/final_render_authorization.schema.json
+scripts/renderer_binding.py
+scripts/financial_candidate_provider.py
+scripts/renderer_strict_projection.py
+scripts/visual_intelligence_*.py
+scripts/run_visual_intelligence_v12.py
+scripts/validate_visual_intelligence_package.py
+scripts/write_human_preview_review.py
+scripts/build_final_render_authorization_v12.py
+scripts/run_daily_production_v12.py
+scripts/run_daily_renderer_closure_v12.py
+scripts/build_final_production_package_v12.py
+tests/remotion-compat/*visual_intelligence*.py
+tests/remotion-compat/test_final_render_authorization_v12.py
+```
+
+Expected: `Visual Intelligence v1.2`.
+
+Preview/Final builder group:
+
+```text
+scripts/build_current_preview_request_v4.py
+scripts/build_current_preview_publication.py
+scripts/build_current_final_authorization_bundle_v1.py
+scripts/build_current_final_request_v2.py
+scripts/publish_current_final_authorization_v1.py
+tests/current-spine/test_current_preview_final_request_builders.py
+tests/current-spine/test_current_preview_publication.py
+tests/current-spine/test_current_final_authorization_publication.py
+.github/workflows/chatgpt-daily-final-authorization.yml
+.github/workflows/current-preview-final-request-builders-ci.yml
+```
+
+Expected: `Current Preview Final Request Builders CI`.
+
+- [ ] **Step 3: Broaden Plot baseline validation trigger exactly**
+
+Add these patterns to `Validate Daily Production Package` `pull_request.paths`:
 
 ```yaml
       - "scripts/**"
@@ -395,48 +571,47 @@ In `validate-daily-production-package.yml`, add broad code/reliability patterns 
       - "skills/**"
 ```
 
-This ensures every Plot non-doc code change has at least the baseline authoritative workflow for the Required Merge Gate to observe. Do not remove the existing exact-day/request paths.
+Keep existing episode/data paths. Remove only duplicate path entries.
 
-- [ ] **Step 4: Run RED→GREEN tests**
+- [ ] **Step 4: Create Plot always-on Required Merge Gate using the same YAML shape as Renderer**
+
+Only repository policy content differs.
+
+- [ ] **Step 5: Run Plot GREEN**
 
 ```bash
 PYTHONPATH=scripts python3 tests/current-spine/test_required_merge_gate.py
 python3 -m py_compile scripts/required_merge_gate.py tests/current-spine/test_required_merge_gate.py
 ```
 
-Then require existing Plot PR CI relevant to the gate change:
+Then require exact PR-head GitHub CI selected by the policy, including baseline `Validate Daily Production Package`.
 
-```text
-Validate Daily Production Package = success
-Current Spine Exact Cross-Repo E2E = success when policy/binding boundary is touched
-Current Renderer Runtime Qualification Handoff = success when mapped boundary is touched
-Visual Intelligence v1.2 = success when mapped boundary is touched
-Current Preview Final Request Builders CI = success when builder boundary is touched
-```
-
-## Task 5: Verify the stable required-check context before repository configuration
+## Task 6: Verify the stable required-check context before repository configuration
 
 **Files:** none.
 
-- [ ] **Step 1: Open one docs-only PR in each repository after the gate source is merged but before rulesets are enabled**
+- [ ] **Step 1: Open one docs-only test PR in Renderer and one in Plot after gate source is merged but before rulesets are active**
 
-- [ ] **Step 2: Query exact check runs for the PR head SHA**
+- [ ] **Step 2: Resolve each test PR head SHA through GitHub CLI**
+
+Renderer example:
 
 ```bash
-gh api "repos/OWNER/REPO/commits/HEAD_SHA/check-runs" --jq '.check_runs[] | [.name,.status,.conclusion] | @tsv'
+export REPOSITORY="saienjoy0/saienjoy0-nasdaq-cafe-remotion"
+export PR_NUMBER="$(gh pr list --repo "$REPOSITORY" --state open --search 'Required Merge Gate context verification' --json number --jq '.[0].number')"
+export HEAD_SHA="$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json headRefOid --jq '.headRefOid')"
+gh api "repos/${REPOSITORY}/commits/${HEAD_SHA}/check-runs" --jq '.check_runs[] | [.name,.status,.conclusion] | @tsv'
 ```
 
-Record the exact successful job/check context emitted by `.github/workflows/required-merge-gate.yml`. Expected intended name: `Required Merge Gate`.
+Repeat with `REPOSITORY=saienjoy0/nasdaq-plot-creator-` and that repository's test PR number.
 
-Do not guess the status-check context in repository settings; use the observed API value.
+Record the exact successful check name emitted by `.github/workflows/required-merge-gate.yml`; intended job name is `Required Merge Gate`, but repository configuration uses the observed API value, not an assumption.
 
-## Task 6: Install active `main` rulesets in both repositories
+## Task 7: Install active `main` rulesets in both repositories
 
 **Files:** repository configuration plus Plot `docs/reliability/repository-protection-policy.md`.
 
-**One-time admin operation:** GitHub repository Settings → Rules → Rulesets → New branch ruleset.
-
-For each repository configure exactly:
+This is a one-time repository-admin operation. In each repository use GitHub Settings → Rules → Rulesets → New branch ruleset and configure exactly:
 
 ```text
 Ruleset name: current-production-main-v1
@@ -446,27 +621,27 @@ Bypass list: none
 Restrict deletions: ON
 Require a pull request before merging: ON
 Required approving reviews: 0
-Dismiss stale approvals: OFF (no approvals required)
+Dismiss stale approvals: OFF
 Require status checks before merging: ON
-Required status check: exact observed Required Merge Gate context from Task 5
+Required status check: exact observed Required Merge Gate context from Task 6
 Require branches to be up to date before merging: ON
 Block force pushes: ON
 ```
 
-Do not require `Validate Daily Production Package`, `Current Request Publication Gate`, `Visual Story Engine CI`, or other path-filtered workflows directly.
+Do not require any path-filtered workflow directly.
 
-- [ ] **Step 1: Verify rulesets through GitHub API**
+- [ ] **Step 1: Verify installed rulesets**
 
 ```bash
 gh api repos/saienjoy0/nasdaq-plot-creator-/rulesets
 gh api repos/saienjoy0/saienjoy0-nasdaq-cafe-remotion/rulesets
 ```
 
-Expected: exactly one active `current-production-main-v1` targeting `main` with pull-request, required-status-check, deletion, and non-fast-forward protections.
+Expected: active `current-production-main-v1` targeting `main` in both repositories, with PR/status/deletion/non-fast-forward protections.
 
-- [ ] **Step 2: Record immutable rollout evidence**
+- [ ] **Step 2: Record rollout evidence**
 
-Create `docs/reliability/repository-protection-policy.md` containing:
+Create `docs/reliability/repository-protection-policy.md` with:
 
 ```text
 repository
@@ -480,17 +655,15 @@ verification date
 
 No secret/token values.
 
-## Task 7: Negative verification — prove bypass is actually blocked
+## Task 8: Negative verification — prove bypass is blocked
 
 - [ ] **Step 1: Failing-check PR**
 
-Create a disposable test PR whose Expected Workflow intentionally fails. Confirm GitHub reports the Required Merge Gate failure and merge is blocked. Close without merge.
+Create a disposable implementation PR that intentionally fails one expected workflow. Confirm Required Merge Gate fails and GitHub blocks merge. Close without merge.
 
-- [ ] **Step 2: Direct main update test**
+- [ ] **Step 2: Direct-main protection**
 
-From an authenticated local/CI-safe environment, attempt a non-destructive direct push of a disposable commit to `main` and require GitHub to reject it because PR/ruleset policy applies. Immediately delete the disposable local commit/branch; no force push.
-
-If policy permissions make a direct-push test unsafe, use GitHub's ruleset evaluation UI/API evidence instead and record why the destructive probe was omitted.
+Use GitHub ruleset evaluation/API evidence first. If a direct-push probe is performed, use a disposable commit with no production data changes and require GitHub to reject the push. Never force-push `main`.
 
 - [ ] **Step 3: Request-only positive test**
 
@@ -500,16 +673,16 @@ Open a valid one-file append-only request PR. Confirm:
 path-specific request workflow = success
 Required Merge Gate = success
 unrelated path-filtered workflows may be absent
-merge is allowed only after Required Merge Gate success
+merge remains blocked until Required Merge Gate succeeds
 ```
 
 ## Review / rollback
 
-Source rollback: revert the Required Merge Gate PRs. Repository-configuration rollback: set ruleset Enforcement status to `Evaluate` or disable the required status check before removing source workflows, never delete the gate source first while an Active ruleset still requires it.
+Source rollback: revert Required Merge Gate source PRs. Repository-configuration rollback: change ruleset Enforcement to `Evaluate` or remove the required status rule before removing source workflow files. Never delete/rename the required gate while an Active ruleset still requires its check context.
 
 Block rollout if:
 
-- Required Merge Gate can be skipped by a path/branch filter;
+- Required Merge Gate itself can be skipped by path/branch filtering;
 - policy permits an unknown non-doc path;
 - gate accepts any conclusion other than `success` for an expected workflow;
 - gate matches a workflow run from a different head SHA;
