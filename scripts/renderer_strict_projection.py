@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lightweight producer RenderSpec -> strict Renderer 2.4 schema projection.
+"""Lightweight producer RenderSpec -> strict Renderer schema projection.
 
 This module is the single compatibility source for removing producer-only fields,
 flattening Visual Grammar metadata, normalizing reviewed schema aliases, and
@@ -35,7 +35,7 @@ SCENE_ALLOWED = {
 }
 BEAT_ALLOWED = {
     "beatId", "startChunkId", "endChunkId", "narrationStartCue", "narrationEndCue",
-    "primaryFunction", "screenState", "visualMode", "visualTemplate",
+    "primaryFunction", "screenState", "visualMode", "visualTemplate", "semanticScope",
     "visualGrammarId", "transitionRole", "templateVariant", "templateConfig",
     "sequencePolicy", "finalHoldMs", "contentType", "screenQuestion",
     "primaryElement", "viewerTexts", "changeCue", "objectIds", "assetPlacementIds",
@@ -43,8 +43,9 @@ BEAT_ALLOWED = {
     "fallback", "financialReturnTarget", "financialVisualTrace", "entity",
     "pictureBook", "shots",
 }
+SUPPORTED_RENDER_SPEC_VERSIONS = frozenset({"2.4.0", "2.5.0"})
 
-# Canonical Renderer 2.4 mapping, mirrored from the exact pinned Renderer
+# Canonical Renderer mapping, mirrored from the exact pinned Renderer
 # `src/spec/visual-component-registry.ts`. The Visual Template is the more specific
 # contract; producer modes are compatibility vocabulary and must not override the
 # template's Renderer mode when the producer mode is already reviewed/known.
@@ -217,9 +218,9 @@ def strict_renderer_projection(
         copy.deepcopy(render_spec), final_contract_path=final_contract_path
     )
     result = {key: source[key] for key in ROOT_ALLOWED if key in source}
-    if source.get("schemaVersion") != "2.4.0":
+    if source.get("schemaVersion") not in SUPPORTED_RENDER_SPEC_VERSIONS:
         raise StrictRendererProjectionError(
-            "renderer projection requires schemaVersion 2.4.0"
+            "renderer projection requires schemaVersion 2.4.0 or 2.5.0"
         )
     source_scenes = source.get("scenes", [])
     if not isinstance(source_scenes, list) or len(source_scenes) != 9:
