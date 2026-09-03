@@ -1,15 +1,73 @@
 #!/usr/bin/env python3
-"""Regression: Current-v2 accepted semantics project deterministically to Renderer 2.4 metadata."""
+"""Regression: Current-v2 accepted semantics project deterministically to Renderer metadata."""
 from __future__ import annotations
 
 import copy
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import current_compatibility_adapter_v12 as adapter  # noqa: E402
+import renderer_strict_projection as strict_projection  # noqa: E402
+
+
+def _minimal_strict_scene(index: int) -> dict:
+    sid = f"scene-{index:02d}"
+    bid = f"{sid}-beat-001"
+    return {
+        "sceneId": sid,
+        "sceneNumber": index,
+        "sceneRole": "editorial-body",
+        "causalScope": "multiple",
+        "expectedBasisType": "major-reporting",
+        "visualMode": "text-focus",
+        "visualBeats": [
+            {
+                "beatId": bid,
+                "semanticScope": "multiple",
+                "screenState": "Data",
+                "visualMode": "text-focus",
+                "visualTemplate": "text-focus",
+                "templateConfig": {"variant": "default"},
+                "visualGrammar": {
+                    "grammarId": "text-focus",
+                    "transitionRole": "continuation",
+                },
+            }
+        ],
+    }
+
+
+def _assert_strict_projection_preserves_semantic_scope() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        root = Path(temp_dir)
+        semantics = root / "semantics.json"
+        compatibility = root / "compatibility.json"
+        final_contract = root / "working" / "2099-01-07" / "final_episode_contract.json"
+        for path in (semantics, compatibility, final_contract):
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("{}\n", encoding="utf-8")
+        render = {
+            "schemaVersion": "2.5.0",
+            "scenes": [_minimal_strict_scene(index) for index in range(1, 10)],
+        }
+        projected = strict_projection.strict_renderer_projection(
+            render,
+            final_contract_path=final_contract,
+            semantics_path=semantics,
+            renderer_compatibility_path=compatibility,
+        )
+        if projected["schemaVersion"] != "2.5.0":
+            raise AssertionError("strict projection changed render_spec 2.5.0 version")
+        scopes = [
+            scene["visualBeats"][0].get("semanticScope")
+            for scene in projected["scenes"]
+        ]
+        if scopes != ["multiple"] * 9:
+            raise AssertionError(f"strict projection dropped or rewrote semanticScope: {scopes}")
 
 
 def main() -> int:
@@ -179,7 +237,9 @@ def main() -> int:
     else:
         raise AssertionError("unknown Current causalScope did not fail closed")
 
-    print("Current-v2 -> Renderer 2.4 compatibility projection PASS")
+    _assert_strict_projection_preserves_semantic_scope()
+
+    print("Current-v2 -> Renderer semantic compatibility projection PASS")
     return 0
 
 
