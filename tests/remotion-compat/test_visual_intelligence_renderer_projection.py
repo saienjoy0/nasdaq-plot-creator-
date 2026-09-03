@@ -37,6 +37,7 @@ def beat(scene_number: int, beat_number: int, mode: str, grammar_id: str = "evid
         "screenState": "Data",
         "visualMode": mode,
         "visualTemplate": "text-focus",
+        "semanticScope": "multiple",
         "visualGrammar": {
             "contractVersion": "1.0.0",
             "grammarId": grammar_id,
@@ -138,7 +139,7 @@ def main() -> int:
             second_mode = aliases[scene_number % len(aliases)]
             scenes.append(scene(scene_number, first_mode, [first_mode, second_mode]))
         render = {
-            "schemaVersion": "2.4.0",
+            "schemaVersion": "2.5.0",
             "episode": {"targetDate": date},
             "scenes": scenes,
             "expectedConfirmed": True,
@@ -163,6 +164,8 @@ def main() -> int:
 
         if render != original:
             raise AssertionError("projection mutated producer render")
+        if strict.get("schemaVersion") != "2.5.0":
+            raise AssertionError(f"2.5.0 version drifted: {strict.get('schemaVersion')}")
         if "expectedConfirmed" in strict or "visualGrammarContractVersion" in strict:
             raise AssertionError("producer-only root keys leaked into Renderer input")
         expected_roles = [
@@ -186,6 +189,8 @@ def main() -> int:
                 )
             if projected_beat["beatId"] != source_beat["beatId"]:
                 raise AssertionError("authoring Beat ID drifted")
+            if projected_beat.get("semanticScope") != source_beat["semanticScope"]:
+                raise AssertionError("semanticScope changed")
             if projected_beat["viewerTexts"] != source_beat["viewerTexts"]:
                 raise AssertionError("viewer text changed")
             if projected_beat["screenQuestion"] != source_beat["screenQuestion"]:
@@ -235,6 +240,33 @@ def main() -> int:
         if restored_ids != producer_ids:
             raise AssertionError(f"canonical intermediate Beat IDs leaked: {restored_ids}")
         intermediate_path.unlink()
+
+        tampered = copy.deepcopy(render)
+        tampered_intermediate = copy.deepcopy(render)
+        tampered_intermediate["scenes"][0]["visualBeats"][0]["semanticScope"] = "nasdaq"
+        write(intermediate_path, tampered_intermediate)
+        try:
+            projection.project_visual_intelligence_renderer_input(
+                tampered,
+                repo_root=root,
+                date=date,
+            )
+        except projection.VisualIntelligenceRendererProjectionError as exc:
+            if "semanticScope" not in str(exc):
+                raise AssertionError(f"semanticScope drift failed for wrong reason: {exc}") from exc
+        else:
+            raise AssertionError("semanticScope drift was not rejected")
+        intermediate_path.unlink()
+
+        legacy = copy.deepcopy(render)
+        legacy["schemaVersion"] = "2.4.0"
+        legacy_projected = projection.project_visual_intelligence_renderer_input(
+            legacy,
+            repo_root=root,
+            date=date,
+        )
+        if legacy_projected.get("schemaVersion") != "2.4.0":
+            raise AssertionError("2.4 compatibility drifted")
 
         unknown = copy.deepcopy(render)
         unknown["scenes"][0]["visualMode"] = "future-unreviewed-mode"

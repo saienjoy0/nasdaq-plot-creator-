@@ -312,6 +312,7 @@ def production(script: dict[str, Any]) -> dict[str, Any]:
             beats.append({
                 "primaryFunction": "Explain", "screenState": f"scene-{index:02d}-state-{beat_index}",
                 "visualMode": "text-focus", "visualTemplate": visual_template, "contentType": "text",
+                "semanticScope": "multiple",
                 "screenQuestion": f"Scene {index} question {beat_index}", "primaryElement": f"Scene {index} element",
                 "viewerTexts": [f"Scene {index} text {beat_index}"], "changeCue": "next",
                 "grammarId": current_grammar_id(visual_template), "transitionRole": "continuation", "evidenceSourceIds": scripted["evidence_ids"],
