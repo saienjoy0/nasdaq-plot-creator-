@@ -1,0 +1,627 @@
+{
+  "alternative_hypotheses": [
+    {
+      "hypothesis": "Dell決算だけがNASDAQ上昇の主因だった。",
+      "id": "ALT-01",
+      "status": "weakened",
+      "supporting_evidence_ids": [
+        "E-002",
+        "E-006",
+        "E-007"
+      ],
+      "weakening_evidence_ids": [
+        "E-001",
+        "E-008",
+        "E-009",
+        "E-010"
+      ]
+    },
+    {
+      "hypothesis": "AI・半導体全体が一斉に買われた。",
+      "id": "ALT-02",
+      "status": "rejected",
+      "supporting_evidence_ids": [
+        "E-007"
+      ],
+      "weakening_evidence_ids": [
+        "E-001",
+        "E-002",
+        "E-009"
+      ]
+    },
+    {
+      "hypothesis": "マクロ逆風が解消したのでNASDAQが上がった。",
+      "id": "ALT-03",
+      "status": "rejected",
+      "supporting_evidence_ids": [
+        "E-008"
+      ],
+      "weakening_evidence_ids": [
+        "E-007",
+        "E-010"
+      ]
+    },
+    {
+      "hypothesis": "三日続落後の機械的な買い戻しだけでNASDAQ上昇を説明できる。",
+      "id": "ALT-04",
+      "status": "unresolved",
+      "supporting_evidence_ids": [
+        "E-007"
+      ],
+      "weakening_evidence_ids": [
+        "E-002",
+        "E-004",
+        "E-005",
+        "E-006"
+      ]
+    }
+  ],
+  "carryover_results": [],
+  "causal_edges": [
+    {
+      "confidence": "high",
+      "editorially_required": true,
+      "evidence_ids": [
+        "E-003",
+        "E-004",
+        "E-006"
+      ],
+      "from_node": "Dell Q2 AI demand and raised guidance",
+      "id": "EDGE-01",
+      "mechanism": "A large positive earnings/guidance gap and record AI orders/backlog repriced Dell-specific growth expectations upward.",
+      "scope": "company_direct",
+      "strongest_alternative": "post-earnings positioning or other Dell-specific flows",
+      "timing_alignment": "strong",
+      "to_node": "DELL sharp rally"
+    },
+    {
+      "confidence": "medium",
+      "editorially_required": true,
+      "evidence_ids": [
+        "E-002",
+        "E-005",
+        "E-006",
+        "E-007"
+      ],
+      "from_node": "Dell evidence that AI infrastructure demand is broadening",
+      "id": "EDGE-02",
+      "mechanism": "Dell servers use Nvidia accelerators, and broader customer demand reduced concern that AI hardware spending depended only on a few hyperscalers.",
+      "scope": "sector_support",
+      "strongest_alternative": "Nvidia had other company-specific or market-wide drivers",
+      "timing_alignment": "partial",
+      "to_node": "support for Nvidia/AI-infrastructure sentiment"
+    },
+    {
+      "confidence": "medium",
+      "editorially_required": true,
+      "evidence_ids": [
+        "E-007",
+        "E-008"
+      ],
+      "from_node": "three-day selloff and stabilizing U.S. yields",
+      "id": "EDGE-03",
+      "mechanism": "Lower/stable discount-rate pressure and bargain-hunting provided a market-wide offset to prior risk-off pressure.",
+      "scope": "nasdaq_wide",
+      "strongest_alternative": "AI-linked large-cap gains alone",
+      "timing_alignment": "partial",
+      "to_node": "Nasdaq rebound support"
+    },
+    {
+      "confidence": "medium",
+      "editorially_required": true,
+      "evidence_ids": [
+        "E-007",
+        "E-010"
+      ],
+      "from_node": "global bond selloff, oil and Middle East tension",
+      "id": "EDGE-04",
+      "mechanism": "Higher inflation and rate uncertainty keep pressure on long-duration growth valuations and prevent a clean risk-on interpretation.",
+      "scope": "nasdaq_wide",
+      "strongest_alternative": "U.S. yields stabilizing reduced the immediate impact",
+      "timing_alignment": "partial",
+      "to_node": "continued valuation/risk headwind"
+    },
+    {
+      "confidence": "medium",
+      "editorially_required": true,
+      "evidence_ids": [
+        "E-001",
+        "E-002",
+        "E-007",
+        "E-008",
+        "E-009",
+        "E-010"
+      ],
+      "from_node": "selective AI-infrastructure strength plus market-wide rebound support",
+      "id": "EDGE-05",
+      "mechanism": "Strong Dell/Nvidia AI evidence helped the technology complex while stabilization/bargain-hunting offset macro headwinds; dispersion kept the index gain modest.",
+      "scope": "nasdaq_wide",
+      "strongest_alternative": "index rebound was mostly mechanical after three down days",
+      "timing_alignment": "partial",
+      "to_node": "Nasdaq Composite +0.45%"
+    }
+  ],
+  "contract_version": "0.3.0",
+  "contradictions": [
+    {
+      "id": "CON-01",
+      "rank": 1,
+      "selection_reason": "マクロ逆風が消えていないのにテックが反発した理由を、AI需要の具体証拠と地合いの二層で説明できる。",
+      "statement": "世界的な債券売りと原油・地政学のインフレ懸念が残ったのに、Nasdaq Compositeは0.45%上昇した。"
+    },
+    {
+      "id": "CON-02",
+      "rank": 2,
+      "selection_reason": "Dell個別材料を半導体全面高やNASDAQ全体の単一原因へ拡大するのを防ぐ。",
+      "statement": "Dellは15.81%、NVIDIAは3.21%上昇した一方、SOXX ETFは0.23%高にとどまり、AMDとBroadcomは下落した。"
+    },
+    {
+      "id": "CON-03",
+      "rank": 3,
+      "selection_reason": "AIテーマでも恩恵が均一ではなく、具体的需要証拠を持つ領域への選別が起きていたことを示す。",
+      "statement": "AIハード需要の強さが確認された一方、CadenceやCrowdStrikeなどNASDAQ100の一部ソフトウェア株は大幅安だった。"
+    }
+  ],
+  "contrary_evidence": [
+    {
+      "effect_on_confidence": "material",
+      "evidence_ids": [
+        "E-001",
+        "E-002"
+      ],
+      "statement": "SOXX ETFは+0.23%にとどまり、AMDとBroadcomは下落したため、AI・半導体全面高ではない。"
+    },
+    {
+      "effect_on_confidence": "material",
+      "evidence_ids": [
+        "E-009"
+      ],
+      "statement": "CadenceとCrowdStrikeなど一部ソフトウェア株は大幅安で、テック全体のリスクオンではない。"
+    },
+    {
+      "effect_on_confidence": "material",
+      "evidence_ids": [
+        "E-007",
+        "E-010"
+      ],
+      "statement": "世界的な債券売り、原油高、地政学リスクは残り、マクロ逆風消滅説とは合わない。"
+    },
+    {
+      "effect_on_confidence": "material",
+      "evidence_ids": [
+        "E-007"
+      ],
+      "statement": "三日続落後の買い戻しもReutersが指摘しており、Dellの因果をNASDAQ全体へ単独拡大できない。"
+    }
+  ],
+  "cross_market_assessment": {
+    "alternatives": [],
+    "evidence_ids": [],
+    "materiality": "not_material",
+    "rationale": "主役はDellの米国引け後決算と翌米国セッションの反応で閉じるため、アジア先行反応を主因判定に使わない。"
+  },
+  "editorial_handoff": {
+    "causal_spine": "Dellの大幅上方修正→AI需要の裾野拡大→Dell/Nvidiaへ選別的追い風→三日続落後の買い戻し・米債安定が指数を支援→SOXX小幅高とAMD/AVGO安で全面高説を棄却→NASDAQ +0.45%を複合要因で回収。",
+    "central_hypothesis": "昨夜のNASDAQは、Dellの記録的なAIサーバー需要がAIインフラ投資の裾野拡大を具体化しDell/Nvidiaを支えた一方、三日続落後の買い戻しと米債利回りの安定が指数を支え、債券・原油・地政学の逆風が上値を抑えた。AI全面高ではなく選別的反発。確信度は中。",
+    "company_direct_material": [
+      "Dell Q2 revenue $46.971B vs LSEG $44.92B",
+      "FY27 revenue guide $167B → $192B",
+      "AI-optimized server revenue guide $60B → $74B",
+      "AI orders $60.9B / backlog $95B",
+      "DELL +15.81%"
+    ],
+    "confidence": "medium",
+    "exclude_from_narration": [
+      "DellがNASDAQ全体を単独で上げたという表現",
+      "SOXX ETFをPHLX SOX指数と呼ぶこと",
+      "AMD/AVGO下落の未確認原因",
+      "債券・原油の逆風が完全に消えたという表現"
+    ],
+    "headline_beyond_discovery": "昨夜の発見は「AI需要が強い」だけではなく、需要の証拠がハイパースケーラー以外へ広がった企業に資金が集まり、マクロ逆風下でもAIの中で選別が進んだこと。",
+    "memory_differences": [],
+    "nasdaq_wide_material": [
+      "Nasdaq Composite +0.45%",
+      "NVDA +3.21%",
+      "SOXX ETF +0.23%",
+      "AMD -0.55% / AVGO -0.66%",
+      "three-day losing streak rebound",
+      "bond yields stabilizing but global bond/oil/geopolitical headwinds remained"
+    ],
+    "next_validation_points": [
+      "次のAIインフラ決算でもneocloud/sovereign/enterpriseへの需要拡大が継続するか",
+      "債券利回りが再上昇した場合も具体的AI需要証拠を持つ銘柄の相対強さが続くか"
+    ],
+    "provisional_lead": "Dell Technologies：AIサーバー見通しを600億ドルから740億ドルへ引き上げ、需要の裾野拡大を示した",
+    "unresolved_questions": [
+      "Dell/Nvidiaの指数寄与と買い戻しの寄与率",
+      "ソフトウェア弱含みの個別要因"
+    ]
+  },
+  "episode_date": "2026-09-03",
+  "evidence": [
+    {
+      "claim": "Fresh Collector/Longbridge data show the Nasdaq Composite closed 26,217.828, up 0.45%, while the SOXX ETF closed 501.440, up 0.23%.",
+      "confidence": "high",
+      "directness": "direct",
+      "event_timestamp": "2026-09-02 US regular session",
+      "evidence_class": "fact",
+      "evidence_id": "E-001",
+      "independence_group": "fresh-market-2026-09-02",
+      "limitations": "Collector label `SOX` maps to ticker SOXX.US; production must label it SOXX ETF, not the PHLX SOX index.",
+      "publication_timestamp": "2026-09-03T00:23:24Z",
+      "source_issuer_or_publisher": "NASDAQ Cafe Collector / Longbridge",
+      "source_reference": "daily-inputs/2026-09-03/daily_source_package_2026-09-03.md",
+      "source_tier": "tier_1",
+      "source_title": "Fresh Daily Source Package 2026-09-03",
+      "timezone": "America/New_York"
+    },
+    {
+      "claim": "Collector market data show DELL +15.81%, NVDA +3.21%, MU +2.43%, QCOM +2.01%, while AMD -0.55% and AVGO -0.66%, demonstrating selective rather than uniform AI/semiconductor strength.",
+      "confidence": "high",
+      "directness": "direct",
+      "event_timestamp": "2026-09-02 US regular session",
+      "evidence_class": "fact",
+      "evidence_id": "E-002",
+      "independence_group": "fresh-ai-dispersion-2026-09-02",
+      "limitations": "DELL is from Yahoo Finance market movers while fixed-watch semiconductor names are from Longbridge; exact intraday causal attribution is unavailable.",
+      "publication_timestamp": "2026-09-03T00:23:24Z",
+      "source_issuer_or_publisher": "NASDAQ Cafe Collector / Longbridge / Yahoo Finance",
+      "source_reference": "daily-inputs/2026-09-03/daily_source_package_2026-09-03.md",
+      "source_tier": "tier_1",
+      "source_title": "Fresh Daily Source Package / Source Pack 2026-09-03",
+      "timezone": "America/New_York"
+    },
+    {
+      "claim": "Dell Q1 FY27 guidance set full-year revenue at $167B midpoint and AI-optimized server revenue at roughly $60B.",
+      "confidence": "high",
+      "directness": "direct",
+      "event_timestamp": "2026-05-28",
+      "evidence_class": "fact",
+      "evidence_id": "E-003",
+      "independence_group": "dell-ir-q1-fy27",
+      "limitations": "Company guidance is management guidance, not Wall Street consensus.",
+      "publication_timestamp": "2026-05-28",
+      "source_issuer_or_publisher": "Dell Technologies",
+      "source_reference": "https://investors.delltechnologies.com/news-releases/news-release-details/dell-technologies-delivers-first-quarter-fiscal-2027-financial",
+      "source_tier": "tier_1",
+      "source_title": "Dell Technologies Delivers First Quarter Fiscal 2027 Financial Results",
+      "timezone": "America/Chicago"
+    },
+    {
+      "claim": "Dell Q2 FY27 reported revenue of $46.971B and raised FY27 revenue guidance from $167B to $192B and AI-optimized server revenue guidance from $60B to $74B; Q2 AI server revenue was $16.4B, orders $60.9B, and backlog $95B.",
+      "confidence": "high",
+      "directness": "direct",
+      "event_timestamp": "2026-09-01 after US close",
+      "evidence_class": "fact",
+      "evidence_id": "E-004",
+      "independence_group": "dell-ir-q2-fy27",
+      "limitations": "Forward guidance is management expectation and can change; backlog is not recognized revenue.",
+      "publication_timestamp": "2026-09-01",
+      "source_issuer_or_publisher": "Dell Technologies",
+      "source_reference": "https://investors.delltechnologies.com/static-files/2ea39342-d76a-4bed-b5d8-be06d7c86a66",
+      "source_tier": "tier_1",
+      "source_title": "Dell Technologies Delivers Second Quarter Fiscal 2027 Financial Results",
+      "timezone": "America/Chicago"
+    },
+    {
+      "claim": "Dell said AI demand was broadening across neoclouds, sovereigns, and enterprise customers and that its AI customer count had surpassed 6,500.",
+      "confidence": "high",
+      "directness": "direct",
+      "event_timestamp": "2026-09-01 15:30 CDT",
+      "evidence_class": "fact",
+      "evidence_id": "E-005",
+      "independence_group": "dell-q2-call",
+      "limitations": "Management description of demand breadth; does not prove future realized revenue.",
+      "publication_timestamp": "2026-09-01",
+      "source_issuer_or_publisher": "Dell Technologies",
+      "source_reference": "https://investors.delltechnologies.com/static-files/a24f97e4-63b2-460d-a4be-44738826e8ce",
+      "source_tier": "tier_1",
+      "source_title": "Dell Technologies Q2 FY27 Earnings Call",
+      "timezone": "America/Chicago"
+    },
+    {
+      "claim": "Reuters reported Dell Q2 revenue of about $47B versus LSEG consensus of $44.92B and linked the raised annual forecast to strong AI-server demand.",
+      "confidence": "high",
+      "directness": "supporting",
+      "event_timestamp": "2026-09-02 US session",
+      "evidence_class": "reported_interpretation",
+      "evidence_id": "E-006",
+      "independence_group": "reuters-dell-2026-09-02",
+      "limitations": "Consensus is Reuters/LSEG reporting; it is not a company-provided expectation.",
+      "publication_timestamp": "2026-09-02",
+      "source_issuer_or_publisher": "Reuters",
+      "source_reference": "https://www.reuters.com/business/retail-consumer/dell-shares-gain-after-strong-ai-server-demand-boosts-annual-forecast-2026-09-02/",
+      "source_tier": "tier_2",
+      "source_title": "Dell shares gain after strong AI server demand boosts annual forecast",
+      "timezone": "America/New_York"
+    },
+    {
+      "claim": "Reuters reported Wall Street ended higher after a three-day losing streak, with Nasdaq +0.45%, Dell +15.8%, Nvidia +3.2%, and chip stocks rallying, while global bond and geopolitical concerns remained.",
+      "confidence": "high",
+      "directness": "supporting",
+      "event_timestamp": "2026-09-02 US session",
+      "evidence_class": "reported_interpretation",
+      "evidence_id": "E-007",
+      "independence_group": "reuters-wall-st-2026-09-02",
+      "limitations": "Market recap identifies multiple concurrent drivers; it does not quantify each factor contribution.",
+      "publication_timestamp": "2026-09-02",
+      "source_issuer_or_publisher": "Reuters",
+      "source_reference": "https://www.reuters.com/business/us-stock-index-futures-subdued-oil-treasury-yields-rise-iran-tensions-2026-09-02/",
+      "source_tier": "tier_2",
+      "source_title": "Wall St ends higher as stocks reclaim some shine",
+      "timezone": "America/New_York"
+    },
+    {
+      "claim": "Nasdaq.com market commentary said U.S. stocks settled higher as bond yields stabilized, providing a valuation-side offset to growth-stock pressure.",
+      "confidence": "medium",
+      "directness": "supporting",
+      "event_timestamp": "2026-09-02 US session",
+      "evidence_class": "reported_interpretation",
+      "evidence_id": "E-008",
+      "independence_group": "nasdaq-bond-stabilization-2026-09-02",
+      "limitations": "Secondary market commentary; use only as supporting macro context.",
+      "publication_timestamp": "2026-09-02",
+      "source_issuer_or_publisher": "Nasdaq / Barchart",
+      "source_reference": "https://www.nasdaq.com/articles/stocks-settle-higher-bond-yields-stabilize",
+      "source_tier": "tier_2",
+      "source_title": "Stocks Settle Higher as Bond Yields Stabilize",
+      "timezone": "America/New_York"
+    },
+    {
+      "claim": "Collector Nasdaq-100 movers included CDNS -7.60% and CRWD -6.90%, showing that the session was not a uniform technology rally.",
+      "confidence": "medium",
+      "directness": "direct",
+      "event_timestamp": "2026-09-02 US regular session",
+      "evidence_class": "fact",
+      "evidence_id": "E-009",
+      "independence_group": "fresh-software-dispersion-2026-09-02",
+      "limitations": "These are price moves; their company-specific causes were not established in the safe Collector artifact.",
+      "publication_timestamp": "2026-09-03T00:23:24Z",
+      "source_issuer_or_publisher": "NASDAQ Cafe Collector / Nasdaq Market Activity",
+      "source_reference": "daily-inputs/2026-09-03/daily_source_package_2026-09-03.md",
+      "source_tier": "tier_1",
+      "source_title": "Fresh Daily Source Package 2026-09-03",
+      "timezone": "America/New_York"
+    },
+    {
+      "claim": "Reuters market coverage described a continuing global bond selloff, inflation concerns and Middle East tensions as headwinds even as U.S. stocks rebounded.",
+      "confidence": "high",
+      "directness": "context",
+      "event_timestamp": "2026-09-02 global/US session",
+      "evidence_class": "reported_interpretation",
+      "evidence_id": "E-010",
+      "independence_group": "reuters-macro-headwind-2026-09-02",
+      "limitations": "Macro conditions are broad and simultaneous; this evidence supports an overlay, not a single-factor causal claim.",
+      "publication_timestamp": "2026-09-02",
+      "source_issuer_or_publisher": "Reuters",
+      "source_reference": "https://www.reuters.com/business/us-stock-index-futures-subdued-oil-treasury-yields-rise-iran-tensions-2026-09-02/",
+      "source_tier": "tier_2",
+      "source_title": "Wall St ends higher as stocks reclaim some shine",
+      "timezone": "America/New_York"
+    }
+  ],
+  "expected_actual_gap": {
+    "actual": {
+      "evidence_ids": [
+        "E-004"
+      ],
+      "statement": "Dell reported $46.971B Q2 revenue and raised FY27 revenue guidance to $192B and AI-optimized server revenue guidance to $74B; Q2 AI orders were $60.9B and backlog $95B."
+    },
+    "expected": {
+      "basis_class": "major_reporting",
+      "evidence_ids": [
+        "E-003",
+        "E-006"
+      ],
+      "statement": "Reuters/LSEG consensus expected Dell Q2 revenue of $44.92B; Dell prior FY27 guidance was $167B revenue and roughly $60B AI-optimized server revenue.",
+      "status": "confirmed"
+    },
+    "gap": {
+      "confidence": "high",
+      "market_meaning": "The surprise was not only a quarterly beat: the scale and breadth of AI-infrastructure demand were revised upward, giving the market fresh evidence that AI hardware demand extended beyond a narrow hyperscaler base.",
+      "statement": "Q2 revenue beat the cited consensus by about $2.05B, while Dell lifted full-year revenue guidance by $25B and AI-server revenue guidance by $14B versus its prior outlook."
+    }
+  },
+  "factor_roles": {
+    "amplifiers": [
+      "NVIDIA +3.21%などAIインフラ関連の強さ",
+      "三日続落後の買い戻し"
+    ],
+    "offsetting": [
+      "SOXX ETFは+0.23%にとどまる",
+      "AMD -0.55%、AVGO -0.66%",
+      "世界的な債券売りと原油・地政学リスク"
+    ],
+    "primary_candidate": "DellのAIサーバー需要・見通し上方修正が、AIインフラ需要の広がりを具体化したこと",
+    "unresolved": [
+      "Dell/NVIDIAの指数寄与と買い戻しの正確な寄与率",
+      "各ソフトウェア下落の会社固有要因"
+    ]
+  },
+  "input_provenance": [
+    {
+      "path_or_reference": "daily-inputs/2026-09-03/daily_source_package_2026-09-03.md",
+      "role": "daily_input",
+      "version_or_hash": "23ed1c1b409aefad4b1ec267c62f4e7ccdc525d5db551cabc7eba5a4523cd06f"
+    },
+    {
+      "path_or_reference": "source-of-truth/01_fox_character_bible.md",
+      "role": "source_of_truth",
+      "version_or_hash": "canon-manifest"
+    },
+    {
+      "path_or_reference": "source-of-truth/02_editorial_bible.md",
+      "role": "source_of_truth",
+      "version_or_hash": "canon-manifest"
+    },
+    {
+      "path_or_reference": "source-of-truth/03_episode_production_spec.md",
+      "role": "source_of_truth",
+      "version_or_hash": "canon-manifest"
+    },
+    {
+      "path_or_reference": "source-of-truth/04_entertainment_inquisitor.md",
+      "role": "source_of_truth",
+      "version_or_hash": "canon-manifest"
+    },
+    {
+      "path_or_reference": "https://investors.delltechnologies.com/static-files/2ea39342-d76a-4bed-b5d8-be06d7c86a66",
+      "role": "other",
+      "version_or_hash": "accessed-2026-09-03"
+    },
+    {
+      "path_or_reference": "https://investors.delltechnologies.com/static-files/a24f97e4-63b2-460d-a4be-44738826e8ce",
+      "role": "other",
+      "version_or_hash": "accessed-2026-09-03"
+    },
+    {
+      "path_or_reference": "https://www.reuters.com/business/retail-consumer/dell-shares-gain-after-strong-ai-server-demand-boosts-annual-forecast-2026-09-02/",
+      "role": "other",
+      "version_or_hash": "accessed-2026-09-03"
+    },
+    {
+      "path_or_reference": "https://www.reuters.com/business/us-stock-index-futures-subdued-oil-treasury-yields-rise-iran-tensions-2026-09-02/",
+      "role": "other",
+      "version_or_hash": "accessed-2026-09-03"
+    }
+  ],
+  "memory_revalidation": [],
+  "research_input_manifest": {
+    "path": "research/2026-09-03/research_input_manifest.json",
+    "sha256": "465b302b7b56f1144e2ea113d2e5aa3d8af252d1c29d62ffc30c8966c15bd1ad"
+  },
+  "research_questions": [
+    {
+      "answer_summary": "Q2売上は470億ドルでLSEG予想449.2億ドルを上回り、FY27売上見通しは1670億ドルから1920億ドル、AIサーバー売上見通しは600億ドルから740億ドルへ引き上げた。",
+      "evidence_ids": [
+        "E-003",
+        "E-004",
+        "E-006"
+      ],
+      "id": "Q-01",
+      "perspective": "official_evidence",
+      "question": "Dellの事前期待とQ2実績・通期見通しの差はどれほど大きかったか。",
+      "status": "answered"
+    },
+    {
+      "answer_summary": "DellはAI需要がneocloud、sovereign、enterpriseへ広がり、顧客数が6500を超えたと説明した。",
+      "evidence_ids": [
+        "E-005"
+      ],
+      "id": "Q-02",
+      "perspective": "official_evidence",
+      "question": "強いAIサーバー需要は大手クラウド以外にも広がっているか。",
+      "status": "answered"
+    },
+    {
+      "answer_summary": "DellとNVIDIAは強かったがSOXX ETFは小幅高、AMDとAVGOは下落。Reutersは三日続落後の買い戻しと債券・原油の逆風も併記しており、Dell単独原因とは言えない。",
+      "evidence_ids": [
+        "E-001",
+        "E-002",
+        "E-007",
+        "E-010"
+      ],
+      "id": "Q-03",
+      "perspective": "other",
+      "question": "Dellの強さをNASDAQ全体の上昇原因として扱えるか。",
+      "status": "partially_answered"
+    },
+    {
+      "answer_summary": "米国株は反発したが、世界的な債券売り、原油高、イラン情勢は残った。米債利回りの安定が相殺材料になったとの市場報道がある。",
+      "evidence_ids": [
+        "E-007",
+        "E-008",
+        "E-010"
+      ],
+      "id": "Q-04",
+      "perspective": "macro_transmission",
+      "question": "マクロ逆風は取引中に消えたのか。",
+      "status": "partially_answered"
+    },
+    {
+      "answer_summary": "NVIDIA、Micron、Qualcommは上昇した一方、AMDとBroadcomは下落し、SOXX ETFは0.23%高にとどまったため全面高ではない。",
+      "evidence_ids": [
+        "E-001",
+        "E-002",
+        "E-007"
+      ],
+      "id": "Q-05",
+      "perspective": "counter_hypothesis",
+      "question": "AI・半導体は全面高だったのか。",
+      "status": "answered"
+    }
+  ],
+  "session": {
+    "information_cutoff": "2026-09-03T00:23:24Z",
+    "market_date": "2026-09-02",
+    "timezone": "America/New_York"
+  },
+  "timeline": [
+    {
+      "event": "Dell released Q2 FY27 results and raised full-year revenue and AI-server guidance after the Sept. 1 U.S. close.",
+      "evidence_ids": [
+        "E-004",
+        "E-006"
+      ],
+      "id": "T-01",
+      "precision": "reported_only",
+      "timestamp_or_window": "2026-09-01 after US regular close",
+      "timezone": "America/New_York"
+    },
+    {
+      "event": "Dell earnings call described AI demand broadening across neocloud, sovereign and enterprise customers.",
+      "evidence_ids": [
+        "E-005"
+      ],
+      "id": "T-02",
+      "precision": "reported_only",
+      "timestamp_or_window": "2026-09-01 16:30 ET approximately",
+      "timezone": "America/New_York"
+    },
+    {
+      "event": "During the Sept. 2 U.S. session, Dell rose 15.81% and Nvidia 3.21% while the Nasdaq Composite rose 0.45%.",
+      "evidence_ids": [
+        "E-001",
+        "E-002",
+        "E-007"
+      ],
+      "id": "T-03",
+      "precision": "session",
+      "timestamp_or_window": "2026-09-02 US regular session",
+      "timezone": "America/New_York"
+    },
+    {
+      "event": "The same session retained global bond/oil/geopolitical headwinds; market commentary cited stabilization in bond yields as an offset.",
+      "evidence_ids": [
+        "E-007",
+        "E-008",
+        "E-010"
+      ],
+      "id": "T-04",
+      "precision": "session",
+      "timestamp_or_window": "2026-09-02 US regular session",
+      "timezone": "America/New_York"
+    },
+    {
+      "event": "By the close, SOXX ETF was only +0.23% and AMD/AVGO were negative, limiting any claim of a uniform semiconductor rally.",
+      "evidence_ids": [
+        "E-001",
+        "E-002"
+      ],
+      "id": "T-05",
+      "precision": "session",
+      "timestamp_or_window": "2026-09-02 US regular close",
+      "timezone": "America/New_York"
+    }
+  ],
+  "validation": {
+    "errors": [],
+    "status": "pass",
+    "warnings": [
+      "Collector field `SOX` is actually SOXX.US; production must label it SOXX ETF.",
+      "Dell is NYSE-listed; use it as an AI-infrastructure signal to NASDAQ, not as a Nasdaq index constituent."
+    ]
+  },
+  "validation_candidates": [],
+  "visual_evidence_needs": []
+}

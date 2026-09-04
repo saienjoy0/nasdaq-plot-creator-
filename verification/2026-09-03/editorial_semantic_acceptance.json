@@ -1,0 +1,128 @@
+{
+  "authoring": {
+    "path": "daily-authoring/2026-09-03.json",
+    "semanticSha256": "493c0afdc83fd8edfd5efc9f298f5fc80583a08151574d8ea17bad872ede6ac6",
+    "sha256": "90b61ed2d1288e05a3e270015408b81f1976ff90e5546c448f6bee34f7dd792f"
+  },
+  "canonManifest": {
+    "path": "source-of-truth/canon_manifest.json",
+    "sha256": "c454839e632654fe2473b08cf65937e158f27774ac6c6fcb430a57450356d9cd"
+  },
+  "causalDossier": {
+    "path": "research/2026-09-03/causal_research_dossier_2026-09-03.json",
+    "sha256": "49917510e4d17e06bed6341f16eb0fdff62f3096768cad159a59beb44d3f5302"
+  },
+  "causalDossierValidation": {
+    "path": "research/2026-09-03/causal_dossier_validation.json",
+    "sha256": "6eae87e9feb9a1575efbca4743f76bc87a9c8a30cfffd2ce0336724c4a2db12d"
+  },
+  "contractBindings": [
+    {
+      "path": "contracts/chatgpt_daily_authoring_v2.schema.json",
+      "role": "daily-authoring-schema",
+      "sha256": "edaeef3afc91cdda10b803d9dc612a6a843f57ba2e2d28b23f31a0a7db5162fc"
+    },
+    {
+      "path": "contracts/editorial_semantic_acceptance.schema.json",
+      "role": "semantic-acceptance-schema",
+      "sha256": "5ecc1e30a4ab4cf5bc6d3ba8ad68c85aed0d63cb1f3897e36470b3eed45003cb"
+    },
+    {
+      "path": "skills/nasdaq-cafe-causal-research/contracts/causal_research_dossier_v0.3.schema.json",
+      "role": "dossier-schema",
+      "sha256": "6d9cf26650d8d1313f3bf7863a418b4b9ab8469755e4834680432ca4797dfc2f"
+    },
+    {
+      "path": "skills/nasdaq-cafe-causal-research/contracts/causal_dossier_validation_receipt.schema.json",
+      "role": "dossier-receipt-schema",
+      "sha256": "ecfccad0f4b6e058762e32cb3e8d2bad3406c9161a69492a0fe419558239d6ef"
+    },
+    {
+      "path": "skills/nasdaq-cafe-causal-research/validators/validate_causal_research_dossier.py",
+      "role": "dossier-validator",
+      "sha256": "46694347d0ae0095894d11e377df1aabd4a53b259eb40844432cd7fd1c7f4cbb"
+    },
+    {
+      "path": "scripts/materialize_causal_research.py",
+      "role": "dossier-receipt-verifier",
+      "sha256": "b52f87500395fd3c1e905ed63e5ab9c3a25b955d61aea25a5dd15412a1a35eac"
+    },
+    {
+      "path": "scripts/canon_manifest.py",
+      "role": "canon-manifest-verifier",
+      "sha256": "0506163818c81c526de2fe199354db2829ad1ee3dab5858d078930f179d985ad"
+    },
+    {
+      "path": "contracts/canon_manifest.schema.json",
+      "role": "canon-manifest-schema",
+      "sha256": "46a8984eaf5c4de447450053ae9886e4cc036797c0c8730ce89419cd821d4d6d"
+    },
+    {
+      "path": "skills/nasdaq-cafe-story-plan/contracts/story_plan.schema.json",
+      "role": "story-plan-schema",
+      "sha256": "84e7a4fd7c2f17f2d02c2487ff6da8dbee1f5112d0ac786cf38aa2ce664c1521"
+    },
+    {
+      "path": "skills/nasdaq-cafe-story-plan/validators/validate_story_plan.py",
+      "role": "story-plan-validator",
+      "sha256": "d7ab21816837ad0105d8a780c6f2104a42301a319e68992bfc33ab69f5e31ba6"
+    },
+    {
+      "path": "skills/nasdaq-cafe-story-authoring/contracts/story_script.schema.json",
+      "role": "story-script-schema",
+      "sha256": "2777cdf9a76435d551841670b8982778ae11fe9d011ff686213b46137c521c24"
+    },
+    {
+      "path": "scripts/story-engine/validate_story_engine_bundle.py",
+      "role": "story-bundle-validator",
+      "sha256": "9ac182c8e20699c935a059ac7b18362ccb70b2c9ce481f30f5aa7b5ba0e0314e"
+    },
+    {
+      "path": "skills/nasdaq-cafe-entertainment-critic/contracts/creative_review.schema.json",
+      "role": "creative-review-schema",
+      "sha256": "464f2e96df5e68d8b058db0f92212bc0f7c11194923fbb767ee3adefe77347a5"
+    },
+    {
+      "path": "scripts/remotion_template_variant.py",
+      "role": "template-variant-policy",
+      "sha256": "d4e9dee06bdf5674b914e102e13b8547d3737897bf99960ec356205efa428689"
+    },
+    {
+      "path": "scripts/validate_editorial_semantic_boundary.py",
+      "role": "semantic-boundary-validator",
+      "sha256": "7e4bba9887d01d4a08cb9b8a40263e05e31b15d03aeba1c56d09b452c1025780"
+    }
+  ],
+  "contractVersion": "1.0.0",
+  "episodeDate": "2026-09-03",
+  "errors": [],
+  "status": "PASS",
+  "storySubdocuments": {
+    "creativeReview": {
+      "jsonPointer": "/creativeReview",
+      "semanticSha256": "5ce6092720b60cbb29927e762933332a5fe5acf15ba825c4b011dc89aeba8b2a"
+    },
+    "storyPlan": {
+      "jsonPointer": "/storyPlan",
+      "semanticSha256": "d2ac9e867089280f8e5ed6424c1db92c7b65a4fa657c0951453b9001d62fab3d"
+    },
+    "storyScript": {
+      "jsonPointer": "/storyScript",
+      "semanticSha256": "bfc86f42999e0d6c500f5f7693e2e636d569505a80a0aafc05397c1c20450a12"
+    }
+  },
+  "validationProjections": {
+    "creativeReview": {
+      "path": "verification/2026-09-03/editorial-semantic-preflight/creative_review.json",
+      "sha256": "79b36b9587655c81b92b66f8ab0bf486c93452416dc16d52942d1f8656d7f7d5"
+    },
+    "storyPlan": {
+      "path": "verification/2026-09-03/editorial-semantic-preflight/story_plan.json",
+      "sha256": "26c1475db0eba9d8aa92f2e584708e93711d60b3d53fddaa265b8209b4195199"
+    },
+    "storyScript": {
+      "path": "verification/2026-09-03/editorial-semantic-preflight/story_script.json",
+      "sha256": "81a98b54d14e2b7562e3de01b14755628a0d68f4196d58638f3b562887bbcb0e"
+    }
+  }
+}
