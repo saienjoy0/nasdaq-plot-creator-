@@ -1,0 +1,259 @@
+{
+  "causal_dossier": {
+    "path": "research/2026-09-03/causal_research_dossier_2026-09-03.json",
+    "sha256": "49917510e4d17e06bed6341f16eb0fdff62f3096768cad159a59beb44d3f5302"
+  },
+  "contract_version": "1.0.0",
+  "episode_date": "2026-09-03",
+  "producer": "chatgpt",
+  "retained_counterevidence_ids": [
+    "E-001",
+    "E-002",
+    "E-007",
+    "E-009",
+    "E-010"
+  ],
+  "scenes": [
+    {
+      "causal_claims": [
+        {
+          "claim_id": "claim-01",
+          "claim_type": "fact",
+          "confidence": "medium",
+          "evidence_ids": [
+            "E-001",
+            "E-002",
+            "E-007",
+            "E-010"
+          ],
+          "scope": "nasdaq_support",
+          "statement": "マクロ逆風が残る中でもNasdaqは0.45%高、DellとNVIDIAが目立って上昇した。"
+        }
+      ],
+      "connection_to_previous": "opening",
+      "evidence_ids": [
+        "E-001",
+        "E-002",
+        "E-007",
+        "E-010"
+      ],
+      "formal_role": "direction_and_conclusion",
+      "narration": "昨夜のNasdaq Compositeは0.45%高でした。ただ、世界では債券売りと原油・地政学の逆風が残っています。\n\nそれでもDellは15.8%、NVIDIAは3.2%上昇。今日は、逆風の中でなぜAIの一部だけ強かったのかを見ます。僕の結論は、Dellが示したAI需要の裾野拡大と、三日続落後の買い戻し・米債の安定が重なった、選別的な反発です。",
+      "scene_id": "scene-01"
+    },
+    {
+      "causal_claims": [
+        {
+          "claim_id": "claim-02",
+          "claim_type": "fact",
+          "confidence": "medium",
+          "evidence_ids": [
+            "E-001",
+            "E-002",
+            "E-009"
+          ],
+          "scope": "sector",
+          "statement": "SOXX ETFは0.23%高にとどまり、AMDとAVGOは下落、ソフトウェアにも大幅安があった。"
+        }
+      ],
+      "connection_to_previous": "but",
+      "evidence_ids": [
+        "E-001",
+        "E-002",
+        "E-009"
+      ],
+      "formal_role": "contradiction",
+      "narration": "でも、ここをAI全面高とまとめると壊れます。SOXX ETFは0.23%高にとどまり、AMDは0.55%安、Broadcomは0.66%安。\n\nCadenceやCrowdStrikeも大きく下げました。つまり、AIというラベルだけで全部が買われた夜ではありません。強かった場所に、もう一段具体的な理由が必要です。",
+      "scene_id": "scene-02"
+    },
+    {
+      "causal_claims": [
+        {
+          "claim_id": "claim-03",
+          "claim_type": "fact",
+          "confidence": "high",
+          "evidence_ids": [
+            "E-003",
+            "E-004",
+            "E-006"
+          ],
+          "scope": "company",
+          "statement": "DellはQ2売上でLSEG予想を上回り、通期売上とAIサーバー売上の見通しを大幅に引き上げた。"
+        }
+      ],
+      "connection_to_previous": "contrast",
+      "evidence_ids": [
+        "E-003",
+        "E-004",
+        "E-006"
+      ],
+      "formal_role": "confirmed_facts",
+      "narration": "Dellの会社直接材料はかなり強いです。Q2売上は470億ドル。\n\nReutersが引用したLSEG予想449.2億ドルを上回りました。さらに通期売上見通しは1670億ドルから1920億ドルへ。AI最適化サーバー売上の見通しも600億ドルから740億ドルへ引き上げています。",
+      "scene_id": "scene-03"
+    },
+    {
+      "causal_claims": [
+        {
+          "claim_id": "claim-04",
+          "claim_type": "grounded_inference",
+          "confidence": "medium",
+          "evidence_ids": [
+            "E-004",
+            "E-005",
+            "E-006"
+          ],
+          "scope": "company",
+          "statement": "AI注文609億ドル、backlog 950億ドルに加え、顧客がneocloud・sovereign・enterpriseへ広がった。"
+        }
+      ],
+      "connection_to_previous": "therefore",
+      "evidence_ids": [
+        "E-004",
+        "E-005",
+        "E-006"
+      ],
+      "formal_role": "expected_actual_gap",
+      "narration": "Gapの中身は、売上の上振れだけではありません。DellはQ2にAI注文609億ドル、AIサーバー売上164億ドル、期末backlogは950億ドル。\n\nさらに、需要がneocloud、sovereign、enterpriseへ広がり、AI顧客は6500社を超えたと説明しました。僕がここで見るのは、AI需要の量だけでなく、買い手の裾野が広がった点です。",
+      "scene_id": "scene-04"
+    },
+    {
+      "causal_claims": [
+        {
+          "claim_id": "claim-05",
+          "claim_type": "grounded_inference",
+          "confidence": "medium",
+          "evidence_ids": [
+            "E-007",
+            "E-008",
+            "E-010"
+          ],
+          "scope": "nasdaq_support",
+          "statement": "世界的な債券売り、原油・地政学のインフレ懸念は残り、米債利回りの安定が相殺材料になった。"
+        }
+      ],
+      "connection_to_previous": "but",
+      "evidence_ids": [
+        "E-007",
+        "E-008",
+        "E-010"
+      ],
+      "formal_role": "global_context",
+      "narration": "ただ、NASDAQ全体へ行くと別のエンジンが残っています。世界の債券市場では売りが続き、原油と中東情勢はインフレ不安を消していません。\n\n高い金利は、将来利益を高く評価されるグロース株には重しです。一方、米国株の時間帯では債券利回りが安定したとの市場報道もあり、ここが相殺材料になりました。",
+      "scene_id": "scene-05"
+    },
+    {
+      "causal_claims": [
+        {
+          "claim_id": "claim-06",
+          "claim_type": "grounded_inference",
+          "confidence": "medium",
+          "evidence_ids": [
+            "E-001",
+            "E-002",
+            "E-007",
+            "E-008"
+          ],
+          "scope": "nasdaq_support",
+          "statement": "Nasdaqは三日続落を止め0.45%高、Dell/Nvidiaが強く、米債安定と買い戻しが指数を支えた。"
+        }
+      ],
+      "connection_to_previous": "therefore",
+      "evidence_ids": [
+        "E-001",
+        "E-002",
+        "E-007",
+        "E-008"
+      ],
+      "formal_role": "market_reaction",
+      "narration": "市場反応を重ねると、Nasdaq Compositeは三日続落を止めて0.45%高。Dellは15.8%、NVIDIAは3.2%高でした。\n\nReutersは、売られ過ぎた銘柄を拾う動きも伝えています。つまりDellがNASDAQを一社で押し上げた、ではありません。DellのAI需要証拠が一部テックを支え、買い戻しと米債の安定が指数側を支えた、と分けるのが安全です。",
+      "scene_id": "scene-06"
+    },
+    {
+      "causal_claims": [
+        {
+          "claim_id": "claim-07",
+          "claim_type": "grounded_inference",
+          "confidence": "medium",
+          "evidence_ids": [
+            "E-001",
+            "E-002",
+            "E-009"
+          ],
+          "scope": "sector",
+          "statement": "SOXX小幅高、AMD/AVGO安、ソフトウェア大幅安が残り、具体的AI需要証拠を持つ領域への選別が示唆された。"
+        }
+      ],
+      "connection_to_previous": "but",
+      "evidence_ids": [
+        "E-001",
+        "E-002",
+        "E-009"
+      ],
+      "formal_role": "entity_divergence",
+      "narration": "反対材料も残します。SOXX ETFは0.23%高にとどまり、AMDとBroadcomはマイナス。ソフトウェアにも大きな下げがありました。\n\nだから昨夜の発見は「AIなら何でも上がる」ではありません。具体的な注文、backlog、顧客層の広がりまで見えた場所が相対的に強かった。ここが見出しだけでは分かりにくい部分です。",
+      "scene_id": "scene-07"
+    },
+    {
+      "causal_claims": [
+        {
+          "claim_id": "claim-08",
+          "claim_type": "grounded_inference",
+          "confidence": "medium",
+          "evidence_ids": [
+            "E-001",
+            "E-002",
+            "E-004",
+            "E-005",
+            "E-007",
+            "E-008",
+            "E-010"
+          ],
+          "scope": "nasdaq_support",
+          "statement": "最も整合するのは「Dellの具体的AI需要証拠＋指数側の買い戻し/米債安定－残るマクロ逆風」という複合説明。"
+        }
+      ],
+      "connection_to_previous": "callback",
+      "evidence_ids": [
+        "E-001",
+        "E-002",
+        "E-004",
+        "E-005",
+        "E-007",
+        "E-008",
+        "E-010"
+      ],
+      "formal_role": "validation_points",
+      "narration": "ここまでで、Dellだけ説は狭すぎる。AI全面高説はSOXXやAMD、Broadcomと合わない。マクロ逆風が消えた説も債券と原油の状況と合いません。\n\n僕が残すのは、DellがAI需要の裾野拡大を具体化し、その追い風がDellやNVIDIAへ届いた一方、NASDAQ全体は買い戻しと米債安定にも支えられ、マクロ逆風は残った、という複合説明です。確信度は中。次は、金利が再び上がっても具体的なAI需要証拠を持つ銘柄が相対的に強いかを見ます。",
+      "scene_id": "scene-08"
+    },
+    {
+      "causal_claims": [],
+      "connection_to_previous": "closing",
+      "evidence_ids": [],
+      "formal_role": "fixed_closing",
+      "narration": "以上、朝のNASDAQカフェでした。今日も気をつけて、いってらっしゃい。\n\nこちらはそろそろ、おやすみなさい。",
+      "scene_id": "scene-09"
+    }
+  ],
+  "story_plan": {
+    "path": "verification/2026-09-03/editorial-semantic-preflight/story_plan.json",
+    "sha256": "26c1475db0eba9d8aa92f2e584708e93711d60b3d53fddaa265b8209b4195199"
+  },
+  "unresolved_points": [
+    {
+      "evidence_ids": [
+        "E-001",
+        "E-007",
+        "E-008"
+      ],
+      "statement": "Dell/Nvidiaの指数寄与と買い戻しの正確な寄与率は不明。"
+    },
+    {
+      "evidence_ids": [
+        "E-002",
+        "E-009"
+      ],
+      "statement": "AMD/AVGOおよびソフトウェア下落の会社固有原因はこの制作で確定していない。"
+    }
+  ]
+}
