@@ -242,6 +242,8 @@ def test_semantic_boundary_preserves_pre_vi_variant_ownership(tmp_path: Path):
     beat["visualMode"] = "verification-matrix"
     beat["visualTemplate"] = "verification-matrix"
     beat["variant"] = None
+    beat["laneLabels"] = ["弱まった仮説", "残った仮説"]
+    beat["viewerTexts"] = ["弱まった仮説｜synthetic weakened", "残った仮説｜synthetic remaining"]
 
     fx.write_json(path, authoring)
     semantic.validate_boundary(root, fx.DATE, path)

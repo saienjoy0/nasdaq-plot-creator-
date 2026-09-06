@@ -6,7 +6,9 @@ on:
       - "daily-authoring/**"
       - "daily-authoring-parts/**"
       - "scripts/validate_chatgpt_visual_feasibility.py"
+      - "scripts/validate_editorial_semantic_boundary.py"
       - "tests/remotion-compat/test_chatgpt_visual_feasibility.py"
+      - "tests/editorial-semantic-boundary/test_pre_freeze_visual_feasibility.py"
       - ".github/workflows/current-visual-feasibility-ci.yml"
   workflow_dispatch:
 
@@ -30,12 +32,14 @@ jobs:
           python-version: "3.12"
 
       - name: Install test dependency
-        run: python -m pip install --disable-pip-version-check pytest
+        run: python -m pip install --disable-pip-version-check pytest jsonschema referencing
 
       - name: Run visual feasibility contract regressions
         run: |
           python3 -m py_compile scripts/validate_chatgpt_visual_feasibility.py
-          pytest -q tests/remotion-compat/test_chatgpt_visual_feasibility.py
+          pytest -q \
+            tests/remotion-compat/test_chatgpt_visual_feasibility.py \
+            tests/editorial-semantic-boundary/test_pre_freeze_visual_feasibility.py
 
       - name: Validate every episode date touched by authoring changes
         if: github.event_name == 'pull_request'

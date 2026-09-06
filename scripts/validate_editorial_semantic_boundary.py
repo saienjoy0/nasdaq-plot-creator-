@@ -27,6 +27,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import materialize_causal_research
 import remotion_template_variant
+import validate_chatgpt_visual_feasibility
 
 
 class EditorialSemanticBoundaryError(ValueError):
@@ -292,6 +293,7 @@ def contract_bindings(root: Path, dossier: dict[str, Any]) -> list[dict[str, str
         ("story-bundle-validator", "scripts/story-engine/validate_story_engine_bundle.py"),
         ("creative-review-schema", "skills/nasdaq-cafe-entertainment-critic/contracts/creative_review.schema.json"),
         ("template-variant-policy", "scripts/remotion_template_variant.py"),
+        ("visual-feasibility-validator", "scripts/validate_chatgpt_visual_feasibility.py"),
         ("semantic-boundary-validator", "scripts/validate_editorial_semantic_boundary.py"),
     ]
     return [_contract_binding(root, role, path) for role, path in pairs]
@@ -315,6 +317,12 @@ def validate_boundary(root: Path, date: str, authoring_path: Path) -> dict[str, 
         raise EditorialSemanticBoundaryError("; ".join(errors))
     if authoring.get("contractVersion") != "2.0.0" or authoring.get("episodeDate") != date:
         raise EditorialSemanticBoundaryError("Canonical Daily Authoring v2 contract/date mismatch")
+
+    feasibility_errors = validate_chatgpt_visual_feasibility.validate(authoring)
+    if feasibility_errors:
+        raise EditorialSemanticBoundaryError(
+            "Visual feasibility validation failed: " + "; ".join(feasibility_errors)
+        )
 
     dossier_path = resolve_ref(
         root,
