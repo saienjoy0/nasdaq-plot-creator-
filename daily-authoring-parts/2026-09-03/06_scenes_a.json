@@ -1,0 +1,404 @@
+{
+  "production": {
+    "scenes": [
+      {
+        "beats": [
+          {
+            "changeCue": "next",
+            "contentType": "market-pulse-grid",
+            "evidenceSourceIds": [
+              "source-001"
+            ],
+            "grammarId": "market",
+            "metrics": [
+              {
+                "label": "Nasdaq",
+                "numericValue": 0.45,
+                "precision": 2,
+                "tone": "positive",
+                "unit": "%",
+                "value": "+0.45%"
+              },
+              {
+                "label": "SOXX ETF",
+                "numericValue": 0.23,
+                "precision": 2,
+                "tone": "positive",
+                "unit": "%",
+                "value": "+0.23%"
+              }
+            ],
+            "primaryElement": "Nasdaq +0.45%",
+            "primaryFunction": "Explain",
+            "screenQuestion": "昨夜の方向は？",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "Nasdaq Composite：+0.45%",
+              "SOXX ETF：+0.23%",
+              "逆風下でも反発"
+            ],
+            "visualEvents": [
+              {
+                "action": "show",
+                "offsetMs": 0,
+                "targetId": "scene-01-number-01-01",
+                "timing": "chunk-start"
+              },
+              {
+                "action": "show",
+                "offsetMs": 180,
+                "targetId": "scene-01-number-01-02",
+                "timing": "chunk-start"
+              }
+            ],
+            "visualMode": "market-pulse",
+            "visualTemplate": "opening-contradiction"
+          },
+          {
+            "changeCue": "next",
+            "contentType": "comparison",
+            "evidenceSourceIds": [
+              "source-001",
+              "source-006"
+            ],
+            "grammarId": "comparison",
+            "metrics": [
+              {
+                "label": "DELL",
+                "numericValue": 15.81,
+                "precision": 2,
+                "tone": "positive",
+                "unit": "%",
+                "value": "+15.81%"
+              },
+              {
+                "label": "NVDA",
+                "numericValue": 3.21,
+                "precision": 2,
+                "tone": "positive",
+                "unit": "%",
+                "value": "+3.21%"
+              }
+            ],
+            "primaryElement": "DELL +15.81% / NVDA +3.21%",
+            "primaryFunction": "Explain",
+            "screenQuestion": "何が目立った？",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "DELL：+15.81%",
+              "NVDA：+3.21%",
+              "でも全面高ではない"
+            ],
+            "visualEvents": [
+              {
+                "action": "show",
+                "offsetMs": 0,
+                "targetId": "scene-01-number-02-01",
+                "timing": "chunk-start"
+              },
+              {
+                "action": "show",
+                "offsetMs": 180,
+                "targetId": "scene-01-number-02-02",
+                "timing": "chunk-start"
+              }
+            ],
+            "visualMode": "comparison",
+            "visualTemplate": "split-comparison"
+          }
+        ],
+        "causalScope": "multiple",
+        "chunks": [
+          {
+            "expression": "通常",
+            "text": "昨夜のNasdaq Compositeは0.45%高でした。ただ、世界では債券売りと原油・地政学の逆風が残っています。"
+          },
+          {
+            "expression": "通常",
+            "text": "それでもDellは15.8%、NVIDIAは3.2%上昇。今日は、逆風の中でなぜAIの一部だけ強かったのかを見ます。僕の結論は、Dellが示したAI需要の裾野拡大と、三日続落後の買い戻し・米債の安定が重なった、選別的な反発です。"
+          }
+        ],
+        "evidenceSourceIds": [
+          "source-001",
+          "source-006"
+        ],
+        "expectedBasisType": "not-applicable",
+        "formalName": "逆風の中でNASDAQ +0.45%",
+        "headline": "逆風の中でNASDAQ +0.45%",
+        "initialExpression": "通常",
+        "performanceIntent": "強い上昇見出しより先に、マクロ逆風が残る矛盾を置く",
+        "purpose": "方向・矛盾・問い・暫定結論を冒頭30秒で提示する",
+        "sceneRole": "direction_and_conclusion",
+        "sourceLabel": "fresh Collector / Reuters",
+        "supportingTexts": [
+          "Nasdaq +0.45%",
+          "DELL +15.81%",
+          "NVDA +3.21%"
+        ],
+        "timelineBasis": "2026-09-02 US regular session",
+        "uncertainty": "DellはNYSE上場であり、NASDAQ指数の直接構成要因として扱わない。",
+        "visualMode": "market-pulse-grid"
+      },
+      {
+        "beats": [
+          {
+            "changeCue": "next",
+            "contentType": "comparison",
+            "evidenceSourceIds": [
+              "source-001"
+            ],
+            "grammarId": "comparison",
+            "metrics": [
+              {
+                "label": "SOXX ETF",
+                "numericValue": 0.23,
+                "precision": 2,
+                "tone": "positive",
+                "unit": "%",
+                "value": "+0.23%"
+              }
+            ],
+            "primaryElement": "SOXX ETF +0.23%",
+            "primaryFunction": "Explain",
+            "screenQuestion": "半導体全体は？",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "SOXX ETF：+0.23%",
+              "上昇は小幅",
+              "PHLX SOX指数ではない"
+            ],
+            "visualMode": "number-card",
+            "visualTemplate": "hero-number"
+          },
+          {
+            "changeCue": "next",
+            "contentType": "comparison",
+            "evidenceSourceIds": [
+              "source-001"
+            ],
+            "grammarId": "comparison",
+            "metrics": [
+              {
+                "label": "AMD",
+                "numericValue": -0.55,
+                "precision": 2,
+                "tone": "negative",
+                "unit": "%",
+                "value": "-0.55%"
+              },
+              {
+                "label": "AVGO",
+                "numericValue": -0.66,
+                "precision": 2,
+                "tone": "negative",
+                "unit": "%",
+                "value": "-0.66%"
+              }
+            ],
+            "primaryElement": "AMD / AVGO は下落",
+            "primaryFunction": "Explain",
+            "screenQuestion": "同じAI株でも？",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "AMD：-0.55%",
+              "AVGO：-0.66%",
+              "全面高説は弱い"
+            ],
+            "visualEvents": [
+              {
+                "action": "show",
+                "offsetMs": 0,
+                "targetId": "scene-02-number-02-01",
+                "timing": "chunk-start"
+              },
+              {
+                "action": "show",
+                "offsetMs": 180,
+                "targetId": "scene-02-number-02-02",
+                "timing": "chunk-start"
+              }
+            ],
+            "visualMode": "comparison",
+            "visualTemplate": "split-comparison"
+          }
+        ],
+        "causalScope": "sector_support",
+        "chunks": [
+          {
+            "expression": "分析",
+            "text": "でも、ここをAI全面高とまとめると壊れます。SOXX ETFは0.23%高にとどまり、AMDは0.55%安、Broadcomは0.66%安。"
+          },
+          {
+            "expression": "分析",
+            "text": "CadenceやCrowdStrikeも大きく下げました。つまり、AIというラベルだけで全部が買われた夜ではありません。強かった場所に、もう一段具体的な理由が必要です。"
+          }
+        ],
+        "evidenceSourceIds": [
+          "source-001"
+        ],
+        "expectedBasisType": "not-applicable",
+        "formalName": "AI全面高ではない",
+        "headline": "AI全面高ではない",
+        "initialExpression": "分析",
+        "performanceIntent": "反対材料を先に見せて主役の説明範囲を狭める",
+        "purpose": "Dell/NVIDIAの強さをセクター全面高へ誤拡大しない",
+        "sceneRole": "contradiction",
+        "sourceLabel": "fresh Collector",
+        "supportingTexts": [
+          "SOXX ETF +0.23%",
+          "AMD -0.55%",
+          "AVGO -0.66%"
+        ],
+        "timelineBasis": "2026-09-02 US regular session",
+        "uncertainty": "CDNS/CRWDの下落原因はこの素材では確定していないため、価格分散の例に限定する。",
+        "visualMode": "comparison"
+      },
+      {
+        "beats": [
+          {
+            "changeCue": "next",
+            "contentType": "expected-actual-gap-flow",
+            "evidenceSourceIds": [
+              "source-003",
+              "source-005"
+            ],
+            "grammarId": "gap",
+            "metrics": [
+              {
+                "label": "Expected",
+                "numericValue": 44.92,
+                "precision": 2,
+                "tone": "neutral",
+                "unit": "B",
+                "value": "$44.92B"
+              },
+              {
+                "label": "Actual",
+                "numericValue": 47.0,
+                "precision": 1,
+                "tone": "positive",
+                "unit": "B",
+                "value": "$47.0B"
+              }
+            ],
+            "primaryElement": "$47.0B vs $44.92B",
+            "primaryFunction": "Explain",
+            "screenQuestion": "Q2売上は？",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "Expected｜$44.92B",
+              "Actual｜$47.0B",
+              "Gap｜約+$2.05B"
+            ],
+            "visualEvents": [
+              {
+                "action": "show",
+                "offsetMs": 0,
+                "targetId": "scene-03-number-01-01",
+                "timing": "chunk-start"
+              },
+              {
+                "action": "show",
+                "offsetMs": 180,
+                "targetId": "scene-03-number-01-02",
+                "timing": "chunk-start"
+              }
+            ],
+            "visualMode": "expected-actual-gap",
+            "visualTemplate": "expected-actual-gap-flow"
+          },
+          {
+            "changeCue": "next",
+            "contentType": "expected-actual-gap-flow",
+            "evidenceSourceIds": [
+              "source-002",
+              "source-003"
+            ],
+            "grammarId": "gap",
+            "metrics": [
+              {
+                "label": "Previous",
+                "numericValue": 60,
+                "precision": 0,
+                "tone": "neutral",
+                "unit": "B",
+                "value": "$60B"
+              },
+              {
+                "label": "Updated",
+                "numericValue": 74,
+                "precision": 0,
+                "tone": "positive",
+                "unit": "B",
+                "value": "$74B"
+              }
+            ],
+            "primaryElement": "$60B → $74B",
+            "primaryFunction": "Explain",
+            "screenQuestion": "AIサーバー通期見通しは？",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "Before｜$60B",
+              "Updated｜$74B",
+              "+ $14B"
+            ],
+            "visualEvents": [
+              {
+                "action": "show",
+                "offsetMs": 0,
+                "targetId": "scene-03-number-02-01",
+                "timing": "chunk-start"
+              },
+              {
+                "action": "show",
+                "offsetMs": 180,
+                "targetId": "scene-03-number-02-02",
+                "timing": "chunk-start"
+              }
+            ],
+            "visualMode": "expected-actual-gap",
+            "visualTemplate": "expected-actual-gap-flow"
+          }
+        ],
+        "causalScope": "company_direct",
+        "chunks": [
+          {
+            "expression": "分析",
+            "text": "Dellの会社直接材料はかなり強いです。Q2売上は470億ドル。"
+          },
+          {
+            "expression": "分析",
+            "text": "Reutersが引用したLSEG予想449.2億ドルを上回りました。さらに通期売上見通しは1670億ドルから1920億ドルへ。AI最適化サーバー売上の見通しも600億ドルから740億ドルへ引き上げています。"
+          }
+        ],
+        "evidenceSourceIds": [
+          "source-002",
+          "source-003",
+          "source-005"
+        ],
+        "expectedBasisType": "major-reporting",
+        "formalName": "DellはExpectedを上回った",
+        "headline": "DellはExpectedを上回った",
+        "initialExpression": "分析",
+        "performanceIntent": "大きな数字を3つに絞って視聴者がGapを追えるようにする",
+        "purpose": "会社直接材料のExpected / Actualを確認する",
+        "sceneRole": "confirmed_facts",
+        "sourceLabel": "Dell IR / Dell IR / Reuters",
+        "supportingTexts": [
+          "Q2売上：$47.0B vs $44.92B",
+          "FY27売上：$167B → $192B",
+          "AI server：$60B → $74B"
+        ],
+        "timelineBasis": "2026-09-01 after US close",
+        "uncertainty": "LSEG consensusはReuters報道経由。通期見通しは会社ガイダンスで将来実績を保証しない。",
+        "visualMode": "expected-actual-gap"
+      }
+    ]
+  }
+}

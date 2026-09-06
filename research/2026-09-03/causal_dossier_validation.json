@@ -1,0 +1,57 @@
+{
+  "contractVersion": "1.0.0",
+  "dossier": {
+    "path": "research/2026-09-03/causal_research_dossier_2026-09-03.json",
+    "sha256": "49917510e4d17e06bed6341f16eb0fdff62f3096768cad159a59beb44d3f5302"
+  },
+  "episodeDate": "2026-09-03",
+  "errors": [],
+  "memoryRetrievalReport": {
+    "path": "working/2026-09-03/memory_retrieval_report_2026-09-03.json",
+    "sha256": "c9e3e73a111195792da6482e68371b0fbb8a039170b6c13df2dcdd1820d79c85"
+  },
+  "researchInputManifest": {
+    "path": "research/2026-09-03/research_input_manifest.json",
+    "sha256": "465b302b7b56f1144e2ea113d2e5aa3d8af252d1c29d62ffc30c8966c15bd1ad"
+  },
+  "schemaBindings": [
+    {
+      "path": "skills/nasdaq-cafe-causal-research/contracts/causal_research_dossier_v0.3.schema.json",
+      "sha256": "6d9cf26650d8d1313f3bf7863a418b4b9ab8469755e4834680432ca4797dfc2f"
+    },
+    {
+      "path": "skills/nasdaq-cafe-causal-research/contracts/research_input_manifest.schema.json",
+      "sha256": "c9f74534a425da5d0c2a337db904f05f5f6d385d969b6a14de3690fe0c00a255"
+    },
+    {
+      "path": "skills/nasdaq-cafe-editorial-memory/contracts/memory_query_plan.schema.json",
+      "sha256": "dc12b8737d9cf3182e869c99ecafe862484afb5aaa2f72a7f69d9e4fcf0ffe19"
+    },
+    {
+      "path": "skills/nasdaq-cafe-editorial-memory/contracts/memory_retrieval_report.schema.json",
+      "sha256": "ee74157a75250d419ccd9a6c09cd051bf3b082b6c2d4698ec92e5d7e9a54a38c"
+    },
+    {
+      "path": "skills/nasdaq-cafe-causal-research/contracts/causal_dossier_validation_receipt.schema.json",
+      "sha256": "ecfccad0f4b6e058762e32cb3e8d2bad3406c9161a69492a0fe419558239d6ef"
+    },
+    {
+      "path": "scripts/build_research_input_manifest.py",
+      "sha256": "e685c32388ffb5ee5d5e78e83c999ee53ef155b1db0b435eea4d63a6fd5e5661"
+    },
+    {
+      "path": "scripts/editorial_memory_retrieval.py",
+      "sha256": "e0928d31fd122281ab2f6b5fe07a4a5d69109782c2f3457757800f554ae1a40b"
+    },
+    {
+      "path": "scripts/temporal_evidence.py",
+      "sha256": "1b11db91d7af6141a709511f5ba45d049b6938d18c5fd43427cb12a92572bc5c"
+    }
+  ],
+  "status": "pass",
+  "validator": {
+    "path": "skills/nasdaq-cafe-causal-research/validators/validate_causal_research_dossier.py",
+    "sha256": "46694347d0ae0095894d11e377df1aabd4a53b259eb40844432cd7fd1c7f4cbb"
+  },
+  "warnings": []
+}
