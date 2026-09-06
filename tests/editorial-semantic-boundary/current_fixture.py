@@ -77,6 +77,7 @@ def install_runtime(source_root: Path, root: Path) -> None:
         "scripts/canon_manifest.py",
         "scripts/materialize_causal_research.py",
         "scripts/remotion_template_variant.py",
+        "scripts/validate_chatgpt_visual_feasibility.py",
         "scripts/validate_editorial_semantic_boundary.py",
         "scripts/chatgpt_semantic_freeze.py",
     ]
