@@ -1,6 +1,6 @@
 # NASDAQ Cafe Architecture Convergence — Open PR Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILLS: use `nasdaq-cafe-production-reliability` as coordinator; apply `superpowers:systematic-debugging` before any non-trivial behavior change, `superpowers:test-driven-development` for every code change, `superpowers:requesting-code-review` before merge, and `superpowers:verification-before-completion` before any success claim. If executed in one agentic session, use `superpowers:subagent-driven-development` task-by-task.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Use `nasdaq-cafe-production-reliability` as coordinator, `superpowers:systematic-debugging` before any non-trivial behavior change, `superpowers:test-driven-development` for every code change, `superpowers:requesting-code-review` before merge, and `superpowers:verification-before-completion` before any success claim.
 
 **Goal:** Converge the currently open Skill/Visual Reliability work into one coherent Production OS without duplicate Skill ownership, stale PR bases, incomplete `semanticScope` enforcement, or Renderer-side semantic invention.
 
@@ -8,15 +8,7 @@
 
 **Tech Stack:** Python 3 + pytest in `saienjoy0/nasdaq-plot-creator-`; TypeScript + Zod + tsx + Remotion in `saienjoy0/saienjoy0-nasdaq-cafe-remotion`; GitHub Actions for mechanical verification only.
 
-**Spec / authorities:**
-- `AGENTS.md`
-- `skills/nasdaq-cafe-production-reliability/SKILL.md`
-- `skills/nasdaq-cafe-production-reliability/references/REPAIR_DESIGN_PROTOCOL.md`
-- `skills/nasdaq-cafe-daily-production/SKILL.md`
-- `skills/nasdaq-cafe-visual-intelligence/SKILL.md`
-- Renderer `AGENTS.md`
-- Renderer PR #220 `docs/17_visual_skill_routing.md`
-- Renderer PR #220 `docs/superpowers/plans/2026-09-03-visual-reliability-pr-a-semantic-scope.md`
+**Spec:** `AGENTS.md`, `skills/nasdaq-cafe-production-reliability/SKILL.md`, `skills/nasdaq-cafe-production-reliability/references/REPAIR_DESIGN_PROTOCOL.md`, `skills/nasdaq-cafe-daily-production/SKILL.md`, `skills/nasdaq-cafe-visual-intelligence/SKILL.md`, Renderer `AGENTS.md`, Renderer PR #220 `docs/17_visual_skill_routing.md`, and Renderer PR #220 `docs/superpowers/plans/2026-09-03-visual-reliability-pr-a-semantic-scope.md`.
 
 ## Global Constraints
 
@@ -577,30 +569,42 @@ Rollback: revert these commits independently only if the corresponding regressio
 ```text
 1. PR #220 visual Skill routing
 2. cleaned/rebased PR #194 editorial/auditor/retention Skill ownership
-3. rebased PR #191 Plot semanticScope authoring/transport
-4. completed PR #223 Renderer semanticScope enforcement
-5. cross-repo Current qualification
+3. completed PR #223 Renderer 2.5 support + semanticScope enforcement, while retaining 2.4 compatibility
+4. rebased PR #191 Plot semanticScope authoring/transport starts emitting fresh 2.5
+5. cross-repo Current qualification on merged heads
 ```
 
 Reasoning:
 - #220 is advisory infrastructure with green Skill/visual CI and no production render semantic change.
 - #194 must be consolidated before its Skills become another source of ownership ambiguity.
-- #191 owns authoring/transport and must be rebased onto the latest Plot Current semantics.
-- #223 can only be called complete after its planned legality and handoff identity gates are implemented.
+- #223 is backward compatible with 2.4 and therefore can safely make Renderer ready for 2.5 before the producer starts emitting 2.5.
+- #191 changes fresh Current producer output to 2.5 and must not land until the bound Renderer main accepts 2.5.
 
-- [ ] **Step 1: Run Plot Current qualification against the exact Renderer merge candidate SHA**
+- [ ] **Step 1: Before merging #223 or #191, qualify their exact two heads together**
+
+From the rebased Plot #191 checkout with the completed Renderer #223 checkout mounted as `../renderer`:
 
 ```bash
 PYTHONPATH=scripts python3 tests/current-spine/run_exact_cross_repo_current_e2e.py --renderer-root ../renderer
 ```
 
-- [ ] **Step 2: Run the Current facade contract**
+Expected: PASS through the semantic-scope boundary.
+
+- [ ] **Step 2: Merge #223 and verify Renderer main fresh CI**
+
+Do not rely only on the PR-head run after merge. Verify the required Renderer workflows on the resulting main SHA.
+
+- [ ] **Step 3: Merge #191 only after Renderer main is 2.5-ready**
+
+Then run:
 
 ```bash
 pytest -q tests/current-spine/test_current_production_facade_contract.py
 ```
 
-- [ ] **Step 3: Verify required GitHub Actions on the exact heads**
+and the exact cross-repo Current qualification against Renderer `main`.
+
+- [ ] **Step 4: Verify required GitHub Actions on exact final heads**
 
 Plot must show success for at least:
 
@@ -633,7 +637,7 @@ Do not use an earlier successful run after a rebase/new commit as completion evi
 
 **Repository authority:** Plot Current facade + exact bound Renderer.
 
-**Goal:** prove that the converged architecture produces a Preview without machine failure and without bypassing human/semantic pauses.
+**Goal:** Prove that the converged architecture produces a Preview without machine failure and without bypassing human/semantic pauses.
 
 - [ ] **Step 1: Select one fresh Current episode/request**
 
@@ -675,8 +679,9 @@ The Architecture Convergence phase may be called complete only when fresh eviden
 one Skill owner per responsibility
 no Final Production-before-Visual Intelligence ordering error
 #220 Skill routing merged with current CI
+#194 cleaned/rebased with routing regression green
+#223 scope transport + Candidate legality + handoff identity green and merged before Plot starts emitting 2.5
 #191 rebased and Plot semanticScope tests green
-#223 scope transport + Candidate legality + handoff identity green
 exact cross-repo Current path green through repaired boundaries
 Golden Episode reaches Preview or an intentional human review pause
 no hidden fallback, duplicate engine, or automatic Final introduced
