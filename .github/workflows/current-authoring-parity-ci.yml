@@ -6,10 +6,12 @@ on:
       - "contracts/chatgpt_daily_authoring_v2.schema.json"
       - "scripts/validate_chatgpt_daily_authoring_closure.py"
       - "scripts/materialize_chatgpt_daily_authoring.py"
+      - "scripts/materialize_renderer_sources.py"
       - "tests/editorial-semantic-boundary/current_fixture.py"
       - "tests/editorial-semantic-boundary/test_current_contract_e2e.py"
       - "tests/current-spine/current_authoring_runtime_fixture.py"
       - "tests/current-spine/test_current_authoring_materializer_parity.py"
+      - "tests/current-spine/test_renderer_source_version_transport.py"
       - ".github/workflows/current-authoring-parity-ci.yml"
   workflow_dispatch:
 
@@ -40,7 +42,10 @@ jobs:
           python3 -m py_compile \
             scripts/validate_chatgpt_daily_authoring_closure.py \
             tests/current-spine/current_authoring_runtime_fixture.py \
-            tests/current-spine/test_current_authoring_materializer_parity.py
+            tests/current-spine/test_current_authoring_materializer_parity.py \
+            tests/current-spine/test_renderer_source_version_transport.py
 
       - name: Verify schema closure materializer parity
-        run: pytest -q tests/current-spine/test_current_authoring_materializer_parity.py
+        run: |
+          pytest -q tests/current-spine/test_current_authoring_materializer_parity.py
+          pytest -q tests/current-spine/test_renderer_source_version_transport.py

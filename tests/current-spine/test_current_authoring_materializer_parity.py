@@ -115,10 +115,35 @@ def test_current_runtime_fixture_schema_closure_materializer_and_source_projecti
     assert completed.returncode == 0, completed.stdout + completed.stderr
     render_path = root / "render-specs" / fx.DATE / "render_spec.json"
     render = json.loads(render_path.read_text(encoding="utf-8"))
+    assert render["schemaVersion"] == "2.5.0"
     assert len(render["scenes"]) == 9
     assert sum(len(scene["visualBeats"]) for scene in render["scenes"]) == 18
+    for authored_scene, rendered_scene in zip(
+        authoring["production"]["scenes"], render["scenes"], strict=True
+    ):
+        for authored_beat, rendered_beat in zip(
+            authored_scene["beats"], rendered_scene["visualBeats"], strict=True
+        ):
+            assert rendered_beat["semanticScope"] == authored_beat["semanticScope"]
     normalized, _ = renderer_sources.normalize_render_base(render)
     assert [source["sourceId"] for source in normalized["sources"]] == ["source-001"]
+
+
+def test_current_materializer_preserves_distinct_authored_beat_scopes(tmp_path: Path):
+    root, fx, authoring = fixture.build_workspace(tmp_path)
+    scene = authoring["production"]["scenes"][0]
+    assert scene["causalScope"] == "multiple"
+    scene["beats"][0]["semanticScope"] = "lead-stock"
+    scene["beats"][1]["semanticScope"] = "nasdaq"
+    write_authoring(root, fx, authoring)
+
+    completed = run_materializer(root, fx.DATE)
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    render = json.loads(
+        (root / "render-specs" / fx.DATE / "render_spec.json").read_text(encoding="utf-8")
+    )
+    scopes = [beat["semanticScope"] for beat in render["scenes"][0]["visualBeats"]]
+    assert scopes == ["lead-stock", "nasdaq"]
 
 
 def test_current_materializer_projects_all_authored_fox_expression_assets(tmp_path: Path):

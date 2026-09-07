@@ -286,6 +286,8 @@ def build_scene(
                 "returnTargetBeatId": beat.get("returnTargetBeatId"),
             },
         }
+        if "semanticScope" in beat:
+            visual_beat["semanticScope"] = beat["semanticScope"]
         if authored_shots:
             visual_beat["shots"] = authored_shots
         visual_beats.append(visual_beat)
@@ -560,7 +562,7 @@ def _require_explicit_v2(a: dict[str, Any]) -> None:
             total_beats += 1
             for key in (
                 "primaryFunction", "screenState", "visualMode", "visualTemplate", "contentType",
-                "screenQuestion", "primaryElement", "viewerTexts", "changeCue", "grammarId",
+                "semanticScope", "screenQuestion", "primaryElement", "viewerTexts", "changeCue", "grammarId",
                 "transitionRole", "evidenceSourceIds",
             ):
                 if key not in beat:
@@ -694,7 +696,7 @@ def _materialize_current_v2(root: Path, date: str, raw_authoring: dict[str, Any]
     viewer_report["conversionCount"] = len(viewer_report["conversions"])
     write_projection_report(work / "viewer_surface_projection_report.json", viewer_report)
     render = {
-        "schemaVersion":"2.4.0", "visualGrammarContractVersion":"1.0.0",
+        "schemaVersion":"2.5.0", "visualGrammarContractVersion":"1.0.0",
         "expectedConfirmed": projected["expectedConfirmed"],
         "episode": {
             "id":date,"targetDate":date,"marketSession":f"{raw_authoring['marketDate']} US market",

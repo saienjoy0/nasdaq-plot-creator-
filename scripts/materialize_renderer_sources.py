@@ -97,6 +97,11 @@ def _canonical_beat_maps(render: dict[str, Any]) -> tuple[dict[str, str], dict[s
 
 def normalize_render_base(render: dict[str, Any]) -> tuple[dict[str, Any], dict[str, str]]:
     """Project producer JSON into a renderer-oriented intermediate contract."""
+    schema_version = render.get("schemaVersion")
+    if schema_version not in {"2.4.0", "2.5.0"}:
+        raise RendererSourceError(
+            f"unsupported renderer source schemaVersion: {schema_version!r}"
+        )
     result = copy.deepcopy(render)
     source_to_canonical, _ = _canonical_beat_maps(result)
     for key in (
@@ -157,7 +162,7 @@ def normalize_render_base(render: dict[str, Any]) -> tuple[dict[str, Any], dict[
                 raise RendererSourceError(f"{source_id}: approved visualGrammar is missing")
             if grammar.get("contractVersion") != "1.0.0":
                 raise RendererSourceError(f"{source_id}: Visual Grammar version mismatch")
-    result["schemaVersion"] = "2.4.0"
+    result["schemaVersion"] = schema_version
     return result, source_to_canonical
 
 def _binding_map(bindings: dict[str, Any]) -> dict[str, dict[str, Any]]:
