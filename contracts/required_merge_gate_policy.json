@@ -34,6 +34,8 @@
         "semantic-freezes/**",
         "verification/**",
         "production-bundles/**",
+        "source-of-truth/**",
+        "designs/**",
         "scripts/**",
         "tests/**",
         "contracts/**",
@@ -42,6 +44,22 @@
         "AGENTS.md"
       ],
       "workflows": [
+        "Validate Daily Production Package"
+      ]
+    },
+    {
+      "name": "editorial-canon",
+      "patterns": [
+        "source-of-truth/**",
+        "contracts/canon_manifest.schema.json",
+        "scripts/canon_manifest.py",
+        "scripts/materialize_sources.py",
+        "scripts/chatgpt_semantic_freeze.py",
+        "tests/canon-manifest/**",
+        ".github/workflows/verify-source-materialization.yml"
+      ],
+      "workflows": [
+        "Verify editorial canon",
         "Validate Daily Production Package"
       ]
     },

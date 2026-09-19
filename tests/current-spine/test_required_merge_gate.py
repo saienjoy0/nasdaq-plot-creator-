@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import fnmatch
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -59,6 +61,33 @@ POLICY = {
     ],
     "unclassifiedNonDocs": "FAIL",
 }
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+REAL_POLICY_PATH = REPO_ROOT / "contracts/required_merge_gate_policy.json"
+
+
+def pull_request_paths(workflow_path: Path) -> list[str]:
+    """Read the simple pull_request.paths list without adding a YAML dependency."""
+    lines = workflow_path.read_text(encoding="utf-8").splitlines()
+    in_pull_request = False
+    in_paths = False
+    paths: list[str] = []
+    for line in lines:
+        if line == "  pull_request:":
+            in_pull_request = True
+            continue
+        if in_pull_request and re.match(r"^  [a-zA-Z_]", line):
+            break
+        if in_pull_request and line == "    paths:":
+            in_paths = True
+            continue
+        if in_paths:
+            match = re.match(r'^      - ["\'](.+)["\']$', line)
+            if match:
+                paths.append(match.group(1))
+            elif line.strip():
+                break
+    return paths
 
 
 class RequiredMergeGateTests(unittest.TestCase):
@@ -165,6 +194,89 @@ class RequiredMergeGateTests(unittest.TestCase):
         )
         self.assertEqual(result["state"], "EXPECTED_WORKFLOW_TIMEOUT")
         self.assertGreaterEqual(now[0], 20)
+
+
+class RealRequiredMergeGatePolicyTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.policy = load_policy(REAL_POLICY_PATH)
+        cls.workflow_paths = {
+            "Verify editorial canon": pull_request_paths(
+                REPO_ROOT / ".github/workflows/verify-source-materialization.yml"
+            ),
+            "Validate Daily Production Package": pull_request_paths(
+                REPO_ROOT / ".github/workflows/validate-daily-production-package.yml"
+            ),
+        }
+
+    def assertRequired(self, path: str, expected: set[str]) -> None:
+        result = classify_changes(self.policy, [{"filename": path, "status": "modified"}])
+        self.assertEqual(result["state"], "WORKFLOWS_REQUIRED", path)
+        self.assertEqual(set(result["expectedWorkflows"]), expected, path)
+
+    def test_canon_sources_and_materialized_files_require_both_workflows(self) -> None:
+        expected = {"Verify editorial canon", "Validate Daily Production Package"}
+        for path in (
+            "source-of-truth/02_editorial_bible.md",
+            "source-of-truth/canon_manifest.json",
+            "source-of-truth/03_episode_production_spec.md",
+            "source-of-truth/04_entertainment_inquisitor.md",
+            "source-of-truth/future_canon_input.md",
+        ):
+            with self.subTest(path=path):
+                self.assertRequired(path, expected)
+
+    def test_designs_require_daily_baseline(self) -> None:
+        self.assertRequired(
+            "designs/STORY_ENGINE_OVERHAUL_MASTER_DESIGN.md",
+            {"Validate Daily Production Package"},
+        )
+
+    def test_every_editorial_canon_owner_has_a_matching_pr_trigger(self) -> None:
+        representatives = (
+            "source-of-truth/02_editorial_bible.md",
+            "contracts/canon_manifest.schema.json",
+            "scripts/canon_manifest.py",
+            "scripts/materialize_sources.py",
+            "scripts/chatgpt_semantic_freeze.py",
+            "tests/canon-manifest/test_canon_manifest.py",
+            ".github/workflows/verify-source-materialization.yml",
+        )
+        for path in representatives:
+            result = classify_changes(self.policy, [{"filename": path, "status": "modified"}])
+            for workflow in result["expectedWorkflows"]:
+                if workflow in self.workflow_paths:
+                    with self.subTest(path=path, workflow=workflow):
+                        self.assertTrue(
+                            any(fnmatch.fnmatchcase(path, pattern) for pattern in self.workflow_paths[workflow]),
+                            f"{workflow} does not trigger for {path}",
+                        )
+
+    def test_design_baseline_owner_has_a_matching_pr_trigger(self) -> None:
+        path = "designs/STORY_ENGINE_OVERHAUL_MASTER_DESIGN.md"
+        self.assertTrue(
+            any(fnmatch.fnmatchcase(path, pattern) for pattern in self.workflow_paths["Validate Daily Production Package"])
+        )
+
+    def test_policy_file_remains_classified_by_existing_baseline(self) -> None:
+        self.assertRequired(
+            "contracts/required_merge_gate_policy.json",
+            {"Validate Daily Production Package"},
+        )
+
+    def test_unknown_external_root_fails_closed(self) -> None:
+        result = classify_changes(self.policy, [{"filename": "unregistered/control.txt", "status": "added"}])
+        self.assertEqual(result["state"], "UNCLASSIFIED_CHANGE")
+
+    def test_request_plus_canon_is_rejected(self) -> None:
+        result = classify_changes(
+            self.policy,
+            [
+                {"filename": "final-authorization-requests-v1/2026-09-02.json", "status": "added"},
+                {"filename": "source-of-truth/02_editorial_bible.md", "status": "modified"},
+            ],
+        )
+        self.assertEqual(result["state"], "MIXED_REQUEST_PR")
 
 
 if __name__ == "__main__":
