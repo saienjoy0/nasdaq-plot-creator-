@@ -1,7 +1,7 @@
 ---
 name: nasdaq-cafe-entertainment-critic
 description: Review a NASDAQ Cafe story for interest, clarity, understanding progression, fox voice, and late payoff while preserving the frozen causal contract.
-version: 1.3.0
+version: 1.3.1
 ---
 
 # NASDAQ Cafe Entertainment Critic
@@ -463,6 +463,14 @@ If the second round still fails, return to the owning upstream stage.
 This Critic checks `opening_promise` recovery, not final title/thumbnail wording.
 
 Final title and thumbnail promise audits occur only after the final episode package has been assembled, because those surfaces may not yet exist at Story Engine review time.
+
+## Evidence-grounded programme review
+
+Judge interest, clarity and watchability separately. For every material finding, identify the exact scene/Beat/object and the quoted narration or actual frame/time when available; state symptom, viewer consequence, owning layer and correction. Inspect the graph endpoints and populated lanes, not only the Director's stated intent. A declared belief change, template diversity, two Beats or schema PASS is not proof that viewers experience progress.
+
+Do not mark actual visual, continuous motion, audio or audience retention as assessed when only script/JSON was inspected. Record unavailable checks in existing explanation/notes fields, without inventing schema keys or external reviewer certification. A script PASS is not completed-video approval. Never infer no drop-off risk from an empty findings list. Compare opening promise with final explanation and identify the actual added evidence or scope change. Financially unsupported arrows are causal-safety findings; repeated facts, empty comparison and procedural narration need concrete findings even when aggregate score is high.
+
+When audience analytics are unavailable, say unassessed. When available, compare first-30-second and scene-boundary retention against comparable episodes and comprehension feedback; a dip or spike alone does not establish its cause.
 
 ## Acceptance
 

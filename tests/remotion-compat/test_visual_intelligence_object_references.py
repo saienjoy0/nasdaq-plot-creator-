@@ -217,27 +217,16 @@ def test_causal_card_specialized_rewrite() -> None:
         "outcomeNodeId": None,
     }
 
-    materialized = causal_inventory.materialize_causal_inventory(projected)
-    causal_scene = materialized["scenes"][0]
-    causal_beat = causal_scene["visualBeats"][0]
-    node_ids = [item["nodeId"] for item in causal_scene["nodes"]]
-    if len(node_ids) != 4 or len(causal_scene["arrows"]) != 3:
-        raise AssertionError("4-line causal card did not become four nodes and three arrows")
-    if causal_beat["templateConfig"]["nodeOrder"] != node_ids:
-        raise AssertionError("causal nodeOrder drifted from generated approved nodes")
-    if causal_beat["templateConfig"]["outcomeNodeId"] != node_ids[-1]:
-        raise AssertionError("causal outcomeNodeId must be the authored final line")
-    if len(causal_beat["objectIds"]) != 7:
-        raise AssertionError("causal Beat must expose the complete node/arrow inventory")
-
-    result = refs.reconcile_projected_object_references(producer, materialized)
-    targets = [item["targetId"] for item in result["scenes"][0]["visualEvents"]]
-    if len(targets) != 7 or set(targets) != set(causal_beat["objectIds"]):
-        raise AssertionError(f"causal display events did not fan out to generated objects: {targets}")
-    if "old-object" in targets:
-        raise AssertionError("old causal source card remained in viewer events")
+    try:
+        causal_inventory.materialize_causal_inventory(projected)
+    except causal_inventory.VisualIntelligenceCausalInventoryError as exc:
+        message = str(exc)
+        if "$.scenes[0].visualBeats[0].objectIds" not in message or "RETURN_TO_STORY" not in message:
+            raise AssertionError(f"Current rejection was not actionable: {message}") from exc
+    else:
+        raise AssertionError("Current causal inventory accepted card-to-chain inference")
     if producer["scenes"][0]["visualBeats"][0]["objectIds"] != ["old-object"]:
-        raise AssertionError("causal canonicalization mutated producer input")
+        raise AssertionError("Current causal validation mutated producer input")
 
 
 def test_noop_is_byte_equivalent() -> None:
