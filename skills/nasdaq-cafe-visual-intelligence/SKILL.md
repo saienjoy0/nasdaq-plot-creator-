@@ -1,6 +1,6 @@
 ---
 name: nasdaq-cafe-visual-intelligence
-version: 1.2.1
+version: 1.2.0
 description: Select and independently critique legal visual candidates for 朝のNASDAQカフェ so visuals increase viewer understanding without changing the frozen story, evidence, causality, or machine eligibility.
 ---
 
@@ -133,16 +133,6 @@ Questions:
 - Would a chart or timeline materially improve comparison or chronology?
 
 Use `required` sparingly. If fallback representation preserves the same fact, causality, uncertainty, and understanding function, prefer `possible`.
-
-### Programme-first media decision
-
-For each Beat, compare real footage/photo/document, deterministic data visualization, existing lawful image and generated conceptual image by the understanding they add. Use the existing intent/provisional-reason/editorialReason fields; do not invent catalog capability. First decide the best explanation, then check availability. Record unavailable optimal expression as a Production Capability Gap and use only a meaning-preserving approved alternative.
-
-Magnitude/trend → exact data chart; geography → accurate map; flows → explicitly authored supported edges; event order → timeline with verified timestamps; real evidence → original/documentary material; abstract or unavailable lawful visual → conceptual generation where useful. Generated images are a tool of this Skill, not a new Skill or evidence source. Never generate precise charts, fake source receipts, real-event proof or authoritative maps. Mark conceptual reconstructions visibly when viewers could mistake them for evidence. Do not generate decoration to fill a variety quota.
-
-Inspect actual object inventory, not template names: a comparison must populate its required sides; the hero must be the episode's contradiction; a source receipt needs readable evidence; independent company/macro factors must not become a chain. Current production rejects card-to-arrow inference. Explicit graph objects, endpoints and configuration must already be authored before Visual Intelligence. Do not auto-repair the meaning to clear that rejection.
-
-Review real reveal times: simultaneous object shows are not a developing explanation, and a long unchanged frame needs an editorial reason. Do not add motion without meaning. Screenshots assess layout only; motion/audio remain unassessed until reviewed in their actual media.
 
 ### Image rule
 

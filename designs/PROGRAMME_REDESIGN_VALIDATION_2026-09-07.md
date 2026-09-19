@@ -25,3 +25,11 @@ This change does not reauthor the historical 2026-08-17 producer package or rend
 The coordinated 5–12-scene migration is designed in PROGRAMME_REDESIGN_2026-09-07.md but not enabled. No TTS or Current Preview/Final request is published by this code PR. No audience retention or continuous audio/motion approval is claimed. Broader quality improvement still requires a newly authored episode, actual preview review and real audience feedback.
 
 Renderer companion: https://github.com/saienjoy0/saienjoy0-nasdaq-cafe-remotion/pull/224 . It fixes subtitle token breaks, with 26 test entrypoints plus typecheck/build passing. Whole Renderer lint has the same pre-existing 30 errors/3warnings at baseline and patched tree.
+
+## GitHub verification and ownership split (2026-09-19)
+
+Renderer PR224 passes its three GitHub checks. Plot PR198's functional checks, including the synthetic Current Visual Intelligence cross-repository acceptance, passed on its first CI run. Two integration controls rejected the PR: unregistered `source-of-truth/**` / `designs/**` ownership in the trusted-base merge policy, and the prohibition on changing the AI-B-owned Visual Intelligence Skill in an architecture PR.
+
+The Visual Intelligence Skill change is now isolated in editorial-only PR199: https://github.com/saienjoy0/nasdaq-plot-creator-/pull/199 . PR198 retains the other four Skill changes. The ownership check itself is unchanged. The code/Skill design describes the combined change, not files all owned by a single PR.
+
+A separate prerequisite policy change will register canon changes against both the existing canon verifier and daily-production validation, with matching workflow triggers. It must pass the existing trusted-base gate and be reviewed/adopted normally before refreshing PR198's base. PR198 cannot authorize its own policy change. No gate status is manually overridden, no force merge is used, and unclassified changes remain failures.
