@@ -219,6 +219,8 @@ class RealRequiredMergeGatePolicyTests(unittest.TestCase):
         for path in (
             "source-of-truth/02_editorial_bible.md",
             "source-of-truth/canon_manifest.json",
+            "source-of-truth/packed/03_episode_production_spec/part-00.b64",
+            "source-of-truth/packed/04_entertainment_inquisitor/part-00.b64",
             "source-of-truth/03_episode_production_spec.md",
             "source-of-truth/04_entertainment_inquisitor.md",
             "source-of-truth/future_canon_input.md",
@@ -235,6 +237,8 @@ class RealRequiredMergeGatePolicyTests(unittest.TestCase):
     def test_every_editorial_canon_owner_has_a_matching_pr_trigger(self) -> None:
         representatives = (
             "source-of-truth/02_editorial_bible.md",
+            "source-of-truth/packed/03_episode_production_spec/part-00.b64",
+            "source-of-truth/packed/04_entertainment_inquisitor/part-00.b64",
             "contracts/canon_manifest.schema.json",
             "scripts/canon_manifest.py",
             "scripts/materialize_sources.py",
@@ -243,6 +247,7 @@ class RealRequiredMergeGatePolicyTests(unittest.TestCase):
             ".github/workflows/verify-source-materialization.yml",
         )
         for path in representatives:
+            self.assertRequired(path, {"Verify editorial canon", "Validate Daily Production Package"})
             result = classify_changes(self.policy, [{"filename": path, "status": "modified"}])
             for workflow in result["expectedWorkflows"]:
                 if workflow in self.workflow_paths:
