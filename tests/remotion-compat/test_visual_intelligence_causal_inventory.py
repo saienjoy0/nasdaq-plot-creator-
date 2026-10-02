@@ -87,6 +87,24 @@ def test_card_only_and_misleading_company_macro_card_rejected() -> None:
     expect_error(render, "$.scenes[0].visualBeats[0].objectIds")
 
 
+def test_causal_shot_cannot_bypass_graph_authority_using_another_template() -> None:
+    for template in ("text-focus", "analogy-steps", "tailwind-headwind"):
+        render = graph_render()
+        scene = render["scenes"][0]
+        scene["cards"] = [{"cardId": "mixed-card", "lines": [
+            {"value": "company expectations"}, {"value": "oil / retail"}, {"value": "NASDAQ"},
+        ]}]
+        scene["nodes"] = []
+        scene["arrows"] = []
+        beat = scene["visualBeats"][0]
+        beat["visualTemplate"] = template
+        beat["visualMode"] = "text-focus"
+        beat["objectIds"] = ["mixed-card"]
+        beat["templateConfig"]["nodeOrder"] = []
+        beat["shots"] = [{"shotRecipe": "causal-build"}]
+        expect_error(render, "$.scenes[0].visualBeats[0].objectIds")
+
+
 def test_missing_and_dangling_endpoints_rejected() -> None:
     missing = graph_render()
     del missing["scenes"][0]["arrows"][0]["fromNodeId"]
@@ -125,6 +143,7 @@ def main() -> int:
     test_explicit_chain_preserved()
     test_disconnected_authored_branches_preserved()
     test_card_only_and_misleading_company_macro_card_rejected()
+    test_causal_shot_cannot_bypass_graph_authority_using_another_template()
     test_missing_and_dangling_endpoints_rejected()
     test_duplicate_ids_and_config_mismatch_rejected()
     test_non_causal_beat_unchanged()

@@ -109,6 +109,13 @@ def materialize_causal_inventory(render: dict[str, Any]) -> dict[str, Any]:
             beat_path = f"{scene_path}.visualBeats[{beat_index}]"
             if not isinstance(beat, dict):
                 _fail(beat_path, "must be an object", "author a visual beat object")
-            if beat.get("visualTemplate") in remotion_template_data.CAUSAL_TEMPLATE_IDS:
+            shots = beat.get("shots", [])
+            if not isinstance(shots, list):
+                _fail(f"{beat_path}.shots", "must be an array", "author the shot list before validating graph authority")
+            has_causal_shot = any(
+                isinstance(shot, dict) and shot.get("shotRecipe") == "causal-build"
+                for shot in shots
+            )
+            if beat.get("visualTemplate") in remotion_template_data.CAUSAL_TEMPLATE_IDS or has_causal_shot:
                 _validate_causal_beat(scene, beat, scene_path, beat_path)
     return result

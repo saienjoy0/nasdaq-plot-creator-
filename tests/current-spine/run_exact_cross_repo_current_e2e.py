@@ -35,6 +35,50 @@ def load_cross_repo_module():
     return module
 
 
+def verify_authored_causal_path(renderer_root: Path, cross_repo) -> dict:
+    """Exercise real Current VI stages with independent authored causal engines."""
+    spec = cross_repo.generate_current_fixture(renderer_root)
+    scene = spec["scenes"][5]
+    beat = scene["visualBeats"][0]
+    scene["nodes"] = [
+        {"nodeId": "scene-06-node-002", "label": "TEST COMPANY REACTION"},
+        {"nodeId": "scene-06-node-001", "label": "TEST COMPANY FACTOR"},
+        {"nodeId": "scene-06-node-004", "label": "TEST MACRO REACTION"},
+        {"nodeId": "scene-06-node-003", "label": "TEST MACRO FACTOR"},
+    ]
+    scene["arrows"] = [
+        {"arrowId": "scene-06-arrow-002", "fromNodeId": "scene-06-node-003", "toNodeId": "scene-06-node-004", "label": "TEST MACRO EDGE"},
+        {"arrowId": "scene-06-arrow-001", "fromNodeId": "scene-06-node-001", "toNodeId": "scene-06-node-002", "label": "TEST COMPANY EDGE"},
+    ]
+    scene["visualEvents"] = []
+    scene["visualMode"] = "causal-diagram"
+    beat.update({
+        "visualTemplate": "causal-lane",
+        "templateVariant": "left-to-right",
+        "visualGrammarId": "causal",
+        "visualMode": "causal-diagram",
+        "screenState": "Data",
+        "sequencePolicy": "static",
+        "objectIds": ["scene-06-node-001", "scene-06-node-002", "scene-06-arrow-001", "scene-06-node-003", "scene-06-node-004", "scene-06-arrow-002"],
+        "templateConfig": {
+            "variant": "left-to-right",
+            "comparisonBasis": None,
+            "dataBasis": "synthetic authored causal path acceptance",
+            "nodeOrder": ["scene-06-node-001", "scene-06-node-002", "scene-06-node-003", "scene-06-node-004"],
+            "laneLabels": [],
+            "outcomeNodeId": None,
+        },
+    })
+    result = cross_repo.run(renderer_root, fixture_override=spec)
+    if result.get("status") != "PASS" or result.get("semanticDiff") != "PASS":
+        raise AssertionError("independent authored graph did not preserve identity through Current VI")
+    return {
+        "authoredIndependentCausalPaths": "PASS",
+        "authoredGraphOrderAndNullableOutcome": "PASS",
+        "authoredCausalGraphPackageValidation": result["packageValidation"],
+    }
+
+
 def verify_preview_request_contract(renderer_root: Path, renderer: dict[str, str]) -> dict[str, str]:
     validator = renderer_root / "scripts/validate-current-request.py"
     if not validator.is_file():
@@ -153,6 +197,7 @@ def main() -> int:
 
     cross_repo = load_cross_repo_module()
     result = cross_repo.run(renderer_root)
+    result.update(verify_authored_causal_path(renderer_root, cross_repo))
     expected = {
         "status": "PASS",
         "rendererCommit": renderer["commit"],
