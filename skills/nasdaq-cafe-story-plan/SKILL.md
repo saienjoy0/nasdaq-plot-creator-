@@ -1,7 +1,7 @@
 ---
 name: nasdaq-cafe-story-plan
 description: Transform a validated causal research dossier into an evidence-bound nine-scene understanding progression before fox narration is written.
-version: 1.2.2
+version: 1.2.3
 ---
 
 # NASDAQ Cafe Story Plan
@@ -71,6 +71,12 @@ skills/nasdaq-cafe-story-plan/validators/validate_story_plan.py
 No narration is generated at this stage.
 
 ---
+
+## Programme-value design before fixed-format authoring
+
+State why this episode deserves viewing beyond a US-market headline: the central question, an evidenced discovery and the changed understanding at the end. Evaluate 5/7/9/12-scene designs on necessary evidence/payoff; functions may share a scene. Current Story Plan v1.2 still requires nine formal scenes: do not output a shorter array as valid, and do not pad repeated facts to fit. Record a capability gap/return to design when a truthful nine-scene progression is not justified. See `designs/PROGRAMME_REDESIGN_2026-09-07.md` for the coordinated migration.
+
+Keep the opening focused on one contradiction and immediate stakes. Later evidence may develop the answer but must not be artificially hidden. Every proposed scene needs a deletion test: what understanding is lost if it goes? Compare structural East Asia exposure independently of temporal price transmission; include only material evidenced connections. Preserve high/medium/unknown distinctions and do not make a diagram more confident than its claim.
 
 ## Stage 0 — Lock the dossier
 

@@ -9,17 +9,21 @@
       "rawBytes": 19355,
       "storage": {
         "mode": "direct",
-        "parts": ["source-of-truth/01_fox_character_bible.md"]
+        "parts": [
+          "source-of-truth/01_fox_character_bible.md"
+        ]
       }
     },
     {
       "id": "02",
       "logicalPath": "source-of-truth/02_editorial_bible.md",
-      "sha256": "de6e6592a587e484bbce102d78ffd927ff98d58f4f195ddad734a73025631dc2",
-      "rawBytes": 29382,
+      "sha256": "cb81d2ec2d5f428d11f5d12243d1217503eea6f831f687bcbe204e4a21e5261a",
+      "rawBytes": 32798,
       "storage": {
         "mode": "direct",
-        "parts": ["source-of-truth/02_editorial_bible.md"]
+        "parts": [
+          "source-of-truth/02_editorial_bible.md"
+        ]
       }
     },
     {

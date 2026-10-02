@@ -19,7 +19,7 @@ import canon_manifest as canon  # noqa: E402
 
 EXPECTED = {
     "01": ("source-of-truth/01_fox_character_bible.md", "95c3d6adad23325b39e34477daf0628a2773cc63fdb89193e263f2a11b97a618", 19355),
-    "02": ("source-of-truth/02_editorial_bible.md", "de6e6592a587e484bbce102d78ffd927ff98d58f4f195ddad734a73025631dc2", 29382),
+    "02": ("source-of-truth/02_editorial_bible.md", "cb81d2ec2d5f428d11f5d12243d1217503eea6f831f687bcbe204e4a21e5261a", 32798),
     "03": ("source-of-truth/03_episode_production_spec.md", "c0e476f36b387961277ffa008d7b2258942e1fe44c475bebe1d79b31b9f4dc3f", 101040),
     "04": ("source-of-truth/04_entertainment_inquisitor.md", "62d7807eb01b3433fc3b3f8bce8f6bad96109f1ae2366ec417c35bac8fa47936", 45895),
 }

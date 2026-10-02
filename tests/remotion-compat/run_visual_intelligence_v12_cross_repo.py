@@ -114,9 +114,9 @@ def write_json(path: Path, value: dict) -> None:
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def run(renderer_root: Path) -> dict:
+def run(renderer_root: Path, *, fixture_override: dict | None = None) -> dict:
     renderer_root = renderer_root.resolve()
-    spec = generate_current_fixture(renderer_root)
+    spec = generate_current_fixture(renderer_root) if fixture_override is None else json.loads(json.dumps(fixture_override))
     date = spec["episode"]["targetDate"]
     expected_commit = subprocess.run(
         ["git", "rev-parse", "HEAD"],

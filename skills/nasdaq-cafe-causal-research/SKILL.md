@@ -1,7 +1,7 @@
 ---
 name: nasdaq-cafe-causal-research
 description: Build an evidence-grounded causal research dossier from a daily NASDAQ source package before editorial selection and script writing, with bounded targeted acquisition when material evidence is missing.
-version: 0.4.0
+version: 0.4.1
 ---
 
 # NASDAQ Cafe Causal Research
@@ -127,6 +127,10 @@ unresolved
 ```
 
 `not_material` ends the cross-market deep test and does not force Asia into the episode.
+
+### Stage 3B — Structural East Asia screen (independent of Stage 3)
+
+Run even when temporal Cross-Market is `not_material`. Test current primary evidence for material Japan/Korea/China/Taiwan revenue, customer demand, supply-chain, capex and policy exposure. Record the relationship, current Evidence IDs, period/denominator, scale, uncertainty and what it changes in today's central question using existing questions/evidence/alternatives/handoff fields. Do not add unsupported schema keys. A geographic connection is not an intraday price cause. Do not name customers, infer production geography or reject demand weakness from revenue geography, forecasts or peer prices alone. If weak, omit from narration with a reason; if material but unverified, return a bounded evidence question, not an invented Asia segment.
 
 ### Stage 4 — Cross-Market Alternative Test
 

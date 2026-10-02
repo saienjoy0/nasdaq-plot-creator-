@@ -1,7 +1,7 @@
 ---
 name: nasdaq-cafe-story-authoring
 description: Convert an approved NASDAQ Cafe Story Plan into the fox's natural nine-scene narration without changing market causality, confidence, timing, counterevidence, or formal scene roles.
-version: 1.1.1
+version: 1.1.2
 ---
 
 # NASDAQ Cafe Story Authoring
@@ -252,6 +252,12 @@ Allowed scope ends at `nasdaq_support`.
 
 Every material dossier counterevidence item must remain represented and listed in `retained_counterevidence_ids`.
 Missing data must remain in `unresolved_points`.
+
+## Programme audit delivery checks
+
+Remove production-process language from public narration: Collector field corrections, internal hypotheses labels, schema/Scene/Beat names and editorial status are not an explanation. Correct the input upstream, then speak the actual instrument and source clearly. A brief source attribution is useful; a description of the pipeline is not. Do not change instrument identity to make prose smoother.
+
+When the narration distinguishes company and index explanations, the visual handoff must distinguish them too. Specify explicit nodes/edges from the approved claims; ordered card lines are not a causal graph. Read every arrow aloud as “A causes B”: if the approved evidence does not support that sentence, remove the arrow upstream or use a non-causal comparison. A forecast or price counterexample may weaken an explanation without disproving it.
 
 ## Final self-check
 
