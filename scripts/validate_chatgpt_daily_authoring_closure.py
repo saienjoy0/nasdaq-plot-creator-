@@ -32,6 +32,7 @@ RENDERABLE_SOURCE_TYPES = {
     "official", "company", "company-ir", "major-media", "analyst", "market-data", "other",
 }
 SOURCE_ID_RE = re.compile(r"^source-[0-9]{3}$")
+VISUAL_SEMANTIC_SCOPES = {"lead-stock", "sector", "nasdaq", "multiple"}
 
 
 def load_json(path: Path, label: str) -> dict[str, Any]:
@@ -78,6 +79,18 @@ def validate_duration_ownership(authoring: dict[str, Any]) -> list[str]:
     if mode == "shortened" and (not isinstance(reason, str) or not reason.strip()):
         errors.append("$.shortenedReason: shortened duration requires a non-empty reason")
     return errors
+
+
+def validate_visual_semantic_scope(beat: dict[str, Any], *, beat_id: str) -> list[str]:
+    scope = beat.get("semanticScope")
+    if scope is None:
+        return [f"{beat_id}: semanticScope is required"]
+    if scope not in VISUAL_SEMANTIC_SCOPES:
+        return [
+            f"{beat_id}: semanticScope must be one of {sorted(VISUAL_SEMANTIC_SCOPES)}; "
+            f"found={scope!r}"
+        ]
+    return []
 
 
 def validate_renderer_source_registry(surface: dict[str, Any]) -> list[str]:
@@ -266,7 +279,8 @@ def validate_authoring(authoring: dict[str, Any], registry: dict[str, Any]) -> l
     errors.extend(validate_duration_ownership(authoring))
 
     surface = authoring
-    if authoring.get("contractVersion") == "2.0.0":
+    require_visual_semantic_scope = authoring.get("contractVersion") == "2.0.0"
+    if require_visual_semantic_scope:
         production = authoring.get("production")
         if not isinstance(production, dict):
             return [*errors, "$.production: must be an object"]
@@ -308,6 +322,8 @@ def validate_authoring(authoring: dict[str, Any], registry: dict[str, Any]) -> l
             if not isinstance(beat, dict):
                 errors.append(f"{beat_id}: beat must be an object")
                 continue
+            if require_visual_semantic_scope:
+                errors.extend(validate_visual_semantic_scope(beat, beat_id=beat_id))
             try:
                 remotion_template_variant.validate_pre_visual_intelligence_variant(
                     beat.get("visualTemplate"),

@@ -3,9 +3,9 @@
 
 The Visual Intelligence boundary consumes the deterministic Renderer intermediate
 already produced by `materialize_renderer_sources.py`, applies the already-compiled
-Financial Recipe Plan, reuses the established Renderer 2.4 object canonicalizers,
+Financial Recipe Plan, reuses the established Renderer object canonicalizers,
 then removes producer-only schema extensions. It MUST NOT change Story meaning,
-narration, viewer text, Scene/Beat order, or Beat count.
+narration, viewer text, semantic scope, Scene/Beat order, or Beat count.
 Authoring Beat IDs remain the stable AI-facing identity even when the deterministic
 Renderer intermediate temporarily uses canonical `vb-*` IDs.
 """
@@ -40,6 +40,7 @@ RENDERER_VISUAL_MODES = {
 }
 
 SEMANTIC_BEAT_FIELDS = (
+    "semanticScope",
     "screenQuestion",
     "primaryElement",
     "viewerTexts",
@@ -195,9 +196,15 @@ def _renderer_intermediate(
     if not path.is_file():
         return copy.deepcopy(producer)
     intermediate = _load_json_object(path, "renderer intermediate")
-    if intermediate.get("schemaVersion") != "2.4.0":
+    producer_version = producer.get("schemaVersion")
+    intermediate_version = intermediate.get("schemaVersion")
+    if producer_version not in renderer_strict_projection.SUPPORTED_RENDER_SPEC_VERSIONS:
         raise VisualIntelligenceRendererProjectionError(
-            "E_VISUAL_RENDERER_INPUT_INVALID: intermediate must be render_spec 2.4.0"
+            f"E_VISUAL_RENDERER_INPUT_INVALID: unsupported producer render_spec {producer_version!r}"
+        )
+    if intermediate_version != producer_version:
+        raise VisualIntelligenceRendererProjectionError(
+            "E_VISUAL_RENDERER_INPUT_INVALID: intermediate schemaVersion must match producer"
         )
     _assert_semantic_alignment(producer, intermediate, stage="intermediate")
     return intermediate
@@ -256,12 +263,12 @@ def _apply_financial_recipe_plan(
 
 
 def _materialize_vnext_object_inventory(candidate: dict[str, Any]) -> dict[str, Any]:
-    """Reuse established Renderer 2.4 object projections without changing Beat semantics.
+    """Reuse established Renderer object projections without changing Beat semantics.
 
     Visual Intelligence must see the same Renderer-native object inventory that final
     rendering sees. In particular, legacy producer Expected/Actual/Gap data is one
     three-line card, while `expected-actual-gap-flow` legally requires three role
-    cards. The established Remotion 2.4 projection already performs this exact
+    cards. The established compatibility projection already performs this exact
     lossless split and rewrites its show events. Reuse it here instead of duplicating
     template semantics.
     """
@@ -468,9 +475,9 @@ def project_visual_intelligence_renderer_input(
 ) -> dict[str, Any]:
     """Return strict 18-Beat Renderer input without mutating approved producer data."""
     repo_root = repo_root.resolve()
-    if render_spec.get("schemaVersion") != "2.4.0":
+    if render_spec.get("schemaVersion") not in renderer_strict_projection.SUPPORTED_RENDER_SPEC_VERSIONS:
         raise VisualIntelligenceRendererProjectionError(
-            "E_VISUAL_RENDERER_INPUT_INVALID: Visual Intelligence requires render_spec 2.4.0"
+            "E_VISUAL_RENDERER_INPUT_INVALID: Visual Intelligence requires supported render_spec"
         )
     if render_spec.get("episode", {}).get("targetDate") != date:
         raise VisualIntelligenceRendererProjectionError(

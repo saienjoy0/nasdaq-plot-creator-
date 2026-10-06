@@ -147,3 +147,18 @@ def test_pre_vi_multi_variant_template_rejects_unknown_explicit_variant(tmp_path
         and "variant" in error
         for error in errors
     )
+
+
+def test_visual_semantic_scope_is_required_per_beat(tmp_path: Path):
+    authoring = current_authoring(tmp_path)
+    beat = authoring["production"]["scenes"][0]["beats"][0]
+    beat.pop("semanticScope", None)
+    errors = closure.validate_authoring(authoring, registry())
+    assert any("scene-01-beat-001: semanticScope is required" in error for error in errors)
+
+
+def test_visual_semantic_scope_rejects_unknown_value(tmp_path: Path):
+    authoring = current_authoring(tmp_path)
+    authoring["production"]["scenes"][0]["beats"][0]["semanticScope"] = "global-tech"
+    errors = closure.validate_authoring(authoring, registry())
+    assert any("scene-01-beat-001: semanticScope must be one of" in error for error in errors)
