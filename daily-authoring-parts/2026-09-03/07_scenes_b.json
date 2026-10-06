@@ -1,0 +1,306 @@
+{
+  "production": {
+    "scenes": [
+      {
+        "beats": [
+          {
+            "changeCue": "next",
+            "contentType": "number-card",
+            "evidenceSourceIds": [
+              "source-003"
+            ],
+            "grammarId": "evidence",
+            "metrics": [
+              {
+                "label": "AI orders",
+                "numericValue": 60.9,
+                "precision": 1,
+                "tone": "positive",
+                "unit": "B",
+                "value": "$60.9B"
+              },
+              {
+                "label": "Backlog",
+                "numericValue": 95,
+                "precision": 0,
+                "tone": "positive",
+                "unit": "B",
+                "value": "$95B"
+              }
+            ],
+            "primaryElement": "$60.9B orders / $95B backlog",
+            "primaryFunction": "Explain",
+            "screenQuestion": "AI需要の厚みは？",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "AI orders：$60.9B",
+              "AI backlog：$95B",
+              "売上と同義ではない"
+            ],
+            "visualEvents": [
+              {
+                "action": "show",
+                "offsetMs": 0,
+                "targetId": "scene-04-number-01-01",
+                "timing": "chunk-start"
+              },
+              {
+                "action": "show",
+                "offsetMs": 180,
+                "targetId": "scene-04-number-01-02",
+                "timing": "chunk-start"
+              }
+            ],
+            "visualMode": "number-card",
+            "visualTemplate": "hero-number"
+          },
+          {
+            "changeCue": "next",
+            "contentType": "text",
+            "evidenceSourceIds": [
+              "source-004"
+            ],
+            "grammarId": "evidence",
+            "primaryElement": "neocloud / sovereign / enterprise",
+            "primaryFunction": "Explain",
+            "screenQuestion": "需要は誰へ広がった？",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "neocloud",
+              "sovereign",
+              "enterprise",
+              "顧客：6,500+"
+            ],
+            "visualMode": "causal-chain",
+            "visualTemplate": "causal-lane"
+          }
+        ],
+        "causalScope": "company_direct",
+        "chunks": [
+          {
+            "expression": "分析",
+            "text": "Gapの中身は、売上の上振れだけではありません。DellはQ2にAI注文609億ドル、AIサーバー売上164億ドル、期末backlogは950億ドル。"
+          },
+          {
+            "expression": "分析",
+            "text": "さらに、需要がneocloud、sovereign、enterpriseへ広がり、AI顧客は6500社を超えたと説明しました。僕がここで見るのは、AI需要の量だけでなく、買い手の裾野が広がった点です。"
+          }
+        ],
+        "evidenceSourceIds": [
+          "source-003",
+          "source-004",
+          "source-005"
+        ],
+        "expectedBasisType": "major-reporting",
+        "formalName": "需要の「量」より「裾野」",
+        "headline": "需要の「量」より「裾野」",
+        "initialExpression": "分析",
+        "performanceIntent": "数字の羅列で終わらず、なぜNVIDIAにも読み替えられたかの橋を作る",
+        "purpose": "Expected / Actualの差を、AI需要の裾野拡大という市場意味へ変換する",
+        "sceneRole": "expected_actual_gap",
+        "sourceLabel": "Dell IR / Dell IR / Reuters",
+        "supportingTexts": [
+          "AI orders：$60.9B",
+          "backlog：$95B",
+          "AI customers：6,500+"
+        ],
+        "timelineBasis": "2026-09-01 results and earnings call",
+        "uncertainty": "backlogは売上ではなく、顧客数と需要の広がりは会社発言を含む。",
+        "visualMode": "causal-chain"
+      },
+      {
+        "beats": [
+          {
+            "changeCue": "next",
+            "contentType": "causal-chain",
+            "evidenceSourceIds": [
+              "source-006"
+            ],
+            "grammarId": "causal",
+            "primaryElement": "Bond / Oil headwind",
+            "primaryFunction": "Explain",
+            "screenQuestion": "逆風は？",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "世界債券：売り",
+              "原油・地政学：インフレ懸念",
+              "高金利はグロースの重し"
+            ],
+            "visualMode": "causal-chain",
+            "visualTemplate": "causal-lane"
+          },
+          {
+            "changeCue": "next",
+            "contentType": "comparison",
+            "evidenceSourceIds": [
+              "source-006",
+              "source-007"
+            ],
+            "grammarId": "comparison",
+            "laneLabels": [
+              "逆風",
+              "相殺"
+            ],
+            "primaryElement": "U.S. yields stabilized",
+            "primaryFunction": "Explain",
+            "screenQuestion": "相殺は？",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "米債利回り：安定",
+              "三日続落後の反発余地",
+              "逆風ゼロではない"
+            ],
+            "visualMode": "comparison",
+            "visualTemplate": "tailwind-headwind"
+          }
+        ],
+        "causalScope": "nasdaq_wide",
+        "chunks": [
+          {
+            "expression": "分析",
+            "text": "ただ、NASDAQ全体へ行くと別のエンジンが残っています。世界の債券市場では売りが続き、原油と中東情勢はインフレ不安を消していません。"
+          },
+          {
+            "expression": "分析",
+            "text": "高い金利は、将来利益を高く評価されるグロース株には重しです。一方、米国株の時間帯では債券利回りが安定したとの市場報道もあり、ここが相殺材料になりました。"
+          }
+        ],
+        "evidenceSourceIds": [
+          "source-006",
+          "source-007"
+        ],
+        "expectedBasisType": "not-applicable",
+        "formalName": "マクロ逆風は消えていない",
+        "headline": "マクロ逆風は消えていない",
+        "initialExpression": "分析",
+        "performanceIntent": "マクロを一方向に断定せず逆風と相殺を同じ画面で見せる",
+        "purpose": "Dellの会社直接材料とNASDAQ-wideのマクロ環境を分離する",
+        "sceneRole": "global_context",
+        "sourceLabel": "Reuters / Nasdaq.com",
+        "supportingTexts": [
+          "世界債券：売り継続",
+          "原油・地政学：インフレ懸念",
+          "米債安定：相殺"
+        ],
+        "timelineBasis": "2026-09-02 global and US session",
+        "uncertainty": "米債安定は市場報道による支持材料で、寄与率は不明。",
+        "visualMode": "macro-pressure"
+      },
+      {
+        "beats": [
+          {
+            "changeCue": "next",
+            "contentType": "comparison",
+            "evidenceSourceIds": [
+              "source-001",
+              "source-006"
+            ],
+            "grammarId": "comparison",
+            "metrics": [
+              {
+                "label": "DELL",
+                "numericValue": 15.81,
+                "precision": 2,
+                "tone": "positive",
+                "unit": "%",
+                "value": "+15.81%"
+              },
+              {
+                "label": "NVDA",
+                "numericValue": 3.21,
+                "precision": 2,
+                "tone": "positive",
+                "unit": "%",
+                "value": "+3.21%"
+              }
+            ],
+            "primaryElement": "DELL +15.81% → NVDA +3.21%",
+            "primaryFunction": "Explain",
+            "screenQuestion": "会社材料の波及は？",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "Dell：会社直接",
+              "NVIDIA：AI需要の支援材料",
+              "NASDAQ全体とは別"
+            ],
+            "visualEvents": [
+              {
+                "action": "show",
+                "offsetMs": 0,
+                "targetId": "scene-06-number-01-01",
+                "timing": "chunk-start"
+              },
+              {
+                "action": "show",
+                "offsetMs": 180,
+                "targetId": "scene-06-number-01-02",
+                "timing": "chunk-start"
+              }
+            ],
+            "visualMode": "comparison",
+            "visualTemplate": "split-comparison"
+          },
+          {
+            "changeCue": "next",
+            "contentType": "evidence-boundary",
+            "evidenceSourceIds": [
+              "source-001",
+              "source-006",
+              "source-007"
+            ],
+            "grammarId": "evidence",
+            "primaryElement": "Nasdaq +0.45%",
+            "primaryFunction": "Explain",
+            "screenQuestion": "指数は何で支えられた？",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "AIインフラの具体証拠",
+              "三日続落後の買い戻し",
+              "米債安定"
+            ],
+            "visualMode": "evidence-boundary",
+            "visualTemplate": "evidence-boundary"
+          }
+        ],
+        "causalScope": "multiple",
+        "chunks": [
+          {
+            "expression": "分析",
+            "text": "市場反応を重ねると、Nasdaq Compositeは三日続落を止めて0.45%高。Dellは15.8%、NVIDIAは3.2%高でした。"
+          },
+          {
+            "expression": "分析",
+            "text": "Reutersは、売られ過ぎた銘柄を拾う動きも伝えています。つまりDellがNASDAQを一社で押し上げた、ではありません。DellのAI需要証拠が一部テックを支え、買い戻しと米債の安定が指数側を支えた、と分けるのが安全です。"
+          }
+        ],
+        "evidenceSourceIds": [
+          "source-001",
+          "source-006",
+          "source-007"
+        ],
+        "expectedBasisType": "not-applicable",
+        "formalName": "Dell直接 ≠ NASDAQ全体",
+        "headline": "Dell直接 ≠ NASDAQ全体",
+        "initialExpression": "分析",
+        "performanceIntent": "一社の決算を指数全体の原因へ拡大しない",
+        "purpose": "会社直接反応とNASDAQ-wide支援材料を明示的に分離する",
+        "sceneRole": "market_reaction",
+        "sourceLabel": "fresh Collector / Reuters / Nasdaq.com",
+        "supportingTexts": [
+          "Nasdaq：+0.45%",
+          "DELL：+15.81%",
+          "NVDA：+3.21%"
+        ],
+        "timelineBasis": "2026-09-02 US regular session close",
+        "uncertainty": "指数寄与率や買い戻しの正確な寄与は確認できない。",
+        "visualMode": "evidence-boundary"
+      }
+    ]
+  }
+}

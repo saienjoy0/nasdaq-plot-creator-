@@ -1,0 +1,277 @@
+{
+  "production": {
+    "scenes": [
+      {
+        "beats": [
+          {
+            "changeCue": "next",
+            "contentType": "comparison",
+            "evidenceSourceIds": [
+              "source-001"
+            ],
+            "grammarId": "comparison",
+            "metrics": [
+              {
+                "label": "SOXX ETF",
+                "numericValue": 0.23,
+                "precision": 2,
+                "tone": "positive",
+                "unit": "%",
+                "value": "+0.23%"
+              },
+              {
+                "label": "AMD",
+                "numericValue": -0.55,
+                "precision": 2,
+                "tone": "negative",
+                "unit": "%",
+                "value": "-0.55%"
+              },
+              {
+                "label": "AVGO",
+                "numericValue": -0.66,
+                "precision": 2,
+                "tone": "negative",
+                "unit": "%",
+                "value": "-0.66%"
+              }
+            ],
+            "primaryElement": "SOXX +0.23 / AMD -0.55 / AVGO -0.66",
+            "primaryFunction": "Explain",
+            "screenQuestion": "全面高だった？",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "SOXX ETF：+0.23%",
+              "AMD：-0.55%",
+              "AVGO：-0.66%"
+            ],
+            "visualEvents": [
+              {
+                "action": "show",
+                "offsetMs": 0,
+                "targetId": "scene-07-number-01-01",
+                "timing": "chunk-start"
+              },
+              {
+                "action": "show",
+                "offsetMs": 180,
+                "targetId": "scene-07-number-01-02",
+                "timing": "chunk-start"
+              },
+              {
+                "action": "show",
+                "offsetMs": 360,
+                "targetId": "scene-07-number-01-03",
+                "timing": "chunk-start"
+              }
+            ],
+            "visualMode": "comparison",
+            "visualTemplate": "split-comparison"
+          },
+          {
+            "changeCue": "next",
+            "contentType": "text",
+            "evidenceSourceIds": [
+              "source-003",
+              "source-004"
+            ],
+            "grammarId": "evidence",
+            "primaryElement": "需要証拠の具体性",
+            "primaryFunction": "Explain",
+            "screenQuestion": "何が選別軸？",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "注文・backlog",
+              "顧客層の拡大",
+              "AIラベルだけでは足りない"
+            ],
+            "visualMode": "text-focus",
+            "visualTemplate": "causal-lane"
+          }
+        ],
+        "causalScope": "sector_support",
+        "chunks": [
+          {
+            "expression": "分析",
+            "text": "反対材料も残します。SOXX ETFは0.23%高にとどまり、AMDとBroadcomはマイナス。ソフトウェアにも大きな下げがありました。"
+          },
+          {
+            "expression": "分析",
+            "text": "だから昨夜の発見は「AIなら何でも上がる」ではありません。具体的な注文、backlog、顧客層の広がりまで見えた場所が相対的に強かった。ここが見出しだけでは分かりにくい部分です。"
+          }
+        ],
+        "evidenceSourceIds": [
+          "source-001"
+        ],
+        "expectedBasisType": "not-applicable",
+        "formalName": "強かったのは「AI全部」ではない",
+        "headline": "強かったのは「AI全部」ではない",
+        "initialExpression": "分析",
+        "performanceIntent": "視聴者のモデルを「AI上昇」から「具体的需要証拠の選別」へ一段深める",
+        "purpose": "全面高説を反対材料で棄却し、発見を選別へ更新する",
+        "sceneRole": "entity_divergence",
+        "sourceLabel": "fresh Collector",
+        "supportingTexts": [
+          "SOXX ETF +0.23%",
+          "AMD -0.55%",
+          "AVGO -0.66%"
+        ],
+        "timelineBasis": "2026-09-02 US regular session",
+        "uncertainty": "個別下落の原因までは確定していないため、価格分散のみを根拠に使う。",
+        "visualMode": "verification-matrix"
+      },
+      {
+        "beats": [
+          {
+            "changeCue": "next",
+            "contentType": "verification",
+            "evidenceSourceIds": [
+              "source-001",
+              "source-006",
+              "source-007"
+            ],
+            "grammarId": "verification",
+            "laneLabels": [
+              "弱まった仮説",
+              "残った仮説"
+            ],
+            "primaryElement": "仮説比較",
+            "primaryFunction": "Explain",
+            "screenQuestion": "どの説明が残った？",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "Dellだけ：狭い",
+              "AI全面高：棄却",
+              "逆風消滅：棄却",
+              "複合説明：最有力"
+            ],
+            "visualMode": "verification-matrix",
+            "visualTemplate": "verification-matrix"
+          },
+          {
+            "changeCue": "next",
+            "contentType": "evidence-boundary",
+            "evidenceSourceIds": [
+              "source-003",
+              "source-004",
+              "source-006"
+            ],
+            "grammarId": "evidence",
+            "primaryElement": "Company-direct vs NASDAQ-wide",
+            "primaryFunction": "Explain",
+            "screenQuestion": "何を分けて覚える？",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "Dell直接｜AI需要の裾野拡大",
+              "NASDAQ-wide｜買い戻し・米債安定",
+              "確信度｜中"
+            ],
+            "visualMode": "verification",
+            "visualTemplate": "evidence-boundary"
+          }
+        ],
+        "causalScope": "multiple",
+        "chunks": [
+          {
+            "expression": "分析",
+            "text": "ここまでで、Dellだけ説は狭すぎる。AI全面高説はSOXXやAMD、Broadcomと合わない。マクロ逆風が消えた説も債券と原油の状況と合いません。"
+          },
+          {
+            "expression": "分析",
+            "text": "僕が残すのは、DellがAI需要の裾野拡大を具体化し、その追い風がDellやNVIDIAへ届いた一方、NASDAQ全体は買い戻しと米債安定にも支えられ、マクロ逆風は残った、という複合説明です。確信度は中。次は、金利が再び上がっても具体的なAI需要証拠を持つ銘柄が相対的に強いかを見ます。"
+          }
+        ],
+        "evidenceSourceIds": [
+          "source-001",
+          "source-003",
+          "source-004",
+          "source-006",
+          "source-007"
+        ],
+        "expectedBasisType": "not-applicable",
+        "formalName": "最有力：AI需要証拠 ＋ 地合い反発",
+        "headline": "最有力：AI需要証拠 ＋ 地合い反発",
+        "initialExpression": "分析",
+        "performanceIntent": "冒頭の問いへ戻り、最後まで見たことで得られる発見を明確にする",
+        "purpose": "代替仮説と反対材料を残しながら中心仮説を確定する",
+        "sceneRole": "validation_points",
+        "sourceLabel": "fresh Collector / Dell IR / Dell IR / Reuters / Nasdaq.com",
+        "supportingTexts": [
+          "Dell直接｜需要の裾野拡大",
+          "NASDAQ-wide｜買い戻し・米債安定",
+          "逆風｜債券・原油・地政学"
+        ],
+        "timelineBasis": "cutoff 2026-09-03T00:23:24Z; market session 2026-09-02",
+        "uncertainty": "各要因の寄与率は不明。Dellの需要見通しは将来保証ではない。",
+        "visualMode": "verification-matrix"
+      },
+      {
+        "beats": [
+          {
+            "changeCue": "next",
+            "contentType": "text",
+            "evidenceSourceIds": [],
+            "grammarId": "assembly",
+            "primaryElement": "以上、朝のNASDAQカフェでした。",
+            "primaryFunction": "Explain",
+            "screenQuestion": "朝のNASDAQカフェ",
+            "screenState": "Data",
+            "transitionRole": "major-shift",
+            "viewerTexts": [
+              "今日も気をつけて、いってらっしゃい。"
+            ],
+            "visualMode": "conclusion-card",
+            "visualTemplate": "conclusion-card"
+          },
+          {
+            "changeCue": "next",
+            "contentType": "text",
+            "evidenceSourceIds": [],
+            "grammarId": "assembly",
+            "primaryElement": "こちらはそろそろ、おやすみなさい。",
+            "primaryFunction": "Explain",
+            "screenQuestion": "また次の朝に",
+            "screenState": "Data",
+            "transitionRole": "closing",
+            "viewerTexts": [
+              "また次の朝に"
+            ],
+            "visualMode": "conclusion-card",
+            "visualTemplate": "conclusion-card"
+          }
+        ],
+        "causalScope": "multiple",
+        "chunks": [
+          {
+            "expression": "通常",
+            "text": "以上、朝のNASDAQカフェでした。今日も気をつけて、いってらっしゃい。"
+          },
+          {
+            "expression": "通常",
+            "text": "こちらはそろそろ、おやすみなさい。"
+          }
+        ],
+        "evidenceSourceIds": [],
+        "expectedBasisType": "not-applicable",
+        "formalName": "朝のNASDAQカフェ",
+        "headline": "朝のNASDAQカフェ",
+        "initialExpression": "通常",
+        "performanceIntent": "結論を弱めず、視聴者を送り出す",
+        "purpose": "新しい証拠を足さず、固定クロージングで締める",
+        "sceneRole": "fixed_closing",
+        "sourceLabel": "closing",
+        "supportingTexts": [
+          "今日も気をつけて、いってらっしゃい。",
+          "こちらはそろそろ、おやすみなさい。"
+        ],
+        "timelineBasis": "2026-09-02 US session",
+        "uncertainty": "中心仮説は中確信度であり寄与率は確定していない。",
+        "visualMode": "conclusion-card"
+      }
+    ]
+  }
+}

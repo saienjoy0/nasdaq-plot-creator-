@@ -1,0 +1,82 @@
+{
+  "contractVersion": "2.0.0",
+  "durationMode": "standard",
+  "episodeDate": "2026-09-03",
+  "informationCutoff": "2026-09-03T00:23:24Z",
+  "marketDate": "2026-09-02",
+  "researchAuthoring": {
+    "memoryQueryPlan": {
+      "comparison_questions": [
+        "過去のAIインフラ需要回と比べ、需要の広がりが大型AI株の支援材料になっているか",
+        "Dellの会社直接材料とNASDAQ全体の上昇要因を分離できるか"
+      ],
+      "contract_version": "1.0.0",
+      "entities": [
+        {
+          "canonical": "Dell Technologies",
+          "entity_id": null,
+          "raw": "DELL",
+          "resolution": "unresolved"
+        },
+        {
+          "canonical": "NVIDIA",
+          "entity_id": null,
+          "raw": "NVDA",
+          "resolution": "unresolved"
+        }
+      ],
+      "episode_date": "2026-09-03",
+      "indicators": [
+        "Nasdaq Composite",
+        "SOXX ETF",
+        "US Treasury yields",
+        "crude oil"
+      ],
+      "lead_candidates": [
+        "DellのAIサーバー見通し上方修正と需要の広がり",
+        "債券・原油の逆風下でもNASDAQが反発"
+      ],
+      "limits": {
+        "max_characters": 18000,
+        "max_claims": 0,
+        "max_episodes": 0,
+        "max_lessons": 0,
+        "max_threads": 0
+      },
+      "policies": [
+        "Federal Reserve policy"
+      ],
+      "relations": [
+        {
+          "relation": "AI infrastructure demand",
+          "source": "Dell results",
+          "target": "Dell/Nvidia sentiment"
+        },
+        {
+          "relation": "macro overlay",
+          "source": "bond yields/oil/geopolitics",
+          "target": "Nasdaq"
+        }
+      ],
+      "technologies": [
+        "AI servers",
+        "AI data centers",
+        "NVIDIA accelerated computing"
+      ],
+      "time_window": {
+        "from": "2026-09-01",
+        "to": "2026-09-03"
+      },
+      "topics": [
+        "Dell Technologies",
+        "NVIDIA",
+        "AI server demand",
+        "AI infrastructure",
+        "Treasury yields",
+        "oil",
+        "semiconductor dispersion"
+      ]
+    }
+  },
+  "shortenedReason": null
+}
