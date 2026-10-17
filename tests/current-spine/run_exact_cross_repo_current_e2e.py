@@ -43,10 +43,18 @@ def verify_authoring_runtime_policy(renderer_root: Path) -> dict:
             raise AssertionError(f"production voice profiles disagree: {field}")
     if main["provider"] != "gemini" or main["voice"] != "Charon" or main["provisional"]:
         raise AssertionError("pinned production voice is not the approved Gemini Charon profile")
-    models = set(re.findall(r"\bgemini-\d[\w.-]*-tts(?:-preview)?\b", text))
+    model_token = r"(?<![A-Za-z0-9_.-])gemini-\d[A-Za-z0-9_.-]*-tts(?:-preview)?(?![A-Za-z0-9_.-])"
+    models = set(re.findall(model_token, text))
     if models != {main["model"]}:
         raise AssertionError(
             f"authoring/runtime TTS policy mismatch: canon03={sorted(models)} runtime={main['model']}"
+        )
+    voices = set(re.findall(r"音声\s*`([^`]+)`", text))
+    voices.update(re.findall(rf"(?:{model_token})の([A-Za-z][A-Za-z0-9-]*)", text))
+    voices.update(re.findall(r"Gemini TTSの([A-Za-z][A-Za-z0-9-]*)", text))
+    if voices != {main["voice"]}:
+        raise AssertionError(
+            f"authoring/runtime voice policy mismatch: canon03={sorted(voices)} runtime={main['voice']}"
         )
 
     policy = (renderer_root / "scripts/duration-policy.ts").read_text(encoding="utf-8")
@@ -60,15 +68,31 @@ def verify_authoring_runtime_policy(renderer_root: Path) -> dict:
             raise AssertionError("authoring duration comparison requires whole-second runtime boundaries")
         seconds[boundary] = milliseconds // 1000
     duration_range = f"実音声{seconds['MIN']}〜{seconds['MAX']}秒"
-    if f"**{duration_range}**" not in text:
+    authored_ranges = {
+        (int(lower), int(upper))
+        for lower, upper in re.findall(r"(?:実音声|実測音声|通常回の合格範囲|通常回の)(\d+)〜(\d+)秒", text)
+    }
+    if f"**{duration_range}**" not in text or authored_ranges != {(seconds["MIN"], seconds["MAX"])}:
         raise AssertionError(f"authoring/runtime duration policy mismatch: canon03 must specify {duration_range}")
-    if f"実音声が{seconds['MIN']}秒未満" not in text:
+    shortened_bounds = {int(value) for value in re.findall(r"実(?:測)?音声(?:が)?(\d+)秒未満", text)}
+    if shortened_bounds != {seconds["MIN"]}:
         raise AssertionError("canon03 shortened boundary differs from the pinned runtime")
+    upper_bounds = {int(value) for value in re.findall(r"実(?:測)?音声が(\d+)秒を超えた", text)}
+    if upper_bounds != {seconds["MAX"]}:
+        raise AssertionError("canon03 upper boundary differs from the pinned runtime")
+    writing_ranges = re.findall(r"^\| [1-9] \| (\d+)〜(\d+)秒 \|", text, re.MULTILINE)
+    if len(writing_ranges) != 9:
+        raise AssertionError("canon03 must contain nine Scene writing-budget ranges")
+    writing_min = sum(int(lower) for lower, _ in writing_ranges)
+    writing_max = sum(int(upper) for _, upper in writing_ranges)
+    if f"合計{writing_min}〜{writing_max}秒" not in text:
+        raise AssertionError(f"canon03 Scene writing-budget total mismatch: actual={writing_min}〜{writing_max}秒")
     return {
         "authoringRuntimePolicy": "PASS",
         "productionTtsModel": main["model"],
         "productionVoice": main["voice"],
         "standardDurationSeconds": [seconds["MIN"], seconds["MAX"]],
+        "sceneWritingBudgetSeconds": [writing_min, writing_max],
     }
 
 

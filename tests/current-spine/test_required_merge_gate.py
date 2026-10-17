@@ -207,6 +207,9 @@ class RealRequiredMergeGatePolicyTests(unittest.TestCase):
             "Validate Daily Production Package": pull_request_paths(
                 REPO_ROOT / ".github/workflows/validate-daily-production-package.yml"
             ),
+            "Current Spine Exact Cross-Repo E2E": pull_request_paths(
+                REPO_ROOT / ".github/workflows/current-spine-exact-cross-repo-e2e.yml"
+            ),
         }
 
     def assertRequired(self, path: str, expected: set[str]) -> None:
@@ -214,8 +217,8 @@ class RealRequiredMergeGatePolicyTests(unittest.TestCase):
         self.assertEqual(result["state"], "WORKFLOWS_REQUIRED", path)
         self.assertEqual(set(result["expectedWorkflows"]), expected, path)
 
-    def test_canon_sources_and_materialized_files_require_both_workflows(self) -> None:
-        expected = {"Verify editorial canon", "Validate Daily Production Package"}
+    def test_canon_sources_require_integrity_and_runtime_qualification(self) -> None:
+        expected = {"Verify editorial canon", "Validate Daily Production Package", "Current Spine Exact Cross-Repo E2E"}
         for path in (
             "source-of-truth/02_editorial_bible.md",
             "source-of-truth/canon_manifest.json",
@@ -227,6 +230,21 @@ class RealRequiredMergeGatePolicyTests(unittest.TestCase):
         ):
             with self.subTest(path=path):
                 self.assertRequired(path, expected)
+
+    def test_failed_runtime_qualification_blocks_canon_only_changes(self) -> None:
+        classification = classify_changes(
+            self.policy, [{"filename": "source-of-truth/canon_manifest.json", "status": "modified"}]
+        )
+        runs = {
+            name: {"id": index, "status": "completed", "conclusion": conclusion}
+            for index, (name, conclusion) in enumerate((
+                ("Verify editorial canon", "success"),
+                ("Validate Daily Production Package", "success"),
+                ("Current Spine Exact Cross-Repo E2E", "failure"),
+            ), start=1)
+        }
+        result = evaluate_latest_runs(set(classification["expectedWorkflows"]), runs)
+        self.assertEqual(result["state"], "EXPECTED_WORKFLOW_FAILED")
 
     def test_designs_require_daily_baseline(self) -> None:
         self.assertRequired(
@@ -247,7 +265,10 @@ class RealRequiredMergeGatePolicyTests(unittest.TestCase):
             ".github/workflows/verify-source-materialization.yml",
         )
         for path in representatives:
-            self.assertRequired(path, {"Verify editorial canon", "Validate Daily Production Package"})
+            expected = {"Verify editorial canon", "Validate Daily Production Package"}
+            if path.startswith("source-of-truth/"):
+                expected.add("Current Spine Exact Cross-Repo E2E")
+            self.assertRequired(path, expected)
             result = classify_changes(self.policy, [{"filename": path, "status": "modified"}])
             for workflow in result["expectedWorkflows"]:
                 if workflow in self.workflow_paths:

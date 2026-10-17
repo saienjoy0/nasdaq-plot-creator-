@@ -79,6 +79,11 @@ jobs:
       - name: Verify current semantic fixture remains current
         run: pytest -q tests/editorial-semantic-boundary/test_current_contract_e2e.py
 
+      - name: Reject contradictory authoring policies and missing required gates
+        env:
+          PYTHONPATH: scripts
+        run: python -m pytest -q tests/current-spine/test_authoring_runtime_policy.py tests/current-spine/test_required_merge_gate.py
+
       - name: Verify exact pinned Visual Intelligence progression
         env:
           PYTHONPATH: scripts

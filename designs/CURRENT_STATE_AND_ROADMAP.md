@@ -10,13 +10,9 @@
 
 Currentの機械工程は実装済みである。
 
-```text
-当日資料 → 現在証拠・記憶再検証 → 因果調査 → 02編集判断
-→ Story / 01・03原稿 / 04審問 → Acceptance / Semantic Freeze
-→ current_production_facade_v12.py → Visual Intelligence
-→ RenderSpec / immutable handoff → Current Preview V4 → MP4
-→ ユーザー目視確認 → 明示Final V2 → 承認後の記憶昇格
-```
+当日資料と再検証した記憶から因果調査・02編集判断を行い、Story、01・03原稿、04審問を経てAcceptance / Semantic Freezeを確定する。
+
+確定した意味は唯一の`current_production_facade_v12.py`からVisual Intelligence、RenderSpec / immutable handoff、Current Preview V4へ渡す。実際のMP4をユーザーが目視確認し、明示Final V2の承認後に記憶を昇格する。
 
 Director/Critic待ちのPREPARED・REVIEW_REQUIREDは正常な停止である。同じ入力のrequestを増やして解決しない。
 
@@ -38,6 +34,7 @@ Director/Critic待ちのPREPARED・REVIEW_REQUIREDは正常な停止である。
 3. READMEと旧ロードマップに実装前の状態や「新しい実日previewが一度もない」という古い案内が残っていた。
 4. コード・fixtureの合格と、最新コードによる制作・人間承認・視聴者反応が混同されやすかった。
 5. 未採用の別案PRにはSkill責任の重複や未完成の契約移行がある。open/greenだけで採用済みとは扱えない。
+6. 今回の独立レビューでは、仕様だけの変更時にE2Eが必須ゲートから漏れることと、文書の一部に残った矛盾を照合が見逃すことが判明した。回帰テストを追加し、修正ブランチで解決した。
 
 ## C. 根本原因
 
@@ -58,6 +55,7 @@ Director/Critic待ちのPREPARED・REVIEW_REQUIREDは正常な停止である。
 
 - canon03を2.6.0へ更新。執筆目標200〜400秒、通常180〜420秒、短縮回180秒未満、現行Charonモデルへ統一する。
 - 既存exact-pinned Cross-Repo E2Eで、Canon Manifestから復元した03と実際のRendererのduration/voice設定を照合する。別の制作fixtureや政策ファイルを作らない。
+- 仕様変更ではそのE2Eの成功を既存Merge Gateから必須にする。音声・尺の部分的な矛盾、日本語直前のモデル名、Scene表の合計を負例で検証する。
 - lint指摘を型・未使用束縛・正規表現表記・テストfixtureのCSS誤検出の範囲で修正し、同じRenderer CIへゼロ警告のlintを追加する。
 - 現在地をこの文書とREADMEへ集約し、機械PASS、制作実績、人間承認、視聴者実測を区別する。
 

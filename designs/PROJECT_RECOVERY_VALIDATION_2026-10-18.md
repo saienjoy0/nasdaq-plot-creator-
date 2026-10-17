@@ -18,8 +18,8 @@ Changes belong to `fix/project-recovery-20261018` in Plot and Renderer until sep
 ## Changes
 
 - Canon03 is intentionally versioned to 2.6.0 and deterministically repacked under the existing four-part transport. Only its manifest SHA/rawBytes and intentional canon snapshot change. Canon01, Canon02, Canon04 and historical freeze files remain unchanged.
-- Canon03 now uses the adopted model, 180–420-second standard acceptance, a 200–400-second writing target and sub-180-second shortened mode. Its flexible Scene writing budgets sum to 200–400 seconds; they are not mandatory per-Scene duration limits.
-- Exact-pinned E2E derives voice/model from the two real production profiles and duration bounds from the real Renderer policy. It compares the decoded canon03 and adds the result to the existing receipt. Canon changes trigger that same workflow.
+- Canon03 now uses the adopted model, 180–420-second standard acceptance, a 200–400-second writing target and sub-180-second shortened mode. The illustrative Scene budget table sums to 200–340 seconds. Those flexible ranges can be redistributed toward the global writing target; they are not mandatory per-Scene duration limits.
+- Exact-pinned E2E derives voice/model from the two real production profiles and duration bounds from the real Renderer policy. It compares all explicit model/voice and measured-duration directives in the decoded canon03, checks the Scene-table total, and adds the result to the existing receipt. Canon changes both trigger that workflow and require its success through the existing merge-gate policy.
 - Renderer lint repairs use existing structural types and preserve validation/render behavior. CSS-animation warnings were false positives on Scene timing fixture properties; those assignments now stay outside object literals, without disabling the lint rule or changing fixture values.
 - Visual Story CI runs ESLint with `--max-warnings=0`.
 - README and the current-state roadmap describe the actual Current path and separate mechanical qualification, real media, user review and audience evidence.
@@ -30,9 +30,9 @@ Changes belong to `fix/project-recovery-20261018` in Plot and Renderer until sep
 |---|---|
 | Existing official mounted-skill preflight | PASS for the installed 2.5.0 skill only; not represented as approval of newer repository canon |
 | Repository `scripts/canon_manifest.py verify` | PASS after intentional canon03 update |
-| Major Plot affected suite: Current Spine, canon manifest, editorial semantic boundary, Renderer handoff | 99 test cases PASS; fresh verbose log contains all 99 PASSED results |
+| Major Plot affected suite: Current Spine, canon manifest, editorial semantic boundary, Renderer handoff | 109 test cases and 28 subtests PASS; JUnit reports 137 results, zero failures/errors/skips |
 | Existing exact-pinned Current Cross-Repo E2E against clean Renderer worktree | PASS, including authored independent graph paths, nullable outcome, Preview V4 acceptance and authoring/runtime policy |
-| Independent duration-only negative check | Changing the canonical range back to 480–540 seconds is rejected even with the correct model |
+| Focused policy/gate regressions | 30 cases and 28 subtests PASS, including contradictory voice, Japanese-adjacent model token, stale checklist range, shortened/upper bounds, incorrect table total and failed required E2E |
 | Renderer `npm run lint` | PASS, including TypeScript |
 | Renderer `npx eslint src scripts --max-warnings=0` | PASS: zero errors and zero warnings |
 | Renderer required spec/public-screen/handoff/Visual Story plus workflow/TTS/key-pool/duration/text-safety checks | 38 unique existing test entrypoints PASS |
@@ -52,4 +52,8 @@ The installed aggregate `produce-nasdaq-cafe-video` skill still embeds older run
 
 ## Review and remote adoption
 
-Fresh independent review and exact-head GitHub checks must be recorded before adoption. Until those checks and normal merge occur, this file describes verified branch changes and does not claim main has been updated.
+Fresh independent review found no critical issue, two important verification gaps and one minor arithmetic error. The important gaps were a missing required-gate classification for canon-only changes and permissive prose checks that accepted contradictory voice/duration directives or missed a model followed by Japanese text. The minor error described a 200–340-second table as totaling 200–400 seconds.
+
+The follow-up regression run reproduced the two gaps before repair (16 failed results including subtests). The existing gate now requires the same E2E for canon changes; ASCII model-token boundaries and explicit voice/range/bound checks reject the contradictions. The table prose now states its actual sum. The focused suite, full affected suite and clean exact-bound E2E all passed after that fix pass. The reviewer also confirmed identical emitted JavaScript for the typed Final adapter and migration changes.
+
+No repair branch has been pushed and no repair PR, remote checks or merge exists at the time of this receipt. Exact-head GitHub checks remain required before adoption. This file describes verified local branch changes and does not claim main has been updated.

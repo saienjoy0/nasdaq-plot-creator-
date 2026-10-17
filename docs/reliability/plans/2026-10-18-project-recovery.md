@@ -37,33 +37,35 @@ The existing Canon02 update demonstrates intentional packed-canon versioning wit
 | Plot `source-of-truth/packed/03_episode_production_spec/part-*.b64` and canon manifest | Version canon03 as 2.6.0, use 200–400-second writing target, 180–420-second standard acceptance and sub-180-second shortened mode; align scene writing budgets and model |
 | Plot `tests/canon-manifest/test_canon_manifest.py` | Deliberately update only canon03 byte/hash snapshot |
 | Plot Current E2E workflow | Requalify on canon changes, not only implementation changes |
+| Plot required merge-gate policy and Current Spine regression tests | Require successful E2E for canon-only changes and reject contradictory authoring directives, including Japanese-adjacent model tokens |
 | Renderer lint-flagged files | Replace explicit `any` with existing structural types, remove unused bindings and redundant escapes; preserve runtime behavior |
 | Renderer Visual Story CI workflow | Run lint with zero-warning policy before functional gates |
 | Plot README, current-state roadmap, programme validation receipt | Replace obsolete PR-8-era status with observed implementation, real media evidence, active/pending work and exact next boundaries |
 
 ## Task 1: Authoring/runtime regression and repair
 
-- [ ] Add `verify_authoring_runtime_policy(renderer_root)` to the existing exact-pinned E2E. Derive the production model/voice from both profiles and accepted seconds from `duration-policy.ts`; decode canon03 through the existing canon manifest.
-- [ ] Run exact E2E on baseline. Expected RED: authoring policy has the wrong model/range, before any synthetic production proceeds.
-- [ ] Update canon03 prose, model references, writing-budget table and standard/shortened rules. Repack using deterministic gzip and the existing ordered physical parts; update manifest SHA/rawBytes and the intentional snapshot.
-- [ ] Add `source-of-truth/**` to the existing exact E2E workflow trigger.
-- [ ] Run canon verifier, canon tests, 99-test affected suite and exact-pinned E2E. Expected GREEN, with explicit authoring/runtime result in the existing receipt.
+- [x] Add `verify_authoring_runtime_policy(renderer_root)` to the existing exact-pinned E2E. Derive the production model/voice from both profiles and accepted seconds from `duration-policy.ts`; decode canon03 through the existing canon manifest.
+- [x] Run exact E2E on baseline. Expected RED: authoring policy has the wrong model/range, before any synthetic production proceeds.
+- [x] Update canon03 prose, model references, writing-budget table and standard/shortened rules. Repack using deterministic gzip and the existing ordered physical parts; update manifest SHA/rawBytes and the intentional snapshot.
+- [x] Add `source-of-truth/**` to the existing exact E2E workflow trigger and required merge-gate classification.
+- [x] Run canon verifier, canon tests, affected suite and exact-pinned E2E. Final result: 109 test cases / 28 subtests and exact E2E PASS, with explicit authoring/runtime result in the existing receipt.
+- [x] Reproduce and repair independent-review gaps: contradictory voice/range directives, Japanese-adjacent model tokens, failed E2E on canon-only changes, and Scene-table total. Preserve the 200–400-second global writing target while accurately stating the illustrative table sum of 200–340 seconds.
 
 ## Task 2: Renderer required lint repair
 
 - [x] Reproduce the existing lint failure: 30 errors and 3 warnings.
-- [ ] Use `RenderSpec` / `RenderSpecScene` for legacy migration annotations and structural unknown-safe types for the Final adapter. Preserve all validation and render settings.
-- [ ] Keep existing bundle hash/path checks, test assertions and preflight outputs byte-equivalent. Fix only redundant escaping, unused properties, repeated-space regex spelling and non-render fixture key names falsely flagged by the animation lint rule.
-- [ ] Make the existing Visual Story CI run `npm run lint -- --max-warnings=0` through a supported script command. No lint rules, source paths or assertions may be disabled.
-- [ ] Run zero-warning lint, typecheck, spec/public-screen/handoff tests, Visual Story tests and build. Compare the modified migration output with baseline for the same temporary fixture.
+- [x] Use `RenderSpec` / `RenderSpecScene` for legacy migration annotations and structural unknown-safe types for the Final adapter. Preserve all validation and render settings.
+- [x] Keep existing bundle hash/path checks, test assertions and preflight outputs byte-equivalent. Fix only redundant escaping, unused properties, repeated-space regex spelling and the placement of non-render fixture keys falsely flagged by the animation lint rule.
+- [x] Make the existing Visual Story CI run `npx eslint src scripts --max-warnings=0` alongside its existing typecheck. No lint rules, source paths or assertions may be disabled.
+- [x] Run zero-warning lint, typecheck, spec/public-screen/handoff tests, Visual Story tests and build. Compare the modified migration output with baseline for the same temporary fixture.
 
 ## Task 3: Current status and unresolved boundaries
 
-- [ ] Preserve the old roadmap as explicitly historical and replace the main navigation with the current production path and a maintained status table.
-- [ ] Record that programme causal-graph/subtitle fixes merged on 3 October; synthetic E2E does not establish episode quality.
-- [ ] Record latest Collector success separately from Renderer queue polls: run `39048732981` resolves an empty Motion Preview queue; its render/wake/outcome jobs are skipped, so it proves no MP4 generation.
-- [ ] Inventory open PRs. Do not merge duplicate Skill owners or partially implemented schema 2.5 proposals merely because they are green. Semantic-scope rollout and variable scene-count remain separate versioned migrations.
-- [ ] State the exact next production boundary: newly authored canon-compatible package, actual Preview, user visual review, audience evidence when available.
+- [x] Preserve the old roadmap in Git history and replace the main navigation with the current production path and a maintained status table.
+- [x] Record that programme causal-graph/subtitle fixes merged on 3 October; synthetic E2E does not establish episode quality.
+- [x] Record latest Collector success separately from Renderer queue polls: run `39048732981` resolves an empty Motion Preview queue; its render/wake/outcome jobs are skipped, so it proves no MP4 generation.
+- [x] Inventory open PRs. Do not merge duplicate Skill owners or partially implemented schema 2.5 proposals merely because they are green. Semantic-scope rollout and variable scene-count remain separate versioned migrations.
+- [x] State the exact next production boundary: newly authored canon-compatible package, actual Preview, user visual review, audience evidence when available.
 
 ## Verification and rollback
 
