@@ -29,8 +29,8 @@
     {
       "id": "03",
       "logicalPath": "source-of-truth/03_episode_production_spec.md",
-      "sha256": "c0e476f36b387961277ffa008d7b2258942e1fe44c475bebe1d79b31b9f4dc3f",
-      "rawBytes": 101040,
+      "sha256": "84241f3b24de485979116fe039c5211916b379b7c1ccfacb6a38331ab3eb1e09",
+      "rawBytes": 101930,
       "storage": {
         "mode": "gzip+base64-concatenated",
         "parts": [

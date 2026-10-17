@@ -3,6 +3,7 @@ name: Current Spine Exact Cross-Repo E2E
 on:
   pull_request:
     paths:
+      - "source-of-truth/**"
       - "contracts/renderer_binding.json"
       - "tests/current-spine/**"
       - "tests/editorial-semantic-boundary/**"

@@ -12,6 +12,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -22,6 +23,53 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def verify_authoring_runtime_policy(renderer_root: Path) -> dict:
+    """Qualify the authoring instructions against the already-bound runtime."""
+    scripts = str(ROOT / "scripts")
+    if scripts not in sys.path:
+        sys.path.insert(0, scripts)
+    from canon_manifest import document_bytes, load_manifest
+
+    manifest = load_manifest(ROOT)
+    production_spec = next(item for item in manifest["documents"] if item["id"] == "03")
+    text = document_bytes(ROOT, production_spec).decode("utf-8")
+    profiles = json.loads((renderer_root / "config/voice-profiles.json").read_text(encoding="utf-8"))["profiles"]
+    main = profiles["fox-main"]
+    charon = profiles["gemini-charon"]
+    for field in ("provider", "model", "voice", "provisional"):
+        if main[field] != charon[field]:
+            raise AssertionError(f"production voice profiles disagree: {field}")
+    if main["provider"] != "gemini" or main["voice"] != "Charon" or main["provisional"]:
+        raise AssertionError("pinned production voice is not the approved Gemini Charon profile")
+    models = set(re.findall(r"\bgemini-\d[\w.-]*-tts(?:-preview)?\b", text))
+    if models != {main["model"]}:
+        raise AssertionError(
+            f"authoring/runtime TTS policy mismatch: canon03={sorted(models)} runtime={main['model']}"
+        )
+
+    policy = (renderer_root / "scripts/duration-policy.ts").read_text(encoding="utf-8")
+    seconds = {}
+    for boundary in ("MIN", "MAX"):
+        match = re.search(rf"export const STANDARD_DURATION_{boundary}_MS = ([\d_]+);", policy)
+        if not match:
+            raise AssertionError(f"cannot read pinned Renderer duration boundary: {boundary}")
+        milliseconds = int(match.group(1).replace("_", ""))
+        if milliseconds % 1000:
+            raise AssertionError("authoring duration comparison requires whole-second runtime boundaries")
+        seconds[boundary] = milliseconds // 1000
+    duration_range = f"実音声{seconds['MIN']}〜{seconds['MAX']}秒"
+    if f"**{duration_range}**" not in text:
+        raise AssertionError(f"authoring/runtime duration policy mismatch: canon03 must specify {duration_range}")
+    if f"実音声が{seconds['MIN']}秒未満" not in text:
+        raise AssertionError("canon03 shortened boundary differs from the pinned runtime")
+    return {
+        "authoringRuntimePolicy": "PASS",
+        "productionTtsModel": main["model"],
+        "productionVoice": main["voice"],
+        "standardDurationSeconds": [seconds["MIN"], seconds["MAX"]],
+    }
 
 
 def load_cross_repo_module():
@@ -195,6 +243,7 @@ def main() -> int:
             f"expected={renderer['registrySnapshotSha256']} actual={registry_sha}"
         )
 
+    authoring_policy = verify_authoring_runtime_policy(renderer_root)
     cross_repo = load_cross_repo_module()
     result = cross_repo.run(renderer_root)
     result.update(verify_authored_causal_path(renderer_root, cross_repo))
@@ -218,6 +267,7 @@ def main() -> int:
     output = {
         **result,
         **preview_request,
+        **authoring_policy,
         "bridgeContractVersion": binding["bridgeContractVersion"],
         "rendererContractVersion": renderer["contractVersion"],
         "registrySnapshotSha256": registry_sha,

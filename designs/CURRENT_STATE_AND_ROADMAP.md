@@ -1,526 +1,103 @@
-# 朝のNASDAQカフェ｜現在地・次の工程・最終ゴール
+# 朝のNASDAQカフェ｜現在地と残る工程
 
-- 基準日: 2026-08-05
-- 基準main SHA: `379c6456b86231d620807ac990ee030f7dc267b8`
-- 文書化PR: **PR #7**
-- 次の実装PR: **PR #8**
-- 現在のフェーズ: **調査・記憶基盤の完成後、制作パッケージ統合へ移る直前**
+確認日：2026-10-18（日本時間）。観測したmain：Plot `9c0b51a6ed15f51094b2c89a47a101ff2442fe83`、Renderer `536fbe8a139b2fa9f89cd9c76e9db71fa889c02e`、Collector `42908709f8044ba8d7a836d67fbe9b715f4b7790`。
 
----
+運用上の案内であり、契約の正本はAGENTS、Canon Manifest、Current Entrypoints、Renderer Bindingである。以前の2026-08-05基準の「次はPR #8」という本文はGit履歴に残る。現在の着手指示として使わない。
 
-## 1. 現在地
+## A. 現在状態
 
-現在は、**過去の番組記憶を安全に検索し、当日の一次情報で再検証したうえで因果調査へ渡せるところまで完成した**。
+米国株の値動きの疑問から企業・産業・政策の仕組みをたどり、理解が変わる金融ドキュメンタリーを継続制作する。東アジアとの事業・供給網の関係は、当日価格の原因と分けて証拠を確認する。
 
-完成済みの経路:
+Currentの機械工程は実装済みである。
 
 ```text
-memory query plan
-→ 関連記憶検索
-→ deterministic retrieval replay
-→ SHA-bound research input manifest
-→ 現在証拠によるmemory revalidation
-→ causal research dossier v0.2
+当日資料 → 現在証拠・記憶再検証 → 因果調査 → 02編集判断
+→ Story / 01・03原稿 / 04審問 → Acceptance / Semantic Freeze
+→ current_production_facade_v12.py → Visual Intelligence
+→ RenderSpec / immutable handoff → Current Preview V4 → MP4
+→ ユーザー目視確認 → 明示Final V2 → 承認後の記憶昇格
 ```
 
-まだ完成していない経路:
-
-```text
-causal research dossier
-→ 最終episode package
-→ 04審問後の制作正本
-→ Primary / Approved Fallback確定
-→ spoken script / asset manifest / render spec
-→ renderer handoff
-→ preview
-```
-
-したがって、現時点で正しい説明は次である。
-
-> 調査と記憶の安全基盤は完成した。これから完成台本、画像採用、render spec、preview配送を一つの制作契約へ接続する。
-
-次の説明はまだ誤りである。
-
-> 当日資料を置けば完成動画まで完全自動で出る。
-
----
-
-## 2. 最終ゴール
-
-ゴールは記憶機能を増やすことではない。
-
-ユーザーが当日の`daily_source_package_YYYY-MM-DD.md`を渡した後、ChatGPTが市場因果と制作内容を完成させ、検証済み成果物だけをrendererへ渡し、preview確認後にだけfinal・公開・記憶化できる一周を完成させることである。
-
-```text
-当日資料
-↓
-現在情報と市場データの確認
-↓
-関連記憶の選択検索
-↓
-過去仮説の現在証拠による再検証
-↓
-Expected / Actual / Gap、時系列、主因、増幅、相殺、反対材料の確定
-↓
-02による編集判断
-↓
-01による狐の語り
-↓
-03による9シーンepisode package
-↓
-04による審問と必要箇所の修正
-↓
-Primary / Approved Fallbackの最終採用
-↓
-spoken script / asset manifest / render spec
-↓
-全成果物の整合validator PASS
-↓
-rendererへ配送
-↓
-GitHub Actions preview
-↓
-ユーザー目視確認
-↓
-明示依頼がある場合だけfinal
-↓
-approved publication record
-↓
-承認内容だけmemory promotion
-```
-
-### MVPゴール
-
-実際の新しい当日資料一件で、次を成功させた時点。
-
-- 因果調査
-- 最終episode package
-- 画像採用経路確定
-- production bundle
-- renderer handoff
-- preview MP4生成
-- ユーザーが目視確認可能
-
-### 運用ゴール
-
-毎日の通常運用を次へ固定できた時点。
-
-```text
-ユーザーが当日資料を渡す
-→ ChatGPTが制作判断を完成
-→ validator済みbundleを配送
-→ Actions preview
-→ ユーザー確認
-→ 明示依頼時だけfinal
-→ 承認記録
-→ memory promotion
-```
-
----
-
-## 3. 担当範囲
-
-### ChatGPTが担当する
-
-- 最新情報確認
-- 主役選定
-- Expected / Actual / Gap
-- 時系列
-- 主因・増幅・相殺・反対材料
-- 世界からNASDAQへの因果経路
-- 9シーン構成
-- 狐ナレーション
-- 04審問と修正
-- Primary / Approved Fallback
-- 必要画像の生成
-- 最終採用経路
-- episode packageとrender specの意味
-
-### `nasdaq-plot-creator-`が担当する
-
-- 01〜04正本の保持
-- 因果調査契約
-- 記憶の検索・再検証・昇格
-- episode package制作契約
-- 成果物間の整合契約
-- 正式validator
-- renderer handoff manifest
-- approved publication record
-
-### deterministic codeが担当する
-
-- schema検査
-- SHA・lineage検査
-- Evidence ID参照検査
-- memory status利用制御
-- asset存在確認
-- 成果物間一致検査
-- 古い入力の誤実行防止
-- bundle作成
-
-### rendererが担当する
-
-- render spec検証
-- Gemini TTS 2ブロック
-- 字幕・Visual Beat同期
-- Remotion preview
-- 軽量技術検査
-- Artifact保存
-- 明示依頼がある場合だけfinal
-
-### ユーザーが担当する
-
-- Primary画像の採用・不採用
-- previewの目視確認
-- final実行の明示
-- 公開承認
-
----
-
-## 4. 完成済み
-
-### PR #1｜基盤
-
-- 01〜04正本の保持・復元
-- causal research Skill初期契約
-- editorial memory architecture
-- memory policy、core、daily、weekly、thread、claim
-- schemaとCI
-
-### PR #2｜安全な記憶昇格
-
-- dry-run / explicit apply
-- immutable revision
-- conflict detection
-- stale plan防止
-- SHA確認
-- atomic rollback
-- no-op再実行
-
-### PR #3｜実エピソード受入試験
-
-- renderer側の実episode package / render spec / validator recordを使用
-- production record互換
-- 実データpromotion preflight
-- 再実行no-op
-
-### PR #4｜最初の正式記憶
-
-- `2026-07-31/v001`
-- AI設備投資回収thread
-- AI capex evaluation claim
-- Amazon / AWS / Apple / SOXX alias
-- 反対材料を含むprovenance
-
-### PR #5｜監査可能な記憶検索
-
-- Query Plan
-- alias解決
-- relevance scoring
-- status / provenance filtering
-- duplicate・diversity・文字数制限
-- 選択理由・除外理由
-- AWS正例、Tesla無関係負例
-
-### PR #6｜記憶再検証Bridge
-
-- deterministic retrieval replay
-- Context / Reportのバイト一致
-- SHA-bound research input manifest
-- causal research dossier v0.2
-- memory revalidation contract
-- Report / Manifest完全照合
-- repo外path・schema拒否
-- current evidence品質検査
-- memory-only Expected / Actual / causal edge拒否
-- Evidence ID完全参照検査
-- 25件の正常系・攻撃的テスト
-- 実retriever end-to-end CI
-
-### PR #7｜現在地とロードマップの文書化
-
-- この文書
-- READMEの現在地更新
-- 次の実装をPR #8として固定
-
-PR #7は文書だけであり、制作機能は追加しない。
-
----
-
-## 5. まだ完成していないもの
-
-- dossierからepisode packageへのmemory reference接続
-- 過去記憶をどのSceneでどう使用したかの監査
-- episode package全体の正式validator統合
-- 04審問後の最終版だけを制作正本にする固定
-- Primary / Fallback最終採用経路検査
-- spoken script / asset manifest / render specの一括整合検査
-- renderer配送用bundle manifest
-- plot-creatorとrendererのcontract version照合
-- 実日の全工程acceptance
-- 日次の安全な一つの入口
-
----
-
-## 6. 次に行う実装
-
-# PR #8｜Episode Package Memory Reference
-
-推奨ブランチ:
-
-```text
-feat/pr8-episode-package-memory-references
-```
-
-### 目的
-
-再検証済みの過去記憶だけを、最終episode packageへ安全に接続する。
-
-### 入力
-
-- validated causal research dossier v0.2
-- 02による編集判断
-- 01〜04に従いChatGPTが作った最終episode package
-
-### 追加する内部参照
-
-```text
-memory_reference_type
-memory_reference_id
-historical_confidence
-current_revalidation_status
-current_evidence_ids
-difference_from_previous
-editorial_use
-scene_ids
-public_usage_mode
-```
-
-`public_usage_mode`候補:
-
-- `current_supported_context`
-- `historical_comparison`
-- `counterevidence`
-- `monitoring_point`
-- `internal_only`
-
-### 必須ルール
-
-1. memory referenceはdossier内に実在する
-2. revalidation statusがdossierと一致する
-3. current evidence IDが実在する
-4. `supported`または適切な`partially_supported`だけを現在文脈へ使える
-5. `historical_context_only`は過去比較に限定する
-6. `weakened`と`invalidated`は変化説明・反対材料に限定する
-7. `unresolved`と`not_used`を現在事実として台本へ入れない
-8. memory referenceなしの過去回言及を拒否する
-9. 利用Sceneと用途を追跡できる
-10. タイトル・サムネイルを本文より強くしない
-
-### 成果物
-
-- episode package memory reference schema
-- dossier → episode package validator
-- status別許可・拒否表
-- positive / adversarial tests
-- AGENTSと制作契約の最小更新
-
-### 非目的
-
-- 自動台本生成
-- 主役決定
-- 04審問の機械化
-- render spec生成
-- renderer変更
-
-### 完了条件
-
-- 未再検証memoryをepisode packageへ入れられない
-- historical onlyを現在事実として使えない
-- weakened / invalidatedを肯定材料に使えない
-- memory利用Sceneとevidenceを追跡できる
-- memoryを使わない回もPASSする
-
----
-
-## 7. その後の順番
-
-## PR #9｜Final Production Package Contract
-
-- 04審問後のepisode packageを唯一の制作正本にする
-- 同じ内容からspoken script、asset manifest、render specを作る契約を固定する
-- Scene順、ナレーション、Visual Beat、テロップ、数字、表情、asset ID、表示合図、復帰先、memory referenceを一致検査する
-- Primary / Approved Fallbackの最終採用経路を一つに固定する
-
-## PR #10｜Renderer Handoff Bundle
-
-- validator PASS済み成果物だけをrendererへ渡す
-- plot-creatorとrendererのcontract versionを固定する
-- 全ファイルのSHAと対象日を持つ`handoff_manifest.json`を作る
-
-出力候補:
-
-```text
-production-bundles/YYYY-MM-DD/
-├── episode_package_YYYY-MM-DD.md
-├── spoken_script_YYYY-MM-DD.md
-├── asset_manifest.json
-├── render_spec.json
-├── official_execution_preflight.json
-├── asset_resolution_log.json
-├── image_generation_log.json
-├── picturebook_backlog_delta.json
-└── handoff_manifest.json
-```
-
-## PR #11｜Real-Day End-to-End Acceptance
-
-実際の新しい当日資料一件で次を通す。
-
-```text
-daily source
-→ memory retrieval
-→ causal dossier
-→ episode package
-→ 04審問後の最終版
-→ image path resolution
-→ production bundle
-→ renderer handoff
-→ preview MP4
-```
-
-自動finalへは進まない。
-
-このPRで実データpreviewまで成功し、ユーザーが目視確認できた時点でMVP完成とする。
-
-## PR #12｜Daily Operational Entry Point
-
-- 入力ファイル検出
-- 対象日確定
-- 古いrender spec誤実行防止
-- 必須成果物一覧
-- validator順序制御
-- renderer handoff
-- preview実行
-- 停止理由の明示
-
-この入口は工程管理であり、編集AIではない。
-
-行ってはいけないこと:
-
-- 主役の自動決定
-- 因果の自動決定
-- ナレーションの自動変更
-- Primary / Fallbackの自動推測
-- preview確認前のfinal
-
----
-
-## 8. 固定する優先順位
-
-```text
-PR #8  記憶をepisode packageへ安全接続
-↓
-PR #9  最終制作成果物の共通正本と整合検査
-↓
-PR #10 renderer配送契約
-↓
-PR #11 実日のpreview acceptance
-↓
-PR #12 日次入口と運用安定化
-```
-
-この順番より先にrendererの見た目改修や追加自動化へ進まない。
-
-理由:
-
-- 台本側からrendererへ渡す正式契約が閉じていない
-- memory利用がepisode packageで追跡可能になっていない
-- Primary / Fallbackとrender specの一貫性が未固定
-- 実日の全工程acceptanceが未完了
-
----
-
-## 9. 停止条件
-
-次のどれかが残る場合はrendererへ渡さない。
-
-- 因果調査未完了
-- Expected根拠不明を確定扱い
-- 重要反対材料欠落
-- memory再検証未完了
-- 04審問未反映
-- Primary / Fallback未確定
-- asset不明
-- episode packageとrender spec不一致
-- validator FAIL
-- unresolved stateあり
-- 対象日不一致
-- 古いrender spec
-
-次のどれかが残る場合はfinalへ進まない。
-
-- preview未生成
-- preview未確認
-- ユーザーの明示依頼なし
-
-次のどれかが残る場合はmemory promotionしない。
-
-- publication record未承認
-- preview未承認
-- rejected因果を含む
-- 未採用画像経路を含む
-- pre-inquisition narrationを含む
-
----
-
-## 10. 次のAIへの直接指示
-
-次に着手する実装はPR #8である。
-
-```text
-ブランチ:
-feat/pr8-episode-package-memory-references
-
-目的:
-validated causal dossierのmemory revalidationを、最終episode packageへ安全に接続する。
-```
-
-開始前に読むもの:
-
-- `AGENTS.md`
-- `source-of-truth/01_fox_character_bible.md`
-- `source-of-truth/02_editorial_bible.md`
-- materialized 03
-- materialized 04
-- `designs/PR6_EDITORIAL_MEMORY_REVALIDATION_BRIDGE.md`
-- causal dossier v0.2 schema
-- memory revalidation schema
-- episode production specのScene・source・evidence関連項目
-
-PR #8では01〜04を変更しない。
-PR #8では台本を自動生成しない。
-PR #8ではrendererを変更しない。
-PR #8ではmemory利用の監査契約とvalidatorだけを完成させる。
-
----
-
-## 11. 最終結論
-
-現在地は、**安全に覚え、安全に思い出し、安全に当日証拠で再検証できるところ**である。
-
-次は、**再検証済み記憶を最終台本のどこでどう使ったか追跡可能にするPR #8**である。
-
-全体のゴールは、
-
-```text
-当日資料
-→ 編集判断済み制作パッケージ
-→ validator PASS
-→ preview
-→ ユーザー確認
-→ final
-→ 承認済み記憶
-```
-
-という一周を、意味を変えず、安全に、毎日繰り返せる状態にすることである。
+Director/Critic待ちのPREPARED・REVIEW_REQUIREDは正常な停止である。同じ入力のrequestを増やして解決しない。
+
+| 項目 | 確認できた状態 | 限界 |
+|---|---|---|
+| Collector | 10月17日run 38986866992はsuccess | 収集内容の十分さや編集承認を意味しない |
+| 因果graph | Plot #198 / Renderer #227で明示graphだけを受理する修正がmain採用済み | 独立二経路・表示順・null outcomeは機械E2Eで確認 |
+| 字幕 | Renderer #224で単語・数字の分断を修正済み | 映像全体の見やすさは未承認 |
+| 編集能力 | 既存Research / Story / Critic / Visual Intelligenceを強化済み | 新作の効果実測とは区別 |
+| 回帰基準 | 主要Plot 99 tests・25 subtests、exact-pinned E2Eが基準mainでPASS | 合成fixtureによる契約証明 |
+| 完成動画 | 2026-08-17回Final run 33533781970と保存MP4を確認 | 10月3日のコード修正を反映した新作ではない |
+| 最近のRenderer success | run 39048732981は空Motion Preview queueの正常終了 | wake/render/outcomeはskipped。MP4生成実績に数えない |
+| 視聴者実測 | 今回の監査ではCTR・維持率・理解度を未取得 | 改善効果を認定できない |
+
+## B. 問題点
+
+1. canon03は480〜540秒・旧TTSモデル、採用済みRendererは通常180〜420秒・gemini-3.8-flash-tts / Charonを要求していた。
+2. Renderer lintに30 errors / 3 warningsが残り、Visual Story CIはlintを実行していなかった。
+3. READMEと旧ロードマップに実装前の状態や「新しい実日previewが一度もない」という古い案内が残っていた。
+4. コード・fixtureの合格と、最新コードによる制作・人間承認・視聴者反応が混同されやすかった。
+5. 未採用の別案PRにはSkill責任の重複や未完成の契約移行がある。open/greenだけで採用済みとは扱えない。
+
+## C. 根本原因
+
+正本のバイト整合、Runtime互換性、説明文書、視聴体験を別々に検査し、同じ制作契約として照合していなかった。既に採用された因果・字幕修正をやり直す必要はない。
+
+## D. 複数案比較
+
+| 案 | 影響 | 判断 |
+|---|---|---|
+| 古い文書へRuntimeを戻す | 採用済み音声・尺・キャッシュを変更する | 不採用 |
+| 検証を緩めて古い指示を通す | 契約不整合を隠す | 不採用 |
+| 作者向け契約をRuntimeへそろえ、同じE2Eで照合する | 現行責任分担を保って入力側を修復する | 採用 |
+| Skill追加やScene数移行を同時に導入する | 別の契約変更と責任重複を持ち込む | 別の版付き変更として評価 |
+
+## E. 推奨案と今回の修正
+
+`fix/project-recovery-20261018`で次を実施する。採用状態はPRのmergeとexact-head検査で確認し、ブランチ上の変更をmain反映済みと記載しない。
+
+- canon03を2.6.0へ更新。執筆目標200〜400秒、通常180〜420秒、短縮回180秒未満、現行Charonモデルへ統一する。
+- 既存exact-pinned Cross-Repo E2Eで、Canon Manifestから復元した03と実際のRendererのduration/voice設定を照合する。別の制作fixtureや政策ファイルを作らない。
+- lint指摘を型・未使用束縛・正規表現表記・テストfixtureのCSS誤検出の範囲で修正し、同じRenderer CIへゼロ警告のlintを追加する。
+- 現在地をこの文書とREADMEへ集約し、機械PASS、制作実績、人間承認、視聴者実測を区別する。
+
+修正設計は[2026-10-18-project-recovery.md](../docs/reliability/plans/2026-10-18-project-recovery.md)、実行結果は[PROJECT_RECOVERY_VALIDATION_2026-10-18.md](PROJECT_RECOVERY_VALIDATION_2026-10-18.md)を参照する。
+
+## F. 実装・運用の順番
+
+1. 技術修復を通常PRの検査と独立レビューへ通す。
+2. 当日資料から現行正本に従った新しい制作attemptを作る。歴史的episode・bundle・requestは書き換えない。
+3. 唯一のCurrent facadeから進め、Director/Critic待ちでは既存requestへ意味成果物を追加する。
+4. 実際のPreview MP4とtechnical reportを取得する。queueのsuccessやrequest受理だけで完了にしない。
+5. ユーザーの目視確認、明示Final、公開承認を分けて記録する。
+6. データが得られたら冒頭・重複・後半の発見のうち一つを対象に検証し、承認済み結果だけを記憶へ反映する。
+
+### 責任と入出力
+
+| 責任 | 既存の担当 | 入力 → 出力 |
+|---|---|---|
+| 情報収集 | Collector | 日付・明示request → 原文・市場データ・source pack |
+| 編集判断 | 正本02・ChatGPT | 現在証拠・反対材料 → 主役・見る理由・仮説 |
+| 過去記憶 | Editorial Memory | query plan・承認履歴 → replay可能な関連記憶 |
+| 因果調査 | Causal Research | 当日証拠・許可された記憶 → dossier・証拠ID・代替仮説 |
+| 構成・語り | Story Plan / Authoring / Engine・正本01/03 | 編集判断 → Scene/Beat・理解変化・完成原稿 |
+| 興味・理解・Retention仮説 | 既存Entertainment Critic・正本04 | draft → Scene単位の指摘・修正要求 |
+| 何を映すか | Visual Intelligence | 凍結済み意味・Registry → Candidate・Director/Critic承認 |
+| 描画 | Renderer | RenderSpec・asset → 音声・production data・MP4 |
+| 技術受入 | Current facade・既存Acceptance | request・証拠・出力 → 機械PASS/停止箇所 |
+| 基盤診断 | Production Reliability | 実際のrun/log・契約 → 原因・修正設計・回帰結果 |
+| 見た目・公開 | ユーザー | exact Preview・権利情報 → 目視確認・明示承認 |
+
+### 別契約として残す移行
+
+- Plot #191 / Renderer #223：semanticScope・schema 2.5。輸送だけでなくCandidate合法性とhandoff版一致まで必要。Renderer後方互換→exact qualification→Plot出力切替の順で扱う。
+- 5〜12 Scene：PROGRAMME_REDESIGN_2026-09-07.mdで設計済み。本番は現在9 Scene。TTS、schema、freeze、intake、fixtureの同時移行が必要。
+- Plot #194 / Renderer #220：Skill統合案。既存Skillで埋まる責任を新設する理由は未確定。既存の強化を優先する。
+
+これらを実装済み・merge済みとは扱わない。一括mergeや、テストを通すための意味の推測は行わない。
+
+## G. リスクと完了条件
+
+新しい03に従うauthoringは新Canon Manifestへ結び付ける。過去のSemantic Freezeは発行時の根拠で検証し、現在のSHAへ差し替えない。lint修正だけではproduction bindingを自動更新しない。
+
+技術修復はREDで不整合を検出し、修復後にcanon検証・主要回帰・同じexact-bound E2E・Renderer lint/typecheck/既存tests/buildが通ることを完了条件とする。番組改善は別に、新しいPreview、そのexact版のユーザー確認、取得可能な視聴者の理解・反応で判断する。未取得の実測を推測で埋めない。
