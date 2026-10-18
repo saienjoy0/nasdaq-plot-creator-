@@ -39,6 +39,7 @@ Changes belong to `fix/project-recovery-20261018` in Plot and Renderer until sep
 | Renderer `npm run build` | PASS |
 | Legacy migration before/after on the same temporary renderable fixture | Output files byte-identical |
 | Collector with its pinned requirements | 81 tests PASS |
+| Historical Story Engine integration after fresh-request fixture repair | 51 tests PASS; current logical-rule SHA is bound and stale logical rules still fail closed |
 
 The local `tsx` CLI cannot bind its IPC socket (`listen EPERM`), so the normal `npm run test:spec` wrapper cannot start. Its existing scripts and nested required suites were expanded, deduplicated and run with `node --import tsx`; Python entrypoints were retained unchanged. No source, assertion or gate was omitted to obtain the 38-entrypoint result. This environment limitation is not a test failure or an episode approval. CI uses its normal commands.
 
@@ -56,4 +57,8 @@ Fresh independent review found no critical issue, two important verification gap
 
 The follow-up regression run reproduced the two gaps before repair (16 failed results including subtests). The existing gate now requires the same E2E for canon changes; ASCII model-token boundaries and explicit voice/range/bound checks reject the contradictions. The table prose now states its actual sum. The focused suite, full affected suite and clean exact-bound E2E all passed after that fix pass. The reviewer also confirmed identical emitted JavaScript for the typed Final adapter and migration changes.
 
-No repair branch has been pushed and no repair PR, remote checks or merge exists at the time of this receipt. Exact-head GitHub checks remain required before adoption. This file describes verified local branch changes and does not claim main has been updated.
+The repair is published as Plot [#201](https://github.com/saienjoy0/nasdaq-plot-creator-/pull/201) and Renderer [#228](https://github.com/saienjoy0/saienjoy0-nasdaq-cafe-remotion/pull/228). The published trees were fetched back and matched the locally qualified trees exactly. Original local commits remain available on `local/project-recovery-20261018`; GitHub-created commit identities differ while file bytes match.
+
+The first remote Story Engine gate, run `39081188980`, exposed a historical integration-test helper that refreshed physical input blob SHAs but retained the old canon03 logical SHA. Its existing positive test also failed locally (one failed, 49 passed). The helper now binds a newly generated temporary request to its actual packed-manifest inputs. A new negative test proves that fresh blob bindings cannot authorize stale logical rules, and the positive test verifies reconstructed rule bytes against their SHA. All 51 Story Engine tests passed after repair. No historical request, receipt, production orchestrator or validation rule changed.
+
+Exact-head GitHub checks remain required before adoption. This file records branch qualification and does not claim that either PR has merged or main has been updated.
