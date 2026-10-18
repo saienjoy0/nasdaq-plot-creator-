@@ -10,6 +10,8 @@
 
 ## 現在地
 
+現在地と残課題は[`designs/CURRENT_STATE_AND_ROADMAP.md`](designs/CURRENT_STATE_AND_ROADMAP.md)を参照します。以前の「次はPR #8」という案内は履歴であり、現在の実装指示ではありません。
+
 Current Spineでは、Plotの公開入口は
 `scripts/current_production_facade_v12.py`、RendererのPreview入口はCurrent
 Preview Request V4だけです。旧Daily Production/hardening入口は履歴・互換用であり、
@@ -47,12 +49,11 @@ Preview Request V4だけです。旧Daily Production/hardening入口は履歴・
 - 新しい実日previewのacceptance gate
 - 前進専用・証拠SHA付き日次state machine CLI
 
-まだ実績として必要なこと:
+2026-08-17回のPreview/Final生成実績があります。10月3日に採用した因果graph・字幕修正を反映した新しい回の制作、Previewのユーザー確認、視聴者データによる番組改善の確認は別の工程です。合成fixtureのE2Eや空queueのsuccessを、新作MP4・見た目・視聴維持率の合格へ読み替えません。
 
-- 次にユーザーから渡される新しい実日のdaily source packageで全工程を実行する
-- preview MP4をユーザーが目視確認する
+2026-10-18の修復ブランチでは、canon03と既存Rendererのモデル・尺を統一し、その照合を既存exact-pinned E2Eへ追加しています。採用状態と実行結果は現在地文書から確認します。
 
-2026-07-31 seedは新しい実日のMVP証明には使用しません。preview確認前にfinalへ進みません。
+2026-07-31 seedは新しい実日のMVP証明には使用しません。現行の本番は9 Scene、Charonの2ブロックです。通常回の合格範囲は実音声180〜420秒、執筆目標は200〜400秒です。preview確認前にfinalへ進みません。
 
 ## 日次入口
 

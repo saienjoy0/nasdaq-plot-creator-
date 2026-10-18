@@ -56,6 +56,12 @@ class ExternalCriticOrchestratorTests(unittest.TestCase):
         request["requested_critic_invocation_id"] = "story-critic-understanding-progression-test"
         for row in request["inputs"]:
             row["git_blob_sha"] = git_blob_sha(ROOT / row["path"])
+        # This is a new test request; retain the historical request on disk.
+        packed_input = next(row for row in request["inputs"] if row["role"] == "packed_rules_manifest")
+        packed = json.loads((ROOT / packed_input["path"]).read_text(encoding="utf-8"))
+        current_rules = {row["logical_path"]: row["sha256"] for row in packed["sources"]}
+        for row in request["logical_rules"]:
+            row["sha256"] = current_rules[row["logical_path"]]
         path = base / "critic_request.json"
         path.write_text(json.dumps(request, ensure_ascii=False, indent=2), encoding="utf-8")
         return path
@@ -105,6 +111,26 @@ class ExternalCriticOrchestratorTests(unittest.TestCase):
             )
             self.assertTrue((bundle / "logical_rules/03_episode_production_spec.md").is_file())
             self.assertTrue((bundle / "logical_rules/04_entertainment_inquisitor.md").is_file())
+            for row in request["logical_rules"]:
+                path = bundle / "logical_rules" / Path(row["logical_path"]).name
+                self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), row["sha256"])
+
+    def test_fresh_blob_bindings_do_not_authorize_stale_logical_rules(self):
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            request_path = self.fresh_request_path(base)
+            request = json.loads(request_path.read_text(encoding="utf-8"))
+            historical = json.loads(self.request.read_text(encoding="utf-8"))
+            self.assertNotEqual(request["logical_rules"], historical["logical_rules"])
+            request["logical_rules"] = historical["logical_rules"]
+            request_path.write_text(json.dumps(request), encoding="utf-8")
+            with self.assertRaisesRegex(self.runner.OrchestratorError, "logical rule SHA differs from packed source manifest"):
+                self.runner.prepare_bundle(
+                    repo_root=ROOT,
+                    request_path=request_path,
+                    request_schema=self.request_schema,
+                    bundle_dir=base / "bundle",
+                )
 
     def test_adapter_image_must_be_digest_pinned(self):
         self.assertIsNotNone(self.runner.PINNED_IMAGE_RE.fullmatch("example/critic@sha256:" + "a" * 64))
